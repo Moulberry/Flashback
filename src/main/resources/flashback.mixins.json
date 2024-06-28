@@ -1,0 +1,10 @@
+{
+	"required": true,
+	"package": "com.moulberry.flashback.mixin",
+	"compatibilityLevel": "JAVA_21",
+	"mixins": [
+	],
+	"injectors": {
+		"defaultRequire": 1
+	}
+}

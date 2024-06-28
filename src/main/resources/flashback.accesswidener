@@ -1,0 +1,84 @@
+accessWidener	v1	named
+
+# Client data
+accessible class net/minecraft/client/multiplayer/ClientChunkCache$Storage
+accessible field net/minecraft/client/multiplayer/ClientChunkCache storage Lnet/minecraft/client/multiplayer/ClientChunkCache$Storage;
+accessible field net/minecraft/client/multiplayer/ClientChunkCache$Storage chunks Ljava/util/concurrent/atomic/AtomicReferenceArray;
+
+accessible method net/minecraft/tags/TagNetworkSerialization serializeToNetwork (Lnet/minecraft/core/Registry;)Lnet/minecraft/tags/TagNetworkSerialization$NetworkPayload;
+
+accessible field net/minecraft/world/entity/LivingEntity lerpHeadSteps I
+accessible field net/minecraft/world/entity/LivingEntity lerpYHeadRot D
+accessible field net/minecraft/world/entity/LivingEntity lerpSteps I
+accessible method net/minecraft/world/entity/Entity lerpPositionAndRotationStep (IDDDDD)V
+accessible method net/minecraft/world/entity/LivingEntity lerpHeadRotationStep (ID)V
+accessible method net/minecraft/world/entity/LivingEntity tickHeadTurn (FF)F
+
+accessible field net/minecraft/client/gui/components/BossHealthOverlay events Ljava/util/Map;
+
+accessible field net/minecraft/client/resources/server/DownloadedPackSource manager Lnet/minecraft/client/resources/server/ServerPackManager;
+accessible field net/minecraft/client/resources/server/ServerPackManager packs Ljava/util/List;
+accessible class net/minecraft/client/resources/server/ServerPackManager$ServerPackData
+accessible field net/minecraft/client/resources/server/ServerPackManager$ServerPackData id Ljava/util/UUID;
+accessible field net/minecraft/client/resources/server/ServerPackManager$ServerPackData url Ljava/net/URL;
+accessible field net/minecraft/client/resources/server/ServerPackManager$ServerPackData hash Lcom/google/common/hash/HashCode;
+
+accessible field net/minecraft/client/gui/components/PlayerTabOverlay header Lnet/minecraft/network/chat/Component;
+accessible field net/minecraft/client/gui/components/PlayerTabOverlay footer Lnet/minecraft/network/chat/Component;
+
+accessible field net/minecraft/client/multiplayer/MultiPlayerGameMode destroyBlockPos Lnet/minecraft/core/BlockPos;
+
+# Entity
+accessible field net/minecraft/network/syncher/SynchedEntityData itemsById [Lnet/minecraft/network/syncher/SynchedEntityData$DataItem;
+
+accessible field net/minecraft/world/entity/Entity ENTITY_COUNTER Ljava/util/concurrent/atomic/AtomicInteger;
+
+# Minecraft server
+accessible field net/minecraft/server/MinecraftServer levels Ljava/util/Map;
+accessible field net/minecraft/server/MinecraftServer worldData Lnet/minecraft/world/level/storage/WorldData;
+accessible field net/minecraft/server/MinecraftServer executor Ljava/util/concurrent/Executor;
+accessible field net/minecraft/server/MinecraftServer storageSource Lnet/minecraft/world/level/storage/LevelStorageSource$LevelStorageAccess;
+accessible field net/minecraft/server/MinecraftServer progressListenerFactory Lnet/minecraft/server/level/progress/ChunkProgressListenerFactory;
+accessible field net/minecraft/server/MinecraftServer nextTickTimeNanos J
+
+accessible field net/minecraft/server/MinecraftServer registries Lnet/minecraft/core/LayeredRegistryAccess;
+mutable field net/minecraft/server/MinecraftServer registries Lnet/minecraft/core/LayeredRegistryAccess;
+accessible class net/minecraft/resources/RegistryDataLoader$Loader
+accessible class net/minecraft/resources/RegistryDataLoader$LoadingFunction
+accessible field net/minecraft/core/LayeredRegistryAccess keys Ljava/util/List;
+mutable field net/minecraft/core/LayeredRegistryAccess keys Ljava/util/List;
+accessible field net/minecraft/core/LayeredRegistryAccess values Ljava/util/List;
+mutable field net/minecraft/core/LayeredRegistryAccess values Ljava/util/List;
+accessible field net/minecraft/core/LayeredRegistryAccess composite Lnet/minecraft/core/RegistryAccess$Frozen;
+mutable field net/minecraft/core/LayeredRegistryAccess composite Lnet/minecraft/core/RegistryAccess$Frozen;
+accessible field net/minecraft/core/RegistryAccess$ImmutableRegistryAccess registries Ljava/util/Map;
+mutable field net/minecraft/core/RegistryAccess$ImmutableRegistryAccess registries Ljava/util/Map;
+
+accessible field net/minecraft/server/network/ServerCommonPacketListenerImpl connection Lnet/minecraft/network/Connection;
+
+accessible field net/minecraft/world/level/chunk/PalettedContainer data Lnet/minecraft/world/level/chunk/PalettedContainer$Data;
+accessible class net/minecraft/world/level/chunk/PalettedContainer$Data
+accessible method net/minecraft/server/MinecraftServer haveTime ()Z
+extendable method net/minecraft/server/MinecraftServer haveTime ()Z
+
+accessible class net/minecraft/server/level/ThreadedLevelLightEngine$TaskType
+
+# Packets
+accessible field net/minecraft/network/protocol/game/ClientboundPlayerInfoUpdatePacket entries Ljava/util/List;
+mutable field net/minecraft/network/protocol/game/ClientboundPlayerInfoUpdatePacket entries Ljava/util/List;
+
+accessible field net/minecraft/network/protocol/game/ClientboundRotateHeadPacket entityId I
+
+accessible field net/minecraft/network/protocol/game/ClientboundAddEntityPacket data I
+mutable field net/minecraft/network/protocol/game/ClientboundAddEntityPacket data I
+accessible field net/minecraft/network/protocol/game/ClientboundAddEntityPacket id I
+mutable field net/minecraft/network/protocol/game/ClientboundAddEntityPacket id I
+
+# Replay UI
+accessible field net/minecraft/client/KeyMapping key Lcom/mojang/blaze3d/platform/InputConstants$Key;
+
+accessible method net/minecraft/client/particle/ParticleEngine clearParticles ()V
+
+# Exporting
+accessible field net/minecraft/client/Minecraft clientTickCount J
+accessible field net/minecraft/client/Minecraft timer Lnet/minecraft/client/Timer;

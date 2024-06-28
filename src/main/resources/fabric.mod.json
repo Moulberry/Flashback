@@ -1,0 +1,35 @@
+{
+	"schemaVersion": 1,
+	"id": "flashback",
+	"version": "${version}",
+	"name": "Flashback",
+	"description": "Record and replay the game",
+	"authors": [
+		"Moulberry"
+	],
+	"contact": {
+		"homepage": "https://flashback.moulberry.com/",
+		"sources": "https://github.com/Moulberry/Flashback"
+	},
+	"license": "ARR",
+	"icon": "assets/flashback/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"client": [
+			"com.moulberry.flashback.FlashbackClient"
+		]
+	},
+	"mixins": [
+		"flashback.mixins.json",
+        {
+          "config": "flashback.client.mixins.json",
+          "environment": "client"
+        }
+	],
+	"depends": {
+		"fabricloader": ">=0.15.10",
+		"minecraft": "~1.20.6",
+		"java": ">=21",
+		"fabric-api": "*"
+	}
+}
