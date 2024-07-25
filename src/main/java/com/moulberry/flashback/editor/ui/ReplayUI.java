@@ -1,0 +1,878 @@
+package com.moulberry.flashback.editor.ui;
+
+import com.mojang.blaze3d.platform.GlStateManager;
+import com.mojang.blaze3d.platform.TextureUtil;
+import com.mojang.blaze3d.platform.Window;
+import com.moulberry.flashback.Flashback;
+import com.moulberry.flashback.ReplayVisuals;
+import com.moulberry.flashback.combo_options.Sizing;
+import com.moulberry.flashback.editor.ui.windows.MainMenuBar;
+import com.moulberry.flashback.editor.ui.windows.StartExportWindow;
+import com.moulberry.flashback.editor.ui.windows.TimelineWindow;
+import com.moulberry.flashback.editor.ui.windows.VisualsWindow;
+import imgui.*;
+import imgui.flag.*;
+import imgui.internal.ImGuiContext;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
+import it.unimi.dsi.fastutil.ints.IntList;
+import net.fabricmc.loader.api.FabricLoader;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.ProgressScreen;
+import net.minecraft.client.gui.screens.ReceivingLevelScreen;
+import net.minecraft.client.multiplayer.MultiPlayerGameMode;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.client.renderer.GameRenderer;
+import net.minecraft.commands.arguments.EntityAnchorArgument;
+import net.minecraft.util.Mth;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.projectile.ProjectileUtil;
+import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.level.GameType;
+import net.minecraft.world.phys.*;
+import net.minecraft.world.phys.shapes.CollisionContext;
+import org.jetbrains.annotations.Nullable;
+import org.joml.Matrix4f;
+import org.joml.Quaternionf;
+import org.joml.Vector4f;
+import org.lwjgl.glfw.GLFW;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.*;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Predicate;
+
+public class ReplayUI {
+
+    public static final CustomImGuiImplGlfw imguiGlfw = new CustomImGuiImplGlfw();
+    private static final CustomImGuiImplGl3 imguiGl3 = new CustomImGuiImplGl3();
+    private static boolean initialized = false;
+
+    private static boolean isFrameHovered = false;
+    private static int frameX = 0;
+    private static int frameY = 0;
+    private static int frameWidth = 1;
+    private static int frameHeight = 1;
+    private static boolean activeLastFrame = false;
+
+    public static Matrix4f lastProjectionMatrix = null;
+    public static Quaternionf lastViewQuaternion = null;
+
+    private static ImFont font = null;
+    public static ImFont icons = null;
+
+    private static String languageCode = null;
+    private static boolean wasNavClose = false;
+    private static boolean navClose = false;
+
+    private static final Lock deferredCloseLock = new ReentrantLock();
+    private static final IntList deferredCloseTextureIds = new IntArrayList();
+    private static final List<AutoCloseable> deferredClose = new ArrayList<>();
+
+    private static float globalScale = 1.0f;
+    public static float newGlobalScale = 1.0f;
+    private static float contentScale = 1.0f;
+
+    private static ImGuiContext imGuiContext = null;
+    private static ImGuiIO imGuiIo = null;
+
+    private static boolean popupOpenLastFrame = false;
+
+    private static String infoOverlayText = null;
+    private static long infoOverlayStartMillis = 0;
+
+    private static int selectedEntity = Integer.MIN_VALUE;
+    private static boolean openSelectedEntityPopup = false;
+
+    public static void init() {
+        if (initialized) {
+            throw new IllegalStateException("ReplayUI initialized twice");
+        }
+        initialized = true;
+
+        // todo: introduce global scale option
+        // newGlobalScale = globalScale = Configuration.internal.globalScale;
+
+        // Initialize config so that everything starts nicely docked
+
+        Path path = Flashback.getConfigDirectory().resolve("imgui.ini");
+        if (!Files.exists(path)) {
+            try {
+                Files.writeString(path, ReplayUIDefaults.LAYOUT);
+            } catch(IOException ignored) {}
+        }
+
+        long oldImGuiContext = ImGui.getCurrentContext().ptr;
+        imGuiContext = new ImGuiContext(ImGui.createContext().ptr);
+        ImGui.setCurrentContext(imGuiContext);
+
+        Path relativePath = FabricLoader.getInstance().getGameDir().relativize(path);
+        ImGui.getIO().setIniFilename(relativePath.toString());
+
+        ImGui.getIO().addConfigFlags(ImGuiConfigFlags.NavEnableKeyboard);
+        ImGui.getIO().addConfigFlags(ImGuiConfigFlags.DockingEnable);
+        // ImGui.getIO().addConfigFlags(ImGuiConfigFlags.ViewportsEnable);
+        ImGui.getIO().setConfigMacOSXBehaviors(Minecraft.ON_OSX);
+
+        imguiGlfw.init(Minecraft.getInstance().getWindow().getWindow(), true, new ImGuiIO(ImGui.getIO().ptr));
+        imguiGl3.init("#version 150");
+
+        contentScale = imguiGlfw.contentScale;
+        initFonts(languageCode);
+
+        ReplayUIDefaults.applyStyle(ImGui.getStyle());
+
+        ImGuiContext currentContext = ImGui.getCurrentContext();
+        currentContext.ptr = oldImGuiContext;
+        ImGui.setCurrentContext(currentContext);
+    }
+
+    public static void initFonts(String languageCode) {
+        if (languageCode != null) {
+            ReplayUI.languageCode = languageCode;
+        } else {
+            languageCode = "en_us";
+        }
+
+        if (!initialized) {
+            return;
+        }
+
+        ImGuiIO io = ImGui.getIO();
+        ImFontAtlas fonts = io.getFonts();
+        fonts.clear();
+
+        int size = (int)(16 * getUiScale());
+
+        ImFontGlyphRangesBuilder rangesBuilder = new ImFontGlyphRangesBuilder();
+        rangesBuilder.addRanges(fonts.getGlyphRangesDefault());
+
+        if (languageCode.startsWith("uk") || languageCode.startsWith("ru") || languageCode.startsWith("bg")) {
+            rangesBuilder.addRanges(fonts.getGlyphRangesCyrillic());
+        } else if (languageCode.startsWith("tr")) {
+            rangesBuilder.addText("ÇçĞğİıÖöŞşÜü");
+        } else if (languageCode.startsWith("pl")) {
+            rangesBuilder.addRanges(new short[]{0x0100, 0x017F, 0});
+        } else if (languageCode.startsWith("cs")) {
+            rangesBuilder.addText("ÁáČčĎďÉéĚěÍíŇňÓóŘřŠšŤťÚúŮůÝýŽž");
+        }
+
+        rangesBuilder.addChar('\u2318'); // Mac CMD
+        rangesBuilder.addChar('\u2303'); // CTRL
+        rangesBuilder.addChar('\u2387'); // Alt
+        rangesBuilder.addChar('\u21E7'); // Shift (up arrow)
+        rangesBuilder.addChar('\u2756'); // Super
+        rangesBuilder.addChar('\u26A0'); // Warning symbol
+        rangesBuilder.addChar('\u2190'); // Left Arrow
+        rangesBuilder.addChar('\u2191'); // Up Arrow
+        rangesBuilder.addChar('\u2192'); // Right Arrow
+        rangesBuilder.addChar('\u2193'); // Down Arrow
+
+        // Make sure every printable key on the keyboard is present
+        for (int i = GLFW.GLFW_KEY_SPACE; i <= GLFW.GLFW_KEY_LAST; i++) {
+            int scancode = GLFW.glfwGetKeyScancode(i);
+            if (scancode != -1) {
+                String key = GLFW.glfwGetKeyName(i, -1);
+                if (key != null) {
+                    rangesBuilder.addText(key);
+                    rangesBuilder.addText(key.toLowerCase());
+                    rangesBuilder.addText(key.toUpperCase());
+                    rangesBuilder.addText(key.toLowerCase(Locale.ROOT));
+                    rangesBuilder.addText(key.toUpperCase(Locale.ROOT));
+                }
+            }
+        }
+
+        short[] glyphRanges = rangesBuilder.buildRanges();
+
+        // Font config for additional fonts
+        final ImFontConfig fontConfig = new ImFontConfig();
+        fontConfig.setOversampleH(2);
+        fontConfig.setOversampleV(2);
+
+        fontConfig.setName("Inter (Medium), 16px");
+        font = fonts.addFontFromMemoryTTF(loadFont("inter-medium.ttf"), size, fontConfig, glyphRanges);
+
+        // Merge in Japanese/Korean/Chinese/etc. characters if needed
+        fontConfig.setMergeMode(true);
+        if (languageCode.startsWith("he")) {
+            short[] hebrewRanges = new short[]{(short)'\u0590', (short)'\u05FF', (short)'\uFB1D', (short)'\uFB4F', 0};
+            io.getFonts().addFontFromMemoryTTF(loadFont("heebo-medium.ttf"), size, fontConfig, hebrewRanges);
+        } else if (languageCode.startsWith("ja")) {
+            io.getFonts().addFontFromMemoryTTF(loadFont("notosansjp-medium.ttf"), size,
+                fontConfig, GlyphRanges.getJapaneseRanges());
+        } else if (languageCode.startsWith("zh")) {
+            io.getFonts().addFontFromMemoryTTF(loadFont("notosanssc-medium.otf"), size,
+                fontConfig, GlyphRanges.getChineseFullRanges());
+            io.getFonts().addFontFromMemoryTTF(loadFont("notosanstc-medium.otf"), size,
+                fontConfig, GlyphRanges.getChineseFullRanges());
+        }
+        fontConfig.setMergeMode(false);
+
+        fonts.build();
+        imguiGl3.updateFontsTexture();
+
+        fontConfig.destroy();
+        fonts.clearTexData();
+    }
+
+    private static byte[] loadFont(String name) {
+        try {
+            var resource = Minecraft.getInstance().getResourceManager().getResource(Flashback.createResourceLocation(name));
+            if (resource.isEmpty()) throw new MissingResourceException("Missing font: " + name, "Font", "");
+            try (InputStream is = resource.get().open()) {
+                return is.readAllBytes();
+            }
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static Vec3 getMouseForwardsVector() {
+        return getMouseForwardsVector(ImGui.getMousePosX(), ImGui.getMousePosY());
+    }
+
+    public static Vec3 getMouseForwardsVector(float mouseX, float mouseY) {
+        if (!isActive() || (!isFrameHovered && !isMovingCamera()) || lastProjectionMatrix == null || lastViewQuaternion == null) return null;
+        return getForwardsVector(mouseX, mouseY);
+    }
+
+    public static Vec2 getMouseViewportFraction() {
+        float x = (ImGui.getMousePosX() - ImGui.getMainViewport().getPosX() - frameX) / frameWidth;
+        float y = (ImGui.getMousePosY() - ImGui.getMainViewport().getPosY() - frameY) / frameHeight;
+        return new Vec2(x, y);
+    }
+
+    public static Vec2 getMouseViewportFraction(float mouseX, float mouseY) {
+        float x = (mouseX - ImGui.getMainViewport().getPosX() - frameX) / frameWidth;
+        float y = (mouseY - ImGui.getMainViewport().getPosY() - frameY) / frameHeight;
+        return new Vec2(x, y);
+    }
+
+    public static Vec3 getForwardsVector(float mouseX, float mouseY) {
+        float x = (mouseX - ImGui.getMainViewport().getPosX() - frameX) / frameWidth * 2 - 1;
+        float y = (mouseY - ImGui.getMainViewport().getPosY() - frameY) / frameHeight * 2 - 1;
+        return getForwardsVectorRaw(x, y);
+    }
+
+    public static Vec3 getForwardsVectorRaw(float x, float y) {
+        if (!isMovingCamera() && (x < -1 || x > 1 || y < -1 || y > 1)) return null;
+
+        var matrix = new Matrix4f(lastProjectionMatrix);
+        matrix.invert();
+
+        // Apply inverse projection matrix to get forwards vector
+        var forwards = new Vector4f(x, y, 0f, 1f);
+        forwards.mul(matrix);
+
+        // Negate and normalize to match MC coordinate space
+        return new Vec3(forwards.x(), -forwards.y(), forwards.z()).normalize();
+    }
+
+    @Nullable
+    public static Vec3 getMouseLookVectorFromForwards(Vec3 forwards) {
+        if (forwards == null) return null;
+
+        // Apply the view quaternion to forwards vector to get view vector
+        var view = forwards.toVector3f();
+        view.rotate(lastViewQuaternion);
+
+        return new Vec3(view.x(), view.y(), view.z()).normalize();
+    }
+
+    @Nullable
+    public static Vec3 getMouseLookVector(float mouseX, float mouseY) {
+        return getMouseLookVectorFromForwards(getMouseForwardsVector(mouseX, mouseY));
+    }
+
+    @Nullable
+    public static Vec3 getMouseLookVector() {
+        return getMouseLookVectorFromForwards(getMouseForwardsVector());
+    }
+
+    public static boolean isEntitySelected(int entityId) {
+        return isActive() && selectedEntity == entityId;
+    }
+
+    public static boolean isMovingCamera() {
+        return imguiGlfw.isGrabbed() && imguiGlfw.getMouseHandledBy() == CustomImGuiImplGlfw.MouseHandledBy.GAME;
+    }
+
+    public static void setInfoOverlay(String text) {
+        infoOverlayText = text;
+        infoOverlayStartMillis = System.currentTimeMillis();
+    }
+
+    public static void setupMainViewport() {
+        var window = Minecraft.getInstance().getWindow();
+
+        int frameBottom = window.height - (frameY + frameHeight);
+        GlStateManager._viewport(frameX * window.getWidth() / window.getScreenWidth(),
+            frameBottom * window.getHeight() / window.getScreenHeight(),
+            Math.max(1, frameWidth * window.getWidth() / window.getScreenWidth()),
+            Math.max(1, frameHeight * window.getHeight() / window.getScreenHeight()));
+    }
+
+    public static float getUiScale() {
+        return globalScale * contentScale;
+    }
+
+    public static double getNewMouseX(double x) {
+        return x - frameX;
+    }
+
+    public static double getNewMouseY(double y) {
+        return y - frameY;
+    }
+
+    public static int getNewGameWidth(float scale) {
+        return Math.max(1, Math.round(frameWidth * scale));
+    }
+
+    public static int getNewGameHeight(float scale) {
+        return Math.max(1, Math.round(frameHeight * scale));
+    }
+
+    private static boolean isActiveInternal() {
+        if (!Flashback.isInReplay()) {
+            return false;
+        }
+
+        if (Flashback.EXPORT_JOB != null) {
+            return false;
+        }
+
+        if (Minecraft.getInstance().options.hideGui) {
+            return false;
+        }
+
+        MultiPlayerGameMode gameMode = Minecraft.getInstance().gameMode;
+        if (gameMode == null) return false;
+        if (gameMode.getPlayerMode() != GameType.SPECTATOR) return false;
+        if (Minecraft.getInstance().level == null) return false;
+        if (Minecraft.getInstance().player == null) return false;
+        if (Minecraft.getInstance().getOverlay() != null) return false;
+        return true;
+    }
+
+    public static void deferredCloseTextureId(int textureId) {
+        deferredCloseLock.lock();
+        try {
+            deferredCloseTextureIds.add(textureId);
+        } finally {
+            deferredCloseLock.unlock();
+        }
+    }
+
+    public static void deferredClose(AutoCloseable autoCloseable) {
+        deferredCloseLock.lock();
+        try {
+            deferredClose.add(autoCloseable);
+        } finally {
+            deferredCloseLock.unlock();
+        }
+    }
+
+    public static boolean isActive() {
+        return activeLastFrame;
+    }
+
+    private static void transitionActiveState(boolean active) {
+        if (activeLastFrame == active) return;
+        activeLastFrame = active;
+
+        // Recalculate the size of the gameplay window
+        Window window = Minecraft.getInstance().getWindow();
+        if (window.getWidth() > 0 && window.getWidth() <= 32768 && window.getHeight() > 0 && window.getHeight() <= 32768) {
+            Minecraft.getInstance().resizeDisplay();
+        }
+        imguiGlfw.ungrab();
+
+        if (!activeLastFrame) {
+            // Make sure the vanilla grab state is correct
+            if (Minecraft.getInstance().gameMode != null) {
+                if (Minecraft.getInstance().screen == null) {
+                    Minecraft.getInstance().mouseHandler.releaseMouse();
+                    Minecraft.getInstance().mouseHandler.grabMouse();
+                } else {
+                    Minecraft.getInstance().mouseHandler.grabMouse();
+                    Minecraft.getInstance().mouseHandler.releaseMouse();
+                }
+                Minecraft.getInstance().mouseHandler.setIgnoreFirstMove();
+            }
+        } else {
+            // Forcefully ungrab the cursor
+            long handle = ImGui.getMainViewport().getPlatformHandle();
+            if (GLFW.glfwGetInputMode(handle, GLFW.GLFW_CURSOR) != GLFW.GLFW_CURSOR_NORMAL) {
+                GLFW.glfwSetInputMode(handle, GLFW.GLFW_CURSOR, GLFW.GLFW_CURSOR_NORMAL);
+                GLFW.glfwSetCursorPos(handle, ImGui.getMainViewport().getSizeX()/2f, ImGui.getMainViewport().getSizeY()/2f);
+            }
+        }
+
+        imguiGlfw.setViewportWindowsHidden(!activeLastFrame);
+    }
+
+    public static void drawOverlay() {
+        long oldImGuiContext = ImGui.getCurrentContext().ptr;
+        ImGui.setCurrentContext(imGuiContext);
+
+        try {
+            drawOverlayInternal();
+        } finally {
+            ImGuiContext currentContext = ImGui.getCurrentContext();
+            currentContext.ptr = oldImGuiContext;
+            ImGui.setCurrentContext(currentContext);
+        }
+    }
+
+    public static void drawOverlayInternal() {
+        int oldFrameX = frameX;
+        int oldFrameY = frameY;
+        int oldFrameWidth = frameWidth;
+        int oldFrameHeight = frameHeight;
+
+        if (!initialized) {
+            throw new IllegalStateException("Tried to use EditorUI while it was not initialized");
+        }
+
+        deferredCloseLock.lock();
+        try {
+            for (int id : deferredCloseTextureIds) {
+                TextureUtil.releaseTextureId(id);
+            }
+            deferredCloseTextureIds.clear();
+
+            for (AutoCloseable closeable : deferredClose) {
+                try {
+                    closeable.close();
+                } catch (Exception e) {}
+            }
+            deferredClose.clear();
+        } finally {
+            deferredCloseLock.unlock();
+        }
+
+        if (Minecraft.getInstance().screen instanceof ProgressScreen || Minecraft.getInstance().screen instanceof ReceivingLevelScreen) {
+            return;
+        }
+
+        if (!isActiveInternal()) {
+            transitionActiveState(false);
+            imguiGlfw.updateReleaseAllKeys(true);
+            return;
+        } else {
+            imguiGlfw.updateReleaseAllKeys(false);
+        }
+
+        if (!ImGui.isAnyMouseDown()) {
+            newGlobalScale = ((int)(newGlobalScale * 16))/16f;
+            if (newGlobalScale < 0.25) newGlobalScale = 0.25f;
+            if (newGlobalScale > 4) newGlobalScale = 4f;
+
+            float newContentScale = ((int)(imguiGlfw.contentScale * 16))/16f;
+            if (newContentScale < 0.125) newContentScale = 0.125f;
+            if (newContentScale > 8) newContentScale = 8f;
+
+            if (globalScale != newGlobalScale || contentScale != newContentScale) {
+                int oldFontSize = (int)(16 * getUiScale());
+                globalScale = newGlobalScale;
+                contentScale = newContentScale;
+                if (oldFontSize != (int)(16 * getUiScale())) {
+                    initFonts(languageCode);
+                }
+            }
+        }
+
+        imguiGlfw.newFrame();
+        ImGui.newFrame();
+
+        navClose = ImGui.getIO().getNavInputs(ImGuiNavInput.Cancel) != 0;
+        if (wasNavClose != navClose) {
+            wasNavClose = navClose;
+        } else if (wasNavClose) {
+            navClose = false;
+        }
+
+        if (ImGui.isPopupOpen("", ImGuiPopupFlags.AnyPopup)) {
+            ImGui.getIO().addConfigFlags(ImGuiConfigFlags.NavEnableKeyboard);
+        } else {
+            ImGui.getIO().removeConfigFlags(ImGuiConfigFlags.NavEnableKeyboard);
+        }
+
+        char controlIcon = Minecraft.ON_OSX ? '\u2318' : '\u2303';
+
+        MainMenuBar.render();
+
+        // Setup docking
+        ImGui.setNextWindowBgAlpha(0);
+        int mainDock = ImGui.dockSpaceOverViewport(ImGui.getMainViewport(), ImGuiDockNodeFlags.NoDockingInCentralNode);
+        imgui.internal.ImGui.dockBuilderGetCentralNode(mainDock).addLocalFlags(imgui.internal.flag.ImGuiDockNodeFlags.NoTabBar);
+
+        isFrameHovered = false;
+        ImGui.setNextWindowDockID(mainDock);
+        ImGuiHelper.pushStyleVar(ImGuiStyleVar.WindowPadding, 0, 0);
+
+        boolean fireCancelNavInput = false;
+
+        if (ImGui.begin("Main", ImGuiWindowFlags.NoMove | ImGuiWindowFlags.NoNavInputs | ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoBackground | ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoCollapse |
+                ImGuiWindowFlags.NoSavedSettings)) {
+            ImGuiHelper.popStyleVar();
+
+            float minX = ImGui.getWindowContentRegionMinX();
+            float maxX = ImGui.getWindowContentRegionMaxX();
+            float minY = ImGui.getWindowContentRegionMinY();
+            float maxY = ImGui.getWindowContentRegionMaxY();
+
+            if (ImGui.getIO().hasConfigFlags(ImGuiConfigFlags.ViewportsEnable)) {
+                frameX = (int) (ImGui.getWindowPosX() - ImGui.getWindowViewport().getPosX() + minX);
+                frameY = (int) (ImGui.getWindowPosY() - ImGui.getWindowViewport().getPosY() + minY);
+            } else {
+                frameX = (int) (ImGui.getWindowPosX() + minX);
+                frameY = (int) (ImGui.getWindowPosY() + minY);
+            }
+            frameWidth = (int) Math.max(1, maxX - minX);
+            frameHeight = (int) Math.max(1, maxY - minY);
+
+            if (ReplayVisuals.sizing == Sizing.KEEP_ASPECT_RATIO || ReplayVisuals.sizing == Sizing.CHANGE_ASPECT_RATIO) {
+                float aspectRatio;
+                if (ReplayVisuals.sizing == Sizing.KEEP_ASPECT_RATIO) {
+                    aspectRatio = ImGui.getMainViewport().getSizeX() / ImGui.getMainViewport().getSizeY();
+                } else {
+                    aspectRatio = ReplayVisuals.changeAspectRatio.aspectRatio();
+                }
+
+                float currentAspectRatio = frameWidth / (float) frameHeight;
+
+                if (currentAspectRatio < aspectRatio) {
+                    int newHeight = (int)(frameWidth / aspectRatio);
+                    frameY += (frameHeight - newHeight)/2;
+                    frameHeight = newHeight;
+                } else if (currentAspectRatio > aspectRatio) {
+                    int newWidth = (int)(frameHeight * aspectRatio);
+                    frameX += (frameWidth - newWidth)/2;
+                    frameWidth = newWidth;
+                }
+            }
+
+            if (infoOverlayText != null) {
+                long currentMillis = System.currentTimeMillis();
+                if (currentMillis < infoOverlayStartMillis || currentMillis > infoOverlayStartMillis + 5000) {
+                    infoOverlayText = null;
+                } else {
+                    ImGui.setNextWindowPos(frameX + frameWidth*0.5f, frameY + frameHeight*0.75f, ImGuiCond.Always, 0.5f, 0.5f);
+                    ImGui.setNextWindowSizeConstraints(0, 0, 550, frameHeight*0.45f);
+
+                    ImGuiHelper.pushStyleVar(ImGuiStyleVar.WindowBorderSize, 2);
+                    ImGuiHelper.pushStyleColor(ImGuiCol.Border, 0xFF00FFFF);
+
+                    if (ImGui.begin("##InfoOverlay", ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoFocusOnAppearing |
+                            ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoCollapse |
+                            ImGuiWindowFlags.NoDocking | ImGuiWindowFlags.NoSavedSettings)) {
+
+                        ImGui.text(infoOverlayText);
+                    }
+                    ImGui.end();
+
+                    ImGuiHelper.popStyleColor();
+                    ImGuiHelper.popStyleVar();
+                }
+            }
+
+            if (ReplayVisuals.sizing == Sizing.UNDERLAY) {
+                frameX = 0;
+                frameY = 0;
+                frameWidth = Minecraft.getInstance().getWindow().getScreenWidth();
+                frameHeight = Minecraft.getInstance().getWindow().getScreenHeight();
+            }
+
+            if (frameX != oldFrameX || frameY != oldFrameY || frameWidth != oldFrameWidth || frameHeight != oldFrameHeight) {
+                Minecraft.getInstance().resizeDisplay();
+            }
+
+            if (ReplayVisuals.ruleOfThirdsGuide) {
+                ImDrawList drawList = ImGui.getForegroundDrawList();
+                drawList.addLine(frameX + frameWidth/3, frameY, frameX + frameWidth/3, frameY+frameHeight, -1, 2);
+                drawList.addLine(frameX + frameWidth*2/3, frameY, frameX + frameWidth*2/3, frameY+frameHeight, -1, 2);
+                drawList.addLine(frameX, frameY + frameHeight/3, frameX + frameWidth, frameY + frameHeight/3, -1, 2);
+                drawList.addLine(frameX, frameY + frameHeight*2/3, frameX + frameWidth, frameY + frameHeight*2/3, -1, 2);
+            }
+
+            if (ReplayVisuals.centerGuide) {
+                ImDrawList drawList = ImGui.getForegroundDrawList();
+                drawList.addLine(frameX + frameWidth/2, frameY, frameX + frameWidth/2, frameY+frameHeight, -1, 2);
+                drawList.addLine(frameX, frameY + frameHeight/2, frameX + frameWidth, frameY + frameHeight/2, -1, 2);
+            }
+
+            if (selectedEntity != Integer.MIN_VALUE) {
+                Entity entity = Minecraft.getInstance().level.getEntity(selectedEntity);
+                if (entity == null) {
+                    selectedEntity = Integer.MIN_VALUE;
+                } else if (entity instanceof Player && !ReplayVisuals.renderPlayers) {
+                    selectedEntity = Integer.MIN_VALUE;
+                } else if (!(entity instanceof Player) && !ReplayVisuals.renderEntities) {
+                    selectedEntity = Integer.MIN_VALUE;
+                } else {
+                    if (openSelectedEntityPopup) {
+                        ImGui.openPopup("###EntityPopup");
+                    }
+
+                    if (ImGuiHelper.beginPopup("###EntityPopup")) {
+                        ImGui.text("Entity: " + entity.getUUID());
+
+                        ImGui.separator();
+
+                        if (ImGui.button("Look At")) {
+                            Minecraft.getInstance().cameraEntity.lookAt(EntityAnchorArgument.Anchor.EYES, entity.getEyePosition());
+                        }
+                        // todo: need to remember spectate target when a snapshot is played
+//                        if (ImGui.button("Spectate")) {
+//                            Minecraft.getInstance().player.connection.sendUnsignedCommand("spectate " + entity.getUUID());
+//                        }
+//                        ImGui.sameLine();
+//                        ImGui.button("Track Entity");
+//
+//                        ImGui.checkbox("Hide During Export", false);
+//
+//                        ImGui.checkbox("Force Glowing", false);
+//                        ImGui.sameLine();
+//                        ImGui.colorButton("Glow Colour", new float[4]);
+//                        ImGui.sameLine();
+//                        ImGui.text("Glow Colour");
+//
+//                        if (entity instanceof LivingEntity) {
+//                            ImGui.checkbox("Show Nametag", true);
+//                            ImGui.checkbox("Override Nametag", false);
+//                        }
+//                        if (entity instanceof Player) {
+//                            ImGui.checkbox("Override Skin", false);
+//                        }
+
+
+                        ImGui.endPopup();
+                    }
+
+                    if (!ImGui.isPopupOpen("###EntityPopup")) {
+                        selectedEntity = Integer.MIN_VALUE;
+                    }
+                }
+            }
+
+            openSelectedEntityPopup = false;
+
+            if (ImGui.isWindowHovered() && ImGui.getMousePosY() > ImGui.getWindowPosY()) {
+                isFrameHovered = true;
+
+                if (Minecraft.getInstance().screen != null) {
+                    ImGui.captureMouseFromApp(false);
+                } else if (isMovingCamera()) {
+                    LocalPlayer player = Minecraft.getInstance().player;
+                    if (player != null) {
+                        int wheelY = (int) Math.signum(ImGui.getIO().getMouseWheel());
+                        if (wheelY != 0) {
+                            final float defaultFlyingSpeed = 0.05f;
+                            float flyingSpeed = Mth.clamp(player.getAbilities().getFlyingSpeed() + (float)wheelY * defaultFlyingSpeed / 10f,
+                                    defaultFlyingSpeed / 10f, defaultFlyingSpeed * 5.0f);
+                            setInfoOverlay(String.format("Flying Speed: %.1f", flyingSpeed / defaultFlyingSpeed));
+                            player.getAbilities().setFlyingSpeed(flyingSpeed);
+                        }
+                    }
+                } else if (ImGui.getIO().getWantCaptureMouse() && !popupOpenLastFrame && !ImGui.isPopupOpen("", ImGuiPopupFlags.AnyPopup)) {
+                    fireCancelNavInput |= handleBasicInputs();
+                }
+            }
+        } else {
+            ImGuiHelper.popStyleVar();
+        }
+        ImGui.end();
+
+        VisualsWindow.render();
+        TimelineWindow.render();
+        StartExportWindow.render();
+
+        popupOpenLastFrame = ImGui.isPopupOpen("", ImGuiPopupFlags.AnyPopup);
+
+        ImGui.render();
+        ImGuiHelper.endFrame();
+
+        if (fireCancelNavInput) {
+            ImGui.getIO().setNavInputs(ImGuiNavInput.Input, 1.0f);
+            ImGui.getIO().setNavInputs(ImGuiNavInput.Cancel, 1.0f);
+        }
+
+        long ctx = GLFW.glfwGetCurrentContext();
+        ImGui.updatePlatformWindows();
+        ImGui.renderPlatformWindowsDefault();
+        GLFW.glfwMakeContextCurrent(ctx);
+
+        var drawData = ImGui.getDrawData();
+        if (drawData != null) {
+            imguiGl3.renderDrawData(drawData);
+        }
+
+        transitionActiveState(true);
+    }
+
+    public static boolean isMainFrameHovered() {
+        return isFrameHovered;
+    }
+
+    private static boolean handleBasicInputs() {
+//        if (ImGui.isMouseClicked(ImGuiMouseButton.Left) && UserAction.LEFT_MOUSE.call(null) == UserAction.ActionResult.USED_STOP) {
+//            return true;
+//        }
+
+        if (ImGui.isMouseClicked(GLFW.GLFW_MOUSE_BUTTON_RIGHT)) {
+            HitResult result = getLookTarget();
+            if (result instanceof EntityHitResult entityHitResult) {
+                if (Minecraft.getInstance().player == Minecraft.getInstance().cameraEntity) {
+                    Minecraft.getInstance().player.setDeltaMovement(Vec3.ZERO);
+                }
+                selectedEntity = entityHitResult.getEntity().getId();
+                openSelectedEntityPopup = true;
+            }
+            return true;
+        }
+
+        if (ImGui.isMouseClicked(GLFW.GLFW_MOUSE_BUTTON_LEFT)) {
+            int key = -GLFW.GLFW_MOUSE_BUTTON_LEFT-1;
+            if (key != 0) {
+                imguiGlfw.setGrabbed(true, key, frameX + frameWidth / 2f, frameY + frameHeight / 2f);
+            }
+            return true;
+        }
+
+//        if (Keybinds.ADJUST_RADIUS.isPressed(false)) {
+//            if (ToolManager.isToolActive() && ToolManager.getCurrentTool().initiateAdjustment()) {
+//                int key = Keybinds.ADJUST_RADIUS.getKey();
+//                if (key != 0) {
+//                    imguiGlfw.setGrabbed(false, key, -1, -1);
+//                }
+//
+//                adjustingTool = true;
+//                adjustingToolOffsetX = 0;
+//                adjustingToolOffsetY = 0;
+//
+//                return true;
+//            }
+//        } else if (Keybinds.ROTATE_CAMERA.isPressed(false)) {
+//            movementControls = EditorMovementControls.rotate();
+//            return true;
+//        } else if (Keybinds.PICK_BLOCK.isPressed(false)) {
+//            RayCaster.RaycastResult result = Tool.raycastBlock();
+//            if (result != null) {
+//                BlockState blockState = Minecraft.getInstance().level.getBlockState(result.blockPos());
+//                CustomBlockState customBlockState = ServerCustomBlocks.getCustomStateFor(blockState);
+//                activeBlockHistory.setActive(Objects.requireNonNullElse(customBlockState, (CustomBlockState) blockState));
+//                return true;
+//            }
+//        } else if (Keybinds.USE_TOOL.isPressed(false)) {
+//            if (UserAction.RIGHT_MOUSE.call(null) != UserAction.ActionResult.NOT_HANDLED || ToolManager.isToolActive()) {
+//                return true;
+//            }
+//        } else if (Keybinds.ARCBALL_CAMERA.isPressed(false)) {
+//            Tool currentTool = ToolManager.isToolActive() ? ToolManager.getCurrentTool() : null;
+//            if (currentTool instanceof RulerTool || currentTool instanceof ModifyTool || Configuration.keybind.useCenterOfScreenForArcball) {
+//                movementControls = EditorMovementControls.arcballFromRaycast();
+//                if (movementControls != EditorMovementControls.none()) {
+//                    int key = Keybinds.ARCBALL_CAMERA.getKey();
+//                    if (key != 0) {
+//                        imguiGlfw.setGrabbed(false, key, frameX + frameWidth / 2f, frameY + frameHeight / 2f);
+//                    }
+//                    return true;
+//                }
+//            } else {
+//                pendingDepthActions.add(PendingDepthAction.ARCBALL);
+//                return true;
+//            }
+//        } else if (Keybinds.PAN_CAMERA.isPressed(false)) {
+//            movementControls = EditorMovementControls.pan();
+//            return true;
+//        }
+
+//        if (Keybinds.CROSSHAIR_CAMERA.isPressed(false)) {
+//            int key = Keybinds.CROSSHAIR_CAMERA.getKey();
+//            if (key != 0) {
+//                imguiGlfw.setGrabbed(true, key, frameX + frameWidth / 2f, frameY + frameHeight / 2f);
+//            }
+//            return true;
+//        }
+        return false;
+    }
+
+    @Nullable
+    private static HitResult getLookTarget() {
+        Vec3 look = getMouseLookVector();
+        if (look == null) {
+            return null;
+        }
+
+        Entity cameraEntity = Minecraft.getInstance().cameraEntity;
+        if (cameraEntity == null) {
+            return null;
+        }
+
+        float distance = 64f;
+
+        Vec3 from = cameraEntity.getEyePosition();
+        Vec3 to = from.add(look.scale(distance));
+
+        BlockHitResult blockResult = null;
+        EntityHitResult entityResult = null;
+
+        if (ReplayVisuals.renderBlocks) {
+            ClipContext clipContext = new ClipContext(from, to, ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, CollisionContext.empty());
+            blockResult = Minecraft.getInstance().level.clip(clipContext);
+
+            if (blockResult.getType() != HitResult.Type.MISS) {
+                distance = (float) blockResult.getLocation().distanceTo(from);
+            }
+        }
+
+        if (ReplayVisuals.renderEntities || ReplayVisuals.renderPlayers) {
+            AABB boundingBox = new AABB(from.subtract(0.5f, 0.5f, 0.5f), from.add(0.5f, 0.5f, 0.5f));
+            boundingBox = boundingBox.expandTowards(look.scale(distance));
+
+            Predicate<Entity> predicate;
+            if (ReplayVisuals.renderEntities && ReplayVisuals.renderPlayers) {
+                predicate = entity -> true;
+            } else if (ReplayVisuals.renderPlayers) {
+                predicate = entity -> entity instanceof Player;
+            } else if (ReplayVisuals.renderEntities) {
+                predicate = entity -> !(entity instanceof Player);
+            } else {
+                throw new IllegalStateException();
+            }
+
+            entityResult = ProjectileUtil.getEntityHitResult(cameraEntity, from, from.add(look.scale(distance)),
+                    boundingBox, predicate, distance*distance);
+        }
+
+        if (entityResult != null && entityResult.getLocation().distanceTo(from) < distance) {
+            return entityResult;
+        } else if (blockResult != null && blockResult.getType() != HitResult.Type.MISS) {
+            return blockResult;
+        } else {
+            return null;
+        }
+    }
+
+    public static boolean consumeNavClose() {
+        boolean navClose = ReplayUI.navClose;
+        ReplayUI.navClose = false;
+        return navClose;
+    }
+
+    public static boolean isMoveQuickDown() {
+        return ImGui.isKeyDown(Minecraft.getInstance().options.keySprint.key.getValue());
+    }
+
+    public static boolean isCtrlOrCmdDown() {
+        return Minecraft.ON_OSX ? ImGui.getIO().getKeySuper() : ImGui.getIO().getKeyCtrl();
+    }
+
+}

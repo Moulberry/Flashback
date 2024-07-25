@@ -3,7 +3,7 @@
 	"id": "flashback",
 	"version": "${version}",
 	"name": "Flashback",
-	"description": "Record and replay the game",
+	"description": "Record your gameplay, view the recordings and export cinematic shots",
 	"authors": [
 		"Moulberry"
 	],
@@ -13,22 +13,28 @@
 	},
 	"license": "ARR",
 	"icon": "assets/flashback/icon.png",
-	"environment": "*",
+	"environment": "client",
 	"entrypoints": {
+		"main": [
+			"com.moulberry.flashback.Flashback"
+		],
 		"client": [
-			"com.moulberry.flashback.FlashbackClient"
+			"com.moulberry.flashback.Flashback"
+		],
+		"frex_flawless_frames": [
+			"com.moulberry.flashback.exporting.FrexFlawlessFramesIntegration"
+		],
+		"modmenu": [
+			"com.moulberry.flashback.FlashbackModMenuApiImpl"
 		]
 	},
+	"accessWidener": "flashback.accesswidener",
 	"mixins": [
-		"flashback.mixins.json",
-        {
-          "config": "flashback.client.mixins.json",
-          "environment": "client"
-        }
+		"flashback.mixins.json"
 	],
 	"depends": {
 		"fabricloader": ">=0.15.10",
-		"minecraft": "~1.20.6",
+		"minecraft": "~1.21",
 		"java": ">=21",
 		"fabric-api": "*"
 	}

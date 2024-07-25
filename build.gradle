@@ -23,25 +23,31 @@ base {
 }
 
 repositories {
-	// Add repositories to retrieve artifacts from in here.
-	// You should only use this when depending on other mods because
-	// Loom adds the essential maven repositories to download Minecraft and libraries from automatically.
-	// See https://docs.gradle.org/current/userguide/declaring_repositories.html
-	// for more information about repositories.
-    maven { url = "https://pkgs.dev.azure.com/djtheredstoner/DevAuth/_packaging/public/maven/v1" }
+    maven {
+		url = "https://pkgs.dev.azure.com/djtheredstoner/DevAuth/_packaging/public/maven/v1"
+		content {
+			includeGroup("me.djtheredstoner")
+		}
+	}
+	maven {
+		url 'https://api.modrinth.com/maven'
+		content {
+			includeGroup("maven.modrinth")
+		}
+	}
 }
 
 loom {
-    accessWidenerPath.set(new File(rootDir, "src/main/resources/flashback.accesswidener"))
-    splitEnvironmentSourceSets()
+	accessWidenerPath = file("src/main/resources/flashback.accesswidener")
 
-	mods {
-		"flashback" {
-			sourceSet sourceSets.main
-			sourceSet sourceSets.client
-		}
-	}
-
+//    splitEnvironmentSourceSets()
+//
+//	mods {
+//		"flashback" {
+//			sourceSet sourceSets.main
+//			sourceSet sourceSets.client
+//		}
+//	}
 }
 
 dependencies {
@@ -55,19 +61,89 @@ dependencies {
 	// Fabric API. This is technically optional, but you probably want it anyway.
 	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
 
+	include(implementation("com.moulberry:mixinconstraints:1.0.1"))
+
+	modCompileOnly("maven.modrinth:sodium:RncWhTxD")
+	modImplementation("maven.modrinth:modmenu:xhN1IvHi")
+//	modCompileOnly("maven.modrinth:axiom:D3uDJmiB")
+
+	// modRuntimeOnly("maven.modrinth:sodium:mc1.20.6-0.5.11")
+
 //    shadow(implementation("org.jcodec:jcodec:0.2.5"))
 //    shadow(implementation("org.jcodec:jcodec-javase:0.2.5"))
-    shadow(implementation("io.humble:humble-video-all:0.3.0"))
+//    shadow(implementation("io.humble:humble-video-all:0.3.0"))
+
+	shadow(implementation("org.bytedeco:javacv-platform:1.5.10") {
+		exclude group: "org.bytedeco", module: "artoolkitplus"
+		exclude group: "org.bytedeco", module: "artoolkitplus-platform"
+		exclude group: "org.bytedeco", module: "flycapture"
+		exclude group: "org.bytedeco", module: "flycapture-platform"
+		exclude group: "org.bytedeco", module: "leptonica"
+		exclude group: "org.bytedeco", module: "leptonica-platform"
+		exclude group: "org.bytedeco", module: "libdc1394"
+		exclude group: "org.bytedeco", module: "libdc1394-platform"
+		exclude group: "org.bytedeco", module: "libfreenect"
+		exclude group: "org.bytedeco", module: "libfreenect-platform"
+		exclude group: "org.bytedeco", module: "libfreenect2"
+		exclude group: "org.bytedeco", module: "libfreenect2-platform"
+		exclude group: "org.bytedeco", module: "librealsense2"
+		exclude group: "org.bytedeco", module: "librealsense2-platform"
+		exclude group: "org.bytedeco", module: "librealsense"
+		exclude group: "org.bytedeco", module: "librealsense-platform"
+		exclude group: "org.bytedeco", module: "openblas"
+		exclude group: "org.bytedeco", module: "openblas-platform"
+		exclude group: "org.bytedeco", module: "opencv"
+		exclude group: "org.bytedeco", module: "opencv-platform"
+		exclude group: "org.bytedeco", module: "tesseract"
+		exclude group: "org.bytedeco", module: "tesseract-platform"
+		exclude group: "org.bytedeco", module: "videoinput"
+		exclude group: "org.bytedeco", module: "videoinput-platform"
+	})
+//	implementation 'org.jcodec:jcodec:0.2.5'
+//	implementation("com.github.zakgof:velvet-video:0.5.2")
+//	implementation("com.github.zakgof:velvet-video-natives:0.2.8.free")
 
     // ImGui
-    shadow(implementation(rootProject.files('deps/imgui-java-binding-1.86.11-10-g0dbf36c.jar')))
-    shadow(implementation("io.github.spair:imgui-java-lwjgl3:1.86.10") {
-        exclude group: 'org.lwjgl'
-        exclude group: 'org.lwjgl.lwjgl'
-    })
-    shadow(api(rootProject.files('deps/imgui-java-natives-linux-1.86.11-10-g0dbf36c.jar')))
-    shadow(api(rootProject.files('deps/imgui-java-natives-macos-1.86.11-10-g0dbf36c.jar')))
-    shadow(api(rootProject.files('deps/imgui-java-natives-windows-1.86.11-10-g0dbf36c.jar')))
+	shadow(implementation(rootProject.files('deps/imgui-java-binding-1.86.11-10-g0dbf36c.jar')))
+	shadow(implementation("io.github.spair:imgui-java-lwjgl3:1.86.10") {
+		exclude group: 'org.lwjgl'
+		exclude group: 'org.lwjgl.lwjgl'
+	})
+	shadow(api(rootProject.files('deps/imgui-java-natives-linux-1.86.11-10-g0dbf36c.jar')))
+	shadow(api(rootProject.files('deps/imgui-java-natives-macos-1.86.11-10-g0dbf36c.jar')))
+	shadow(api(rootProject.files('deps/imgui-java-natives-windows-1.86.11-10-g0dbf36c.jar')))
+
+	// Native File Dialogs
+	String nfdVersion = "org.lwjgl:lwjgl-nfd:3.3.3";
+
+	shadow(implementation(nfdVersion) {
+		exclude group: 'org.lwjgl'
+		exclude group: 'org.lwjgl.lwjgl'
+	})
+	shadow(api("org.lwjgl:lwjgl-nfd::natives-macos") {
+		exclude group: 'org.lwjgl'
+		exclude group: 'org.lwjgl.lwjgl'
+	})
+	shadow(api("org.lwjgl:lwjgl-nfd::natives-linux") {
+		exclude group: 'org.lwjgl'
+		exclude group: 'org.lwjgl.lwjgl'
+	})
+	shadow(api("org.lwjgl:lwjgl-nfd::natives-windows") {
+		exclude group: 'org.lwjgl'
+		exclude group: 'org.lwjgl.lwjgl'
+	})
+	shadow(api("org.lwjgl:lwjgl-nfd::natives-macos-arm64") {
+		exclude group: 'org.lwjgl'
+		exclude group: 'org.lwjgl.lwjgl'
+	})
+	shadow(api("org.lwjgl:lwjgl-nfd::natives-linux-arm64") {
+		exclude group: 'org.lwjgl'
+		exclude group: 'org.lwjgl.lwjgl'
+	})
+	shadow(api("org.lwjgl:lwjgl-nfd::natives-windows-arm64") {
+		exclude group: 'org.lwjgl'
+		exclude group: 'org.lwjgl.lwjgl'
+	})
 }
 
 processResources {
@@ -107,6 +183,12 @@ shadowJar {
     exclude("LICENSE")
     exclude("LICENSE.txt")
 }
+
+remapJar {
+	dependsOn(shadowJar)
+	input = shadowJar.getArchiveFile()
+}
+
 
 // configure the maven publication
 publishing {

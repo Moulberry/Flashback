@@ -28,6 +28,9 @@ accessible field net/minecraft/client/gui/components/PlayerTabOverlay footer Lne
 
 accessible field net/minecraft/client/multiplayer/MultiPlayerGameMode destroyBlockPos Lnet/minecraft/core/BlockPos;
 
+accessible field net/minecraft/network/protocol/game/ClientboundLevelChunkWithLightPacket lightData Lnet/minecraft/network/protocol/game/ClientboundLightUpdatePacketData;
+mutable field net/minecraft/network/protocol/game/ClientboundLevelChunkWithLightPacket lightData Lnet/minecraft/network/protocol/game/ClientboundLightUpdatePacketData;
+
 # Entity
 accessible field net/minecraft/network/syncher/SynchedEntityData itemsById [Lnet/minecraft/network/syncher/SynchedEntityData$DataItem;
 
@@ -61,7 +64,11 @@ accessible class net/minecraft/world/level/chunk/PalettedContainer$Data
 accessible method net/minecraft/server/MinecraftServer haveTime ()Z
 extendable method net/minecraft/server/MinecraftServer haveTime ()Z
 
+accessible method net/minecraft/server/MinecraftServer synchronizeTime (Lnet/minecraft/server/level/ServerLevel;)V
+extendable method net/minecraft/server/MinecraftServer synchronizeTime (Lnet/minecraft/server/level/ServerLevel;)V
+
 accessible class net/minecraft/server/level/ThreadedLevelLightEngine$TaskType
+accessible field net/minecraft/server/network/PlayerChunkSender pendingChunks Lit/unimi/dsi/fastutil/longs/LongSet;
 
 # Packets
 accessible field net/minecraft/network/protocol/game/ClientboundPlayerInfoUpdatePacket entries Ljava/util/List;
@@ -74,11 +81,39 @@ mutable field net/minecraft/network/protocol/game/ClientboundAddEntityPacket dat
 accessible field net/minecraft/network/protocol/game/ClientboundAddEntityPacket id I
 mutable field net/minecraft/network/protocol/game/ClientboundAddEntityPacket id I
 
+accessible field net/minecraft/network/protocol/game/ClientboundLevelChunkPacketData blockEntitiesData Ljava/util/List;
+accessible class net/minecraft/network/protocol/game/ClientboundLevelChunkPacketData$BlockEntityInfo
+accessible field net/minecraft/network/protocol/game/ClientboundLevelChunkPacketData$BlockEntityInfo packedXZ I
+accessible field net/minecraft/network/protocol/game/ClientboundLevelChunkPacketData$BlockEntityInfo y I
+accessible field net/minecraft/network/protocol/game/ClientboundLevelChunkPacketData$BlockEntityInfo type Lnet/minecraft/world/level/block/entity/BlockEntityType;
+accessible field net/minecraft/network/protocol/game/ClientboundLevelChunkPacketData$BlockEntityInfo tag Lnet/minecraft/nbt/CompoundTag;
+accessible field net/minecraft/network/protocol/game/ClientboundLevelChunkPacketData buffer [B
+
 # Replay UI
+accessible field net/minecraft/client/gui/screens/Screen renderables Ljava/util/List;
 accessible field net/minecraft/client/KeyMapping key Lcom/mojang/blaze3d/platform/InputConstants$Key;
 
 accessible method net/minecraft/client/particle/ParticleEngine clearParticles ()V
 
+accessible field com/mojang/blaze3d/platform/Window width I
+accessible field com/mojang/blaze3d/platform/Window height I
+
 # Exporting
 accessible field net/minecraft/client/Minecraft clientTickCount J
-accessible field net/minecraft/client/Minecraft timer Lnet/minecraft/client/Timer;
+accessible field net/minecraft/client/Minecraft timer Lnet/minecraft/client/DeltaTracker$Timer;
+accessible field net/minecraft/client/DeltaTracker$Timer deltaTicks F
+accessible field net/minecraft/client/DeltaTracker$Timer realtimeDeltaTicks F
+accessible field net/minecraft/client/DeltaTracker$Timer deltaTickResidual F
+accessible field net/minecraft/client/DeltaTracker$Timer pausedDeltaTickResidual F
+accessible field com/mojang/blaze3d/platform/NativeImage pixels J
+accessible field com/mojang/blaze3d/platform/NativeImage size J
+accessible method net/minecraft/client/player/AbstractClientPlayer getPlayerInfo ()Lnet/minecraft/client/multiplayer/PlayerInfo;
+accessible field net/minecraft/client/renderer/LevelRenderer visibleSections Lit/unimi/dsi/fastutil/objects/ObjectArrayList;
+accessible field net/minecraft/client/renderer/LevelRenderer sectionOcclusionGraph Lnet/minecraft/client/renderer/SectionOcclusionGraph;
+accessible field net/minecraft/client/renderer/SectionOcclusionGraph fullUpdateTask Ljava/util/concurrent/Future;
+accessible field net/minecraft/client/renderer/SectionOcclusionGraph needsFullUpdate Z
+accessible field com/mojang/blaze3d/platform/Window framebufferWidth I
+accessible field com/mojang/blaze3d/platform/Window framebufferHeight I
+accessible field com/mojang/blaze3d/pipeline/RenderTarget colorTextureId I
+accessible field net/minecraft/client/Minecraft mainRenderTarget Lcom/mojang/blaze3d/pipeline/RenderTarget;
+mutable field net/minecraft/client/Minecraft mainRenderTarget Lcom/mojang/blaze3d/pipeline/RenderTarget;

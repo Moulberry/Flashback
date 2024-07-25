@@ -1,10 +1,54 @@
 {
-	"required": true,
-	"package": "com.moulberry.flashback.mixin",
-	"compatibilityLevel": "JAVA_21",
-	"mixins": [
-	],
-	"injectors": {
-		"defaultRequire": 1
-	}
+  "required": true,
+  "package": "com.moulberry.flashback.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "client": [
+    "MixinDebugScreenOverlay",
+    "MixinLevelRenderer",
+    "MixinMinecraft",
+    "MixinMouseHandler",
+    "MixinRenderTarget",
+    "MixinWindow",
+    "packet_fix.MixinBossHealthOverlay",
+    "playback.MixinArmorStandRenderer",
+    "playback.MixinClientCommonPacketListenerImpl",
+    "playback.MixinGameRenderer",
+    "playback.MixinItemInHandRenderer",
+    "record.MixinClientConfigurationPacketListenerImpl",
+    "ui.MixinPauseScreen",
+    "ui.MixinTitleScreen",
+    "visuals.MixinBossHealthOverlay",
+    "visuals.MixinClientLevelData",
+    "visuals.MixinEntityRenderDispatcher",
+    "visuals.MixinFogRenderer",
+    "visuals.MixinGui",
+    "visuals.MixinLoadingOverlay",
+    "visuals.MixinOptions"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  },
+  "mixins": [
+    "MixinThreadedLevelLightEngine",
+    "compat.MixinAxiomEditorUI",
+    "compat.MixinSodiumWorldRenderer",
+    "playback.MixinEntity",
+    "playback.MixinLevelChunkSection",
+    "playback.MixinLivingEntity",
+    "playback.MixinPlayerChunkSender",
+    "playback.MixinScoreboard",
+    "playback.MixinTickRateManager",
+    "record.MixinConnection",
+    "record.MixinFFmpegFrameRecorder",
+    "replay_server.MixinChunkGenerators",
+    "replay_server.MixinChunkStatusTasks",
+    "replay_server.MixinPersistentEntitySectionManager",
+    "replay_server.MixinPlayerList",
+    "replay_server.MixinServerChunkCache",
+    "replay_server.MixinServerConfigurationPacketListenerImpl",
+    "replay_server.MixinServerEntity",
+    "replay_server.MixinServerGamePacketListenerImpl",
+    "replay_server.MixinServerLoginPacketListenerImpl",
+    "replay_server.MixinTickRateManager"
+  ]
 }
