@@ -2,15 +2,18 @@ package com.moulberry.flashback.exporting;
 
 import com.mojang.blaze3d.pipeline.MainTarget;
 import com.mojang.blaze3d.platform.NativeImage;
+import org.jetbrains.annotations.Nullable;
 import org.lwjgl.opengl.GL30C;
 import org.lwjgl.system.MemoryUtil;
 
 import java.nio.ByteBuffer;
+import java.nio.FloatBuffer;
 
 public class SaveableFramebuffer implements AutoCloseable {
 
     private MainTarget framebuffer;
     private int pboId;
+    public @Nullable FloatBuffer audioBuffer;
 
     private boolean isDownloading = false;
 

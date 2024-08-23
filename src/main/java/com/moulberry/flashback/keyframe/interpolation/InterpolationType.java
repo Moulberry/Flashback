@@ -11,6 +11,8 @@ public enum InterpolationType {
     EASE_IN_OUT(SidedInterpolationType.EASE, SidedInterpolationType.EASE),
     HOLD(SidedInterpolationType.HOLD, SidedInterpolationType.HOLD);
 
+    public static InterpolationType DEFAULT = SMOOTH;
+
     public static final InterpolationType[] INTERPOLATION_TYPES = values();
 
     public static String[] NAMES = new String[] {

@@ -4,7 +4,9 @@ import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.platform.TextureUtil;
 import com.mojang.blaze3d.platform.Window;
 import com.moulberry.flashback.Flashback;
-import com.moulberry.flashback.ReplayVisuals;
+import com.moulberry.flashback.editor.ui.windows.ExportQueueWindow;
+import com.moulberry.flashback.state.EditorState;
+import com.moulberry.flashback.state.EditorStateManager;
 import com.moulberry.flashback.combo_options.Sizing;
 import com.moulberry.flashback.editor.ui.windows.MainMenuBar;
 import com.moulberry.flashback.editor.ui.windows.StartExportWindow;
@@ -21,11 +23,9 @@ import net.minecraft.client.gui.screens.ProgressScreen;
 import net.minecraft.client.gui.screens.ReceivingLevelScreen;
 import net.minecraft.client.multiplayer.MultiPlayerGameMode;
 import net.minecraft.client.player.LocalPlayer;
-import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.commands.arguments.EntityAnchorArgument;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.ProjectileUtil;
 import net.minecraft.world.level.ClipContext;
@@ -54,10 +54,10 @@ public class ReplayUI {
     private static boolean initialized = false;
 
     private static boolean isFrameHovered = false;
-    private static int frameX = 0;
-    private static int frameY = 0;
-    private static int frameWidth = 1;
-    private static int frameHeight = 1;
+    public static int frameX = 0;
+    public static int frameY = 0;
+    public static int frameWidth = 1;
+    public static int frameHeight = 1;
     private static boolean activeLastFrame = false;
 
     public static Matrix4f lastProjectionMatrix = null;
@@ -84,7 +84,7 @@ public class ReplayUI {
     private static boolean popupOpenLastFrame = false;
 
     private static String infoOverlayText = null;
-    private static long infoOverlayStartMillis = 0;
+    private static long infoOverlayEndMillis = 0;
 
     private static int selectedEntity = Integer.MIN_VALUE;
     private static boolean openSelectedEntityPopup = false;
@@ -105,6 +105,14 @@ public class ReplayUI {
             try {
                 Files.writeString(path, ReplayUIDefaults.LAYOUT);
             } catch(IOException ignored) {}
+        } else {
+            try {
+                String imguiIni = Files.readString(path);
+                if (imguiIni.contains("[Window][Timeline]")) {
+                    imguiIni = imguiIni.replace("[Window][Timeline]", "[Window][###Timeline]");
+                    Files.writeString(path, imguiIni);
+                }
+            } catch (IOException ignored) {}
         }
 
         long oldImGuiContext = ImGui.getCurrentContext().ptr;
@@ -305,7 +313,12 @@ public class ReplayUI {
 
     public static void setInfoOverlay(String text) {
         infoOverlayText = text;
-        infoOverlayStartMillis = System.currentTimeMillis();
+        infoOverlayEndMillis = System.currentTimeMillis() + 5000;
+    }
+
+    public synchronized static void setInfoOverlayShort(String text) {
+        infoOverlayText = text;
+        infoOverlayEndMillis = System.currentTimeMillis() + 1000;
     }
 
     public static void setupMainViewport() {
@@ -380,6 +393,11 @@ public class ReplayUI {
 
     public static boolean isActive() {
         return activeLastFrame;
+    }
+
+    public static boolean shouldModifyViewport() {
+        EditorState editorState = EditorStateManager.getCurrent();
+        return isActive() && editorState != null && editorState.replayVisuals.sizing != Sizing.UNDERLAY;
     }
 
     private static void transitionActiveState(boolean active) {
@@ -538,12 +556,15 @@ public class ReplayUI {
             frameWidth = (int) Math.max(1, maxX - minX);
             frameHeight = (int) Math.max(1, maxY - minY);
 
-            if (ReplayVisuals.sizing == Sizing.KEEP_ASPECT_RATIO || ReplayVisuals.sizing == Sizing.CHANGE_ASPECT_RATIO) {
+            EditorState editorState = EditorStateManager.getCurrent();
+            Sizing sizing = editorState == null ? Sizing.KEEP_ASPECT_RATIO : editorState.replayVisuals.sizing;
+
+            if (sizing == Sizing.KEEP_ASPECT_RATIO || sizing == Sizing.CHANGE_ASPECT_RATIO) {
                 float aspectRatio;
-                if (ReplayVisuals.sizing == Sizing.KEEP_ASPECT_RATIO) {
+                if (sizing == Sizing.KEEP_ASPECT_RATIO) {
                     aspectRatio = ImGui.getMainViewport().getSizeX() / ImGui.getMainViewport().getSizeY();
                 } else {
-                    aspectRatio = ReplayVisuals.changeAspectRatio.aspectRatio();
+                    aspectRatio = editorState.replayVisuals.changeAspectRatio.aspectRatio();
                 }
 
                 float currentAspectRatio = frameWidth / (float) frameHeight;
@@ -561,8 +582,9 @@ public class ReplayUI {
 
             if (infoOverlayText != null) {
                 long currentMillis = System.currentTimeMillis();
-                if (currentMillis < infoOverlayStartMillis || currentMillis > infoOverlayStartMillis + 5000) {
+                if (currentMillis < infoOverlayEndMillis - 30000 || currentMillis > infoOverlayEndMillis) {
                     infoOverlayText = null;
+                    infoOverlayEndMillis = 0;
                 } else {
                     ImGui.setNextWindowPos(frameX + frameWidth*0.5f, frameY + frameHeight*0.75f, ImGuiCond.Always, 0.5f, 0.5f);
                     ImGui.setNextWindowSizeConstraints(0, 0, 550, frameHeight*0.45f);
@@ -583,7 +605,7 @@ public class ReplayUI {
                 }
             }
 
-            if (ReplayVisuals.sizing == Sizing.UNDERLAY) {
+            if (sizing == Sizing.UNDERLAY) {
                 frameX = 0;
                 frameY = 0;
                 frameWidth = Minecraft.getInstance().getWindow().getScreenWidth();
@@ -594,27 +616,33 @@ public class ReplayUI {
                 Minecraft.getInstance().resizeDisplay();
             }
 
-            if (ReplayVisuals.ruleOfThirdsGuide) {
-                ImDrawList drawList = ImGui.getForegroundDrawList();
-                drawList.addLine(frameX + frameWidth/3, frameY, frameX + frameWidth/3, frameY+frameHeight, -1, 2);
-                drawList.addLine(frameX + frameWidth*2/3, frameY, frameX + frameWidth*2/3, frameY+frameHeight, -1, 2);
-                drawList.addLine(frameX, frameY + frameHeight/3, frameX + frameWidth, frameY + frameHeight/3, -1, 2);
-                drawList.addLine(frameX, frameY + frameHeight*2/3, frameX + frameWidth, frameY + frameHeight*2/3, -1, 2);
-            }
+            if (Minecraft.getInstance().screen == null && Minecraft.getInstance().getOverlay() == null) {
+                if (editorState != null && editorState.replayVisuals.ruleOfThirdsGuide) {
+                    ImDrawList drawList = ImGui.getBackgroundDrawList();
+                    drawList.removeImDrawListFlags(ImDrawListFlags.AntiAliasedLines);
+                    drawList.addLine(frameX + frameWidth/3, frameY, frameX + frameWidth/3, frameY+frameHeight, 0xAAFFFFFF, 2);
+                    drawList.addLine(frameX + frameWidth*2/3, frameY, frameX + frameWidth*2/3, frameY+frameHeight, 0xAAFFFFFF, 2);
+                    drawList.addLine(frameX, frameY + frameHeight/3, frameX + frameWidth, frameY + frameHeight/3, 0xAAFFFFFF, 2);
+                    drawList.addLine(frameX, frameY + frameHeight*2/3, frameX + frameWidth, frameY + frameHeight*2/3, 0xAAFFFFFF, 2);
+                    drawList.addImDrawListFlags(ImDrawListFlags.AntiAliasedLines);
+                }
 
-            if (ReplayVisuals.centerGuide) {
-                ImDrawList drawList = ImGui.getForegroundDrawList();
-                drawList.addLine(frameX + frameWidth/2, frameY, frameX + frameWidth/2, frameY+frameHeight, -1, 2);
-                drawList.addLine(frameX, frameY + frameHeight/2, frameX + frameWidth, frameY + frameHeight/2, -1, 2);
+                if (editorState != null && editorState.replayVisuals.centerGuide) {
+                    ImDrawList drawList = ImGui.getBackgroundDrawList();
+                    drawList.removeImDrawListFlags(ImDrawListFlags.AntiAliasedLines);
+                    drawList.addLine(frameX + frameWidth/2, frameY, frameX + frameWidth/2, frameY+frameHeight, 0xAAFFFFFF, 2);
+                    drawList.addLine(frameX, frameY + frameHeight/2, frameX + frameWidth, frameY + frameHeight/2, 0xAAFFFFFF, 2);
+                    drawList.addImDrawListFlags(ImDrawListFlags.AntiAliasedLines);
+                }
             }
 
             if (selectedEntity != Integer.MIN_VALUE) {
                 Entity entity = Minecraft.getInstance().level.getEntity(selectedEntity);
                 if (entity == null) {
                     selectedEntity = Integer.MIN_VALUE;
-                } else if (entity instanceof Player && !ReplayVisuals.renderPlayers) {
+                } else if (entity instanceof Player && editorState != null && !editorState.replayVisuals.renderPlayers) {
                     selectedEntity = Integer.MIN_VALUE;
-                } else if (!(entity instanceof Player) && !ReplayVisuals.renderEntities) {
+                } else if (!(entity instanceof Player) && editorState != null && !editorState.replayVisuals.renderEntities) {
                     selectedEntity = Integer.MIN_VALUE;
                 } else {
                     if (openSelectedEntityPopup) {
@@ -629,10 +657,10 @@ public class ReplayUI {
                         if (ImGui.button("Look At")) {
                             Minecraft.getInstance().cameraEntity.lookAt(EntityAnchorArgument.Anchor.EYES, entity.getEyePosition());
                         }
-                        // todo: need to remember spectate target when a snapshot is played
-//                        if (ImGui.button("Spectate")) {
-//                            Minecraft.getInstance().player.connection.sendUnsignedCommand("spectate " + entity.getUUID());
-//                        }
+                        if (ImGui.button("Spectate")) {
+                            Minecraft.getInstance().player.connection.sendUnsignedCommand("spectate " + entity.getUUID());
+                            ImGui.closeCurrentPopup();
+                        }
 //                        ImGui.sameLine();
 //                        ImGui.button("Track Entity");
 //
@@ -676,7 +704,7 @@ public class ReplayUI {
                         if (wheelY != 0) {
                             final float defaultFlyingSpeed = 0.05f;
                             float flyingSpeed = Mth.clamp(player.getAbilities().getFlyingSpeed() + (float)wheelY * defaultFlyingSpeed / 10f,
-                                    defaultFlyingSpeed / 10f, defaultFlyingSpeed * 5.0f);
+                                    defaultFlyingSpeed / 10f, defaultFlyingSpeed * 10.0f);
                             setInfoOverlay(String.format("Flying Speed: %.1f", flyingSpeed / defaultFlyingSpeed));
                             player.getAbilities().setFlyingSpeed(flyingSpeed);
                         }
@@ -693,6 +721,7 @@ public class ReplayUI {
         VisualsWindow.render();
         TimelineWindow.render();
         StartExportWindow.render();
+        ExportQueueWindow.render();
 
         popupOpenLastFrame = ImGui.isPopupOpen("", ImGuiPopupFlags.AnyPopup);
 
@@ -824,7 +853,9 @@ public class ReplayUI {
         BlockHitResult blockResult = null;
         EntityHitResult entityResult = null;
 
-        if (ReplayVisuals.renderBlocks) {
+        EditorState editorState = EditorStateManager.getCurrent();
+
+        if (editorState == null || editorState.replayVisuals.renderBlocks) {
             ClipContext clipContext = new ClipContext(from, to, ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, CollisionContext.empty());
             blockResult = Minecraft.getInstance().level.clip(clipContext);
 
@@ -833,16 +864,16 @@ public class ReplayUI {
             }
         }
 
-        if (ReplayVisuals.renderEntities || ReplayVisuals.renderPlayers) {
+        if (editorState == null || editorState.replayVisuals.renderEntities || editorState.replayVisuals.renderPlayers) {
             AABB boundingBox = new AABB(from.subtract(0.5f, 0.5f, 0.5f), from.add(0.5f, 0.5f, 0.5f));
             boundingBox = boundingBox.expandTowards(look.scale(distance));
 
             Predicate<Entity> predicate;
-            if (ReplayVisuals.renderEntities && ReplayVisuals.renderPlayers) {
+            if (editorState.replayVisuals.renderEntities && editorState.replayVisuals.renderPlayers) {
                 predicate = entity -> true;
-            } else if (ReplayVisuals.renderPlayers) {
+            } else if (editorState.replayVisuals.renderPlayers) {
                 predicate = entity -> entity instanceof Player;
-            } else if (ReplayVisuals.renderEntities) {
+            } else if (editorState.replayVisuals.renderEntities) {
                 predicate = entity -> !(entity instanceof Player);
             } else {
                 throw new IllegalStateException();

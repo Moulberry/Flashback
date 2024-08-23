@@ -10,18 +10,18 @@ import org.lwjgl.glfw.GLFW;
 public class ReplayUIDefaults {
 
     public static final String LAYOUT = """
-            [Window][Timeline]
+            [Window][###Timeline]
             Pos=0,830
             Size=1920,250
             Collapsed=0
             DockId=0x00000002,0
-            
+
             [Window][Visuals]
             Pos=1670,0
             Size=250,830
             Collapsed=0
             DockId=0x00000004,0
-            
+
             [Docking][Data]
             DockSpace     ID=0x8B93E3BD Window=0xA787BDB4 Pos=0,22 Size=1920,1080 Split=Y Selected=0x1F1A625A
               DockNode    ID=0x00000001 Parent=0x8B93E3BD SizeRef=1920,830 Split=X Selected=0x1F1A625A

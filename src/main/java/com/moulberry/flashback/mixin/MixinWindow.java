@@ -2,13 +2,14 @@ package com.moulberry.flashback.mixin;
 
 import com.mojang.blaze3d.platform.Window;
 import com.moulberry.flashback.Flashback;
-import com.moulberry.flashback.ReplayVisuals;
+import com.moulberry.flashback.visuals.ReplayVisuals;
 import com.moulberry.flashback.combo_options.Sizing;
 import com.moulberry.flashback.editor.ui.ReplayUI;
 import org.lwjgl.glfw.GLFW;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -36,12 +37,22 @@ public abstract class MixinWindow {
     @Final
     private long window;
 
+    @Unique
+    private float calculateWidthScaleFactor() {
+        return Math.max(1/8f, Math.min(8f, (float) this.framebufferWidth / this.width));
+    }
+
+    @Unique
+    private float calculateHeightScaleFactor() {
+        return Math.max(1/8f, Math.min(8f, (float) this.framebufferHeight / this.height));
+    }
+
     @Inject(method = "getWidth", at=@At("HEAD"), cancellable = true)
     public void getWidth(CallbackInfoReturnable<Integer> cir) {
         if (Flashback.EXPORT_JOB != null && Flashback.EXPORT_JOB.shouldChangeFramebufferSize()) {
             cir.setReturnValue(Flashback.EXPORT_JOB.getWidth());
-        } else if (ReplayUI.isActive() && ReplayVisuals.sizing != Sizing.UNDERLAY) {
-            cir.setReturnValue(ReplayUI.getNewGameWidth((float) this.framebufferWidth / this.width));
+        } else if (ReplayUI.shouldModifyViewport()) {
+            cir.setReturnValue(ReplayUI.getNewGameWidth(this.calculateWidthScaleFactor()));
         }
     }
 
@@ -49,33 +60,22 @@ public abstract class MixinWindow {
     public void getHeight(CallbackInfoReturnable<Integer> cir) {
         if (Flashback.EXPORT_JOB != null && Flashback.EXPORT_JOB.shouldChangeFramebufferSize()) {
             cir.setReturnValue(Flashback.EXPORT_JOB.getHeight());
-        } else if (ReplayUI.isActive() && ReplayVisuals.sizing != Sizing.UNDERLAY) {
-            cir.setReturnValue(ReplayUI.getNewGameHeight((float) this.framebufferHeight / this.height));
+        } else if (ReplayUI.shouldModifyViewport()) {
+            cir.setReturnValue(ReplayUI.getNewGameHeight(this.calculateHeightScaleFactor()));
         }
     }
 
     @Inject(method = "getScreenWidth", at=@At("HEAD"), cancellable = true)
     public void getScreenWidth(CallbackInfoReturnable<Integer> cir) {
-        if (ReplayUI.isActive() && ReplayVisuals.sizing != Sizing.UNDERLAY) {
+        if (ReplayUI.shouldModifyViewport()) {
             cir.setReturnValue(ReplayUI.getNewGameWidth(1));
         }
     }
 
     @Inject(method = "getScreenHeight", at=@At("HEAD"), cancellable = true)
     public void getScreenHeight(CallbackInfoReturnable<Integer> cir) {
-        if (ReplayUI.isActive() && ReplayVisuals.sizing != Sizing.UNDERLAY) {
+        if (ReplayUI.shouldModifyViewport()) {
             cir.setReturnValue(ReplayUI.getNewGameHeight(1));
-        }
-    }
-
-    @Inject(method = "onFramebufferResize", at=@At(value = "INVOKE", target = "Lcom/mojang/blaze3d/platform/WindowEventHandler;resizeDisplay()V", shift = At.Shift.BEFORE))
-    public void onFramebufferResize(long l, int i, int j, CallbackInfo ci) {
-        int[] widthB = new int[1];
-        int[] heightB = new int[1];
-        GLFW.glfwGetWindowSize(this.window, widthB, heightB);
-        if (widthB[0] > 0 && heightB[0] > 0) {
-            this.width = widthB[0];
-            this.height = heightB[0];
         }
     }
 
@@ -83,15 +83,6 @@ public abstract class MixinWindow {
     public void onResize(long l, int i, int j, CallbackInfo ci) {
         if (l != this.window) {
             ci.cancel();
-            return;
-        }
-
-        int[] widthB = new int[1];
-        int[] heightB = new int[1];
-        GLFW.glfwGetFramebufferSize(this.window, widthB, heightB);
-        if (widthB[0] > 0 && heightB[0] > 0) {
-            this.framebufferWidth = widthB[0];
-            this.framebufferHeight = heightB[0];
         }
     }
 
@@ -109,9 +100,9 @@ public abstract class MixinWindow {
                 j++;
             }
             cir.setReturnValue(j);
-        } else if (ReplayUI.isActive() && ReplayVisuals.sizing != Sizing.UNDERLAY) {
-            int fbw = ReplayUI.getNewGameWidth((float) this.framebufferWidth / this.width);
-            int fbh = ReplayUI.getNewGameHeight((float) this.framebufferHeight / this.height);
+        } else if (ReplayUI.shouldModifyViewport()) {
+            int fbw = ReplayUI.getNewGameWidth(this.calculateWidthScaleFactor());
+            int fbh = ReplayUI.getNewGameHeight(this.calculateHeightScaleFactor());
 
             int j = 1;
             while (j != scale && j < fbw && j < fbh && fbw / (j + 1) >= 320 && fbh / (j + 1) >= 240) {
@@ -137,9 +128,9 @@ public abstract class MixinWindow {
             this.guiScaledHeight = (double)fbh / d > (double)j ? j + 1 : j;
 
             ci.cancel();
-        } else if (ReplayUI.isActive() && ReplayVisuals.sizing != Sizing.UNDERLAY) {
-            int fbw = ReplayUI.getNewGameWidth((float) this.framebufferWidth / this.width);
-            int fbh = ReplayUI.getNewGameHeight((float) this.framebufferHeight / this.height);
+        } else if (ReplayUI.shouldModifyViewport()) {
+            int fbw = ReplayUI.getNewGameWidth(this.calculateWidthScaleFactor());
+            int fbh = ReplayUI.getNewGameHeight(this.calculateHeightScaleFactor());
 
             this.guiScale = d;
             int i = (int)((double)fbw / d);

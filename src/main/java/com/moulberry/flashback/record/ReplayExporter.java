@@ -9,6 +9,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.io.BufferedOutputStream;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -20,7 +21,7 @@ public class ReplayExporter {
 
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 
-    public static void export(Path recordFolder, Path outputFile) {
+    public static void export(Path recordFolder, Path outputFile, @Nullable String name) {
         Flashback.LOGGER.info("Exporting {} to {}", recordFolder, outputFile);
 
         FlashbackMeta meta = tryReadMeta(recordFolder.resolve("metadata.json"));
@@ -30,6 +31,10 @@ public class ReplayExporter {
         if (meta == null) {
             Flashback.LOGGER.error("Cannot export, both metadata files are invalid");
             return;
+        }
+
+        if (name != null) {
+            meta.name = name;
         }
 
         // Validate
@@ -46,6 +51,12 @@ public class ReplayExporter {
         if (meta.chunks.isEmpty()) {
             Flashback.LOGGER.error("Cannot export, no chunk files exist");
             return;
+        }
+
+        try {
+            Files.createDirectories(outputFile.getParent());
+        } catch (IOException e) {
+            Flashback.LOGGER.error("Unable to create parent directories", e);
         }
 
         try {

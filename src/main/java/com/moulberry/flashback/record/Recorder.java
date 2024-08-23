@@ -10,11 +10,13 @@ import com.moulberry.flashback.action.*;
 import com.moulberry.flashback.io.AsyncReplaySaver;
 import com.moulberry.flashback.io.ReplayWriter;
 import io.netty.buffer.ByteBuf;
+import net.minecraft.SharedConstants;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.Screenshot;
 import net.minecraft.client.gui.components.BossHealthOverlay;
 import net.minecraft.client.gui.components.LerpingBossEvent;
 import net.minecraft.client.gui.components.PlayerTabOverlay;
+import net.minecraft.client.gui.screens.ReceivingLevelScreen;
 import net.minecraft.client.multiplayer.ClientChunkCache;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.multiplayer.ClientPacketListener;
@@ -56,11 +58,10 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.GameRules;
 import net.minecraft.world.level.GameType;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.border.WorldBorder;
 import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.scores.*;
-import org.apache.commons.io.FileUtils;
-import org.jetbrains.annotations.Nullable;
 
 import java.nio.file.Path;
 import java.util.*;
@@ -106,6 +107,7 @@ public class Recorder {
     private boolean isConfiguring = false;
     private boolean finishedConfiguration = false;
     private boolean finishedPausing = false;
+    private ResourceKey<Level> lastDimensionType = null;
 
     private volatile boolean needsInitialSnapshot = true;
     private volatile boolean closeForWriting = false;
@@ -116,6 +118,10 @@ public class Recorder {
         this.asyncReplaySaver = new AsyncReplaySaver(registryAccess);
         this.configurationPacketCodec = ConfigurationProtocols.CLIENTBOUND.codec();
         this.gamePacketCodec = GameProtocols.CLIENTBOUND_TEMPLATE.bind(RegistryFriendlyByteBuf.decorator(registryAccess)).codec();
+
+        this.metadata.dataVersion = SharedConstants.getCurrentVersion().getDataVersion().getVersion();
+        this.metadata.protocolVersion = SharedConstants.getProtocolVersion();
+        this.metadata.versionString = SharedConstants.VERSION_STRING;
     }
 
     public void setRegistryAccess(RegistryAccess registryAccess) {
@@ -155,29 +161,42 @@ public class Recorder {
 
         this.finishedConfiguration |= this.flushPackets();
 
-        if (Minecraft.getInstance().level != null && Minecraft.getInstance().getOverlay() == null && !Minecraft.getInstance().isPaused() && !this.isPaused) {
+        Minecraft minecraft = Minecraft.getInstance();
+
+        boolean isLevelLoaded = !(Minecraft.getInstance().screen instanceof ReceivingLevelScreen);
+        boolean changedDimensions = false;
+
+        if (minecraft.level != null && (minecraft.getOverlay() == null || !minecraft.getOverlay().isPauseScreen()) &&
+                !minecraft.isPaused() && !this.isPaused && isLevelLoaded) {
             this.writeEntityPositions();
             this.writeLocalData();
+
             this.asyncReplaySaver.submit(writer -> writer.startAndFinishAction(ActionNextTick.INSTANCE));
             this.writtenTicksInChunk += 1;
             this.writtenTicks += 1;
 
-            if (!this.hasTakenScreenshot) {
-                Minecraft minecraft = Minecraft.getInstance();
-                if (minecraft.levelRenderer.countRenderedSections() > 10 && minecraft.levelRenderer.hasRenderedAllSections()) {
-                    NativeImage nativeImage = Screenshot.takeScreenshot(minecraft.getMainRenderTarget());
-                    this.asyncReplaySaver.writeIcon(nativeImage);
-                    this.hasTakenScreenshot = true;
-                }
+            if (!this.hasTakenScreenshot && ((this.writtenTicks >= 20 && minecraft.screen == null) || close)) {
+                NativeImage nativeImage = Screenshot.takeScreenshot(minecraft.getMainRenderTarget());
+                this.asyncReplaySaver.writeIcon(nativeImage);
+                this.hasTakenScreenshot = true;
+            }
+
+            // Write chunk after changing dimensions
+            ResourceKey<Level> dimension = minecraft.level.dimension();
+            if (this.lastDimensionType == null) {
+                this.lastDimensionType = dimension;
+            } else if (this.lastDimensionType != dimension) {
+                this.lastDimensionType = dimension;
+                changedDimensions = true;
             }
         }
 
         this.finishedPausing |= this.wasPaused && !this.isPaused;
 
         boolean writeChunk = close;
-        if (Minecraft.getInstance().level != null) {
+        if (minecraft.level != null) {
             boolean finished = this.finishedConfiguration || this.finishedPausing;
-            writeChunk |= this.writtenTicksInChunk >= CHUNK_LENGTH_SECONDS*20 || finished;
+            writeChunk |= this.writtenTicksInChunk >= CHUNK_LENGTH_SECONDS*20 || finished || changedDimensions;
         }
 
         if (writeChunk) {
@@ -214,6 +233,9 @@ public class Recorder {
 
             this.finishedPausing = false;
             this.finishedConfiguration = false;
+            if (minecraft.level != null) {
+                this.lastDimensionType = minecraft.level.dimension();
+            }
         }
 
         if (!this.isPaused) {
@@ -229,17 +251,8 @@ public class Recorder {
         this.isPaused = paused;
     }
 
-    public void finish(@Nullable Path outputFile) {
-        Path recordFolder = this.asyncReplaySaver.finish();
-        if (outputFile != null) {
-            ReplayExporter.export(recordFolder, outputFile);
-        } else {
-            try {
-                FileUtils.deleteDirectory(recordFolder.toFile());
-            } catch (Exception e) {
-                Flashback.LOGGER.error("Exception deleting record folder", e);
-            }
-        }
+    public Path finish() {
+        return this.asyncReplaySaver.finish();
     }
 
     private void writeLocalData() {
@@ -337,13 +350,18 @@ public class Recorder {
         List<IdWithPosition> changedPositions = new ArrayList<>();
 
         for (Entity entity : level.entitiesForRendering()) {
+            if (PacketHelper.shouldIgnoreEntity(entity)) {
+                continue;
+            }
+
             Position position;
             if (entity instanceof LivingEntity livingEntity) {
                 double lerpHeadRot = livingEntity.lerpHeadSteps > 0 ? livingEntity.lerpYHeadRot : livingEntity.getYHeadRot();
                 position = new Position(livingEntity.lerpTargetX(), entity.lerpTargetY(), entity.lerpTargetZ(),
                     entity.lerpTargetYRot(), entity.lerpTargetXRot(), (float) lerpHeadRot, entity.onGround());
             } else {
-                position = new Position(entity.getX(), entity.getY(), entity.getZ(),
+                var trackingPosition = entity.trackingPosition();
+                position = new Position(trackingPosition.x, trackingPosition.y, trackingPosition.z,
                     entity.getYRot(), entity.getXRot(), entity.getYHeadRot(), entity.onGround());
             }
             Position lastPosition = this.lastPositions.get(entity);
@@ -428,6 +446,14 @@ public class Recorder {
         }
 
         return endedConfiguration;
+    }
+
+    public void writeLevelEvent(int type, BlockPos blockPos, int data, boolean globalEvent) {
+        if (this.closeForWriting || this.needsInitialSnapshot || this.wasPaused) {
+            return;
+        }
+
+        this.pendingPackets.add(new PacketWithPhase(new ClientboundLevelEventPacket(type, blockPos, data, globalEvent), ConnectionProtocol.PLAY));
     }
 
     public void writePacketAsync(Packet<?> packet, ConnectionProtocol phase) {
@@ -522,7 +548,7 @@ public class Recorder {
 
         // Login packet
         CommonPlayerSpawnInfo commonPlayerSpawnInfo = new CommonPlayerSpawnInfo(level.dimensionTypeRegistration(), level.dimension(), 0,
-            gameMode.getPlayerMode(), gameMode.getPreviousPlayerMode(), level.isDebug(), false, Optional.empty(), 0);
+            gameMode.getPlayerMode(), gameMode.getPreviousPlayerMode(), level.isDebug(), level.getLevelData().isFlat, Optional.empty(), 0);
         var loginPacket = new ClientboundLoginPacket(localPlayer.getId(), level.getLevelData().isHardcore(), connection.levels(),
             1, Minecraft.getInstance().options.getEffectiveRenderDistance(), level.getServerSimulationDistance(),
             localPlayer.isReducedDebugInfo(), localPlayer.shouldShowDeathScreen(), localPlayer.getDoLimitedCrafting(), commonPlayerSpawnInfo, false);
@@ -671,6 +697,10 @@ public class Recorder {
 
         // Entity data
         for (Entity entity : level.entitiesForRendering()) {
+            if (PacketHelper.shouldIgnoreEntity(entity)) {
+                continue;
+            }
+
             if (!(entity instanceof LocalPlayer)) {
                 gamePackets.add(PacketHelper.createAddEntity(entity));
             }

@@ -11,7 +11,7 @@ import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.locks.ReentrantLock;
 
-public class EditorStateCache {
+public class EditorStateManager {
 
     private static long AUTOSAVE_INTERVAL_MILLIS = 30 * 1000; // 30 seconds
 
@@ -106,6 +106,12 @@ public class EditorStateCache {
 
     @Nullable
     public static EditorState getCurrent() {
+        if (Flashback.isExporting()) {
+            return Flashback.EXPORT_JOB.getSettings().editorState();
+        }
+        if (!Flashback.isInReplay()) {
+            return null;
+        }
         return current;
     }
 
@@ -133,8 +139,8 @@ public class EditorStateCache {
         if (old) {
             filename += ".old";
         }
-        return Flashback.getConfigDirectory()
-                .resolve("replay_states")
+        return Flashback.getDataDirectory()
+                .resolve("editor_states")
                 .resolve(filename);
     }
 

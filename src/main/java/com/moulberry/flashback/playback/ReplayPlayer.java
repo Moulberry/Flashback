@@ -9,9 +9,11 @@ import net.minecraft.stats.Stat;
 import net.minecraft.world.item.crafting.RecipeHolder;
 
 import java.util.Collection;
+import java.util.UUID;
 
 public class ReplayPlayer extends ServerPlayer {
     public boolean followLocalPlayerNextTick = false;
+    public UUID spectatingUuid = null;
 
     public ReplayPlayer(MinecraftServer minecraftServer, ServerLevel serverLevel, GameProfile gameProfile, ClientInformation clientInformation) {
         super(minecraftServer, serverLevel, gameProfile, clientInformation);

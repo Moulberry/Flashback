@@ -2,40 +2,63 @@ package com.moulberry.flashback.keyframe.impl;
 
 import com.google.gson.*;
 import com.moulberry.flashback.Interpolation;
-import com.moulberry.flashback.ReplayVisuals;
 import com.moulberry.flashback.keyframe.Keyframe;
-import com.moulberry.flashback.playback.ReplayServer;
+import com.moulberry.flashback.keyframe.handler.KeyframeHandler;
+import com.moulberry.flashback.keyframe.interpolation.InterpolationType;
 import com.moulberry.flashback.spline.CatmullRom;
+import imgui.ImGui;
 
 import java.lang.reflect.Type;
+import java.util.function.Consumer;
 
-public class TickrateKeyframe extends Keyframe<ReplayServer> {
+public class TickrateKeyframe extends Keyframe {
 
     private float tickrate;
 
     public TickrateKeyframe(float tickrate) {
-        super(ReplayServer.class);
+        this(tickrate, InterpolationType.DEFAULT);
+    }
+
+    public TickrateKeyframe(float tickrate, InterpolationType interpolationType) {
         this.tickrate = tickrate;
+        this.interpolationType(interpolationType);
     }
 
     @Override
-    public void apply(ReplayServer replayServer) {
-        replayServer.desiredTickRate = this.tickrate;
+    public Keyframe copy() {
+        return new TickrateKeyframe(this.tickrate, this.interpolationType());
     }
 
     @Override
-    public void applyInterpolated(ReplayServer replayServer, Keyframe otherGeneric, float amount) {
+    public void renderEditKeyframe(Consumer<Consumer<Keyframe>> update) {
+        ImGui.setNextItemWidth(160);
+        float[] input = new float[]{this.tickrate/20f};
+        if (ImGui.sliderFloat("Speed", input, 0.1f, 10.0f)) {
+            float tickrate = input[0]*20f;
+            if (this.tickrate != tickrate) {
+                update.accept(keyframe -> ((TickrateKeyframe)keyframe).tickrate = tickrate);
+            }
+        }
+    }
+
+    @Override
+    public void apply(KeyframeHandler keyframeHandler) {
+        keyframeHandler.applyTickrate(this.tickrate);
+    }
+
+    @Override
+    public void applyInterpolated(KeyframeHandler keyframeHandler, Keyframe otherGeneric, float amount) {
         if (!(otherGeneric instanceof TickrateKeyframe other)) {
-            this.apply(replayServer);
+            this.apply(keyframeHandler);
             return;
         }
 
         float tickrate = Interpolation.linear(this.tickrate, other.tickrate, amount);
-        replayServer.desiredTickRate = tickrate;
+        keyframeHandler.applyTickrate(tickrate);
     }
 
     @Override
-    public void applyInterpolatedSmooth(ReplayServer replayServer, Keyframe p1, Keyframe p2, Keyframe p3, float t0, float t1, float t2, float t3, float amount, float lerpAmount, boolean lerpFromRight) {
+    public void applyInterpolatedSmooth(KeyframeHandler keyframeHandler, Keyframe p1, Keyframe p2, Keyframe p3, float t0, float t1, float t2, float t3, float amount, float lerpAmount, boolean lerpFromRight) {
         float time1 = t1 - t0;
         float time2 = t2 - t0;
         float time3 = t3 - t0;
@@ -54,7 +77,7 @@ public class TickrateKeyframe extends Keyframe<ReplayServer> {
             }
         }
 
-        replayServer.desiredTickRate = tickrate;
+        keyframeHandler.applyTickrate(tickrate);
     }
 
     public static class TypeAdapter implements JsonSerializer<TickrateKeyframe>, JsonDeserializer<TickrateKeyframe> {
@@ -62,13 +85,16 @@ public class TickrateKeyframe extends Keyframe<ReplayServer> {
         public TickrateKeyframe deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) throws JsonParseException {
             JsonObject jsonObject = json.getAsJsonObject();
             float tickrate = jsonObject.get("tickrate").getAsFloat();
-            return new TickrateKeyframe(tickrate);
+            InterpolationType interpolationType = context.deserialize(jsonObject.get("interpolation_type"), InterpolationType.class);
+            return new TickrateKeyframe(tickrate, interpolationType);
         }
 
         @Override
         public JsonElement serialize(TickrateKeyframe src, Type typeOfSrc, JsonSerializationContext context) {
             JsonObject jsonObject = new JsonObject();
             jsonObject.addProperty("tickrate", src.tickrate);
+            jsonObject.addProperty("type", "tickrate");
+            jsonObject.add("interpolation_type", context.serialize(src.interpolationType()));
             return jsonObject;
         }
     }

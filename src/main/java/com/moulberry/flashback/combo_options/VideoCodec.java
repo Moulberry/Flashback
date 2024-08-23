@@ -1,17 +1,20 @@
 package com.moulberry.flashback.combo_options;
 
-import com.moulberry.flashback.Flashback;
-import it.unimi.dsi.fastutil.ints.IntArrayList;
-import it.unimi.dsi.fastutil.ints.IntList;
+import com.moulberry.flashback.exporting.PixelFormatHelper;
 import org.bytedeco.ffmpeg.avcodec.AVCodec;
+import org.bytedeco.ffmpeg.avcodec.AVCodecContext;
 import org.bytedeco.ffmpeg.avcodec.AVCodecHWConfig;
+import org.bytedeco.ffmpeg.avutil.AVDictionary;
+import org.bytedeco.ffmpeg.avutil.AVRational;
 import org.bytedeco.ffmpeg.global.avcodec;
 import org.bytedeco.ffmpeg.global.avutil;
-import org.bytedeco.javacpp.BytePointer;
-import org.bytedeco.javacpp.IntPointer;
 import org.bytedeco.javacpp.Pointer;
 
 import java.util.*;
+
+import static org.bytedeco.ffmpeg.global.avcodec.*;
+import static org.bytedeco.ffmpeg.global.avutil.*;
+import static org.bytedeco.ffmpeg.global.avutil.av_find_nearest_q_idx;
 
 public enum VideoCodec implements ComboOption {
 
@@ -50,9 +53,20 @@ public enum VideoCodec implements ComboOption {
             try (Pointer pointer = new Pointer()) {
                 while (true) {
                     try (AVCodec codec = avcodec.av_codec_iterate(pointer)) {
-                        if (codec == null) {
-                            break;
-                        } else if (codec.id() == this.codecId && avcodec.av_codec_is_encoder(codec) != 0) {
+                        try {
+                            if (codec == null) {
+                                break;
+                            }
+                            if (codec.id() != this.codecId) {
+                                continue;
+                            }
+                            if (avcodec.av_codec_is_encoder(codec) == 0) {
+                                continue;
+                            }
+                            if (!doesEncoderWork(codec)) {
+                                continue;
+                            }
+
                             int capabilities = codec.capabilities();
                             String name = codec.name().getString();
 
@@ -64,6 +78,10 @@ public enum VideoCodec implements ComboOption {
                                 encodersAvoid.add(name);
                             } else {
                                 encodersSoftware.add(name);
+                            }
+                        } finally {
+                            if (codec != null) {
+                                codec.close();
                             }
                         }
                     }
@@ -82,12 +100,58 @@ public enum VideoCodec implements ComboOption {
         return this.encoders;
     }
 
+    private static boolean doesEncoderWork(AVCodec codec) {
+        AVCodecContext codecContext = null;
+        AVDictionary options = new AVDictionary(null);
+
+        try {
+            if ((codecContext = avcodec.avcodec_alloc_context3(codec)) == null) {
+                return false;
+            }
+
+            // Setup dummy parameters
+            codecContext.codec_id(codec.id());
+            codecContext.codec_type(AVMEDIA_TYPE_VIDEO);
+            codecContext.bit_rate(400000);
+            codecContext.width(1920);
+            codecContext.height(1080);
+
+            AVRational frameRate = av_d2q(60.0, 1001000);
+            AVRational supportedFramerates = codec.supported_framerates();
+            if (supportedFramerates != null) {
+                int idx = av_find_nearest_q_idx(frameRate, supportedFramerates);
+                frameRate = supportedFramerates.position(idx);
+            }
+
+            AVRational time_base = av_inv_q(frameRate);
+            codecContext.time_base(time_base);
+
+            int pixelFormat = PixelFormatHelper.getBestPixelFormat(codec.name().getString());
+            codecContext.pix_fmt(pixelFormat);
+
+            if ((codec.capabilities() & AV_CODEC_CAP_EXPERIMENTAL) != 0) {
+                codecContext.strict_std_compliance(FF_COMPLIANCE_EXPERIMENTAL);
+            }
+
+            return avcodec.avcodec_open2(codecContext, codec, options) >= 0;
+        } finally {
+            if (codecContext != null) {
+                avcodec.avcodec_close(codecContext);
+                codecContext.close();
+            }
+            avutil.av_dict_free(options);
+        }
+
+    }
+
     private static boolean codecHasHwConfig(AVCodec codec) {
         try (AVCodecHWConfig config = avcodec.avcodec_get_hw_config(codec, 0)) {
-            return config != null;
-        } catch (Throwable t) {
-            return false;
-        }
+            if (config != null) {
+                config.close();
+                return true;
+            }
+        } catch (Exception ignored) {}
+        return false;
     }
 
 }

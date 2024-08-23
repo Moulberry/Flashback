@@ -1,6 +1,7 @@
 package com.moulberry.flashback.mixin.playback;
 
 import com.moulberry.flashback.Flashback;
+import com.moulberry.flashback.playback.ReplayPlayer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.server.ServerTickRateManager;
 import net.minecraft.world.TickRateManager;
@@ -10,6 +11,7 @@ import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(TickRateManager.class)
@@ -18,16 +20,34 @@ public abstract class MixinTickRateManager {
     @Shadow
     public abstract boolean runsNormally();
 
+    @Shadow
+    protected boolean runGameElements;
+
+    /*
+     * Freeze the replay server, preventing game elements from running normally
+     */
+
+    @Inject(method = "tick", at = @At("RETURN"))
+    public void tick(CallbackInfo ci) {
+        if (Flashback.isInReplay() && this.isServerTickRateManager) {
+            this.runGameElements = false;
+        }
+    }
+
     @Unique
-    private final boolean isClientTickRateManager = !((Object)this instanceof ServerTickRateManager);
+    private final boolean isServerTickRateManager = ((Object)this instanceof ServerTickRateManager);
 
     @Inject(method = "isEntityFrozen", at = @At("HEAD"), cancellable = true)
     public void isEntityFrozen(Entity entity, CallbackInfoReturnable<Boolean> cir) {
-        if (this.isClientTickRateManager && Flashback.isInReplay()) {
-            if (Flashback.EXPORT_JOB != null && Flashback.EXPORT_JOB.isRunning()) {
-                cir.setReturnValue(false);
+        if (Flashback.isInReplay()) {
+            if (this.isServerTickRateManager) {
+                cir.setReturnValue(!(entity instanceof ReplayPlayer));
             } else {
-                cir.setReturnValue(!this.runsNormally() || entity == Minecraft.getInstance().player);
+                if (Flashback.isExporting()) {
+                    cir.setReturnValue(false);
+                } else {
+                    cir.setReturnValue(!this.runsNormally() || entity == Minecraft.getInstance().player);
+                }
             }
         }
     }

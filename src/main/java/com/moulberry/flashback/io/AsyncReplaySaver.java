@@ -44,7 +44,7 @@ import java.util.function.Consumer;
 
 public class AsyncReplaySaver {
 
-    private final ArrayBlockingQueue<Consumer<ReplayWriter>> tasks = new ArrayBlockingQueue<>(256);
+    private final ArrayBlockingQueue<Consumer<ReplayWriter>> tasks = new ArrayBlockingQueue<>(1024);
     private final AtomicReference<Throwable> error = new AtomicReference<>(null);
     private final AtomicBoolean shouldStop = new AtomicBoolean(false);
     private final AtomicBoolean hasStopped = new AtomicBoolean(false);

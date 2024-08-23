@@ -2,41 +2,55 @@ package com.moulberry.flashback.editor.ui.windows;
 
 import com.mojang.blaze3d.platform.Window;
 import com.moulberry.flashback.Flashback;
+import com.moulberry.flashback.combo_options.AudioCodec;
 import com.moulberry.flashback.combo_options.VideoCodec;
 import com.moulberry.flashback.combo_options.VideoContainer;
-import com.moulberry.flashback.combo_options.VideoPreset;
+import com.moulberry.flashback.compat.IrisApiWrapper;
+import com.moulberry.flashback.exporting.ExportJobQueue;
 import com.moulberry.flashback.state.EditorState;
-import com.moulberry.flashback.state.EditorStateCache;
+import com.moulberry.flashback.state.EditorStateManager;
 import com.moulberry.flashback.editor.ui.ImGuiHelper;
 import com.moulberry.flashback.exporting.AsyncFileDialogs;
 import com.moulberry.flashback.exporting.ExportJob;
 import com.moulberry.flashback.exporting.ExportSettings;
 import com.moulberry.flashback.playback.ReplayServer;
 import imgui.ImGui;
+import imgui.flag.ImGuiPopupFlags;
 import imgui.flag.ImGuiWindowFlags;
 import imgui.type.ImFloat;
 import imgui.type.ImString;
 import net.fabricmc.loader.api.FabricLoader;
+import net.irisshaders.iris.api.v0.IrisApi;
+import net.minecraft.FileUtil;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.player.LocalPlayer;
+import org.jetbrains.annotations.Nullable;
 
 import java.nio.file.Path;
-import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 public class StartExportWindow {
 
     private static boolean open = false;
+    private static boolean close = false;
 
     private static final int[] lastFramebufferSize = new int[]{0, 0};
 
     private static final int[] resolution = new int[]{1920, 1080};
     private static final int[] startEndTick = new int[]{0, 100};
     private static final ImFloat framerate = new ImFloat(60);
+    private static boolean resetRng = false;
+
     private static VideoContainer container = VideoContainer.MP4;
-    private static VideoCodec codec = VideoCodec.H264;
-    private static VideoPreset preset = VideoPreset.MEDIUM;
-    private static int[] selectedEncoder = new int[]{0};
+    private static VideoCodec videoCodec = VideoCodec.H264;
+    private static int[] selectedVideoEncoder = new int[]{0};
     private static boolean useMaximumBitrate = false;
     private static final ImString bitrate = ImGuiHelper.createResizableImString("20m");
+
+    private static boolean recordAudio = false;
+    private static AudioCodec audioCodec = AudioCodec.AAC;
+
+    private static final ImString jobName = ImGuiHelper.createResizableImString("");
 
     static {
         bitrate.inputData.allowedChars = "0123456789kmb";
@@ -60,17 +74,34 @@ public class StartExportWindow {
         }
 
         if (ImGuiHelper.beginPopupModalCloseable("Export to video###StartExport", ImGuiWindowFlags.AlwaysAutoResize)) {
+            if (close) {
+                close = false;
+                ImGui.closeCurrentPopup();
+                ImGuiHelper.endPopupModalCloseable();
+                return;
+            }
+
             ImGuiHelper.separatorWithText("Capture Options");
 
             ImGui.inputInt2("Resolution", resolution);
+            if (resolution[0] < 16) resolution[0] = 16;
+            if (resolution[1] < 16) resolution[1] = 16;
+            if (resolution[0] % 2 != 0) resolution[0] += 1;
+            if (resolution[1] % 2 != 0) resolution[1] += 1;
+
             if (ImGui.inputInt2("Start/end tick", startEndTick)) {
-                EditorState editorState = EditorStateCache.getCurrent();
+                EditorState editorState = EditorStateManager.getCurrent();
                 ReplayServer replayServer = Flashback.getReplayServer();
                 if (editorState != null && replayServer != null) {
                     editorState.setExportTicks(startEndTick[0], startEndTick[1], replayServer.getTotalReplayTicks());
                 }
             }
             ImGui.inputFloat("Framerate", framerate);
+
+            if (ImGui.checkbox("Reset RNG", resetRng)) {
+                resetRng = !resetRng;
+            }
+            ImGuiHelper.tooltip("Attempts to remove randomness from the replay in order to produce more consistent outputs when recording the same scene multiple times");
 
             ImGuiHelper.separatorWithText("Video Options");
 
@@ -79,42 +110,28 @@ public class StartExportWindow {
                 container = newContainer;
 
                 boolean supported = false;
-                for (VideoCodec supportedCodec : container.getSupportedCodecs()) {
-                    if (codec == supportedCodec) {
+                for (VideoCodec supportedCodec : container.getSupportedVideoCodecs()) {
+                    if (videoCodec == supportedCodec) {
                         supported = true;
                         break;
                     }
                 }
 
                 if (!supported) {
-                    codec = container.getSupportedCodecs()[0];
+                    videoCodec = container.getSupportedVideoCodecs()[0];
                 }
             }
 
-            VideoCodec newCodec = ImGuiHelper.enumCombo("Codec", codec, container.getSupportedCodecs());
-            if (newCodec != codec) {
-                codec = newCodec;
-                selectedEncoder[0] = 0;
+            VideoCodec newCodec = ImGuiHelper.enumCombo("Codec", videoCodec, container.getSupportedVideoCodecs());
+            if (newCodec != videoCodec) {
+                videoCodec = newCodec;
+                selectedVideoEncoder[0] = 0;
             }
 
-            String[] encoders = codec.getEncoders();
+            String[] encoders = videoCodec.getEncoders();
             if (encoders.length > 1) {
-                ImGuiHelper.combo("Encoder", selectedEncoder, encoders);
+                ImGuiHelper.combo("Encoder", selectedVideoEncoder, encoders);
             }
-
-//            VideoPreset newPreset = ImGuiHelper.enumCombo("Preset", preset);
-//            if (newPreset != preset) {
-//                preset = newPreset;
-//
-//                useMaximumBitrate = false;
-//                if (preset.ordinal() <= VideoPreset.SUPERFAST.ordinal()) {
-//                    bitrate.set("5m");
-//                } else if (preset.ordinal() <= VideoPreset.MEDIUM.ordinal()) {
-//                    bitrate.set("10m");
-//                } else {
-//                    bitrate.set("20m");
-//                }
-//            }
 
             if (ImGui.checkbox("Use Maximum Bitrate", useMaximumBitrate)) {
                 useMaximumBitrate = !useMaximumBitrate;
@@ -127,43 +144,121 @@ public class StartExportWindow {
                 }
             }
 
-            if (ImGui.button("Begin")) {
-                int numBitrate;
-                if (useMaximumBitrate) {
-                    numBitrate = 0;
-                } else {
-                    numBitrate = stringToBitrate(ImGuiHelper.getString(bitrate));
+            AudioCodec[] supportedAudioCodecs = container.getSupportedAudioCodecs();
+            if (supportedAudioCodecs.length > 0) {
+                ImGuiHelper.separatorWithText("Audio Options");
+
+                if (ImGui.checkbox("Record Audio", recordAudio)) {
+                    recordAudio = !recordAudio;
                 }
 
-                String encoder = codec.getEncoders()[selectedEncoder[0]];
+                if (recordAudio) {
+                    AudioCodec newAudioCodec = ImGuiHelper.enumCombo("Audio Codec", audioCodec, supportedAudioCodecs);
+                    if (newAudioCodec != audioCodec) {
+                        audioCodec = newAudioCodec;
+                    }
+                }
+            } else {
+                recordAudio = false;
+            }
 
-                Path defaultExportPath = FabricLoader.getInstance().getGameDir();
-                String defaultExportPathString = defaultExportPath.toString();
-                AsyncFileDialogs.saveFileDialog(defaultExportPathString, "output." + container.extension(),
-                        container.extension(), container.extension()).thenAccept(pathStr -> {
-                    if (pathStr != null) {
-                        int start = Math.max(0, startEndTick[0]);
-                        int end = Math.max(start, startEndTick[1]);
+            ImGui.dummy(0, 10);
 
-                        ReplayServer replayServer = Flashback.getReplayServer();
-                        if (replayServer != null) {
-                            int totalTicks = replayServer.getTotalReplayTicks();
-                            start = Math.min(start, totalTicks);
-                            end = Math.min(end, totalTicks);
-                        }
-
-                        Path path = Path.of(pathStr);
-                        ExportSettings settings = new ExportSettings(resolution[0], resolution[1], start, end,
-                                Math.max(1, framerate.get()), container, codec, encoder, numBitrate, path);
+            float buttonSize = (ImGui.getContentRegionAvailX() - ImGui.getStyle().getItemSpacingX()) / 2f;
+            if (ImGui.button("Start Export", buttonSize, 25)) {
+                createExportSettings(null).thenAccept(settings -> {
+                    if (settings != null) {
+                        close = true;
                         Flashback.EXPORT_JOB = new ExportJob(settings);
                     }
                 });
+            }
+            ImGui.sameLine();
+            if (ImGui.button("Add to Queue", buttonSize, 25)) {
+                jobName.set("Job #" + (ExportJobQueue.count()+1));
+                ImGui.openPopup("QueuedJobName");
+            }
 
-                ImGui.closeCurrentPopup();
+            if (ImGui.beginPopup("QueuedJobName")) {
+                ImGui.setNextItemWidth(100);
+                ImGui.inputText("Job Name", jobName);
+
+                if (ImGui.button("Queue Job")) {
+                    createExportSettings(ImGuiHelper.getString(jobName)).thenAccept(settings -> {
+                        if (settings != null) {
+                            close = true;
+                            ExportJobQueue.queuedJobs.add(settings);
+                        }
+                    });
+                }
+                ImGui.sameLine();
+                if (ImGui.button("Back")) {
+                    ImGui.closeCurrentPopup();
+                }
+                ImGui.endPopup();
             }
 
             ImGuiHelper.endPopupModalCloseable();
         }
+
+        close = false;
+    }
+
+    private static CompletableFuture<ExportSettings> createExportSettings(@Nullable String name) {
+        int numBitrate;
+        if (useMaximumBitrate) {
+            numBitrate = 0;
+        } else {
+            numBitrate = stringToBitrate(ImGuiHelper.getString(bitrate));
+        }
+
+        String encoder = videoCodec.getEncoders()[selectedVideoEncoder[0]];
+
+        Path defaultExportPath = FabricLoader.getInstance().getGameDir();
+
+        String defaultName = null;
+        if (name != null) {
+            try {
+                defaultName = FileUtil.findAvailableName(defaultExportPath, name, "." + container.extension());
+            } catch (Exception ignored) {}
+        }
+        if (defaultName == null) {
+            defaultName = "output." + container.extension();
+        }
+
+        String defaultExportPathString = defaultExportPath.toString();
+        return AsyncFileDialogs.saveFileDialog(defaultExportPathString, defaultName,
+            container.extension(), container.extension()).thenApply(pathStr -> {
+            if (pathStr != null) {
+                int start = Math.max(0, startEndTick[0]);
+                int end = Math.max(start, startEndTick[1]);
+
+                ReplayServer replayServer = Flashback.getReplayServer();
+                if (replayServer != null) {
+                    int totalTicks = replayServer.getTotalReplayTicks();
+                    start = Math.min(start, totalTicks);
+                    end = Math.min(end, totalTicks);
+                }
+
+                EditorState editorState = EditorStateManager.getCurrent();
+                if (editorState == null) {
+                    return null;
+                }
+
+                LocalPlayer player = Minecraft.getInstance().player;
+                if (player == null) {
+                    return null;
+                }
+
+                Path path = Path.of(pathStr);
+                return new ExportSettings(name, editorState.copy(),
+                    player.position(), player.getYRot(), player.getXRot(),
+                    resolution[0], resolution[1], start, end,
+                    Math.max(1, framerate.get()), resetRng, container, videoCodec, encoder, numBitrate, recordAudio, path);
+            }
+
+            return null;
+        });
     }
 
     private static int stringToBitrate(String string) {
@@ -210,7 +305,7 @@ public class StartExportWindow {
     public static void open() {
         open = true;
 
-        EditorState editorState = EditorStateCache.getCurrent();
+        EditorState editorState = EditorStateManager.getCurrent();
 
         if (editorState != null && editorState.exportStartTicks >= 0) {
             startEndTick[0] = editorState.exportStartTicks;

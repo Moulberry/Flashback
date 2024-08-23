@@ -4,15 +4,16 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 import org.jetbrains.annotations.Nullable;
 
 public class SelectReplayScreen extends Screen {
 
     protected final Screen lastScreen;
-    private Button deleteButton;
     private Button selectButton;
     private Button editButton;
+    private Button deleteButton;
     protected EditBox searchBox;
     private ReplaySelectionList list;
 
@@ -26,14 +27,16 @@ public class SelectReplayScreen extends Screen {
         this.searchBox = new EditBox(this.font, this.width / 2 - 100, 22, 200, 20, this.searchBox, Component.translatable("selectWorld.search"));
         this.searchBox.setResponder(string -> this.list.updateFilter(string));
         this.addWidget(this.searchBox);
-         this.list = this.addRenderableWidget(new ReplaySelectionList(this, this.minecraft,
+        this.list = this.addRenderableWidget(new ReplaySelectionList(this, this.minecraft,
                  this.width, this.height - 112, 48, 36, this.searchBox.getValue(), this.list));
         this.selectButton = this.addRenderableWidget(Button.builder(Component.translatable("flashback.select_replay.open"), this::tryOpenReplay)
-                .bounds(this.width / 2 - 150, this.height - 52, 300, 20).build());
+                .bounds(this.width / 2 - 154, this.height - 52, 308, 20).build());
         this.editButton = this.addRenderableWidget(Button.builder(Component.translatable("selectWorld.edit"), this::tryEditReplay)
-                .bounds(this.width / 2 - 150, this.height - 28, 146, 20).build());
+                .bounds(this.width / 2 - 154, this.height - 28, 150, 20).build());
         this.deleteButton = this.addRenderableWidget(Button.builder(Component.translatable("selectWorld.delete"), this::tryDeleteReplay)
-                .bounds(this.width / 2 + 4, this.height - 28, 146, 20).build());
+                                                           .bounds(this.width / 2 + 4, this.height - 28, 72, 20).build());
+        this.addRenderableWidget(Button.builder(CommonComponents.GUI_BACK, button -> this.minecraft.setScreen(this.lastScreen))
+                                                           .bounds(this.width / 2 + 82, this.height - 28, 72, 20).build());
         this.updateButtonStatus(null);
     }
 

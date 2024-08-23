@@ -3,28 +3,56 @@
  */
 package com.moulberry.flashback.screen;
 
-import com.moulberry.flashback.editor.ui.windows.TimelineWindow;
 import com.moulberry.flashback.record.FlashbackMeta;
+import net.minecraft.SharedConstants;
+import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.util.FormattedCharSequence;
 import org.jetbrains.annotations.Nullable;
 
 import java.nio.file.Path;
+import java.util.List;
 
 public class ReplaySummary implements Comparable<ReplaySummary> {
     private final Path path;
     private final FlashbackMeta metadata;
     private final String replayId;
-    private final long lastOpened;
+    private final long lastModified;
     private final byte[] iconBytes;
     private Component info = null;
+    private Component hoverInfo = null;
+    private boolean canOpen = true;
+    private boolean hasWarning = false;
 
-    public ReplaySummary(Path path, FlashbackMeta metadata, String replayId, long lastOpened, @Nullable byte[] iconBytes) {
+    public ReplaySummary(Path path, FlashbackMeta metadata, String replayId, long lastModified, @Nullable byte[] iconBytes) {
         this.path = path;
         this.metadata = metadata;
         this.replayId = replayId;
-        this.lastOpened = lastOpened;
+        this.lastModified = lastModified;
         this.iconBytes = iconBytes;
+
+        if (metadata.protocolVersion != 0 && metadata.protocolVersion != SharedConstants.getProtocolVersion()) {
+            this.canOpen = false;
+
+            if (metadata.versionString != null && !metadata.versionString.equals(SharedConstants.VERSION_STRING)) {
+                this.hoverInfo = Component.literal("Unable to open replay\nReplay was created in " + metadata.versionString +
+                    " and is incompatible with " + SharedConstants.VERSION_STRING);
+            } else {
+                this.hoverInfo = Component.literal("Unable to open replay\nReplay was created with protocol version " + metadata.protocolVersion +
+                    " and is incompatible with " + SharedConstants.getProtocolVersion());
+            }
+        } else if (metadata.dataVersion != 0 && metadata.dataVersion != SharedConstants.getCurrentVersion().getDataVersion().getVersion()) {
+            this.hasWarning = true;
+
+            if (metadata.versionString != null && !metadata.versionString.equals(SharedConstants.VERSION_STRING)) {
+                this.hoverInfo = Component.literal("Important Warning\nReplay was created in " + metadata.versionString +
+                    " and may fail to load in " + SharedConstants.VERSION_STRING);
+            } else {
+                this.hoverInfo = Component.literal("Important Warning\nReplay was created with data version " + metadata.dataVersion +
+                    " and may fail to load with " + SharedConstants.getCurrentVersion().getDataVersion().getVersion());
+            }
+        }
     }
 
     public Path getPath() {
@@ -35,12 +63,16 @@ public class ReplaySummary implements Comparable<ReplaySummary> {
         return this.replayId;
     }
 
+    public FlashbackMeta getReplayMetadata() {
+        return this.metadata;
+    }
+
     public String getReplayName() {
         return this.metadata.name.isEmpty() ? this.replayId : this.metadata.name;
     }
 
-    public long getLastPlayed() {
-        return this.lastOpened;
+    public long getLastModified() {
+        return this.lastModified;
     }
 
     public Component getInfo() {
@@ -68,6 +100,9 @@ public class ReplaySummary implements Comparable<ReplaySummary> {
                     }
                     builder.append(seconds).append('s');
                 }
+                if (builder.isEmpty()) {
+                    builder.append("0s");
+                }
 
                 mutable.append(Component.translatable("flashback.select_replay.duration", builder));
             }
@@ -81,16 +116,24 @@ public class ReplaySummary implements Comparable<ReplaySummary> {
         return this.iconBytes;
     }
 
+    public Component getHoverInfo() {
+        return this.hoverInfo;
+    }
+
+    public boolean hasWarning() {
+        return this.hasWarning;
+    }
+
     public boolean canOpen() {
-        return true;
+        return this.canOpen;
     }
 
     @Override
     public int compareTo(ReplaySummary levelSummary) {
-        if (this.getLastPlayed() < levelSummary.getLastPlayed()) {
+        if (this.getLastModified() < levelSummary.getLastModified()) {
             return 1;
         }
-        if (this.getLastPlayed() > levelSummary.getLastPlayed()) {
+        if (this.getLastModified() > levelSummary.getLastModified()) {
             return -1;
         }
         return this.replayId.compareTo(levelSummary.replayId);

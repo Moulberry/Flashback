@@ -1,7 +1,11 @@
 package com.moulberry.flashback.state;
 
+import com.moulberry.flashback.Flashback;
+import com.moulberry.flashback.editor.ui.ReplayUI;
 import com.moulberry.flashback.keyframe.Keyframe;
+import com.moulberry.flashback.keyframe.handler.KeyframeHandler;
 import com.moulberry.flashback.keyframe.KeyframeType;
+import com.moulberry.flashback.keyframe.impl.TimelapseKeyframe;
 import com.moulberry.flashback.keyframe.interpolation.SidedInterpolationType;
 
 import java.util.Map;
@@ -10,31 +14,39 @@ import java.util.TreeMap;
 public class KeyframeTrack {
 
     public final KeyframeType keyframeType;
-    public TreeMap<Integer, Keyframe<?>> keyframesByTick = new TreeMap<>();
+    public TreeMap<Integer, Keyframe> keyframesByTick = new TreeMap<>();
     public boolean enabled = true;
 
     public KeyframeTrack(KeyframeType keyframeType) {
         this.keyframeType = keyframeType;
     }
 
-    @SuppressWarnings("unchecked")
-    public <T> boolean tryApplyKeyframes(T t, float tick) {
+    public boolean tryApplyKeyframes(KeyframeHandler t, float tick) {
+        if (!t.supportedKeyframes().contains(this.keyframeType)) {
+            return false;
+        }
+
+        if (this.keyframeType == KeyframeType.TIMELAPSE) {
+            return this.tryApplyKeyframesTimelapse(t, tick);
+        }
+
         // Skip if empty
-        TreeMap<Integer, Keyframe<?>> keyframeTimes = this.keyframesByTick;
+        TreeMap<Integer, Keyframe> keyframeTimes = this.keyframesByTick;
         if (keyframeTimes.isEmpty()) {
             return false;
         }
 
-        Map.Entry<Integer, Keyframe<?>> lowerEntry = keyframeTimes.floorEntry((int) tick);
+        Map.Entry<Integer, Keyframe> lowerEntry = keyframeTimes.floorEntry((int) tick);
         if (lowerEntry == null) {
             return false;
         }
 
-        if (lowerEntry.getValue().operandClass != t.getClass()) {
-            return false;
-        }
+        Keyframe lowerKeyframe = lowerEntry.getValue();
 
-        Keyframe<T> lowerKeyframe = (Keyframe<T>) lowerEntry.getValue();
+        if (tick == lowerEntry.getKey()) {
+            lowerKeyframe.apply(t);
+            return true;
+        }
 
         SidedInterpolationType leftInterpolation = lowerEntry.getValue().interpolationType().rightSide;
 
@@ -45,8 +57,14 @@ public class KeyframeTrack {
         }
 
         // Get next entry, skip if tick is not between two keyframes
-        Map.Entry<Integer, Keyframe<?>> ceilEntry = keyframeTimes.ceilingEntry(lowerEntry.getKey() + 1);
+        Map.Entry<Integer, Keyframe> ceilEntry = keyframeTimes.ceilingEntry(lowerEntry.getKey() + 1);
         if (ceilEntry == null) {
+            if ((int) tick == lowerEntry.getKey()) {
+                lowerKeyframe.apply(t);
+                return true;
+            } else if (t.alwaysApplyLastKeyframe()) {
+                lowerKeyframe.apply(t);
+            }
             return false;
         }
 
@@ -61,12 +79,12 @@ public class KeyframeTrack {
                 rightInterpolation == SidedInterpolationType.SMOOTH;
 
         if (isUsingSmooth) {
-            Map.Entry<Integer, Keyframe<?>> beforeEntry = keyframeTimes.floorEntry(lowerEntry.getKey() - 1);
+            Map.Entry<Integer, Keyframe> beforeEntry = keyframeTimes.floorEntry(lowerEntry.getKey() - 1);
             if (beforeEntry == null) {
                 beforeEntry = lowerEntry;
             }
 
-            Map.Entry<Integer, Keyframe<?>> afterAfterEntry = keyframeTimes.ceilingEntry(ceilEntry.getKey() + 1);
+            Map.Entry<Integer, Keyframe> afterAfterEntry = keyframeTimes.ceilingEntry(ceilEntry.getKey() + 1);
             if (afterAfterEntry == null) {
                 afterAfterEntry = ceilEntry;
             }
@@ -84,7 +102,7 @@ public class KeyframeTrack {
                 lerpFromRight = false;
             }
 
-            ((Keyframe<T>)beforeEntry.getValue()).applyInterpolatedSmooth(t, lowerEntry.getValue(), ceilEntry.getValue(), afterAfterEntry.getValue(),
+            beforeEntry.getValue().applyInterpolatedSmooth(t, lowerEntry.getValue(), ceilEntry.getValue(), afterAfterEntry.getValue(),
                     beforeEntry.getKey(), lowerEntry.getKey(), ceilEntry.getKey(), afterAfterEntry.getKey(), amount, lerpAmount, lerpFromRight);
         } else {
             amount = SidedInterpolationType.interpolate(leftInterpolation, rightInterpolation, amount);
@@ -97,6 +115,39 @@ public class KeyframeTrack {
         }
 
         return true;
+    }
+
+    private boolean tryApplyKeyframesTimelapse(KeyframeHandler t, float tick) {
+        // Skip if empty
+        TreeMap<Integer, Keyframe> keyframeTimes = this.keyframesByTick;
+        if (keyframeTimes.isEmpty()) {
+            return false;
+        }
+
+        Map.Entry<Integer, Keyframe> lowerEntry = keyframeTimes.floorEntry((int) tick);
+        Map.Entry<Integer, Keyframe> ceilEntry = keyframeTimes.ceilingEntry(((int) tick) + 1);
+
+        if (ceilEntry == null && lowerEntry != null && lowerEntry.getKey() == (int) tick) {
+            ceilEntry = lowerEntry;
+            lowerEntry = keyframeTimes.floorEntry((int) tick - 1);
+        }
+
+        if (lowerEntry != null && ceilEntry != null) {
+            int lowerTicks = ((TimelapseKeyframe) lowerEntry.getValue()).ticks;
+            int ceilTicks = ((TimelapseKeyframe) ceilEntry.getValue()).ticks;
+
+            if (ceilTicks <= lowerTicks) {
+                ReplayUI.setInfoOverlayShort("Unable to timelapse. Right keyframe's time must be greater than left keyframe's time");
+                t.applyTickrate(20);
+            } else {
+                double tickrate = (double) (ceilEntry.getKey() - lowerEntry.getKey()) / (ceilTicks - lowerTicks) * 20;
+                t.applyTickrate((float) tickrate);
+            }
+
+            return true;
+        }
+
+        return false;
     }
 
 }

@@ -15,8 +15,7 @@ public class TempFolderProvider {
 
     public enum TempFolderType {
         SERVER("server"),
-        RECORDING("recording"),
-        PLAYBACK("playback");
+        RECORDING("recording");
 
         private final String id;
 
@@ -26,9 +25,7 @@ public class TempFolderProvider {
     }
 
     private static Path getSharedTempFolder() {
-        return FabricLoader.getInstance().getGameDir()
-                .resolve("flashback")
-                .resolve("temp");
+        return Flashback.getDataDirectory().resolve("temp");
     }
 
     public static void tryDeleteStaleFolders() {
@@ -126,7 +123,7 @@ public class TempFolderProvider {
         try {
             FileUtils.deleteDirectory(path.toFile());
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            Flashback.LOGGER.error("Failed to delete temp directory", e);
         }
 
         deleteDirectoryIfEmpty(path.getParent());

@@ -5,9 +5,12 @@ import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.mojang.authlib.yggdrasil.YggdrasilAuthenticationService;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.moulberry.flashback.Flashback;
-import com.moulberry.flashback.ReplayVisuals;
+import com.moulberry.flashback.configuration.FlashbackConfig;
+import com.moulberry.flashback.exporting.ExportJob;
+import com.moulberry.flashback.exporting.ExportJobQueue;
+import com.moulberry.flashback.keyframe.handler.MinecraftKeyframeHandler;
 import com.moulberry.flashback.state.EditorState;
-import com.moulberry.flashback.state.EditorStateCache;
+import com.moulberry.flashback.state.EditorStateManager;
 import com.moulberry.flashback.exporting.PerfectFrames;
 import com.moulberry.flashback.playback.ReplayServer;
 import com.moulberry.flashback.ext.MinecraftExt;
@@ -63,6 +66,8 @@ import java.time.Instant;
 import java.util.Queue;
 import java.util.UUID;
 import java.util.concurrent.Executor;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 @Mixin(Minecraft.class)
@@ -129,7 +134,9 @@ public abstract class MixinMinecraft implements MinecraftExt {
     @Final
     public ParticleEngine particleEngine;
 
-    @Shadow @Final public DeltaTracker.Timer timer;
+    @Shadow
+    @Nullable
+    public Entity cameraEntity;
 
     @Inject(method="<init>", at=@At("RETURN"))
     public void init(GameConfig gameConfig, CallbackInfo ci) {
@@ -145,7 +152,8 @@ public abstract class MixinMinecraft implements MinecraftExt {
 
     @Inject(method = "renderNames", at = @At("HEAD"), cancellable = true)
     private static void renderNames(CallbackInfoReturnable<Boolean> cir) {
-        if (!ReplayVisuals.renderNametags) {
+        EditorState editorState = EditorStateManager.getCurrent();
+        if (editorState != null && !editorState.replayVisuals.renderNametags) {
             cir.setReturnValue(false);
         }
     }
@@ -165,7 +173,7 @@ public abstract class MixinMinecraft implements MinecraftExt {
             Flashback.RECORDER.endTick(false);
         }
 
-        EditorStateCache.saveIfNeeded();
+        EditorStateManager.saveIfNeeded();
 
         ReplayServer replayServer = Flashback.getReplayServer();
 
@@ -173,63 +181,11 @@ public abstract class MixinMinecraft implements MinecraftExt {
         if (inReplay != inReplayLast) {
             inReplayLast = inReplay;
             if (inReplay) {
-                ReplayVisuals.setupReplay();
                 Minecraft.getInstance().options.hideGui = false;
             } else {
-                ReplayVisuals.disable();
-                EditorStateCache.reset();
+                EditorStateManager.reset();
             }
         }
-
-        if (inReplay && ReplayVisuals.forceEntityLerpTicks > 0) {
-            ReplayVisuals.forceEntityLerpTicks -= 1;
-            if (replayServer.replayPaused && this.level != null && !this.level.tickRateManager().runsNormally()) {
-                for (Entity entity : this.level.entitiesForRendering()) {
-                    if (entity == this.player) {
-                        continue;
-                    }
-                    if (entity instanceof LivingEntity livingEntity) {
-                        if (livingEntity.lerpSteps > 0) {
-                            livingEntity.lerpPositionAndRotationStep(livingEntity.lerpSteps, livingEntity.lerpTargetX(),
-                                livingEntity.lerpTargetY(), livingEntity.lerpTargetZ(), livingEntity.lerpTargetYRot(), livingEntity.lerpTargetXRot());
-                            --livingEntity.lerpSteps;
-                        }
-                        if (livingEntity.lerpHeadSteps > 0) {
-                            livingEntity.lerpHeadRotationStep(livingEntity.lerpHeadSteps, livingEntity.lerpYHeadRot);
-                            --livingEntity.lerpHeadSteps;
-                        }
-                        livingEntity.setOldPosAndRot();
-                        livingEntity.tickHeadTurn(livingEntity.yBodyRot, 0.0f);
-                    } else {
-                        entity.moveTo(entity.lerpTargetX(), entity.lerpTargetY(), entity.lerpTargetZ(),
-                            entity.lerpTargetYRot(), entity.lerpTargetXRot());
-                    }
-                    if (entity.isPassenger()) {
-                        entity.setDeltaMovement(Vec3.ZERO);
-                        entity.getVehicle().positionRider(entity);
-                    }
-                }
-            }
-        }
-    }
-
-    @Unique
-    private volatile boolean forceClientTick = false;
-
-    @Override
-    public void flashback$forceClientTick() {
-        this.forceClientTick = true;
-    }
-
-    @WrapOperation(method = "runTick", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/DeltaTracker$Timer;advanceTime(JZ)I"))
-    public int runTick_advanceTime(DeltaTracker.Timer instance, long l, boolean runTick, Operation<Integer> original) {
-        int ticks = original.call(instance, l, runTick);
-        if (this.forceClientTick) {
-            this.forceClientTick = false;
-            this.particleEngine.clearParticles();
-            return Math.max(1, ticks);
-        }
-        return ticks;
     }
 
     @Inject(method = "getTickTargetMillis", at = @At("HEAD"), cancellable = true)
@@ -249,8 +205,27 @@ public abstract class MixinMinecraft implements MinecraftExt {
     @Unique
     private final DeltaTracker.Timer localPlayerTimer = new DeltaTracker.Timer(20.0f, 0, FloatUnaryOperator.identity());
 
+    @Inject(method = "disconnect(Lnet/minecraft/client/gui/screens/Screen;Z)V", at = @At("HEAD"))
+    public void disconnect(Screen screen, boolean isTransferring, CallbackInfo ci) {
+        try {
+            if (Flashback.getConfig().automaticallyFinish && Flashback.RECORDER != null && !isTransferring) {
+                Flashback.finishRecordingReplay();
+            }
+        } catch (Exception e) {
+            Flashback.LOGGER.error("Failed to finish replay on disconnect", e);
+        }
+    }
+
     @Inject(method = "runTick", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/Minecraft;runAllTasks()V", shift = At.Shift.AFTER))
     public void runTick_runAllTasks(boolean runTick, CallbackInfo ci) {
+        if (ExportJobQueue.drainingQueue) {
+            if (ExportJobQueue.queuedJobs.isEmpty()) {
+                ExportJobQueue.drainingQueue = false;
+            } else if (Flashback.EXPORT_JOB == null) {
+                Flashback.EXPORT_JOB = new ExportJob(ExportJobQueue.queuedJobs.removeFirst());
+            }
+        }
+
         if (Flashback.EXPORT_JOB != null && !ReplayUI.isActive()) {
             try {
                 PerfectFrames.enable();
@@ -266,18 +241,26 @@ public abstract class MixinMinecraft implements MinecraftExt {
             if (this.level != null && this.player != null && !this.player.isPassenger() && !this.player.isRemoved()) {
                 localPlayerTicks = Math.min(10, localPlayerTicks);
                 for (int i = 0; i < localPlayerTicks; i++) {
-                    this.level.tickNonPassenger(this.player);
+                    this.level.guardEntityTick(this.level::tickNonPassenger, this.player);
                 }
             }
         }
     }
 
     @Override
-    public float flashback$getLocalPlayerPartialTick() {
-        if (Flashback.EXPORT_JOB != null && Flashback.EXPORT_JOB.isRunning()) {
-            return this.timer.getGameTimeDeltaPartialTick(true);
+    public float flashback$getLocalPlayerPartialTick(float originalPartialTick) {
+        if (Flashback.isExporting() || this.cameraEntity != this.player) {
+            return originalPartialTick;
         }
-        return localPlayerTimer.getGameTimeDeltaPartialTick(true);
+        return this.localPlayerTimer.getGameTimeDeltaPartialTick(true);
+    }
+
+    @Unique
+    private final AtomicBoolean applyKeyframes = new AtomicBoolean(false);
+
+    @Override
+    public void flashback$applyKeyframes() {
+        this.applyKeyframes.set(true);
     }
 
     @Inject(method = "runTick", at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/platform/Window;setErrorSection(Ljava/lang/String;)V", ordinal = 1), cancellable = true)
@@ -287,9 +270,10 @@ public abstract class MixinMinecraft implements MinecraftExt {
             return;
         }
 
-        if (!replayServer.replayPaused) {
-            EditorState editorState = EditorStateCache.get(replayServer.getMetadata().replayIdentifier);
-            editorState.applyKeyframes((Minecraft) (Object) this, replayServer.getPartialReplayTick());
+        boolean forceApplyKeyframes = this.applyKeyframes.compareAndSet(true, false);
+        if (!replayServer.replayPaused || forceApplyKeyframes) {
+            EditorState editorState = EditorStateManager.get(replayServer.getMetadata().replayIdentifier);
+            editorState.applyKeyframes(new MinecraftKeyframeHandler((Minecraft) (Object) this), replayServer.getPartialReplayTick());
         }
         if (!replayServer.doClientRendering()) {
             ci.cancel();

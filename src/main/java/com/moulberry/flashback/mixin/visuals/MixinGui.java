@@ -1,6 +1,8 @@
 package com.moulberry.flashback.mixin.visuals;
 
-import com.moulberry.flashback.ReplayVisuals;
+import com.moulberry.flashback.Flashback;
+import com.moulberry.flashback.state.EditorState;
+import com.moulberry.flashback.state.EditorStateManager;
 import com.moulberry.flashback.editor.ui.CustomImGuiImplGlfw;
 import com.moulberry.flashback.editor.ui.ReplayUI;
 import net.minecraft.client.DeltaTracker;
@@ -18,28 +20,32 @@ public class MixinGui {
 
     @Inject(method = "renderChat", at = @At("HEAD"), cancellable = true)
     public void renderChat(GuiGraphics guiGraphics, DeltaTracker deltaTracker, CallbackInfo ci) {
-        if (!ReplayVisuals.showChat) {
+        EditorState editorState = EditorStateManager.getCurrent();
+        if (editorState != null && !editorState.replayVisuals.showChat) {
             ci.cancel();
         }
     }
 
     @Inject(method = "renderTitle", at = @At("HEAD"), cancellable = true)
     public void renderTitle(GuiGraphics guiGraphics, DeltaTracker deltaTracker, CallbackInfo ci) {
-        if (!ReplayVisuals.showTitleText) {
+        EditorState editorState = EditorStateManager.getCurrent();
+        if (editorState != null && !editorState.replayVisuals.showTitleText) {
             ci.cancel();
         }
     }
 
     @Inject(method = "renderScoreboardSidebar", at = @At("HEAD"), cancellable = true)
     public void renderScoreboardSidebar(GuiGraphics guiGraphics, DeltaTracker deltaTracker, CallbackInfo ci) {
-        if (!ReplayVisuals.showScoreboard) {
+        EditorState editorState = EditorStateManager.getCurrent();
+        if (editorState != null && !editorState.replayVisuals.showScoreboard) {
             ci.cancel();
         }
     }
 
     @Inject(method = "renderOverlayMessage", at = @At("HEAD"), cancellable = true)
     public void renderOverlayMessage(GuiGraphics guiGraphics, DeltaTracker deltaTracker, CallbackInfo ci) {
-        if (!ReplayVisuals.showActionBar) {
+        EditorState editorState = EditorStateManager.getCurrent();
+        if (editorState != null && !editorState.replayVisuals.showActionBar) {
             ci.cancel();
         }
     }
@@ -47,6 +53,9 @@ public class MixinGui {
     @Inject(method = "canRenderCrosshairForSpectator", at = @At("HEAD"), cancellable = true)
     public void canRenderCrosshairForSpectator(HitResult hitResult, CallbackInfoReturnable<Boolean> cir) {
         if (ReplayUI.isActive() && ReplayUI.imguiGlfw.getMouseHandledBy() == CustomImGuiImplGlfw.MouseHandledBy.GAME) {
+            cir.setReturnValue(true);
+        }
+        if (Flashback.getSpectatingPlayer() != null) {
             cir.setReturnValue(true);
         }
     }

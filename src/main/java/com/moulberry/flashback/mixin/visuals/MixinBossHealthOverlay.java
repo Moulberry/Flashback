@@ -1,6 +1,7 @@
 package com.moulberry.flashback.mixin.visuals;
 
-import com.moulberry.flashback.ReplayVisuals;
+import com.moulberry.flashback.state.EditorState;
+import com.moulberry.flashback.state.EditorStateManager;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.BossHealthOverlay;
 import org.spongepowered.asm.mixin.Mixin;
@@ -13,7 +14,8 @@ public class MixinBossHealthOverlay {
 
     @Inject(method = "render", at = @At("HEAD"), cancellable = true)
     public void render(GuiGraphics guiGraphics, CallbackInfo ci) {
-        if (!ReplayVisuals.showBossBar) {
+        EditorState editorState = EditorStateManager.getCurrent();
+        if (editorState != null && !editorState.replayVisuals.showBossBar) {
             ci.cancel();
         }
     }

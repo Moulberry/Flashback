@@ -63,7 +63,8 @@ dependencies {
 
 	include(implementation("com.moulberry:mixinconstraints:1.0.1"))
 
-	modCompileOnly("maven.modrinth:sodium:RncWhTxD")
+    modCompileOnly("maven.modrinth:sodium:RncWhTxD")
+    modCompileOnly("maven.modrinth:iris:kuOV4Ece")
 	modImplementation("maven.modrinth:modmenu:xhN1IvHi")
 //	modCompileOnly("maven.modrinth:axiom:D3uDJmiB")
 

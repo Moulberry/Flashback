@@ -9,25 +9,44 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.*;
 import com.moulberry.flashback.FixedDeltaTracker;
 import com.moulberry.flashback.Flashback;
+import com.moulberry.flashback.Utils;
+import com.moulberry.flashback.compat.IrisApiWrapper;
+import com.moulberry.flashback.keyframe.KeyframeType;
+import com.moulberry.flashback.keyframe.handler.KeyframeHandler;
+import com.moulberry.flashback.keyframe.handler.MinecraftKeyframeHandler;
 import com.moulberry.flashback.state.EditorState;
-import com.moulberry.flashback.state.EditorStateCache;
+import com.moulberry.flashback.state.EditorStateManager;
 import com.moulberry.flashback.playback.ReplayServer;
+import com.moulberry.flashback.state.KeyframeTrack;
+import it.unimi.dsi.fastutil.doubles.DoubleArrayList;
+import it.unimi.dsi.fastutil.doubles.DoubleList;
+import it.unimi.dsi.fastutil.floats.FloatArrayList;
+import it.unimi.dsi.fastutil.floats.FloatList;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.Screenshot;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.FogRenderer;
 import net.minecraft.client.renderer.ShaderInstance;
-import net.minecraft.client.sounds.SoundEngine;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.phys.Vec3;
 import org.joml.Matrix4f;
 import org.lwjgl.glfw.GLFW;
+import org.lwjgl.openal.SOFTLoopback;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.nio.FloatBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.LockSupport;
@@ -42,6 +61,8 @@ public class ExportJob {
     private long escapeCancelStartMillis = -1;
     private long renderStartTime;
 
+    private final Random particleRandom;
+
     private boolean showingDebug = false;
     private boolean pressedDebugKey = false;
     private long serverTickTimeNanos = 0;
@@ -50,10 +71,13 @@ public class ExportJob {
     private long encodeTimeNanos = 0;
     private long downloadTimeNanos = 0;
 
+    private double audioSamples = 0.0;
+
     private final AtomicBoolean finishedServerTick = new AtomicBoolean(false);
 
     public ExportJob(ExportSettings settings) {
         this.settings = settings;
+        this.particleRandom = this.settings.resetRng() ? new Random(2000) : null;
     }
 
     public boolean isRunning() {
@@ -76,12 +100,21 @@ public class ExportJob {
         return this.settings.resolutionY();
     }
 
+    public Random getParticleRandom() {
+        return this.particleRandom;
+    }
+
+    public ExportSettings getSettings() {
+        return this.settings;
+    }
+
     public void run() {
         ReplayServer replayServer = Flashback.getReplayServer();
         if (this.running || replayServer == null) {
             throw new IllegalStateException("run() called twice");
         }
         this.running = true;
+        Minecraft.getInstance().mouseHandler.releaseMouse();
 
         UUID uuid = UUID.randomUUID();
 
@@ -108,6 +141,7 @@ public class ExportJob {
         } finally {
             this.running = false;
             this.shouldChangeFramebufferSize = false;
+
             Minecraft.getInstance().resizeDisplay();
 
             try {
@@ -136,23 +170,29 @@ public class ExportJob {
             return;
         }
 
+        Random random = new Random(1000);
+        Random mathRandom = this.settings.resetRng() ? Utils.getInternalMathRandom() : null;
+
         this.setup(replayServer);
+        this.updateRandoms(random, mathRandom);
 
         shouldChangeFramebufferSize = true;
         Minecraft.getInstance().resizeDisplay();
 
-        double framesPerTick = this.settings.framerate() / 20.0;
+        DoubleList ticks = calculateTicks(this.settings.editorState(), this.settings.startTick(), this.settings.endTick(), this.settings.framerate());
 
-        int currentFrame = 0;
-        int totalFrames = (int) Math.ceil((this.settings.endTick() - this.settings.startTick() + 1) * framesPerTick);
         int clientTickCount = 0;
 
         this.renderStartTime = System.currentTimeMillis();
 
-        EditorState editorState = EditorStateCache.get(replayServer.getMetadata().replayIdentifier);
+        EditorState editorState = EditorStateManager.get(replayServer.getMetadata().replayIdentifier);
 
-        while (currentFrame <= totalFrames) {
-            double currentTickDouble = currentFrame / framesPerTick;
+        double lastTickDouble = 0;
+
+        for (int tickIndex = 0; tickIndex < ticks.size(); tickIndex++) {
+            double currentTickDouble = ticks.getDouble(tickIndex);
+            float deltaTicksFloat = (float)(currentTickDouble - lastTickDouble);
+            lastTickDouble = currentTickDouble;
             int currentTick = (int) currentTickDouble;
             double partialTick = currentTickDouble - currentTick;
             int targetServerTick = this.settings.startTick() + currentTick;
@@ -165,6 +205,7 @@ public class ExportJob {
             // Tick client
             while (clientTickCount < currentTick) {
                 start = System.nanoTime();
+                this.updateRandoms(random, mathRandom);
                 this.runClientTick();
                 clientTickTimeNanos += System.nanoTime() - start;
 
@@ -204,52 +245,124 @@ public class ExportJob {
 
             this.tryUnfreezeClient();
 
-            editorState.applyKeyframes(Minecraft.getInstance(), (float)(this.settings.startTick() + currentTickDouble));
+            KeyframeHandler keyframeHandler = new MinecraftKeyframeHandler(Minecraft.getInstance());
+            editorState.applyKeyframes(keyframeHandler, (float)(this.settings.startTick() + currentTickDouble));
 
-            RenderTarget oldTarget = Minecraft.getInstance().getMainRenderTarget();
-            SaveableFramebuffer saveable = downloader.take();
-            RenderTarget renderTarget = saveable.getFramebuffer(this.settings.resolutionX(), this.settings.resolutionY());
+            boolean asyncFrameCapture = !IrisApiWrapper.isIrisAvailable() || !IrisApiWrapper.isShaderPackInUse();
 
-            Minecraft.getInstance().mainRenderTarget = renderTarget;
+            RenderTarget oldTarget = null;
+            SaveableFramebuffer saveable = null;
+            RenderTarget renderTarget;
+
+            if (asyncFrameCapture) {
+                oldTarget = Minecraft.getInstance().getMainRenderTarget();
+                saveable = downloader.take();
+                renderTarget = saveable.getFramebuffer(this.settings.resolutionX(), this.settings.resolutionY());
+
+                Minecraft.getInstance().mainRenderTarget = renderTarget;
+            } else {
+                renderTarget = Minecraft.getInstance().mainRenderTarget;
+            }
 
             renderTarget.bindWrite(true);
-
             RenderSystem.clear(16640, Minecraft.ON_OSX);
 
             // Perform rendering
             PerfectFrames.waitUntilFrameReady();
             FogRenderer.setupNoFog();
             RenderSystem.enableCull();
-            Minecraft.getInstance().timer.deltaTicks = 1 / (float) framesPerTick;
-            Minecraft.getInstance().timer.realtimeDeltaTicks = 1 / (float) framesPerTick;
+            Minecraft.getInstance().timer.deltaTicks = deltaTicksFloat;
+            Minecraft.getInstance().timer.realtimeDeltaTicks = deltaTicksFloat;
             Minecraft.getInstance().timer.deltaTickResidual = (float) partialTick;
             Minecraft.getInstance().timer.pausedDeltaTickResidual = (float) partialTick;
 
             start = System.nanoTime();
-            Minecraft.getInstance().gameRenderer.render(new FixedDeltaTracker(1 / (float) framesPerTick, (float) partialTick), true);
+            Minecraft.getInstance().gameRenderer.render(new FixedDeltaTracker(deltaTicksFloat, (float) partialTick), true);
             renderTimeNanos += System.nanoTime() - start;
 
             renderTarget.unbindWrite();
 
-            Minecraft.getInstance().mainRenderTarget = oldTarget;
+            boolean cancel;
 
-            this.shouldChangeFramebufferSize = false;
-            boolean cancel = finishFrame(renderTarget, infoRenderTarget, currentFrame, totalFrames);
-            this.shouldChangeFramebufferSize = true;
+            // Capture audio if necessary
+            FloatBuffer audioBuffer = null;
+            if (this.settings.recordAudio()) {
+                long device = Minecraft.getInstance().getSoundManager().soundEngine.library.currentDevice;
 
-            submitDownloadedFrames(encoder, downloader, false);
+                audioSamples += 44100 / this.settings.framerate();
+                int renderSamples = (int) audioSamples;
+                audioSamples -= renderSamples;
 
-            downloader.startDownload(saveable);
-
-            if (cancel) {
-                break;
+                audioBuffer = ByteBuffer.allocateDirect(renderSamples * 4).order(ByteOrder.nativeOrder()).asFloatBuffer();
+                SOFTLoopback.alcRenderSamplesSOFT(device, audioBuffer, renderSamples);
             }
 
-            currentFrame += 1;
+            if (asyncFrameCapture) {
+                Minecraft.getInstance().mainRenderTarget = oldTarget;
+
+                this.shouldChangeFramebufferSize = false;
+                cancel = finishFrame(renderTarget, infoRenderTarget, tickIndex, ticks.size());
+                this.shouldChangeFramebufferSize = true;
+
+                submitDownloadedFrames(encoder, downloader, false);
+
+                saveable.audioBuffer = audioBuffer;
+                downloader.startDownload(saveable);
+            } else {
+                this.shouldChangeFramebufferSize = false;
+                cancel = finishFrame(renderTarget, infoRenderTarget, tickIndex, ticks.size());
+                this.shouldChangeFramebufferSize = true;
+
+                start = System.nanoTime();
+                NativeImage image = Screenshot.takeScreenshot(renderTarget);
+                downloadTimeNanos += System.nanoTime() - start;
+
+                start = System.nanoTime();
+                encoder.encode(image, audioBuffer);
+                encodeTimeNanos += System.nanoTime() - start;
+            }
+
+            if (cancel) {
+                ExportJobQueue.drainingQueue = false;
+                break;
+            }
         }
 
         submitDownloadedFrames(encoder, downloader, true);
         encoder.finish();
+    }
+
+    private void updateRandoms(Random random, Random mathRandom) {
+        if (!this.settings.resetRng()) {
+            return;
+        }
+
+        Minecraft minecraft = Minecraft.getInstance();
+
+        long connectionSeed = random.nextLong();
+        long levelSeed = random.nextLong();
+        long entitySeed = random.nextLong();
+        long mathSeed = random.nextLong();
+        long particleSeed = random.nextLong();
+
+        if (minecraft.getConnection() != null) {
+            minecraft.getConnection().random.setSeed(connectionSeed);
+        }
+        if (minecraft.level != null) {
+            minecraft.level.random.setSeed(levelSeed);
+
+            for (Entity entity : minecraft.level.entitiesForRendering()) {
+                if (entity == null) {
+                    continue;
+                }
+
+                entity.getRandom().setSeed(entitySeed ^ entity.getUUID().getMostSignificantBits());
+            }
+        }
+        if (mathRandom != null) {
+            mathRandom.setSeed(mathSeed);
+        }
+        this.particleRandom.setSeed(particleSeed);
     }
 
     private void setup(ReplayServer replayServer) {
@@ -257,14 +370,6 @@ public class ExportJob {
 
         // Clear particles
         minecraft.particleEngine.clearParticles();
-
-        // Apply keyframes at start tick
-        EditorState editorState = EditorStateCache.get(replayServer.getMetadata().replayIdentifier);
-        editorState.applyKeyframes(Minecraft.getInstance(), this.settings.startTick());
-
-        // Ensure position is updated before doing anything else
-        this.runClientTick();
-        this.setServerTickAndWait(replayServer, replayServer.getReplayTick(), true);
 
         int currentTick = Math.max(0, this.settings.startTick() - 20);
 
@@ -278,6 +383,17 @@ public class ExportJob {
             this.runClientTick();
             currentTick += 1;
         }
+
+        // Apply initial position and keyframes at start tick
+        LocalPlayer player = minecraft.player;
+        if (player != null) {
+            Vec3 position = this.settings.initialCameraPosition();
+            player.moveTo(position.x, position.y, position.z, this.settings.initialCameraYaw(), this.settings.initialCameraPitch());
+            player.setDeltaMovement(Vec3.ZERO);
+        }
+        EditorState editorState = EditorStateManager.get(replayServer.getMetadata().replayIdentifier);
+        editorState.applyKeyframes(new MinecraftKeyframeHandler(Minecraft.getInstance()), this.settings.startTick());
+        this.runClientTick();
 
         // Ensured replay server is paused at startTick
         this.setServerTickAndWait(replayServer, this.settings.startTick(), true);
@@ -306,6 +422,7 @@ public class ExportJob {
 
         while (Minecraft.getInstance().pollTask()) {}
         Minecraft.getInstance().tick();
+        Minecraft.getInstance().getSoundManager().updateSource(Minecraft.getInstance().gameRenderer.getMainCamera());
         this.tryUnfreezeClient();
     }
 
@@ -317,18 +434,18 @@ public class ExportJob {
     }
 
     private void submitDownloadedFrames(AsyncVideoEncoder encoder, SaveableFramebufferQueue downloader, boolean drain) {
-        NativeImage image;
+        SaveableFramebufferQueue.DownloadedFrame frame;
         while (true) {
             long start = System.nanoTime();
-            image = downloader.finishDownload(drain);
+            frame = downloader.finishDownload(drain);
             downloadTimeNanos += System.nanoTime() - start;
 
-            if (image == null) {
+            if (frame == null) {
                 break;
             }
 
             start = System.nanoTime();
-            encoder.encode(image);
+            encoder.encode(frame.image(), frame.audioBuffer());
             encodeTimeNanos += System.nanoTime() - start;
         }
     }
@@ -373,7 +490,7 @@ public class ExportJob {
 
             RenderSystem.clear(16640, Minecraft.ON_OSX);
 
-            int guiScale = 4;
+            float guiScale = 4f;
             int scaledWidth = (int) Math.ceil(infoRenderTarget.width / guiScale);
             int scaledHeight = (int) Math.ceil(infoRenderTarget.height / guiScale);
 
@@ -386,6 +503,11 @@ public class ExportJob {
             RenderSystem.disableDepthTest();
 
             List<String> lines = new ArrayList<>();
+
+            if (this.settings.name() != null) {
+                lines.add(this.settings.name());
+                lines.add("");
+            }
 
             lines.add("Exported Frames: " + currentFrame + "/" + totalFrames);
 
@@ -474,6 +596,56 @@ public class ExportJob {
         } else {
             return seconds + "s";
         }
+    }
+
+    private static class TickrateKeyframeCapture implements KeyframeHandler {
+        private float tickrate = 20.0f;
+
+        @Override
+        public EnumSet<KeyframeType> supportedKeyframes() {
+            return EnumSet.of(KeyframeType.SPEED, KeyframeType.TIMELAPSE);
+        }
+
+        @Override
+        public boolean alwaysApplyLastKeyframe() {
+            return true;
+        }
+
+        @Override
+        public void applyTickrate(float tickrate) {
+            this.tickrate = tickrate;
+        }
+    }
+
+    private static DoubleList calculateTicks(EditorState editorState, int startTick, int endTick, double fps) {
+        DoubleList ticks = new DoubleArrayList();
+
+        ticks.add(0);
+
+        double residual = 0;
+        int currentTick = 0;
+
+        TickrateKeyframeCapture capture = new TickrateKeyframeCapture();
+
+        int count = endTick - startTick;
+        while (currentTick <= count) {
+            capture.tickrate = 20.0f;
+            editorState.applyKeyframes(capture, startTick + currentTick + (float) residual);
+
+            residual += capture.tickrate / fps;
+
+            int roundedResidual = (int) residual;
+            residual -= roundedResidual;
+            currentTick += roundedResidual;
+
+            if (currentTick > count) {
+                break;
+            }
+
+            ticks.add(currentTick + residual);
+        }
+
+        return ticks;
     }
 
 }

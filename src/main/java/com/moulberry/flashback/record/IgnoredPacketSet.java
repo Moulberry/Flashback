@@ -74,7 +74,8 @@ public class IgnoredPacketSet {
         ClientboundChunkBatchStartPacket.class,
         ClientboundChunkBatchFinishedPacket.class,
         ClientboundDebugSamplePacket.class,
-        ClientboundPongResponsePacket.class
+        ClientboundPongResponsePacket.class,
+        ClientboundLevelEventPacket.class
     );
 
 }

@@ -40,6 +40,10 @@ public class PixelFormatHelper {
 
             IntPointer pixFmts = codec.pix_fmts();
 
+            if (pixFmts == null) {
+                return avutil.AV_PIX_FMT_YUV420P;
+            }
+
             int index = 0;
             while (true) {
                 int pixFmt = pixFmts.get(index);

@@ -42,87 +42,6 @@ public class ImGuiHelper {
         return imString;
     }
 
-    public static int elementList(String name, List<String> elements, float width, int minLines, int maxLines, boolean framed, IntConsumer buttonConsumer) {
-        if (minLines > maxLines) throw new IllegalArgumentException();
-
-        if (width <= 0) {
-            width = Math.max(ImGui.getContentRegionAvailX() + width, 4.0f);
-        }
-
-        float itemSpacingX = ImGui.getStyle().getItemSpacingX();
-        float framePaddingX = ImGui.getStyle().getFramePaddingX();
-        float availableSpace = width;
-        if (framed) availableSpace -= framePaddingX*2f;
-
-        int lines = 0;
-        boolean scrollbar = false;
-        if (minLines == maxLines) {
-            lines = minLines;
-            scrollbar = true; // assume there is a scrollbar
-        } else {
-            float consumedWidth = 0;
-            for (String element : elements) {
-                float elementWidth = framePaddingX*2f + ImGuiHelper.calcTextWidth(element);
-                if (consumedWidth+elementWidth < availableSpace && consumedWidth > 0) {
-                    consumedWidth += elementWidth + itemSpacingX;
-                } else {
-                    consumedWidth = elementWidth + itemSpacingX;
-                    lines += 1;
-                    if (lines > maxLines) {
-                        lines = maxLines;
-                        scrollbar = true;
-                        break;
-                    }
-                }
-            }
-            if (lines < minLines) lines = minLines;
-        }
-
-        float lineHeight = ImGui.getFontSize() + ImGui.getStyle().getFramePaddingY()*2 + ImGui.getStyle().getItemSpacingY();
-        boolean visible;
-        if (framed) {
-            visible = ImGui.beginChildFrame(ImGui.getID(name), width, lineHeight*lines + ImGui.getStyle().getFramePaddingY()*2 - ImGui.getStyle().getItemSpacingY());
-        } else {
-            visible = ImGui.beginChild(name, width, lineHeight*lines - ImGui.getStyle().getItemSpacingY());
-        }
-
-        int ret = -1;
-
-        if (visible) {
-            if (scrollbar) {
-                availableSpace -= ImGui.getStyle().getScrollbarSize();
-            }
-
-            float consumedWidth = 0;
-            for (int i=0; i<elements.size(); i++) {
-                String element = elements.get(i);
-                float elementWidth = framePaddingX*2f + ImGuiHelper.calcTextWidth(element);
-                if (consumedWidth+elementWidth < availableSpace && consumedWidth > 0) {
-                    ImGui.sameLine();
-                    consumedWidth += elementWidth + itemSpacingX;
-                } else {
-                    consumedWidth = elementWidth + itemSpacingX;
-                }
-                ImGui.pushID(i);
-                if (ImGui.button(element)) {
-                    ret = i;
-                }
-                if (buttonConsumer != null) {
-                    buttonConsumer.accept(i);
-                }
-                ImGui.popID();
-            }
-        }
-
-        if (framed) {
-            ImGui.endChildFrame();
-        } else {
-            ImGui.endChild();
-        }
-
-        return ret;
-    }
-
     private static final int[] enumComboSharedArray = new int[]{0};
     private static final Map<Class<?>, Object[]> enumComboCachedValues = new HashMap<>();
     private static final Map<Class<?>, String[]> enumComboCachedText = new HashMap<>();
@@ -207,27 +126,17 @@ public class ImGuiHelper {
 
     private static boolean closeableModalOnTopLast = false;
     private static boolean closeableModalOnTop = false;
-    private static boolean inputIntScrolledLastFrame = false;
-    private static boolean inputIntScrolledThisFrame = false;
-
     private static boolean wantSpecialInputLastFrame = false;
     private static boolean wantSpecialInputThisFrame = false;
+
     private static StringBuilder specialInput = new StringBuilder();
     private static int backspaceCount = 0;
 
-    private static boolean handledFocusNext = false;
-    private static boolean focusNext = false;
-
     public static void endFrame() {
         closeableModalOnTopLast = closeableModalOnTop;
-        inputIntScrolledLastFrame = inputIntScrolledThisFrame;
-        inputIntScrolledThisFrame = false;
 
         wantSpecialInputLastFrame = wantSpecialInputThisFrame;
         wantSpecialInputThisFrame = false;
-
-        handledFocusNext = false;
-        focusNext = false;
 
         if (!wantSpecialInputLastFrame) specialInput.setLength(0);
     }

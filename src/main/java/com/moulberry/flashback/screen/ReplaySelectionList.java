@@ -5,13 +5,16 @@ package com.moulberry.flashback.screen;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
+import com.google.gson.reflect.TypeToken;
 import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.logging.LogUtils;
 import com.moulberry.flashback.Flashback;
+import com.moulberry.flashback.FlashbackGson;
 import com.moulberry.flashback.SneakyThrow;
 import com.moulberry.flashback.record.FlashbackMeta;
 import net.fabricmc.loader.api.FabricLoader;
+import net.minecraft.SharedConstants;
 import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -48,6 +51,8 @@ public class ReplaySelectionList extends ObjectSelectionList<ReplaySelectionList
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofLocalizedDateTime(FormatStyle.SHORT).withZone(ZoneId.systemDefault());
     private static final ResourceLocation ERROR_HIGHLIGHTED_SPRITE = ResourceLocation.withDefaultNamespace("world_list/error_highlighted");
     private static final ResourceLocation ERROR_SPRITE = ResourceLocation.withDefaultNamespace("world_list/error");
+    private static final ResourceLocation WARNING_HIGHLIGHTED_SPRITE = ResourceLocation.withDefaultNamespace("world_list/warning_highlighted");
+    static private final ResourceLocation WARNING_SPRITE = ResourceLocation.withDefaultNamespace("world_list/warning");
     private static final ResourceLocation JOIN_HIGHLIGHTED_SPRITE = ResourceLocation.withDefaultNamespace("world_list/join_highlighted");
     private static final ResourceLocation JOIN_SPRITE = ResourceLocation.withDefaultNamespace("world_list/join");
     private static final Logger LOGGER = LogUtils.getLogger();
@@ -57,6 +62,8 @@ public class ReplaySelectionList extends ObjectSelectionList<ReplaySelectionList
     private List<ReplaySummary> currentlyDisplayedReplays;
     private String filter;
     private final LoadingHeader loadingHeader;
+
+    private Map<UUID, Long> lastOpenTimes = null;
 
     public ReplaySelectionList(SelectReplayScreen selectReplayScreen, Minecraft minecraft, int i, int j, int k, int l, String string, @Nullable ReplaySelectionList replaySelectionList) {
         super(minecraft, i, j, k, l);
@@ -125,8 +132,49 @@ public class ReplaySelectionList extends ObjectSelectionList<ReplaySelectionList
         this.filter = string;
     }
 
+//    private Path getOpenTimeCachePath() {
+//        Path flashbackDir = Flashback.getDataDirectory();
+//        Path replayDir = flashbackDir.resolve("replays");
+//        return replayDir.resolve(".lastopened.json");
+//    }
+//
+//    private synchronized long getOpenTime(UUID uuid) {
+//        if (this.lastOpenTimes == null) {
+//            Path path = getOpenTimeCachePath();
+//
+//            if (Files.exists(path)) {
+//                try {
+//                    String serialized = Files.readString(path);
+//                    TypeToken<Map<UUID, Long>> typeToken = (TypeToken<Map<UUID, Long>>) TypeToken.getParameterized(Map.class, UUID.class, Long.class);
+//                    this.lastOpenTimes = FlashbackGson.PRETTY.fromJson(serialized, typeToken);
+//                    return this.lastOpenTimes.getOrDefault(uuid, 0L);
+//                } catch (IOException e) {
+//                    Flashback.LOGGER.error("Unable to read last opened cache", e);
+//                }
+//            }
+//
+//            this.lastOpenTimes = new HashMap<>();
+//        }
+//
+//        return this.lastOpenTimes.getOrDefault(uuid, 0L);
+//    }
+//
+//    private synchronized void setOpenTime(UUID uuid, long time) {
+//        this.lastOpenTimes.put(uuid, time);
+//    }
+//
+//    private synchronized void saveOpenTimeCache() {
+//        String serialized = FlashbackGson.PRETTY.toJson(this.lastOpenTimes);
+//        try {
+//            Files.writeString(getOpenTimeCachePath(), serialized, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING,
+//                StandardOpenOption.CREATE);
+//        } catch (IOException e) {
+//            Flashback.LOGGER.error("Unable to write last opened cache", e);
+//        }
+//    }
+
     private CompletableFuture<List<ReplaySummary>> loadReplays() {
-        Path flashbackDir = FabricLoader.getInstance().getGameDir().resolve("flashback");
+        Path flashbackDir = Flashback.getDataDirectory();
         Path replayDir = flashbackDir.resolve("replays");
 
         if (!Files.exists(replayDir) || !Files.isDirectory(replayDir)) {
@@ -148,14 +196,12 @@ public class ReplaySelectionList extends ObjectSelectionList<ReplaySelectionList
                         BasicFileAttributeView attributeView = Files.getFileAttributeView(path, BasicFileAttributeView.class);
                         BasicFileAttributes basicFileAttributes = attributeView.readAttributes();
 
-                        long lastOpened = Math.max(basicFileAttributes.creationTime().toMillis(),
-                                Math.max(basicFileAttributes.lastAccessTime().toMillis(), basicFileAttributes.lastModifiedTime().toMillis()));
+                        long lastModified = Math.max(basicFileAttributes.creationTime().toMillis(), basicFileAttributes.lastModifiedTime().toMillis());
 
                         byte[] iconBytes = null;
                         String metadataString = null;
 
                         try (FileSystem fs = FileSystems.newFileSystem(path)) {
-
                             Path iconPath = fs.getPath("/icon.png");
                             if (Files.exists(iconPath)) {
                                 iconBytes = Files.readAllBytes(iconPath);
@@ -176,10 +222,10 @@ public class ReplaySelectionList extends ObjectSelectionList<ReplaySelectionList
                         JsonObject metadataJson = new Gson().fromJson(metadataString, JsonObject.class);
                         FlashbackMeta metadata = FlashbackMeta.fromJson(metadataJson);
                         if (metadata != null) {
-                            return new ReplaySummary(path, metadata, fileName, lastOpened, iconBytes);
+                            return new ReplaySummary(path, metadata, fileName, lastModified, iconBytes);
                         }
                     } catch (IOException e) {
-                        SneakyThrow.sneakyThrow(e);
+                        Flashback.LOGGER.error("Failed to load replay", e);
                     }
                     return null;
                 }, Util.backgroundExecutor()));
@@ -300,7 +346,7 @@ public class ReplaySelectionList extends ObjectSelectionList<ReplaySelectionList
         @Override
         public Component getNarration() {
             MutableComponent component = Component.translatable("narrator.select.world_info", this.summary.getReplayName(),
-                    Component.translationArg(new Date(this.summary.getLastPlayed())),
+                    Component.translationArg(new Date(this.summary.getLastModified())),
                     this.summary.getInfo());
             return Component.translatable("narrator.select", component);
         }
@@ -309,7 +355,7 @@ public class ReplaySelectionList extends ObjectSelectionList<ReplaySelectionList
         public void render(GuiGraphics guiGraphics, int i, int j, int k, int l, int m, int n, int o, boolean bl, float f) {
             String title = this.summary.getReplayName();
             String fileAndTime = this.summary.getReplayId();
-            long p = this.summary.getLastPlayed();
+            long p = this.summary.getLastModified();
             if (p != -1L) {
                 fileAndTime = fileAndTime + " (" + DATE_FORMAT.format(Instant.ofEpochMilli(p)) + ")";
             }
@@ -318,7 +364,14 @@ public class ReplaySelectionList extends ObjectSelectionList<ReplaySelectionList
             }
             Component info = this.summary.getInfo();
 
-            guiGraphics.drawString(this.minecraft.font, title, k + ICON_WIDTH + 3, j + 1, 0xFFFFFF, false);
+            int titleColour = 0xFFFFFF;
+            if (!this.summary.canOpen()) {
+                titleColour = 0xFF5555;
+            } else if (this.summary.hasWarning()) {
+                titleColour = 0xFFAA55;
+            }
+
+            guiGraphics.drawString(this.minecraft.font, title, k + ICON_WIDTH + 3, j + 1, titleColour, false);
             guiGraphics.drawString(this.minecraft.font, fileAndTime, k + ICON_WIDTH + 3, j + this.minecraft.font.lineHeight + 3, 0xFF808080, false);
             guiGraphics.drawString(this.minecraft.font, info, k + ICON_WIDTH + 3, j + this.minecraft.font.lineHeight + this.minecraft.font.lineHeight + 3, 0xFF808080, false);
 
@@ -329,15 +382,21 @@ public class ReplaySelectionList extends ObjectSelectionList<ReplaySelectionList
             if (this.minecraft.options.touchscreen().get() || bl) {
                 guiGraphics.fill(k, j, k + ICON_WIDTH, j + ICON_HEIGHT, -1601138544);
                 int q = n - k;
-                boolean bl2 = q < 32;
+                boolean hoveredIcon = q < 32;
 
-                if (!this.summary.canOpen()) {
-                    ResourceLocation resourceLocation3 = bl2 ? ERROR_HIGHLIGHTED_SPRITE : ERROR_SPRITE;
-                    guiGraphics.blitSprite(resourceLocation3, k, j, ICON_WIDTH, ICON_HEIGHT);
-                } else {
-                    ResourceLocation resourceLocation = bl2 ? JOIN_HIGHLIGHTED_SPRITE : JOIN_SPRITE;
-                    guiGraphics.blitSprite(resourceLocation, k, j, ICON_WIDTH, ICON_HEIGHT);
+                if (bl && this.summary.getHoverInfo() != null) {
+                    guiGraphics.renderTooltip(this.minecraft.font, this.minecraft.font.split(this.summary.getHoverInfo(), 240), n, o);
                 }
+
+                ResourceLocation iconOverlay;
+                if (!this.summary.canOpen()) {
+                    iconOverlay = hoveredIcon ? ERROR_HIGHLIGHTED_SPRITE : ERROR_SPRITE;
+                } else if (this.summary.hasWarning()) {
+                    iconOverlay = hoveredIcon ? WARNING_HIGHLIGHTED_SPRITE : WARNING_SPRITE;
+                } else {
+                    iconOverlay = hoveredIcon ? JOIN_HIGHLIGHTED_SPRITE : JOIN_SPRITE;
+                }
+                guiGraphics.blitSprite(iconOverlay, k, j, ICON_WIDTH, ICON_HEIGHT);
             }
         }
 
@@ -366,6 +425,9 @@ public class ReplaySelectionList extends ObjectSelectionList<ReplaySelectionList
             if (this.summary.canOpen()) {
                 this.minecraft.forceSetScreen(new GenericMessageScreen(Component.translatable("flashback.select_replay.data_read")));
                 Flashback.openReplayWorld(this.summary.getPath());
+
+//                setOpenTime(this.summary.getReplayMetadata().replayIdentifier, System.currentTimeMillis());
+//                saveOpenTimeCache();
             }
         }
 
@@ -398,7 +460,7 @@ public class ReplaySelectionList extends ObjectSelectionList<ReplaySelectionList
         public void editReplay() {
             SystemToast.add(this.minecraft.getToasts(), new SystemToast.SystemToastId(3000),
                     Component.literal("Sorry"), Component.literal("Editing replay data hasn't been implemented yet"));
-            // todo:
+            // todo: implement editing replay data
 //            EditWorldScreen editWorldScreen;
 //            ReplayStorageSource.ReplayStorageAccess levelStorageAccess;
 //            this.queueLoadScreen();

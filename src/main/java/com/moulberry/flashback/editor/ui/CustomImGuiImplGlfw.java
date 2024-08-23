@@ -307,7 +307,7 @@ public class CustomImGuiImplGlfw {
                 if (keyInBoundsForGame) this.keyPressedGame[minecraftKey] = action != GLFW_RELEASE;
 
                 // Don't allow key presses during export
-                if (Flashback.EXPORT_JOB != null && Flashback.EXPORT_JOB.isRunning()) {
+                if (Flashback.isExporting()) {
                     if (action == GLFW_RELEASE && keyInBoundsForGame && this.keyPressedGame[minecraftKey]) {
                         this.keyPressedGame[minecraftKey] = false;
                     } else {

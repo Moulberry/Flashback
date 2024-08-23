@@ -12,5 +12,9 @@
   "flashback.option.automatically_finish": "Automatically Finish",
   "flashback.option.automatically_finish.description": "Automatically finishes a replay recording when exiting the world/server",
   "flashback.option.show_recording_toasts": "Show Recording Toasts",
-  "flashback.option.show_recording_toasts.description": "Show toasts in the top right when starting/stopping a replay recording"
+  "flashback.option.show_recording_toasts.description": "Show toasts in the top right when starting/stopping a replay recording",
+  "flashback.option.quicksave": "Quicksave",
+  "flashback.option.quicksave.description": "Save the replay with default values instead of opening the Save Replay screen",
+  "flashback.option.hide_pause_menu_controls": "Hide Pause Controls",
+  "flashback.option.hide_pause_menu_controls.description": "Hide Pause (ESC) menu controls for starting/finishing a replay. The commands will still work"
 }

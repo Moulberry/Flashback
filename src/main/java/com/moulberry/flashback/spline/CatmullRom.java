@@ -267,7 +267,7 @@ public class CatmullRom {
         if (t1 == t3) {
             b2 = Interpolation.linear(a2, a3, 0.5f);
         } else {
-            b2 =Interpolation.linear(a2, a3, (t - t1)/(t3 - t1));
+            b2 = Interpolation.linear(a2, a3, (t - t1)/(t3 - t1));
         }
 
         if (t1 == t2) {

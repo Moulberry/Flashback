@@ -3,6 +3,8 @@ package com.moulberry.flashback.exporting;
 import com.mojang.blaze3d.platform.NativeImage;
 import org.jetbrains.annotations.Nullable;
 
+import java.nio.ByteBuffer;
+import java.nio.FloatBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -37,7 +39,9 @@ public class SaveableFramebufferQueue implements AutoCloseable {
         this.waiting.add(texture);
     }
 
-    public @Nullable NativeImage finishDownload(boolean drain) {
+    record DownloadedFrame(NativeImage image, @Nullable FloatBuffer audioBuffer) {}
+
+    public @Nullable DownloadedFrame finishDownload(boolean drain) {
         if (this.waiting.isEmpty()) {
             return null;
         }
@@ -47,9 +51,13 @@ public class SaveableFramebufferQueue implements AutoCloseable {
         }
 
         SaveableFramebuffer texture = this.waiting.removeFirst();
+
         NativeImage nativeImage = texture.finishDownload(this.width, this.height);
+        FloatBuffer audioBuffer = texture.audioBuffer;
+        texture.audioBuffer = null;
+
         this.available.add(texture);
-        return nativeImage;
+        return new DownloadedFrame(nativeImage, audioBuffer);
     }
 
     @Override

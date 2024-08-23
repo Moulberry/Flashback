@@ -1,6 +1,8 @@
 package com.moulberry.flashback.mixin.visuals;
 
-import com.moulberry.flashback.ReplayVisuals;
+import com.moulberry.flashback.state.EditorState;
+import com.moulberry.flashback.state.EditorStateManager;
+import com.moulberry.flashback.visuals.ReplayVisuals;
 import net.minecraft.client.multiplayer.ClientLevel;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -12,8 +14,9 @@ public class MixinClientLevelData {
 
     @Inject(method = "getDayTime", at = @At("HEAD"), cancellable = true)
     public void getDayTime(CallbackInfoReturnable<Long> cir) {
-        if (ReplayVisuals.overrideTimeOfDay >= 0) {
-            cir.setReturnValue(ReplayVisuals.overrideTimeOfDay);
+        EditorState editorState = EditorStateManager.getCurrent();
+        if (editorState != null && editorState.replayVisuals.overrideTimeOfDay >= 0) {
+            cir.setReturnValue(editorState.replayVisuals.overrideTimeOfDay);
         }
     }
 

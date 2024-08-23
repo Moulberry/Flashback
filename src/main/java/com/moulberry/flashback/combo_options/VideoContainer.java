@@ -16,7 +16,8 @@ public enum VideoContainer implements ComboOption {
 
     private final String text;
     private final String extension;
-    private VideoCodec[] supportedCodecs = null;
+    private VideoCodec[] supportedVideoCodecs = null;
+    private AudioCodec[] supportedAudioCodecs = null;
 
     VideoContainer(String text, String extension) {
         this.text = text;
@@ -32,8 +33,8 @@ public enum VideoContainer implements ComboOption {
         return extension;
     }
 
-    public VideoCodec[] getSupportedCodecs() {
-        if (this.supportedCodecs == null) {
+    public VideoCodec[] getSupportedVideoCodecs() {
+        if (this.supportedVideoCodecs == null) {
             List<VideoCodec> supportedCodecs = new ArrayList<>();
             try (AVOutputFormat outputFormat = avformat.av_guess_format(this.extension, "test."+this.extension, null)) {
                 for (VideoCodec codec : VideoCodec.values()) {
@@ -51,9 +52,30 @@ public enum VideoContainer implements ComboOption {
                 }
             }
 
-            this.supportedCodecs = supportedCodecs.toArray(new VideoCodec[0]);
+            this.supportedVideoCodecs = supportedCodecs.toArray(new VideoCodec[0]);
         }
-        return this.supportedCodecs;
+        return this.supportedVideoCodecs;
+    }
+
+    public AudioCodec[] getSupportedAudioCodecs() {
+        if (this.supportedAudioCodecs == null) {
+            List<AudioCodec> supportedCodecs = new ArrayList<>();
+            try (AVOutputFormat outputFormat = avformat.av_guess_format(this.extension, "test."+this.extension, null)) {
+                for (AudioCodec codec : AudioCodec.values()) {
+                    if (codec.getEncoders().length == 0) {
+                        continue;
+                    }
+
+                    int ret = avformat.avformat_query_codec(outputFormat, codec.codecId(), avcodec.FF_COMPLIANCE_NORMAL);
+                    if (ret == 1) {
+                        supportedCodecs.add(codec);
+                    }
+                }
+            }
+
+            this.supportedAudioCodecs = supportedCodecs.toArray(new AudioCodec[0]);
+        }
+        return this.supportedAudioCodecs;
     }
 
 }

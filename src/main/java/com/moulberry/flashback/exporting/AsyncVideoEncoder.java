@@ -8,6 +8,7 @@ import net.fabricmc.loader.api.FabricLoader;
 import org.bytedeco.ffmpeg.avutil.AVComponentDescriptor;
 import org.bytedeco.ffmpeg.avutil.AVFrame;
 import org.bytedeco.ffmpeg.avutil.AVPixFmtDescriptor;
+import org.bytedeco.ffmpeg.global.avcodec;
 import org.bytedeco.ffmpeg.global.avutil;
 import org.bytedeco.ffmpeg.global.swscale;
 import org.bytedeco.ffmpeg.swscale.SwsContext;
@@ -24,6 +25,7 @@ import org.lwjgl.system.MemoryUtil;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.FloatBuffer;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -51,7 +53,8 @@ public class AsyncVideoEncoder implements AutoCloseable {
 
     private static final int SRC_PIXEL_FORMAT = avutil.AV_PIX_FMT_RGBA;
 
-    private record ImageFrame(long pointer, int size, int width, int height, int channels, int imageDepth, int stride, int pixelFormat) implements AutoCloseable {
+    private record ImageFrame(long pointer, int size, int width, int height, int channels, int imageDepth, int stride, int pixelFormat,
+                              @Nullable FloatBuffer audioBuffer) implements AutoCloseable {
         public void close() {
             MemoryUtil.nmemFree(this.pointer);
         }
@@ -70,6 +73,11 @@ public class AsyncVideoEncoder implements AutoCloseable {
         }
 
         int maxBitrate = Math.min(288_000_000, 5000 + (int) Math.ceil(width * height * settings.framerate()));
+
+        if (settings.encoder().equals("libsvtav1")) {
+            maxBitrate = Math.min(100_000_000, maxBitrate);
+        }
+
         int bitrate;
         if (settings.bitrate() <= 0) {
             bitrate = maxBitrate;
@@ -89,7 +97,7 @@ public class AsyncVideoEncoder implements AutoCloseable {
             boolean needsRescale = SRC_PIXEL_FORMAT != dstPixelFormat;
 
             final FFmpegFrameRecorder recorder = new FFmpegFrameRecorder(
-                    filename, width, height, 0);
+                    filename, width, height, settings.recordAudio() ? 1 : 0);
 
             recorder.setVideoBitrate(bitrate);
             recorder.setVideoCodec(settings.codec().codecId());
@@ -97,7 +105,14 @@ public class AsyncVideoEncoder implements AutoCloseable {
             recorder.setFormat(extension);
             recorder.setFrameRate(fps);
             recorder.setPixelFormat(dstPixelFormat);
-            recorder.setGopSize((int) Math.ceil(fps * 2));
+            recorder.setGopSize((int) Math.max(20, Math.min(240, Math.ceil(fps * 2))));
+
+            if (settings.recordAudio()) {
+                recorder.setAudioCodec(avcodec.AV_CODEC_ID_AAC);
+                recorder.setSampleFormat(avutil.AV_SAMPLE_FMT_FLTP);
+                recorder.setSampleRate(44100);
+                recorder.setAudioBitrate(320000);
+            }
 
             recorder.start();
 
@@ -144,6 +159,9 @@ public class AsyncVideoEncoder implements AutoCloseable {
 
                     recorder.recordImage(src.width, src.height, src.imageDepth, src.channels,
                             src.stride, src.pixelFormat, buffer);
+                    if (src.audioBuffer != null) {
+                        recorder.recordSamples(src.audioBuffer);
+                    }
 
                     if (this.reusePictureData != null) {
                         if (this.reusePictureData.offer(src.pointer)) { // try adding to the reuse queue, ignore if full
@@ -259,7 +277,7 @@ public class AsyncVideoEncoder implements AutoCloseable {
                             0, src.height, picture_ptr, picture.linesize());
 
                     this.encodeQueue.put(new ImageFrame(tempPointerAddress, dstSize, dstWidth, dstHeight, dstChannels, dstDepth,
-                            dstWidth, dstPixelFormat));
+                            dstWidth, dstPixelFormat, src.audioBuffer));
                 } catch (Throwable t) {
                     try {
                         av_frame_free(picture);
@@ -299,7 +317,7 @@ public class AsyncVideoEncoder implements AutoCloseable {
         }
     }
 
-    public void encode(NativeImage src) {
+    public void encode(NativeImage src, @Nullable FloatBuffer audioBuffer) {
         checkEncodeError(src);
 
         if (this.finishRescaleThread.get() || this.finishEncodeThread.get() || this.finishedWriting.get()) {
@@ -310,7 +328,7 @@ public class AsyncVideoEncoder implements AutoCloseable {
         while (true) {
             try {
                 ImageFrame imageFrame = new ImageFrame(src.pixels, (int) src.size, src.getWidth(), src.getHeight(),
-                        4, Frame.DEPTH_INT, src.getWidth(), SRC_PIXEL_FORMAT);
+                        4, Frame.DEPTH_INT, src.getWidth(), SRC_PIXEL_FORMAT, audioBuffer);
                 if (this.rescaleQueue != null) {
                     this.rescaleQueue.put(imageFrame);
                 } else {
@@ -368,7 +386,7 @@ public class AsyncVideoEncoder implements AutoCloseable {
 
         if (this.reusePictureData != null) {
             for (Long address : this.reusePictureData) {
-                if (address != 0) {
+                if (address != null && address != 0) {
                     MemoryUtil.nmemFree(address);
                 }
             }

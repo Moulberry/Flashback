@@ -2,52 +2,63 @@ package com.moulberry.flashback.keyframe.impl;
 
 import com.google.gson.*;
 import com.moulberry.flashback.Interpolation;
-import com.moulberry.flashback.ReplayVisuals;
 import com.moulberry.flashback.keyframe.Keyframe;
-import com.moulberry.flashback.playback.ReplayServer;
+import com.moulberry.flashback.keyframe.handler.KeyframeHandler;
+import com.moulberry.flashback.keyframe.interpolation.InterpolationType;
 import com.moulberry.flashback.spline.CatmullRom;
-import net.minecraft.client.Minecraft;
-import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.level.GameRules;
+import imgui.ImGui;
+import imgui.type.ImInt;
 
 import java.lang.reflect.Type;
+import java.util.function.Consumer;
 
-public class TimeOfDayKeyframe extends Keyframe<Minecraft> {
+public class TimeOfDayKeyframe extends Keyframe {
 
-    private final int time;
+    public int time;
 
     public TimeOfDayKeyframe(int time) {
-        super(Minecraft.class);
+        this(time, InterpolationType.DEFAULT);
+    }
+
+    public TimeOfDayKeyframe(int time, InterpolationType interpolationType) {
         this.time = time;
+        this.interpolationType(interpolationType);
     }
 
-    private void setTime(Minecraft minecraft, int time) {
-        time = time % 24000;
-        if (time < 0) {
-            time += 24000;
+    @Override
+    public Keyframe copy() {
+        return new TimeOfDayKeyframe(this.time, this.interpolationType());
+    }
+
+    @Override
+    public void renderEditKeyframe(Consumer<Consumer<Keyframe>> update) {
+        ImGui.setNextItemWidth(160);
+        ImInt input = new ImInt(this.time);
+        if (ImGui.inputInt("Time", input, 0)) {
+            if (this.time != input.get()) {
+                update.accept(keyframe -> ((TimeOfDayKeyframe)keyframe).time = input.get());
+            }
         }
-
-        ReplayVisuals.overrideTimeOfDay = time;
     }
 
     @Override
-    public void apply(Minecraft minecraft) {
-        this.setTime(minecraft, this.time);
+    public void apply(KeyframeHandler keyframeHandler) {
+        keyframeHandler.applyTimeOfDay(this.time);
     }
 
     @Override
-    public void applyInterpolated(Minecraft minecraft, Keyframe otherGeneric, float amount) {
+    public void applyInterpolated(KeyframeHandler keyframeHandler, Keyframe otherGeneric, float amount) {
         if (!(otherGeneric instanceof TimeOfDayKeyframe other)) {
-            this.apply(minecraft);
+            this.apply(keyframeHandler);
             return;
         }
 
         int time = Math.round(Interpolation.linear(this.time, other.time, amount));
-        this.setTime(minecraft, time);
+        keyframeHandler.applyTimeOfDay(time);
     }
 
     @Override
-    public void applyInterpolatedSmooth(Minecraft minecraft, Keyframe p1, Keyframe p2, Keyframe p3, float t0, float t1, float t2, float t3, float amount, float lerpAmount, boolean lerpFromRight) {
+    public void applyInterpolatedSmooth(KeyframeHandler keyframeHandler, Keyframe p1, Keyframe p2, Keyframe p3, float t0, float t1, float t2, float t3, float amount, float lerpAmount, boolean lerpFromRight) {
         float time1 = t1 - t0;
         float time2 = t2 - t0;
         float time3 = t3 - t0;
@@ -66,7 +77,7 @@ public class TimeOfDayKeyframe extends Keyframe<Minecraft> {
             }
         }
 
-        this.setTime(minecraft, Math.round(timeOfDay));
+        keyframeHandler.applyTimeOfDay(Math.round(timeOfDay));
     }
 
 
@@ -75,13 +86,16 @@ public class TimeOfDayKeyframe extends Keyframe<Minecraft> {
         public TimeOfDayKeyframe deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) throws JsonParseException {
             JsonObject jsonObject = json.getAsJsonObject();
             int timeOfDay = jsonObject.get("time").getAsInt();
-            return new TimeOfDayKeyframe(timeOfDay);
+            InterpolationType interpolationType = context.deserialize(jsonObject.get("interpolation_type"), InterpolationType.class);
+            return new TimeOfDayKeyframe(timeOfDay, interpolationType);
         }
 
         @Override
         public JsonElement serialize(TimeOfDayKeyframe src, Type typeOfSrc, JsonSerializationContext context) {
             JsonObject jsonObject = new JsonObject();
             jsonObject.addProperty("time", src.time);
+            jsonObject.addProperty("type", "time");
+            jsonObject.add("interpolation_type", context.serialize(src.interpolationType()));
             return jsonObject;
         }
     }

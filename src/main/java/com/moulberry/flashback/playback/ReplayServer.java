@@ -4,11 +4,14 @@ import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.mojang.authlib.GameProfile;
 import com.moulberry.flashback.Flashback;
-import com.moulberry.flashback.ReplayVisuals;
+import com.moulberry.flashback.ext.LevelChunkExt;
 import com.moulberry.flashback.TempFolderProvider;
+import com.moulberry.flashback.keyframe.handler.ReplayServerKeyframeHandler;
+import com.moulberry.flashback.packet.FlashbackClearParticles;
+import com.moulberry.flashback.packet.FlashbackForceClientTick;
+import com.moulberry.flashback.packet.FlashbackInstantlyLerp;
 import com.moulberry.flashback.state.EditorState;
-import com.moulberry.flashback.state.EditorStateCache;
-import com.moulberry.flashback.ext.LevelChunkSectionExt;
+import com.moulberry.flashback.state.EditorStateManager;
 import com.moulberry.flashback.ext.MinecraftExt;
 import com.moulberry.flashback.ext.ServerGamePacketListenerImplExt;
 import com.moulberry.flashback.io.ReplayReader;
@@ -51,12 +54,12 @@ import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.WorldDataConfiguration;
 import net.minecraft.world.level.chunk.LevelChunk;
-import net.minecraft.world.level.chunk.LevelChunkSection;
 import net.minecraft.world.level.storage.LevelStorageSource;
 
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.file.FileSystem;
+import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -66,6 +69,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -73,19 +77,22 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BooleanSupplier;
 import java.util.function.Function;
 import java.util.zip.ZipEntry;
-import java.util.zip.ZipInputStream;
 
 public class ReplayServer extends IntegratedServer {
 
     private static final Gson GSON = new Gson();
+    public static int REPLAY_VIEWER_IDS_START = -981723987;
+    public static String REPLAY_VIEWER_NAME = "Replay Viewer";
 
     public volatile int jumpToTick = -1;
     public volatile boolean replayPaused = true;
+    public AtomicBoolean forceApplyKeyframes = new AtomicBoolean(false);
     public AtomicBoolean sendFinishedServerTick = new AtomicBoolean(false);
-    public volatile float desiredTickRate = 20.0f;
+    private volatile float desiredTickRate = 20.0f;
+    private volatile float desiredTickRateManual = 20.0f;
 
     private int currentTick = 0;
-    private int targetTick = 0;
+    private volatile int targetTick = 0;
     private final int totalTicks;
     public ResourceKey<Level> spawnLevel = null;
     private final ReplayGamePacketHandler gamePacketHandler;
@@ -97,6 +104,7 @@ public class ReplayServer extends IntegratedServer {
     public boolean followLocalPlayerNextTickIfFar = false;
     public boolean isProcessingSnapshot = false;
     private boolean processedSnapshot = false;
+    private volatile boolean fastForwarding = false;
 
     private final UUID playbackUUID;
     private final FlashbackMeta metadata;
@@ -112,6 +120,7 @@ public class ReplayServer extends IntegratedServer {
     private Component tabListFooter = Component.empty();
 
     private Component shutdownReason = null;
+    private FileSystem playbackFileSystem = null;
 
     public ReplayServer(Thread thread, Minecraft minecraft, LevelStorageSource.LevelStorageAccess levelStorageAccess, PackRepository packRepository, WorldStem worldStem, Services services,
                         ChunkProgressListenerFactory chunkProgressListenerFactory, UUID playbackUUID, Path path) {
@@ -124,36 +133,10 @@ public class ReplayServer extends IntegratedServer {
         this.configurationPacketCodec = ConfigurationProtocols.CLIENTBOUND.codec();
 
         try {
-            Path playbackFolder = TempFolderProvider.createTemp(TempFolderProvider.TempFolderType.PLAYBACK, playbackUUID);
+            this.playbackFileSystem = FileSystems.newFileSystem(path);
 
-            byte[] buffer = new byte[1024];
-            ZipInputStream zis = new ZipInputStream(Files.newInputStream(path));
-            ZipEntry zipEntry = zis.getNextEntry();
-            while (zipEntry != null) {
-                File newFile = newFile(playbackFolder.toFile(), zipEntry);
-                if (zipEntry.isDirectory()) {
-                    if (!newFile.isDirectory() && !newFile.mkdirs()) {
-                        throw new IOException("Failed to create directory " + newFile);
-                    }
-                } else {
-                    // fix for Windows-created archives
-                    File parent = newFile.getParentFile();
-                    if (!parent.isDirectory() && !parent.mkdirs()) {
-                        throw new IOException("Failed to create directory " + parent);
-                    }
-
-                    // write file content
-                    FileOutputStream fos = new FileOutputStream(newFile);
-                    int len;
-                    while ((len = zis.read(buffer)) > 0) {
-                        fos.write(buffer, 0, len);
-                    }
-                    fos.close();
-                }
-                zipEntry = zis.getNextEntry();
-            }
-
-            String metadataJson = Files.readString(playbackFolder.resolve("metadata.json"));
+            Path metadataPath = this.playbackFileSystem.getPath("/metadata.json");
+            String metadataJson = Files.readString(metadataPath);
             this.metadata = FlashbackMeta.fromJson(GSON.fromJson(metadataJson, JsonObject.class));
             if (this.metadata == null) {
                 throw new RuntimeException("Invalid metadata file");
@@ -161,14 +144,14 @@ public class ReplayServer extends IntegratedServer {
 
             int ticks = 0;
             for (Map.Entry<String, FlashbackChunkMeta> entry : this.metadata.chunks.entrySet()) {
-                var chunkMetaWithPath = new PlayableChunk(entry.getValue(), playbackFolder.resolve(entry.getKey()));
+                var chunkMetaWithPath = new PlayableChunk(entry.getValue(), this.playbackFileSystem.getPath("/"+entry.getKey()));
                 this.playableChunksByStart.put(ticks, chunkMetaWithPath);
                 ticks += entry.getValue().duration;
             }
 
             this.totalTicks = ticks;
 
-            Path levelChunkCachePath = playbackFolder.resolve("level_chunk_cache");
+            Path levelChunkCachePath = this.playbackFileSystem.getPath("/level_chunk_cache");
             if (Files.exists(levelChunkCachePath)) {
                 int chunkCacheIndex = 0;
 
@@ -214,19 +197,6 @@ public class ReplayServer extends IntegratedServer {
         return this.metadata;
     }
 
-    public static File newFile(File destinationDir, ZipEntry zipEntry) throws IOException {
-        File destFile = new File(destinationDir, zipEntry.getName());
-
-        String destDirPath = destinationDir.getCanonicalPath();
-        String destFilePath = destFile.getCanonicalPath();
-
-        if (!destFilePath.startsWith(destDirPath + File.separator)) {
-            throw new IOException("Entry is outside of the target dir: " + zipEntry.getName());
-        }
-
-        return destFile;
-    }
-
     public void updateRegistry(FeatureFlagSet featureFlagSet, Collection<String> selectedPacks, List<Packet<? super ClientConfigurationPacketListener>> initialPackets,
             List<ConfigurationTask> configurationTasks) {
         this.worldData.setDataConfiguration(new WorldDataConfiguration(
@@ -252,7 +222,9 @@ public class ReplayServer extends IntegratedServer {
 
     @Override
     public boolean initServer() {
-        AtomicInteger newPlayerIds = new AtomicInteger(-981723987);
+        Entity.ENTITY_COUNTER.set(1000000);
+
+        AtomicInteger newPlayerIds = new AtomicInteger(REPLAY_VIEWER_IDS_START);
         this.setPlayerList(new PlayerList(this, this.registries(), this.playerDataStorage, 1) {
             @Override
             public ServerPlayer getPlayerForLogin(GameProfile gameProfile, ClientInformation clientInformation) {
@@ -347,6 +319,22 @@ public class ReplayServer extends IntegratedServer {
         this.jumpToTick = tick;
     }
 
+    public float getDesiredTickRate(boolean manual) {
+        if (manual) {
+            return this.desiredTickRateManual;
+        } else {
+            return this.desiredTickRate;
+        }
+    }
+
+    public void setDesiredTickRate(float tickrate, boolean manual) {
+        if (manual) {
+            this.desiredTickRateManual = tickrate;
+        } else {
+            this.desiredTickRate = tickrate;
+        }
+    }
+
     public int getReplayTick() {
         return this.targetTick;
     }
@@ -355,9 +343,8 @@ public class ReplayServer extends IntegratedServer {
     private long lastTickTimeNanos;
 
     public float getPartialReplayTick() {
-        int lastReplayTick = this.lastReplayTick;
         if (this.replayPaused || this.isPaused()) {
-            return lastReplayTick;
+            return this.targetTick;
         } else {
             long currentNanos = Util.getNanos();
             long nanosPerTick = this.tickRateManager().nanosecondsPerTick();
@@ -365,7 +352,7 @@ public class ReplayServer extends IntegratedServer {
             double partial = (currentNanos - this.lastTickTimeNanos) / (double) nanosPerTick;
             partial = Math.max(0, Math.min(1, partial));
 
-            return lastReplayTick + (float) partial;
+            return this.lastReplayTick + (float) partial;
         }
     }
 
@@ -374,7 +361,7 @@ public class ReplayServer extends IntegratedServer {
     }
 
     public boolean doClientRendering() {
-        return !this.isProcessingSnapshot && !this.processedSnapshot;
+        return !this.isProcessingSnapshot && !this.processedSnapshot && !this.fastForwarding;
     }
 
     public void updateBossBar(ClientboundBossEventPacket packet) {
@@ -540,8 +527,8 @@ public class ReplayServer extends IntegratedServer {
             if (!doesCachedChunkIdMatch(chunk, index)) {
                 packet.handle(this.gamePacketHandler);
 
-                for (LevelChunkSection section : chunk.getSections()) {
-                    ((LevelChunkSectionExt)section).flashback$setCachedChunkId(index);
+                if (chunk instanceof LevelChunkExt ext) {
+                    ext.flashback$setCachedChunkId(index);
                 }
             }
         } else {
@@ -550,13 +537,10 @@ public class ReplayServer extends IntegratedServer {
     }
 
     private static boolean doesCachedChunkIdMatch(LevelChunk chunk, int chunkId) {
-        for (LevelChunkSection section : chunk.getSections()) {
-            if (chunkId != ((LevelChunkSectionExt) section).flashback$getCachedChunkId()) {
-                return false;
-            }
+        if (chunk instanceof LevelChunkExt ext) {
+            return ext.flashback$getCachedChunkId() == chunkId;
         }
-
-        return true;
+        return false;
     }
 
     public static final TicketType<ChunkPos> ENTITY_LOAD_TICKET = TicketType.create("replay_entity_load", Comparator.comparingLong(ChunkPos::toLong), 5);
@@ -597,48 +581,70 @@ public class ReplayServer extends IntegratedServer {
         return super.haveTime() && this.jumpToTick < 0;
     }
 
+    public EditorState getEditorState() {
+        return EditorStateManager.get(this.metadata.replayIdentifier);
+    }
+
     @Override
     public void tickServer(BooleanSupplier booleanSupplier) {
         this.lastReplayTick = this.currentTick;
         this.lastTickTimeNanos = this.nextTickTimeNanos - this.tickRateManager().nanosecondsPerTick();
 
-        if (!this.replayPaused) {
-            EditorState editorState = EditorStateCache.get(this.metadata.replayIdentifier);
-            editorState.applyKeyframes(this, this.lastReplayTick);
-        }
-
         // Update list of replay viewers
         this.replayViewers.clear();
         for (ServerPlayer player : this.getPlayerList().getPlayers()) {
             if (player instanceof ReplayPlayer replayPlayer) {
+                Entity cameraEntity = replayPlayer.getCamera();
+                replayPlayer.spectatingUuid = cameraEntity == null || cameraEntity == replayPlayer ? null : cameraEntity.getUUID();
                 this.replayViewers.add(replayPlayer);
             }
         }
 
-        int extraForceEntityLerpTicks = 0;
+        // Update current tick
+        boolean normalPlayback = false;
         if (this.jumpToTick >= 0) {
             this.targetTick = this.jumpToTick;
             this.jumpToTick = -1;
-            extraForceEntityLerpTicks = Math.max(0, Math.abs(this.targetTick - this.currentTick) - 1);
         } else if (!this.isPaused() && !this.replayPaused && this.targetTick < this.totalTicks) {
             // Normal playback
             this.targetTick += 1;
+            normalPlayback = true;
         } else if (this.targetTick == this.totalTicks && this.currentTick == this.totalTicks) {
             // Pause when reaching end of replay
             this.replayPaused = true;
         }
 
-        // Update tick rate & frozen state
-        if (this.tickRateManager().tickrate() != this.desiredTickRate) {
-            this.tickRateManager().setTickRate(this.desiredTickRate);
+        if (Flashback.EXPORT_JOB != null || this.targetTick == this.currentTick || normalPlayback) {
+            this.runUpdates(booleanSupplier);
+        } else {
+            int realTargetTick = this.targetTick;
+
+            if (this.targetTick < this.currentTick) {
+                int minTick = this.playableChunksByStart.floorKey(this.targetTick) + 1;
+                this.targetTick = Math.max(minTick, realTargetTick - 20);
+            } else {
+                this.targetTick = Math.max(this.currentTick+1, realTargetTick - 20);
+            }
+
+            if (this.targetTick >= realTargetTick) {
+                this.targetTick = realTargetTick;
+                this.runUpdates(booleanSupplier);
+            } else {
+                while (this.targetTick <= realTargetTick) {
+                    this.fastForwarding = this.targetTick < realTargetTick;
+
+                    this.runUpdates(booleanSupplier);
+
+                    if (this.targetTick == realTargetTick) {
+                        break;
+                    } else {
+                        this.targetTick += 1;
+                    }
+                }
+                this.fastForwarding = false;
+            }
         }
 
-        boolean wantFrozen = this.replayPaused && this.targetTick == this.currentTick;
-        if (this.tickRateManager().isFrozen() != wantFrozen) {
-            this.tickRateManager().setFrozen(wantFrozen);
-        }
-
-        this.handleActions();
         this.tryFollowLocalPlayer();
 
         // Update resourcepacks
@@ -653,11 +659,11 @@ public class ReplayServer extends IntegratedServer {
                 RemotePack oldRemotePack = this.oldRemotePacks.get(entry.getKey());
                 if (oldRemotePack == null) {
                     this.getPlayerList().broadcastAll(new ClientboundResourcePackPushPacket(remotePack.id, remotePack.url, remotePack.hash,
-                            true, Optional.empty()));
+                        true, Optional.empty()));
                 } else if (!oldRemotePack.equals(remotePack)) {
                     this.getPlayerList().broadcastAll(new ClientboundResourcePackPopPacket(Optional.of(remotePack.id)));
                     this.getPlayerList().broadcastAll(new ClientboundResourcePackPushPacket(remotePack.id, remotePack.url, remotePack.hash,
-                            true, Optional.empty()));
+                        true, Optional.empty()));
                 }
                 this.oldRemotePacks.put(entry.getKey(), remotePack);
             }
@@ -671,9 +677,41 @@ public class ReplayServer extends IntegratedServer {
             });
         }
 
-        if (extraForceEntityLerpTicks > 0) {
-            ReplayVisuals.forceEntityLerpTicks = Math.min(10, ReplayVisuals.forceEntityLerpTicks + extraForceEntityLerpTicks);
+        if (this.sendFinishedServerTick.compareAndExchange(true, false)) {
+            for (ReplayPlayer replayViewer : this.replayViewers) {
+                ServerPlayNetworking.send(replayViewer, FinishedServerTick.INSTANCE);
+            }
+            if (this.replayViewers.isEmpty() && Flashback.EXPORT_JOB != null) {
+                Flashback.EXPORT_JOB.onFinishedServerTick();
+            }
         }
+    }
+
+    private void runUpdates(BooleanSupplier booleanSupplier) {
+        boolean forceApplyKeyframes = this.forceApplyKeyframes.compareAndSet(true, false) && Flashback.EXPORT_JOB == null;
+        if (!this.replayPaused || forceApplyKeyframes) {
+            this.desiredTickRate = 20.0f;
+            EditorState editorState = EditorStateManager.get(this.metadata.replayIdentifier);
+            editorState.applyKeyframes(new ReplayServerKeyframeHandler(this), this.targetTick);
+
+            if (forceApplyKeyframes) {
+                ((MinecraftExt)Minecraft.getInstance()).flashback$applyKeyframes();
+            }
+        }
+
+        float tickRate = this.desiredTickRate;
+        if (Flashback.EXPORT_JOB == null) {
+            tickRate *= this.desiredTickRateManual / 20f;
+        }
+
+        // Update tick rate & frozen state
+        if (this.tickRateManager().tickrate() != tickRate) {
+            this.tickRateManager().setTickRate(tickRate);
+        }
+
+        boolean tickChanged = this.targetTick != this.currentTick;
+
+        this.handleActions();
 
         // Add tickets for keeping entities loaded
         for (ServerLevel level : this.getAllLevels()) {
@@ -686,34 +724,55 @@ public class ReplayServer extends IntegratedServer {
         // Tick underlying server
         super.tickServer(booleanSupplier);
 
-        if (this.processedSnapshot) {
-            this.processedSnapshot = false;
+        if (Flashback.EXPORT_JOB == null) {
+            if (this.processedSnapshot) {
+                this.processedSnapshot = false;
 
-            for (ReplayPlayer replayViewer : this.replayViewers) {
-                replayViewer.connection.chunkSender.sendNextChunks(replayViewer);
-            }
-            for (ServerLevel level : this.getAllLevels()) {
-                for (ServerPlayer player : level.players()) {
-                    if (player instanceof ReplayPlayer) {
-                        // Called twice, first one will update the chunk tracking & second one will update the entity tracking
-                        level.getChunkSource().move(player);
-                        level.getChunkSource().move(player);
+                for (ReplayPlayer replayViewer : this.replayViewers) {
+                    replayViewer.connection.chunkSender.sendNextChunks(replayViewer);
+                    ServerPlayNetworking.send(replayViewer, FlashbackInstantlyLerp.INSTANCE);
+                    ServerPlayNetworking.send(replayViewer, FlashbackClearParticles.INSTANCE);
+
+                    // Ensure replay viewers are still spectating
+                    if (replayViewer.spectatingUuid != null) {
+                        Entity camera = replayViewer.getCamera();
+                        if (camera == null || camera == replayViewer || camera.isRemoved()) {
+                            Entity targetEntity = replayViewer.serverLevel().getEntity(replayViewer.spectatingUuid);
+                            if (targetEntity != null && !targetEntity.isRemoved()) {
+                                replayViewer.setCamera(targetEntity);
+                            } else {
+                                replayViewer.spectatingUuid = null;
+                            }
+                        } else {
+                            replayViewer.spectatingUuid = null;
+                        }
+                    }
+                }
+                for (ServerLevel level : this.getAllLevels()) {
+                    for (ServerPlayer player : level.players()) {
+                        if (player instanceof ReplayPlayer) {
+                            // Called twice, first one will update the chunk tracking & second one will update the entity tracking
+                            level.getChunkSource().move(player);
+                            level.getChunkSource().move(player);
+                        }
                     }
                 }
             }
 
-            if (Flashback.EXPORT_JOB == null) {
-                ReplayVisuals.forceEntityLerpTicks = 10;
-                ((MinecraftExt)Minecraft.getInstance()).flashback$forceClientTick();
-            }
-        }
-
-        if (this.sendFinishedServerTick.compareAndExchange(true, false)) {
-            for (ReplayPlayer replayViewer : this.replayViewers) {
-                ServerPlayNetworking.send(replayViewer, FinishedServerTick.INSTANCE);
-            }
-            if (this.replayViewers.isEmpty() && Flashback.EXPORT_JOB != null) {
-                Flashback.EXPORT_JOB.onFinishedServerTick();
+            if (this.replayPaused) {
+                if (tickChanged) {
+                    if (this.tickRateManager().isFrozen()) {
+                        this.tickRateManager().setFrozen(false);
+                    }
+                    for (ReplayPlayer replayViewer : this.replayViewers) {
+                        ServerPlayNetworking.send(replayViewer, FlashbackForceClientTick.INSTANCE);
+                    }
+                    this.tickRateManager().setFrozen(true);
+                } else if (!this.tickRateManager().isFrozen()) {
+                    this.tickRateManager().setFrozen(true);
+                }
+            } else if (this.tickRateManager().isFrozen()) {
+                this.tickRateManager().setFrozen(false);
             }
         }
     }
@@ -751,6 +810,15 @@ public class ReplayServer extends IntegratedServer {
 
         if (shouldJump) {
             this.processedSnapshot = true;
+
+            // Clear bossbars and particles
+            for (ReplayPlayer replayViewer : this.replayViewers) {
+                for (UUID uuid : this.bossEvents.keySet()) {
+                    replayViewer.connection.send(ClientboundBossEventPacket.createRemovePacket(uuid));
+                }
+            }
+            this.bossEvents.clear();
+
             Map.Entry<Integer, PlayableChunk> entry = this.playableChunksByStart.floorEntry(this.targetTick);
             ReplayReader replayReader = entry.getValue().getOrLoadReplayReader(this.registryAccess());
             replayReader.handleSnapshot(this);
@@ -867,7 +935,13 @@ public class ReplayServer extends IntegratedServer {
         super.stopServer();
         this.clearReplayTempFolder();
 
-        TempFolderProvider.deleteTemp(TempFolderProvider.TempFolderType.PLAYBACK, this.playbackUUID);
+        if (this.playbackFileSystem != null) {
+            try {
+                this.playbackFileSystem.close();
+            } catch (IOException e) {
+                Flashback.LOGGER.error("Failed to close playback zip", e);
+            }
+        }
     }
 
     public void clearReplayTempFolder() {
@@ -876,6 +950,6 @@ public class ReplayServer extends IntegratedServer {
 
     @Override
     public boolean isSingleplayerOwner(GameProfile gameProfile) {
-        return gameProfile.getName().equals("ReplayViewer");
+        return gameProfile.getName().equals(REPLAY_VIEWER_NAME) && gameProfile.getProperties().containsKey("IsReplayViewer");
     }
 }

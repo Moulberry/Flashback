@@ -16,7 +16,7 @@ public class MixinDebugScreenOverlay {
 
     @Inject(method = "render", at = @At("HEAD"), cancellable = true)
     public void render(GuiGraphics guiGraphics, CallbackInfo ci) {
-        if (Flashback.EXPORT_JOB != null && Flashback.EXPORT_JOB.isRunning()) {
+        if (Flashback.isExporting()) {
             ci.cancel();
         }
     }
