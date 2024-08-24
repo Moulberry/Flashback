@@ -659,6 +659,10 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
         ServerLevel newLevel = this.replayServer.getLevel(dimension);
 
         if (newLevel == oldLevel) {
+            // Change to new dimension
+            this.currentDimension = commonPlayerSpawnInfo.dimension();
+            this.replayServer.spawnLevel = this.currentDimension;
+
             if (!this.replayServer.isProcessingSnapshot) {
                 this.replayServer.followLocalPlayerNextTickIfFar = true;
             }
