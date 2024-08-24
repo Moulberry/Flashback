@@ -582,6 +582,9 @@ public class ReplayServer extends IntegratedServer {
     }
 
     public EditorState getEditorState() {
+        if (Flashback.isExporting()) {
+            return Flashback.EXPORT_JOB.getSettings().editorState();
+        }
         return EditorStateManager.get(this.metadata.replayIdentifier);
     }
 
@@ -691,8 +694,7 @@ public class ReplayServer extends IntegratedServer {
         boolean forceApplyKeyframes = this.forceApplyKeyframes.compareAndSet(true, false) && Flashback.EXPORT_JOB == null;
         if (!this.replayPaused || forceApplyKeyframes) {
             this.desiredTickRate = 20.0f;
-            EditorState editorState = EditorStateManager.get(this.metadata.replayIdentifier);
-            editorState.applyKeyframes(new ReplayServerKeyframeHandler(this), this.targetTick);
+            this.getEditorState().applyKeyframes(new ReplayServerKeyframeHandler(this), this.targetTick);
 
             if (forceApplyKeyframes) {
                 ((MinecraftExt)Minecraft.getInstance()).flashback$applyKeyframes();

@@ -185,8 +185,6 @@ public class ExportJob {
 
         this.renderStartTime = System.currentTimeMillis();
 
-        EditorState editorState = EditorStateManager.get(replayServer.getMetadata().replayIdentifier);
-
         double lastTickDouble = 0;
 
         for (int tickIndex = 0; tickIndex < ticks.size(); tickIndex++) {
@@ -246,7 +244,7 @@ public class ExportJob {
             this.tryUnfreezeClient();
 
             KeyframeHandler keyframeHandler = new MinecraftKeyframeHandler(Minecraft.getInstance());
-            editorState.applyKeyframes(keyframeHandler, (float)(this.settings.startTick() + currentTickDouble));
+            this.settings.editorState().applyKeyframes(keyframeHandler, (float)(this.settings.startTick() + currentTickDouble));
 
             boolean asyncFrameCapture = !IrisApiWrapper.isIrisAvailable() || !IrisApiWrapper.isShaderPackInUse();
 
@@ -391,8 +389,7 @@ public class ExportJob {
             player.moveTo(position.x, position.y, position.z, this.settings.initialCameraYaw(), this.settings.initialCameraPitch());
             player.setDeltaMovement(Vec3.ZERO);
         }
-        EditorState editorState = EditorStateManager.get(replayServer.getMetadata().replayIdentifier);
-        editorState.applyKeyframes(new MinecraftKeyframeHandler(Minecraft.getInstance()), this.settings.startTick());
+        this.settings.editorState().applyKeyframes(new MinecraftKeyframeHandler(Minecraft.getInstance()), this.settings.startTick());
         this.runClientTick();
 
         // Ensured replay server is paused at startTick
