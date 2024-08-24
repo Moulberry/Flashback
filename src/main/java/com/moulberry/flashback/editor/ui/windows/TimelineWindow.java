@@ -438,59 +438,64 @@ public class TimelineWindow {
                 }
             }
 
-            handleKeyPresses(replayServer, cursorTicks, editorState, totalTicks);
+            boolean shouldProcessInput = !ImGui.isPopupOpen("", ImGuiPopupFlags.AnyPopup) && !ImGui.getIO().getWantTextInput();
+            if (shouldProcessInput) {
+                handleKeyPresses(replayServer, cursorTicks, editorState, totalTicks);
 
-            boolean leftClicked = ImGui.isMouseClicked(ImGuiMouseButton.Left);
-            boolean rightClicked = ImGui.isMouseClicked(ImGuiMouseButton.Right);
-            if ((leftClicked || rightClicked) && !ImGui.isPopupOpen("", ImGuiPopupFlags.AnyPopup)) {
-                handleClick(editorState, replayServer, totalTicks);
-            } else if (ImGui.isMouseDragging(ImGuiMouseButton.Left)) {
-                if (grabbedExportBarResizeLeft) {
-                    ImGui.setMouseCursor(ImGuiMouseCursor.ResizeEW);
-
-                    int target = timelineXToReplayTick(mouseX);
-                    editorState.setExportTicks(target, -1, totalTicks);
-                }
-                if (grabbedExportBarResizeRight) {
-                    ImGui.setMouseCursor(ImGuiMouseCursor.ResizeEW);
-
-                    int target = timelineXToReplayTick(mouseX);
-                    editorState.setExportTicks(-1, target, totalTicks);
-                }
-                if (zoomBarWidth > 1f && grabbedZoomBar) {
-                    float dx = ImGui.getMouseDragDeltaX();
-                    float factor = dx / zoomBarWidth;
-
-                    if (grabbedZoomBarResizeLeft) {
+                boolean leftClicked = ImGui.isMouseClicked(ImGuiMouseButton.Left);
+                boolean rightClicked = ImGui.isMouseClicked(ImGuiMouseButton.Right);
+                if (leftClicked || rightClicked) {
+                    handleClick(editorState, replayServer, totalTicks);
+                } else if (ImGui.isMouseDragging(ImGuiMouseButton.Left)) {
+                    if (grabbedExportBarResizeLeft) {
                         ImGui.setMouseCursor(ImGuiMouseCursor.ResizeEW);
-                        editorState.zoomMin = Math.max(0, Math.min(editorState.zoomMax-0.01f, zoomMinBeforeDrag + factor));
-                    } else if (grabbedZoomBarResizeRight) {
-                        ImGui.setMouseCursor(ImGuiMouseCursor.ResizeEW);
-                        editorState.zoomMax = Math.max(editorState.zoomMin+0.01f, Math.min(1, zoomMaxBeforeDrag + factor));
-                    } else {
-                        ImGui.setMouseCursor(ImGuiMouseCursor.Hand);
 
-                        double zoomSize = zoomMaxBeforeDrag - zoomMinBeforeDrag;
-                        if (factor < 0) {
-                            editorState.zoomMin = Math.max(0, zoomMinBeforeDrag + factor);
-                            editorState.zoomMax = editorState.zoomMin + zoomSize;
-                        } else if (factor > 0) {
-                            editorState.zoomMax = Math.min(1, zoomMaxBeforeDrag + factor);
-                            editorState.zoomMin = editorState.zoomMax - zoomSize;
+                        int target = timelineXToReplayTick(mouseX);
+                        editorState.setExportTicks(target, -1, totalTicks);
+                    }
+                    if (grabbedExportBarResizeRight) {
+                        ImGui.setMouseCursor(ImGuiMouseCursor.ResizeEW);
+
+                        int target = timelineXToReplayTick(mouseX);
+                        editorState.setExportTicks(-1, target, totalTicks);
+                    }
+                    if (zoomBarWidth > 1f && grabbedZoomBar) {
+                        float dx = ImGui.getMouseDragDeltaX();
+                        float factor = dx / zoomBarWidth;
+
+                        if (grabbedZoomBarResizeLeft) {
+                            ImGui.setMouseCursor(ImGuiMouseCursor.ResizeEW);
+                            editorState.zoomMin = Math.max(0, Math.min(editorState.zoomMax-0.01f, zoomMinBeforeDrag + factor));
+                        } else if (grabbedZoomBarResizeRight) {
+                            ImGui.setMouseCursor(ImGuiMouseCursor.ResizeEW);
+                            editorState.zoomMax = Math.max(editorState.zoomMin+0.01f, Math.min(1, zoomMaxBeforeDrag + factor));
+                        } else {
+                            ImGui.setMouseCursor(ImGuiMouseCursor.Hand);
+
+                            double zoomSize = zoomMaxBeforeDrag - zoomMinBeforeDrag;
+                            if (factor < 0) {
+                                editorState.zoomMin = Math.max(0, zoomMinBeforeDrag + factor);
+                                editorState.zoomMax = editorState.zoomMin + zoomSize;
+                            } else if (factor > 0) {
+                                editorState.zoomMax = Math.min(1, zoomMaxBeforeDrag + factor);
+                                editorState.zoomMin = editorState.zoomMax - zoomSize;
+                            }
                         }
+                        editorState.markDirty();
                     }
-                    editorState.markDirty();
-                }
-                if (grabbedPlayback) {
-                    int desiredTick = timelineXToReplayTick(mouseX);
+                    if (grabbedPlayback) {
+                        int desiredTick = timelineXToReplayTick(mouseX);
 
-                    if (desiredTick > currentReplayTick) {
-                        replayServer.goToReplayTick(desiredTick);
+                        if (desiredTick > currentReplayTick) {
+                            replayServer.goToReplayTick(desiredTick);
+                        }
+
+                        replayServer.replayPaused = true;
                     }
-
-                    replayServer.replayPaused = true;
+                } else if (!ImGui.isAnyMouseDown()) {
+                    releaseGrabbed(editorState, replayServer, totalTicks);
                 }
-            } else if (!ImGui.isAnyMouseDown()) {
+            } else {
                 releaseGrabbed(editorState, replayServer, totalTicks);
             }
         }
@@ -1079,6 +1084,12 @@ public class TimelineWindow {
             }
 
             grabbedKeyframe = false;
+        }
+
+        if (pendingStepBackwardsTicks > 0 && !ImGui.isKeyDown(GLFW.GLFW_KEY_LEFT)) {
+            replayServer.goToReplayTick(Math.max(0, replayServer.getReplayTick() - pendingStepBackwardsTicks));
+            replayServer.forceApplyKeyframes.set(true);
+            pendingStepBackwardsTicks = 0;
         }
     }
 
