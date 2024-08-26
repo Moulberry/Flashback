@@ -366,20 +366,20 @@ public class ExportJob {
     private void setup(ReplayServer replayServer) {
         Minecraft minecraft = Minecraft.getInstance();
 
-        // Clear particles
-        minecraft.particleEngine.clearParticles();
-
         int currentTick = Math.max(0, this.settings.startTick() - 20);
 
         // Ensure replay server is paused at currentTick
         this.setServerTickAndWait(replayServer, currentTick, true);
         this.runClientTick();
 
+        // Clear particles
+        minecraft.particleEngine.clearParticles();
+
         // Advance until tick is at start
         while (currentTick < this.settings.startTick()) {
+            currentTick += 1;
             this.setServerTickAndWait(replayServer, currentTick, true);
             this.runClientTick();
-            currentTick += 1;
         }
 
         // Apply initial position and keyframes at start tick
