@@ -24,6 +24,7 @@
     "visuals.MixinBossHealthOverlay",
     "visuals.MixinClientLevelData",
     "visuals.MixinEntityRenderDispatcher",
+    "visuals.MixinEntityRenderer",
     "visuals.MixinFogRenderer",
     "visuals.MixinGui",
     "visuals.MixinLevelRenderer",
