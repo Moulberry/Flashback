@@ -904,33 +904,33 @@ public class TimelineWindow {
 
                 editorState.push(new EditorStateHistoryEntry(undo, redo, "Changed interpolation type to " + interpolationType));
             }
-        }
 
-        ImInt intWrapper = new ImInt(editingKeyframeTick);
-        ImGui.setNextItemWidth(160);
-        ImGui.inputInt("Tick", intWrapper, 0);
-        int newEditingKeyframeTick = intWrapper.get();
+            ImInt intWrapper = new ImInt(editingKeyframeTick);
+            ImGui.setNextItemWidth(160);
+            ImGui.inputInt("Tick", intWrapper, 0);
+            int newEditingKeyframeTick = intWrapper.get();
 
-        if (ImGui.isItemDeactivatedAfterEdit() && newEditingKeyframeTick != editingKeyframeTick) {
-            for (SelectedKeyframes selectedKeyframes : selectedKeyframesList) {
-                KeyframeTrack track = editorState.keyframeTracks.get(selectedKeyframes.trackIndex());
+            if (ImGui.isItemDeactivatedAfterEdit() && newEditingKeyframeTick != editingKeyframeTick) {
+                for (SelectedKeyframes selectedKeyframes : selectedKeyframesList) {
+                    KeyframeTrack track = editorState.keyframeTracks.get(selectedKeyframes.trackIndex());
 
-                Keyframe possibleKeyframe = track.keyframesByTick.get(editingKeyframeTick);
-                if (possibleKeyframe == editingKeyframe) {
-                    List<EditorStateHistoryAction> undo = List.of(
-                        new EditorStateHistoryAction.RemoveKeyframe(track.keyframeType, selectedKeyframes.trackIndex(), newEditingKeyframeTick),
-                        new EditorStateHistoryAction.SetKeyframe(track.keyframeType, selectedKeyframes.trackIndex(), editingKeyframeTick, editingKeyframe.copy())
-                    );
-                    List<EditorStateHistoryAction> redo = List.of(
-                        new EditorStateHistoryAction.RemoveKeyframe(track.keyframeType, selectedKeyframes.trackIndex(), editingKeyframeTick),
-                        new EditorStateHistoryAction.SetKeyframe(track.keyframeType, selectedKeyframes.trackIndex(), newEditingKeyframeTick, editingKeyframe.copy())
-                    );
+                    Keyframe possibleKeyframe = track.keyframesByTick.get(editingKeyframeTick);
+                    if (possibleKeyframe == editingKeyframe) {
+                        List<EditorStateHistoryAction> undo = List.of(
+                            new EditorStateHistoryAction.RemoveKeyframe(track.keyframeType, selectedKeyframes.trackIndex(), newEditingKeyframeTick),
+                            new EditorStateHistoryAction.SetKeyframe(track.keyframeType, selectedKeyframes.trackIndex(), editingKeyframeTick, editingKeyframe.copy())
+                        );
+                        List<EditorStateHistoryAction> redo = List.of(
+                            new EditorStateHistoryAction.RemoveKeyframe(track.keyframeType, selectedKeyframes.trackIndex(), editingKeyframeTick),
+                            new EditorStateHistoryAction.SetKeyframe(track.keyframeType, selectedKeyframes.trackIndex(), newEditingKeyframeTick, editingKeyframe.copy())
+                        );
 
-                    editorState.push(new EditorStateHistoryEntry(undo, redo, "Moved 1 keyframe(s)"));
-                    selectedKeyframes.keyframeTicks().remove(editingKeyframeTick);
-                    selectedKeyframes.keyframeTicks().add(newEditingKeyframeTick);
-                    editingKeyframeTick = newEditingKeyframeTick;
-                    return;
+                        editorState.push(new EditorStateHistoryEntry(undo, redo, "Moved 1 keyframe(s)"));
+                        selectedKeyframes.keyframeTicks().remove(editingKeyframeTick);
+                        selectedKeyframes.keyframeTicks().add(newEditingKeyframeTick);
+                        editingKeyframeTick = newEditingKeyframeTick;
+                        return;
+                    }
                 }
             }
         }
