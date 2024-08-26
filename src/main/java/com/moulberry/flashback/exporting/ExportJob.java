@@ -22,6 +22,7 @@ import it.unimi.dsi.fastutil.doubles.DoubleArrayList;
 import it.unimi.dsi.fastutil.doubles.DoubleList;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.floats.FloatList;
+import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.Screenshot;
 import net.minecraft.client.gui.Font;
@@ -417,10 +418,29 @@ public class ExportJob {
     private void runClientTick() {
         this.tryUnfreezeClient();
 
-        while (Minecraft.getInstance().pollTask()) {}
-        Minecraft.getInstance().tick();
-        Minecraft.getInstance().getSoundManager().updateSource(Minecraft.getInstance().gameRenderer.getMainCamera());
+        Minecraft minecraft = Minecraft.getInstance();
+
+        while (minecraft.pollTask()) {}
+        minecraft.tick();
+        this.updateSoundSound(minecraft);
+
         this.tryUnfreezeClient();
+    }
+
+    private void updateSoundSound(Minecraft minecraft) {
+        EditorState editorState = EditorStateManager.getCurrent();
+        if (editorState != null && editorState.audioSourceEntity != null && minecraft.level != null) {
+            Entity sourceEntity = minecraft.level.getEntities().get(editorState.audioSourceEntity);
+            if (sourceEntity != null) {
+                Camera dummyCamera = new Camera();
+                dummyCamera.eyeHeight = sourceEntity.getEyeHeight();
+                dummyCamera.setup(minecraft.level, sourceEntity, false, false, 1.0f);
+                minecraft.getSoundManager().updateSource(dummyCamera);
+                return;
+            }
+        }
+
+        minecraft.getSoundManager().updateSource(Minecraft.getInstance().gameRenderer.getMainCamera());
     }
 
     private void tryUnfreezeClient() {

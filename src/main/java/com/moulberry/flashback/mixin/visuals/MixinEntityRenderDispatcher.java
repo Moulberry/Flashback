@@ -3,6 +3,7 @@ package com.moulberry.flashback.mixin.visuals;
 import com.llamalad7.mixinextras.injector.v2.WrapWithCondition;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.state.EditorState;
 import com.moulberry.flashback.state.EditorStateManager;
 import com.moulberry.flashback.editor.ui.ReplayUI;
@@ -27,8 +28,15 @@ public abstract class MixinEntityRenderDispatcher {
     // Add a yellow outline to selected entity
     @Inject(method = "render", at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/vertex/PoseStack;popPose()V", shift = At.Shift.BEFORE))
     public void render(Entity entity, double d, double e, double f, float g, float h, PoseStack poseStack, MultiBufferSource multiBufferSource, int i, CallbackInfo ci) {
-        if (ReplayUI.isEntitySelected(entity.getId())) {
-            renderHitbox(poseStack, multiBufferSource.getBuffer(RenderType.lines()), entity, h, 1.0f, 1.0f, 0.0f);
+        if (Flashback.isInReplay()) {
+            if (ReplayUI.isEntitySelected(entity.getUUID())) {
+                renderHitbox(poseStack, multiBufferSource.getBuffer(RenderType.lines()), entity, h, 1.0f, 1.0f, 0.0f);
+            } else if (!Flashback.isExporting()) {
+                EditorState editorState = EditorStateManager.getCurrent();
+                if (editorState != null && entity.getUUID().equals(editorState.audioSourceEntity)) {
+                    renderHitbox(poseStack, multiBufferSource.getBuffer(RenderType.lines()), entity, h, 0.0f, 1.0f, 0.0f);
+                }
+            }
         }
     }
 

@@ -120,6 +120,7 @@ accessible field com/mojang/blaze3d/platform/Window height I
 
 # Visuals
 accessible field net/minecraft/client/Camera eyeHeight F
+accessible method net/minecraft/client/multiplayer/ClientLevel getEntities ()Lnet/minecraft/world/level/entity/LevelEntityGetter;
 
 # Exporting
 accessible field net/minecraft/client/Minecraft clientTickCount J

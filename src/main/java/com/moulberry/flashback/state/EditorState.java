@@ -30,6 +30,8 @@ public class EditorState {
     public int exportStartTicks = -1;
     public int exportEndTicks = -1;
 
+    public UUID audioSourceEntity = null;
+
     public void setKeyframe(int trackIndex, int tick, Keyframe keyframe) {
         if (trackIndex >= this.keyframeTracks.size()) {
             return;

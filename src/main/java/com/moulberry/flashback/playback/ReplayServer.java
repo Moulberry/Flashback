@@ -49,12 +49,15 @@ import net.minecraft.server.packs.repository.PackRepository;
 import net.minecraft.server.players.PlayerList;
 import net.minecraft.world.BossEvent;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.flag.FeatureFlagSet;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.WorldDataConfiguration;
 import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.storage.LevelStorageSource;
+import net.minecraft.world.phys.Vec3;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
 import java.io.IOException;
@@ -249,6 +252,36 @@ public class ReplayServer extends IntegratedServer {
 
             @Override
             public void broadcastSystemMessage(Component component, Function<ServerPlayer, Component> function, boolean bl) {
+            }
+
+            @Override
+            public void broadcast(@Nullable Player player, double x, double y, double z, double distance, ResourceKey<Level> resourceKey, Packet<?> packet) {
+                UUID audioSourceEntity = null;
+
+                EditorState editorState = ReplayServer.this.getEditorState();
+                if (editorState != null) {
+                    audioSourceEntity = editorState.audioSourceEntity;
+                }
+
+                for (ReplayPlayer replayViewer : ReplayServer.this.replayViewers) {
+                    if (replayViewer != player && replayViewer.level().dimension() == resourceKey) {
+                        Vec3 source = replayViewer.position();
+
+                        if (audioSourceEntity != null) {
+                            Entity entity = replayViewer.serverLevel().getEntity(audioSourceEntity);
+                            if (entity != null) {
+                                source = entity.position();
+                            }
+                        }
+
+                        double dx = x - source.x;
+                        double dy = y - source.y;
+                        double dz = z - source.z;
+                        if (dx*dx + dy*dy + dz*dz < distance*distance) {
+                            replayViewer.connection.send(packet);
+                        }
+                    }
+                }
             }
 
             @Override

@@ -160,6 +160,13 @@ public class StartExportWindow {
                         audioCodec = newAudioCodec;
                     }
                 }
+
+                EditorState editorState = EditorStateManager.getCurrent();
+                if (editorState != null && editorState.audioSourceEntity != null) {
+                    ImGui.text("Audio Source: \nEntity(" + editorState.audioSourceEntity + ")");
+                } else {
+                    ImGui.text("Audio Source: Camera");
+                }
             } else {
                 recordAudio = false;
             }

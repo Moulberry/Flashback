@@ -5,6 +5,7 @@ import com.mojang.blaze3d.platform.TextureUtil;
 import com.mojang.blaze3d.platform.Window;
 import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.editor.ui.windows.ExportQueueWindow;
+import com.moulberry.flashback.editor.ui.windows.SelectedEntityPopup;
 import com.moulberry.flashback.state.EditorState;
 import com.moulberry.flashback.state.EditorStateManager;
 import com.moulberry.flashback.combo_options.Sizing;
@@ -86,7 +87,7 @@ public class ReplayUI {
     private static String infoOverlayText = null;
     private static long infoOverlayEndMillis = 0;
 
-    private static int selectedEntity = Integer.MIN_VALUE;
+    private static UUID selectedEntity = null;
     private static boolean openSelectedEntityPopup = false;
 
     public static void init() {
@@ -303,8 +304,8 @@ public class ReplayUI {
         return getMouseLookVectorFromForwards(getMouseForwardsVector());
     }
 
-    public static boolean isEntitySelected(int entityId) {
-        return isActive() && selectedEntity == entityId;
+    public static boolean isEntitySelected(UUID uuid) {
+        return isActive() && uuid.equals(selectedEntity);
     }
 
     public static boolean isMovingCamera() {
@@ -636,56 +637,26 @@ public class ReplayUI {
                 }
             }
 
-            if (selectedEntity != Integer.MIN_VALUE) {
-                Entity entity = Minecraft.getInstance().level.getEntity(selectedEntity);
+            if (selectedEntity != null) {
+                Entity entity = Minecraft.getInstance().level.getEntities().get(selectedEntity);
                 if (entity == null) {
-                    selectedEntity = Integer.MIN_VALUE;
+                    selectedEntity = null;
                 } else if (entity instanceof Player && editorState != null && !editorState.replayVisuals.renderPlayers) {
-                    selectedEntity = Integer.MIN_VALUE;
+                    selectedEntity = null;
                 } else if (!(entity instanceof Player) && editorState != null && !editorState.replayVisuals.renderEntities) {
-                    selectedEntity = Integer.MIN_VALUE;
+                    selectedEntity = null;
                 } else {
                     if (openSelectedEntityPopup) {
                         ImGui.openPopup("###EntityPopup");
                     }
 
                     if (ImGuiHelper.beginPopup("###EntityPopup")) {
-                        ImGui.text("Entity: " + entity.getUUID());
-
-                        ImGui.separator();
-
-                        if (ImGui.button("Look At")) {
-                            Minecraft.getInstance().cameraEntity.lookAt(EntityAnchorArgument.Anchor.EYES, entity.getEyePosition());
-                        }
-                        if (ImGui.button("Spectate")) {
-                            Minecraft.getInstance().player.connection.sendUnsignedCommand("spectate " + entity.getUUID());
-                            ImGui.closeCurrentPopup();
-                        }
-//                        ImGui.sameLine();
-//                        ImGui.button("Track Entity");
-//
-//                        ImGui.checkbox("Hide During Export", false);
-//
-//                        ImGui.checkbox("Force Glowing", false);
-//                        ImGui.sameLine();
-//                        ImGui.colorButton("Glow Colour", new float[4]);
-//                        ImGui.sameLine();
-//                        ImGui.text("Glow Colour");
-//
-//                        if (entity instanceof LivingEntity) {
-//                            ImGui.checkbox("Show Nametag", true);
-//                            ImGui.checkbox("Override Nametag", false);
-//                        }
-//                        if (entity instanceof Player) {
-//                            ImGui.checkbox("Override Skin", false);
-//                        }
-
-
+                        SelectedEntityPopup.render(entity, editorState);
                         ImGui.endPopup();
                     }
 
                     if (!ImGui.isPopupOpen("###EntityPopup")) {
-                        selectedEntity = Integer.MIN_VALUE;
+                        selectedEntity = null;
                     }
                 }
             }
@@ -761,7 +732,7 @@ public class ReplayUI {
                 if (Minecraft.getInstance().player == Minecraft.getInstance().cameraEntity) {
                     Minecraft.getInstance().player.setDeltaMovement(Vec3.ZERO);
                 }
-                selectedEntity = entityHitResult.getEntity().getId();
+                selectedEntity = entityHitResult.getEntity().getUUID();
                 openSelectedEntityPopup = true;
             }
             return true;

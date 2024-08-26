@@ -19,6 +19,7 @@ import it.unimi.dsi.fastutil.floats.FloatUnaryOperator;
 import net.minecraft.CrashReport;
 import net.minecraft.ReportedException;
 import net.minecraft.Util;
+import net.minecraft.client.Camera;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.User;
@@ -32,6 +33,7 @@ import net.minecraft.client.multiplayer.chat.report.ReportEnvironment;
 import net.minecraft.client.particle.ParticleEngine;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.server.IntegratedServer;
+import net.minecraft.client.sounds.SoundManager;
 import net.minecraft.network.Connection;
 import net.minecraft.network.protocol.login.ServerboundHelloPacket;
 import net.minecraft.server.MinecraftServer;
@@ -156,6 +158,23 @@ public abstract class MixinMinecraft implements MinecraftExt {
         if (editorState != null && !editorState.replayVisuals.renderNametags) {
             cir.setReturnValue(false);
         }
+    }
+
+    @WrapOperation(method = "runTick", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/sounds/SoundManager;updateSource(Lnet/minecraft/client/Camera;)V"))
+    public void runTick_updateSource(SoundManager instance, Camera camera, Operation<Void> original) {
+        EditorState editorState = EditorStateManager.getCurrent();
+        if (editorState != null && editorState.audioSourceEntity != null && this.level != null) {
+            Entity sourceEntity = this.level.getEntities().get(editorState.audioSourceEntity);
+            if (sourceEntity != null) {
+                Camera dummyCamera = new Camera();
+                dummyCamera.eyeHeight = sourceEntity.getEyeHeight();
+                dummyCamera.setup(this.level, sourceEntity, false, false, 1.0f);
+                instance.updateSource(dummyCamera);
+                return;
+            }
+        }
+
+        original.call(instance, camera);
     }
 
     @Inject(method = "runTick", at=@At(value = "INVOKE", target = "Lcom/mojang/blaze3d/pipeline/RenderTarget;blitToScreen(II)V", shift = At.Shift.AFTER))
