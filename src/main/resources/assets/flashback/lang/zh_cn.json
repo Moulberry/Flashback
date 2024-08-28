@@ -1,6 +1,6 @@
 {
   "flashback.select_replay": "选择回放",
-  "flashback.select_replay.open": "打开回访",
+  "flashback.select_replay.open": "打开回放",
   "flashback.select_replay.loading_replays": "正在加载回放，请稍后……",
   "flashback.select_replay.replay": "回放",
   "flashback.select_replay.data_read": "正在读取回放数据，请稍后……",
