@@ -9,7 +9,10 @@ import com.moulberry.flashback.PacketHelper;
 import com.moulberry.flashback.action.*;
 import com.moulberry.flashback.io.AsyncReplaySaver;
 import com.moulberry.flashback.io.ReplayWriter;
+import com.moulberry.flashback.mixin.compat.bobby.FakeChunkManagerAccessor;
+import de.johni0702.minecraft.bobby.FakeChunkManager;
 import io.netty.buffer.ByteBuf;
+import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.SharedConstants;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.Screenshot;
@@ -31,6 +34,8 @@ import net.minecraft.nbt.Tag;
 import net.minecraft.network.ConnectionProtocol;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.PlayerChatMessage;
+import net.minecraft.network.chat.SignedMessageBody;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.common.ClientboundResourcePackPopPacket;
@@ -61,6 +66,9 @@ import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.border.WorldBorder;
 import net.minecraft.world.level.chunk.LevelChunk;
+import net.minecraft.world.level.saveddata.maps.MapDecoration;
+import net.minecraft.world.level.saveddata.maps.MapId;
+import net.minecraft.world.level.saveddata.maps.MapItemSavedData;
 import net.minecraft.world.scores.*;
 
 import java.nio.file.Path;
@@ -122,6 +130,13 @@ public class Recorder {
         this.metadata.dataVersion = SharedConstants.getCurrentVersion().getDataVersion().getVersion();
         this.metadata.protocolVersion = SharedConstants.getProtocolVersion();
         this.metadata.versionString = SharedConstants.VERSION_STRING;
+
+        if (FabricLoader.getInstance().isModLoaded("bobby")) {
+            try {
+                String bobbyWorldName = FakeChunkManagerAccessor.getCurrentWorldOrServerName(Minecraft.getInstance().getConnection());
+                this.metadata.bobbyWorldName = bobbyWorldName;
+            } catch (Throwable t) {}
+        }
     }
 
     public void setRegistryAccess(RegistryAccess registryAccess) {
@@ -468,6 +483,17 @@ public class Recorder {
             return;
         }
 
+        // Convert player chat packets into system chat packets
+        if (packet instanceof ClientboundPlayerChatPacket playerChatPacket) {
+            try {
+                Component content = playerChatPacket.unsignedContent() != null ? playerChatPacket.unsignedContent() : Component.literal(playerChatPacket.body().content());
+                Component decorated = playerChatPacket.chatType().decorate(content);
+                packet = new ClientboundSystemChatPacket(decorated, false);
+            } catch (Exception e) {
+                return;
+            }
+        }
+
         if (IgnoredPacketSet.isIgnored(packet)) {
             return;
         }
@@ -547,7 +573,8 @@ public class Recorder {
         List<Packet<? super ClientGamePacketListener>> gamePackets = new ArrayList<>();
 
         // Login packet
-        CommonPlayerSpawnInfo commonPlayerSpawnInfo = new CommonPlayerSpawnInfo(level.dimensionTypeRegistration(), level.dimension(), 0,
+        long hashedSeed = level.getBiomeManager().biomeZoomSeed;
+        CommonPlayerSpawnInfo commonPlayerSpawnInfo = new CommonPlayerSpawnInfo(level.dimensionTypeRegistration(), level.dimension(), hashedSeed,
             gameMode.getPlayerMode(), gameMode.getPreviousPlayerMode(), level.isDebug(), level.getLevelData().isFlat, Optional.empty(), 0);
         var loginPacket = new ClientboundLoginPacket(localPlayer.getId(), level.getLevelData().isHardcore(), connection.levels(),
             1, Minecraft.getInstance().options.getEffectiveRenderDistance(), level.getServerSimulationDistance(),
@@ -738,6 +765,33 @@ public class Recorder {
             if (entity instanceof Mob mob && mob.isLeashed()) {
                 gamePackets.add(new ClientboundSetEntityLinkPacket(mob, mob.getLeashHolder()));
             }
+        }
+
+        // Map data
+        for (Map.Entry<MapId, MapItemSavedData> entry : level.mapData.entrySet()) {
+            MapItemSavedData data = entry.getValue();
+
+            int offsetX = 0;
+            int offsetY = 0;
+            int sizeX = 128;
+            int sizeY = 128;
+
+            if (data.colors.length != sizeX * sizeY) {
+                Flashback.LOGGER.error("Unable to save snapshot of map data, expected colour array to be size {}, got {} instead", sizeX * sizeY, data.colors.length);
+                continue;
+            }
+
+            byte[] colorsCopy = new byte[sizeX * sizeY];
+            System.arraycopy(data.colors, 0, colorsCopy, 0, sizeX * sizeY);
+            MapItemSavedData.MapPatch patch = new MapItemSavedData.MapPatch(offsetX, offsetY, sizeX, sizeY, colorsCopy);
+
+            ArrayList<MapDecoration> decorations = new ArrayList<>();
+            for (MapDecoration decoration : data.getDecorations()) {
+                decorations.add(decoration);
+            }
+
+            var packet = new ClientboundMapItemDataPacket(entry.getKey(), data.scale, data.locked, decorations, patch);
+            gamePackets.add(packet);
         }
 
         this.asyncReplaySaver.writeGamePackets(this.gamePacketCodec, gamePackets);

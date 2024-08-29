@@ -10,8 +10,10 @@ import com.google.gson.JsonSerializer;
 import com.moulberry.flashback.Utils;
 import com.moulberry.flashback.editor.ui.ImGuiHelper;
 import com.moulberry.flashback.keyframe.Keyframe;
+import com.moulberry.flashback.keyframe.KeyframeType;
 import com.moulberry.flashback.keyframe.handler.KeyframeHandler;
 import com.moulberry.flashback.keyframe.interpolation.InterpolationType;
+import com.moulberry.flashback.keyframe.types.TimelapseKeyframeType;
 import imgui.ImGui;
 import imgui.type.ImString;
 
@@ -27,8 +29,13 @@ public class TimelapseKeyframe extends Keyframe {
     public TimelapseKeyframe(int ticks) {
         this.ticks = ticks;
         this.timelapseKeyframeInput = ImGuiHelper.createResizableImString(Utils.timeToString(this.ticks));
-        this.timelapseKeyframeInput.inputData.allowedChars = "0123456789tsmh";
+        this.timelapseKeyframeInput.inputData.allowedChars = "0123456789tsmh.";
         this.interpolationType(InterpolationType.LINEAR);
+    }
+
+    @Override
+    public KeyframeType<?> keyframeType() {
+        return TimelapseKeyframeType.INSTANCE;
     }
 
     @Override

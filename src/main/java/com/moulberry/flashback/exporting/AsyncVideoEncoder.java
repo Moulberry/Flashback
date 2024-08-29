@@ -21,6 +21,7 @@ import org.bytedeco.javacv.FFmpegLogCallback;
 import org.bytedeco.javacv.Frame;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.lwjgl.opengl.GL11;
 import org.lwjgl.system.MemoryUtil;
 
 import java.io.IOException;
@@ -51,7 +52,7 @@ public class AsyncVideoEncoder implements AutoCloseable {
 
     private final AtomicReference<Throwable> threadedError = new AtomicReference<>(null);
 
-    private static final int SRC_PIXEL_FORMAT = avutil.AV_PIX_FMT_RGBA;
+    public static final int SRC_PIXEL_FORMAT = avutil.AV_PIX_FMT_RGBA;
 
     private record ImageFrame(long pointer, int size, int width, int height, int channels, int imageDepth, int stride, int pixelFormat,
                               @Nullable FloatBuffer audioBuffer) implements AutoCloseable {
@@ -89,11 +90,12 @@ public class AsyncVideoEncoder implements AutoCloseable {
         String extension = settings.container().extension();
 
         try {
-            if (FabricLoader.getInstance().isDevelopmentEnvironment() || true) {
-                FFmpegLogCallback.set();
-            }
+            FFmpegLogCallback.set();
 
-            int dstPixelFormat = PixelFormatHelper.getBestPixelFormat(settings.encoder());
+            boolean wantTransparency = settings.transparent();
+
+            int dstPixelFormat = PixelFormatHelper.getBestPixelFormat(settings.encoder(), wantTransparency);
+            Flashback.LOGGER.info("Encoding video with pixel format {}", PixelFormatHelper.pixelFormatToString(dstPixelFormat));
             boolean needsRescale = SRC_PIXEL_FORMAT != dstPixelFormat;
 
             final FFmpegFrameRecorder recorder = new FFmpegFrameRecorder(

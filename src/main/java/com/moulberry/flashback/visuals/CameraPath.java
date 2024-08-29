@@ -15,6 +15,9 @@ import com.moulberry.flashback.combo_options.Sizing;
 import com.moulberry.flashback.editor.ui.windows.TimelineWindow;
 import com.moulberry.flashback.keyframe.KeyframeType;
 import com.moulberry.flashback.keyframe.handler.KeyframeHandler;
+import com.moulberry.flashback.keyframe.types.CameraKeyframeType;
+import com.moulberry.flashback.keyframe.types.CameraOrbitKeyframeType;
+import com.moulberry.flashback.keyframe.types.FOVKeyframeType;
 import com.moulberry.flashback.playback.ReplayServer;
 import com.moulberry.flashback.state.EditorState;
 import com.moulberry.flashback.state.EditorStateManager;
@@ -24,20 +27,28 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Matrix4f;
+import org.joml.Quaterniond;
 import org.joml.Quaternionf;
+import org.joml.Vector3d;
 import org.joml.Vector3f;
 
 import java.util.EnumSet;
+import java.util.Set;
 
 public class CameraPath {
 
     private static VertexBuffer cameraPathVertexBuffer = null;
     private static CameraPathArgs lastCameraPathArgs = null;
+    private static Vector3d basePosition = null;
     private static int lastEditorStateModCount = 0;
     private static int lastCursorTick = 0;
 
     public static void renderCameraPath(PoseStack poseStack, Camera camera, ReplayServer replayServer) {
         RenderSystem.assertOnRenderThread();
+
+        if (Minecraft.getInstance().options.hideGui) {
+            return;
+        }
 
         EditorState state = replayServer.getEditorState();
         int replayTick = TimelineWindow.getCursorTick();
@@ -49,7 +60,8 @@ public class CameraPath {
                 lastCameraPathArgs = cameraPathArgs;
 
                 BufferBuilder bufferBuilder = Tesselator.getInstance().begin(VertexFormat.Mode.LINES, DefaultVertexFormat.POSITION_COLOR_NORMAL);
-                buildCameraPath(state, cameraPathArgs, bufferBuilder);
+                Vector3d basePosition = new Vector3d(camera.getPosition().x, camera.getPosition().y, camera.getPosition().z);
+                buildCameraPath(state, basePosition.mul(-1, new Vector3d()), cameraPathArgs, bufferBuilder);
 
                 if (cameraPathVertexBuffer != null) {
                     cameraPathVertexBuffer.close();
@@ -58,6 +70,7 @@ public class CameraPath {
 
                 MeshData meshData = bufferBuilder.build();
                 if (meshData != null) {
+                    CameraPath.basePosition = basePosition;
                     cameraPathVertexBuffer = new VertexBuffer(VertexBuffer.Usage.STATIC);
                     cameraPathVertexBuffer.bind();
                     cameraPathVertexBuffer.upload(meshData);
@@ -83,8 +96,8 @@ public class CameraPath {
         RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
 
         poseStack.pushPose();
-        poseStack.translate(-camera.getPosition().x,
-            -camera.getPosition().y + camera.eyeHeight, -camera.getPosition().z);
+        poseStack.translate(basePosition.x-camera.getPosition().x,
+            basePosition.y-camera.getPosition().y + camera.eyeHeight, basePosition.z-camera.getPosition().z);
 
         cameraPathVertexBuffer.bind();
         cameraPathVertexBuffer.drawWithShader(poseStack.last().pose(), RenderSystem.getProjectionMatrix(), GameRenderer.getRendertypeLinesShader());
@@ -99,7 +112,8 @@ public class CameraPath {
             state.applyKeyframes(fovHandler, replayTick);
             if (handler.position != null) {
                 BufferBuilder bufferBuilder = Tesselator.getInstance().begin(VertexFormat.Mode.LINES, DefaultVertexFormat.POSITION_COLOR_NORMAL);
-                renderCamera(bufferBuilder, handler.position, handler.angle, fovHandler.fov, getCameraColour(false, true), 1.0f);
+                renderCamera(bufferBuilder, handler.position.sub(basePosition, new Vector3d()), handler.angle, fovHandler.fov,
+                    getCameraColour(false, true), 1.0f);
 
                 var oldModelViewMatrix = new Matrix4f(RenderSystem.getModelViewMatrix());
                 RenderSystem.getModelViewMatrix().set(poseStack.last().pose());
@@ -116,7 +130,7 @@ public class CameraPath {
 
     private record CameraPathArgs(int lastLastCameraTick, int lastCameraTick, int nextCameraTick, int nextNextCameraTick) {}
 
-    private static CameraPathArgs createCameraPathArgs(EditorState state, int replayTick, EnumSet<KeyframeType> supportedKeyframes) {
+    private static CameraPathArgs createCameraPathArgs(EditorState state, int replayTick, Set<KeyframeType<?>> supportedKeyframes) {
         int lastCameraTick = -1;
         int nextCameraTick = -1;
 
@@ -160,7 +174,7 @@ public class CameraPath {
         return new CameraPathArgs(lastLastCameraTick, lastCameraTick, nextCameraTick, nextNextCameraTick);
     }
 
-    private static void buildCameraPath(EditorState state, CameraPathArgs args, BufferBuilder bufferBuilder) {
+    private static void buildCameraPath(EditorState state, Vector3d offset, CameraPathArgs args, BufferBuilder bufferBuilder) {
         var handler = new CapturingKeyframeHandler();
         var fovHandler = new FovCapturingKeyframeHandler();
         float defaultFov = Minecraft.getInstance().options.fov().get();
@@ -170,7 +184,7 @@ public class CameraPath {
             state.applyKeyframes(handler, args.lastCameraTick);
             state.applyKeyframes(fovHandler, args.lastCameraTick);
 
-            renderCamera(bufferBuilder, handler.position, handler.angle, fovHandler.fov,
+            renderCamera(bufferBuilder, handler.position.add(offset, new Vector3d()), handler.angle, fovHandler.fov,
                 getCameraColour(false, false), 1.0f);
 
             if (args.lastLastCameraTick != -1) {
@@ -178,9 +192,9 @@ public class CameraPath {
                 state.applyKeyframes(handler, args.lastLastCameraTick);
                 state.applyKeyframes(fovHandler, args.lastLastCameraTick);
 
-                renderCamera(bufferBuilder, handler.position, handler.angle, fovHandler.fov,
+                renderCamera(bufferBuilder, handler.position.add(offset, new Vector3d()), handler.angle, fovHandler.fov,
                     getCameraColour(false, false), 0.6f);
-                renderPath(bufferBuilder, args.lastLastCameraTick, args.lastCameraTick, state, handler, 0.6f);
+                renderPath(bufferBuilder, args.lastLastCameraTick, args.lastCameraTick, state, offset, handler, 0.6f);
             }
         }
 
@@ -189,7 +203,7 @@ public class CameraPath {
             state.applyKeyframes(handler, args.nextCameraTick);
             state.applyKeyframes(fovHandler, args.nextCameraTick);
 
-            renderCamera(bufferBuilder, handler.position, handler.angle, fovHandler.fov,
+            renderCamera(bufferBuilder, handler.position.add(offset, new Vector3d()), handler.angle, fovHandler.fov,
                 getCameraColour(false, false), 1.0f);
 
             if (args.nextNextCameraTick != -1) {
@@ -197,14 +211,14 @@ public class CameraPath {
                 state.applyKeyframes(handler, args.nextNextCameraTick);
                 state.applyKeyframes(fovHandler, args.nextNextCameraTick);
 
-                renderCamera(bufferBuilder, handler.position, handler.angle, fovHandler.fov,
+                renderCamera(bufferBuilder, handler.position.add(offset, new Vector3d()), handler.angle, fovHandler.fov,
                     getCameraColour(false, false), 0.6f);
-                renderPath(bufferBuilder, args.nextCameraTick, args.nextNextCameraTick, state, handler, 0.6f);
+                renderPath(bufferBuilder, args.nextCameraTick, args.nextNextCameraTick, state, offset, handler, 0.6f);
             }
         }
 
         if (args.lastCameraTick != -1 && args.nextCameraTick != -1) {
-            renderPath(bufferBuilder, args.lastCameraTick, args.nextCameraTick, state, handler, 1.0f);
+            renderPath(bufferBuilder, args.lastCameraTick, args.nextCameraTick, state, offset, handler, 1.0f);
         }
     }
 
@@ -219,32 +233,28 @@ public class CameraPath {
     }
 
     private static void renderPath(BufferBuilder bufferBuilder, int fromTick, int toTick,
-            EditorState editorState, CapturingKeyframeHandler handler, float opacity) {
-        Vector3f lastPosition = null;
+            EditorState editorState, Vector3d offset, CapturingKeyframeHandler handler, float opacity) {
+        Vector3d lastPosition = null;
 
         int step = (toTick - fromTick) / 2000 + 1;
 
         for (int tick = fromTick; tick <= toTick; tick += step) {
             editorState.applyKeyframes(handler, tick);
-            Vector3f rawPosition = new Vector3f(handler.position);
-
-            double x = rawPosition.x;
-            double y = rawPosition.y;
-            double z = rawPosition.z;
-
-            Vector3f position = new Vector3f((float) x, (float) y, (float) z);
+            Vector3d position = handler.position.add(offset, new Vector3d());
 
             if (lastPosition != null) {
-                float dx = position.x - lastPosition.x;
-                float dy = position.y - lastPosition.y;
-                float dz = position.z - lastPosition.z;
+                double dx = position.x - lastPosition.x;
+                double dy = position.y - lastPosition.y;
+                double dz = position.z - lastPosition.z;
                 float distanceInv = 1f / (float) Math.sqrt(dx*dx + dy*dy + dz*dz);
                 dx *= distanceInv;
                 dy *= distanceInv;
                 dz *= distanceInv;
 
-                bufferBuilder.addVertex(lastPosition.x, lastPosition.y, lastPosition.z).setColor(1.0f, 1.0f, 0.1f, 0.0f).setNormal(dx, dy, dz);
-                bufferBuilder.addVertex( position.x, position.y, position.z).setColor(1.0f, 1.0f, 0.1f, opacity).setNormal(dx, dy, dz);
+                bufferBuilder.addVertex((float) lastPosition.x, (float) lastPosition.y, (float) lastPosition.z).setColor(1.0f, 1.0f, 0.1f, 0.0f)
+                             .setNormal((float) dx, (float) dy, (float) dz);
+                bufferBuilder.addVertex((float) position.x, (float) position.y, (float) position.z).setColor(1.0f, 1.0f, 0.1f, opacity)
+                             .setNormal((float) dx, (float) dy, (float) dz);
             }
 
             lastPosition = position;
@@ -252,10 +262,10 @@ public class CameraPath {
     }
 
     private static final PoseStack cameraPoseStack = new PoseStack();
-    private static void renderCamera(BufferBuilder bufferBuilder, Vector3f position, Quaternionf angle, float fov, int rgb, float opacity) {
+    private static void renderCamera(BufferBuilder bufferBuilder, Vector3d position, Quaterniond angle, float fov, int rgb, float opacity) {
         cameraPoseStack.pushPose();
         cameraPoseStack.translate(position.x, position.y, position.z);
-        cameraPoseStack.mulPose(angle);
+        cameraPoseStack.mulPose(new Quaternionf(angle));
 
         PoseStack.Pose pose = cameraPoseStack.last();
 
@@ -294,14 +304,14 @@ public class CameraPath {
         cameraPoseStack.popPose();
     }
 
-    private static final EnumSet<KeyframeType> SUPPORTED_CAMERA_KEYFRAMES = EnumSet.of(KeyframeType.CAMERA, KeyframeType.CAMERA_ORBIT);
+    private static final Set<KeyframeType<?>> SUPPORTED_CAMERA_KEYFRAMES = Set.of(CameraKeyframeType.INSTANCE, CameraOrbitKeyframeType.INSTANCE);
 
     private static class CapturingKeyframeHandler implements KeyframeHandler {
-        private Vector3f position;
-        private Quaternionf angle;
+        private Vector3d position;
+        private Quaterniond angle;
 
         @Override
-        public EnumSet<KeyframeType> supportedKeyframes() {
+        public Set<KeyframeType<?>> supportedKeyframes() {
             return SUPPORTED_CAMERA_KEYFRAMES;
         }
 
@@ -311,9 +321,9 @@ public class CameraPath {
         }
 
         @Override
-        public void applyCameraPosition(Vector3f position, float yaw, float pitch, float roll) {
+        public void applyCameraPosition(Vector3d position, double yaw, double pitch, double roll) {
             this.position = position;
-            this.angle = new Quaternionf().rotationYXZ((float) -Math.toRadians(yaw), (float) Math.toRadians(pitch), (float) -Math.toRadians(roll));
+            this.angle = new Quaterniond().rotationYXZ((float) -Math.toRadians(yaw), (float) Math.toRadians(pitch), (float) -Math.toRadians(roll));
         }
     }
 
@@ -321,8 +331,8 @@ public class CameraPath {
         private float fov;
 
         @Override
-        public EnumSet<KeyframeType> supportedKeyframes() {
-            return EnumSet.of(KeyframeType.FOV);
+        public Set<KeyframeType<?>> supportedKeyframes() {
+            return Set.of(FOVKeyframeType.INSTANCE);
         }
 
         @Override

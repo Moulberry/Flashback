@@ -2,6 +2,7 @@ package com.moulberry.flashback.editor.ui.windows;
 
 import com.mojang.blaze3d.platform.Window;
 import com.moulberry.flashback.Flashback;
+import com.moulberry.flashback.combo_options.AspectRatio;
 import com.moulberry.flashback.combo_options.AudioCodec;
 import com.moulberry.flashback.combo_options.VideoCodec;
 import com.moulberry.flashback.combo_options.VideoContainer;
@@ -28,6 +29,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.concurrent.CompletableFuture;
 
 public class StartExportWindow {
@@ -36,19 +38,25 @@ public class StartExportWindow {
     private static boolean close = false;
 
     private static final int[] lastFramebufferSize = new int[]{0, 0};
+    private static AspectRatio lastCustomAspectRatio = null;
 
     private static final int[] resolution = new int[]{1920, 1080};
     private static final int[] startEndTick = new int[]{0, 100};
     private static final ImFloat framerate = new ImFloat(60);
     private static boolean resetRng = false;
+    private static boolean ssaa = false;
 
-    private static VideoContainer container = VideoContainer.MP4;
-    private static VideoCodec videoCodec = VideoCodec.H264;
+    private static VideoContainer[] supportedContainers = null;
+    private static VideoContainer[] supportedContainersWithTransparency = null;
+
+    private static VideoContainer container = null;
+    private static VideoCodec videoCodec = null;
     private static int[] selectedVideoEncoder = new int[]{0};
     private static boolean useMaximumBitrate = false;
     private static final ImString bitrate = ImGuiHelper.createResizableImString("20m");
 
     private static boolean recordAudio = false;
+    private static boolean transparentBackground = false;
     private static AudioCodec audioCodec = AudioCodec.AAC;
 
     private static Path defaultExportPath = null;
@@ -59,6 +67,8 @@ public class StartExportWindow {
     }
 
     public static void render() {
+        EditorState editorState = EditorStateManager.getCurrent();
+
         if (open) {
             ImGui.openPopup("###StartExport");
             Window window = Minecraft.getInstance().getWindow();
@@ -70,6 +80,39 @@ public class StartExportWindow {
                 resolution[1] = window.framebufferHeight;
                 lastFramebufferSize[0] = window.framebufferWidth;
                 lastFramebufferSize[1] = window.framebufferHeight;
+            }
+
+            if (editorState != null) {
+                AspectRatio aspectRatio = editorState.replayVisuals.changeAspectRatio;
+                if (aspectRatio != null && aspectRatio != lastCustomAspectRatio) {
+                    switch (aspectRatio) {
+                        case ASPECT_16_9 -> {
+                            resolution[0] = 1920;
+                            resolution[1] = 1080;
+                        }
+                        case ASPECT_9_16 -> {
+                            resolution[0] = 1080;
+                            resolution[1] = 1920;
+                        }
+                        case ASPECT_240_1 -> {
+                            resolution[0] = 1920;
+                            resolution[1] = 800;
+                        }
+                        case ASPECT_1_1 -> {
+                            resolution[0] = 1920;
+                            resolution[1] = 1920;
+                        }
+                        case ASPECT_4_3 -> {
+                            resolution[0] = 1600;
+                            resolution[1] = 1200;
+                        }
+                        case ASPECT_3_2 -> {
+                            resolution[0] = 2160;
+                            resolution[1] = 1440;
+                        }
+                    }
+                }
+                lastCustomAspectRatio = aspectRatio;
             }
 
             open = false;
@@ -92,7 +135,6 @@ public class StartExportWindow {
             if (resolution[1] % 2 != 0) resolution[1] += 1;
 
             if (ImGui.inputInt2("Start/end tick", startEndTick)) {
-                EditorState editorState = EditorStateManager.getCurrent();
                 ReplayServer replayServer = Flashback.getReplayServer();
                 if (editorState != null && replayServer != null) {
                     editorState.setExportTicks(startEndTick[0], startEndTick[1], replayServer.getTotalReplayTicks());
@@ -105,46 +147,16 @@ public class StartExportWindow {
             }
             ImGuiHelper.tooltip("Attempts to remove randomness from the replay in order to produce more consistent outputs when recording the same scene multiple times");
 
+            ImGui.sameLine();
+
+            if (ImGui.checkbox("SSAA", ssaa)) {
+                ssaa = !ssaa;
+            }
+            ImGuiHelper.tooltip("Supersampling Anti-Aliasing: Remove jagged edges by rendering the game at double resolution and downscaling");
+
             ImGuiHelper.separatorWithText("Video Options");
 
-            VideoContainer newContainer = ImGuiHelper.enumCombo("Container", container);
-            if (newContainer != container) {
-                container = newContainer;
-
-                boolean supported = false;
-                for (VideoCodec supportedCodec : container.getSupportedVideoCodecs()) {
-                    if (videoCodec == supportedCodec) {
-                        supported = true;
-                        break;
-                    }
-                }
-
-                if (!supported) {
-                    videoCodec = container.getSupportedVideoCodecs()[0];
-                }
-            }
-
-            VideoCodec newCodec = ImGuiHelper.enumCombo("Codec", videoCodec, container.getSupportedVideoCodecs());
-            if (newCodec != videoCodec) {
-                videoCodec = newCodec;
-                selectedVideoEncoder[0] = 0;
-            }
-
-            String[] encoders = videoCodec.getEncoders();
-            if (encoders.length > 1) {
-                ImGuiHelper.combo("Encoder", selectedVideoEncoder, encoders);
-            }
-
-            if (ImGui.checkbox("Use Maximum Bitrate", useMaximumBitrate)) {
-                useMaximumBitrate = !useMaximumBitrate;
-            }
-            if (!useMaximumBitrate) {
-                ImGui.inputText("Bitrate", bitrate);
-                if (ImGui.isItemDeactivatedAfterEdit()) {
-                    int numBitrate = stringToBitrate(ImGuiHelper.getString(bitrate));
-                    bitrate.set(bitrateToString(numBitrate));
-                }
-            }
+            renderVideoOptions(editorState);
 
             AudioCodec[] supportedAudioCodecs = container.getSupportedAudioCodecs();
             if (supportedAudioCodecs.length > 0) {
@@ -159,13 +171,12 @@ public class StartExportWindow {
                     if (newAudioCodec != audioCodec) {
                         audioCodec = newAudioCodec;
                     }
-                }
 
-                EditorState editorState = EditorStateManager.getCurrent();
-                if (editorState != null && editorState.audioSourceEntity != null) {
-                    ImGui.text("Audio Source: \nEntity(" + editorState.audioSourceEntity + ")");
-                } else {
-                    ImGui.text("Audio Source: Camera");
+                    if (editorState != null && editorState.audioSourceEntity != null) {
+                        ImGui.text("Audio Source: \nEntity(" + editorState.audioSourceEntity + ")");
+                    } else {
+                        ImGui.text("Audio Source: Camera");
+                    }
                 }
             } else {
                 recordAudio = false;
@@ -211,6 +222,69 @@ public class StartExportWindow {
         }
 
         close = false;
+    }
+
+    private static void renderVideoOptions(EditorState editorState) {
+        if (editorState != null && !editorState.replayVisuals.renderSky && ImGui.checkbox("Transparent Sky", transparentBackground)) {
+            transparentBackground = !transparentBackground;
+        }
+
+        VideoContainer[] containers;
+        if (transparentBackground) {
+            if (supportedContainersWithTransparency == null) {
+                supportedContainersWithTransparency = VideoContainer.findSupportedContainers(true);
+            }
+            containers = supportedContainersWithTransparency;
+        } else {
+            if (supportedContainers == null) {
+                supportedContainers = VideoContainer.findSupportedContainers(false);
+            }
+            containers = supportedContainers;
+        }
+
+        if (containers.length == 0) {
+            ImGui.text("No supported containers found");
+            return;
+        }
+
+        if (container == null || !Arrays.asList(containers).contains(container)) {
+            container = containers[0];
+        }
+
+        container = ImGuiHelper.enumCombo("Container", container, containers);
+
+        VideoCodec[] codecs = container.getSupportedVideoCodecs(transparentBackground);
+
+        if (codecs.length == 0) {
+            ImGui.text("No supported codecs found");
+            return;
+        }
+
+        if (videoCodec == null || !Arrays.asList(codecs).contains(videoCodec)) {
+            videoCodec = codecs[0];
+        }
+
+        VideoCodec newCodec = ImGuiHelper.enumCombo("Codec", videoCodec, codecs);
+        if (newCodec != videoCodec) {
+            videoCodec = newCodec;
+            selectedVideoEncoder[0] = 0;
+        }
+
+        String[] encoders = videoCodec.getEncoders();
+        if (encoders.length > 1) {
+            ImGuiHelper.combo("Encoder", selectedVideoEncoder, encoders);
+        }
+
+        if (ImGui.checkbox("Use Maximum Bitrate", useMaximumBitrate)) {
+            useMaximumBitrate = !useMaximumBitrate;
+        }
+        if (!useMaximumBitrate) {
+            ImGui.inputText("Bitrate", bitrate);
+            if (ImGui.isItemDeactivatedAfterEdit()) {
+                int numBitrate = stringToBitrate(ImGuiHelper.getString(bitrate));
+                bitrate.set(bitrateToString(numBitrate));
+            }
+        }
     }
 
     private static CompletableFuture<ExportSettings> createExportSettings(@Nullable String name) {
@@ -266,12 +340,15 @@ public class StartExportWindow {
                     return null;
                 }
 
+                boolean transparent = transparentBackground && !editorState.replayVisuals.renderSky;
+
                 Path path = Path.of(pathStr);
                 defaultExportPath = path.getParent();
                 return new ExportSettings(name, editorState.copy(),
                     player.position(), player.getYRot(), player.getXRot(),
                     resolution[0], resolution[1], start, end,
-                    Math.max(1, framerate.get()), resetRng, container, videoCodec, encoder, numBitrate, recordAudio, path);
+                    Math.max(1, framerate.get()), resetRng, container, videoCodec, encoder, numBitrate, transparent, ssaa,
+                    recordAudio, path);
             }
 
             return null;

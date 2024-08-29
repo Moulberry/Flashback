@@ -229,6 +229,13 @@ public class VisualsWindow {
                 visuals.changeAspectRatio = ImGuiHelper.enumCombo("Aspect", visuals.changeAspectRatio);
                 editorState.markDirty();
             }
+
+            if (!editorState.hideDuringExport.isEmpty()) {
+                if (ImGui.button("Unhide All Entities")) {
+                    editorState.hideDuringExport.clear();
+                    editorState.markDirty();
+                }
+            }
         }
         ImGui.end();
     }

@@ -41,7 +41,7 @@ public class Utils {
         };
     }
 
-    public static Utils.ClosestElement findClosest(float position, float leftPosition, float rightPosition, float threshold) {
+    public static ClosestElement findClosest(float position, float leftPosition, float rightPosition, float threshold) {
         boolean leftValid = Math.abs(leftPosition - position) <= threshold;
         boolean rightValid = Math.abs(rightPosition - position) <= threshold;
 
@@ -93,30 +93,36 @@ public class Utils {
     private static final int HOUR_TO_TICKS = MINUTE_TO_TICKS * 60;
 
     public static int stringToTime(String string) {
-        int number = 0;
-        int modifier = 1;
+        int numberStart = 0;
         int total = 0;
 
-        for (char c : string.toCharArray()) {
-            if (c >= '0' && c <= '9') {
-                if (modifier > 1) {
-                    total += number * modifier;
-                    number = 0;
-                    modifier = 1;
-                }
+        char[] characters = string.toCharArray();
+        for (int i = 0; i < characters.length; i++) {
+            char c = characters[i];
 
-                number *= 10;
-                number += c - '0';
-            } else if (c == 's') {
-                modifier *= SECOND_TO_TICKS;
-            } else if (c == 'm') {
-                modifier *= MINUTE_TO_TICKS;
-            } else if (c == 'h') {
-                modifier *= HOUR_TO_TICKS;
+            if (c == 't' || c == 's' || c == 'm' || c == 'h') {
+                try {
+                    double value = Double.parseDouble(string.substring(numberStart, i));
+                    int multiplier = switch (c) {
+                        case 't' -> 1;
+                        case 's' -> SECOND_TO_TICKS;
+                        case 'm' -> MINUTE_TO_TICKS;
+                        case 'h' -> HOUR_TO_TICKS;
+                        default -> throw new IllegalStateException("Unexpected value: " + c);
+                    };
+                    total += (int)(value * multiplier);
+                    i += 1;
+                    numberStart = i;
+                } catch (NumberFormatException ignored) {}
             }
         }
 
-        total += number * modifier;
+        if (numberStart < characters.length) {
+            try {
+                double value = Double.parseDouble(string.substring(numberStart));
+                total += (int)(value * SECOND_TO_TICKS);
+            } catch (NumberFormatException ignored) {}
+        }
 
         return total;
     }
@@ -140,9 +146,13 @@ public class Utils {
             builder.append(minutes).append('m');
             timeToString(builder, ticks - minutes*MINUTE_TO_TICKS);
         } else if (ticks >= SECOND_TO_TICKS) {
-            int seconds = ticks / SECOND_TO_TICKS;
-            builder.append(seconds).append('s');
-            timeToString(builder, ticks - seconds*SECOND_TO_TICKS);
+            if (ticks % SECOND_TO_TICKS == 0) {
+                int seconds = ticks / SECOND_TO_TICKS;
+                builder.append(seconds).append('s');
+            } else {
+                double seconds = (double) ticks / SECOND_TO_TICKS;
+                builder.append(seconds).append('s');
+            }
         } else if (ticks > 0) {
             builder.append(ticks).append('t');
         }

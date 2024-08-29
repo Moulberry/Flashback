@@ -1,14 +1,21 @@
 package com.moulberry.flashback.keyframe.handler;
 
+import com.moulberry.flashback.keyframe.KeyframeType;
+import com.moulberry.flashback.keyframe.types.CameraKeyframeType;
+import com.moulberry.flashback.keyframe.types.CameraOrbitKeyframeType;
+import com.moulberry.flashback.keyframe.types.CameraShakeKeyframeType;
+import com.moulberry.flashback.keyframe.types.FOVKeyframeType;
+import com.moulberry.flashback.keyframe.types.TimeOfDayKeyframeType;
 import com.moulberry.flashback.state.EditorState;
 import com.moulberry.flashback.state.EditorStateManager;
-import com.moulberry.flashback.keyframe.KeyframeType;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.world.phys.Vec3;
+import org.joml.Vector3d;
 import org.joml.Vector3f;
 
 import java.util.EnumSet;
+import java.util.Set;
 
 public class MinecraftKeyframeHandler implements KeyframeHandler {
 
@@ -19,24 +26,25 @@ public class MinecraftKeyframeHandler implements KeyframeHandler {
     }
 
     @Override
-    public EnumSet<KeyframeType> supportedKeyframes() {
-        return EnumSet.of(KeyframeType.CAMERA, KeyframeType.CAMERA_ORBIT, KeyframeType.FOV, KeyframeType.TIME_OF_DAY, KeyframeType.CAMERA_SHAKE);
+    public Set<KeyframeType<?>> supportedKeyframes() {
+        return Set.of(CameraKeyframeType.INSTANCE, CameraOrbitKeyframeType.INSTANCE, FOVKeyframeType.INSTANCE,
+            TimeOfDayKeyframeType.INSTANCE, CameraShakeKeyframeType.INSTANCE);
     }
 
     @Override
-    public void applyCameraPosition(Vector3f position, float yaw, float pitch, float roll) {
+    public void applyCameraPosition(Vector3d position, double yaw, double pitch, double roll) {
         LocalPlayer player = this.minecraft.player;
         if (player != null) {
-            player.moveTo(position.x, position.y, position.z, yaw, pitch);
+            player.moveTo(position.x, position.y, position.z, (float) yaw, (float) pitch);
 
             EditorState editorState = EditorStateManager.getCurrent();
             if (editorState != null) {
-                if (roll > -0.1 && roll < 0.1) {
+                if (roll > -0.01 && roll < 0.01) {
                     editorState.replayVisuals.overrideRoll = false;
                     editorState.replayVisuals.overrideRollAmount = 0.0f;
                 } else {
                     editorState.replayVisuals.overrideRoll = true;
-                    editorState.replayVisuals.overrideRollAmount = roll;
+                    editorState.replayVisuals.overrideRollAmount = (float) roll;
                 }
             }
 

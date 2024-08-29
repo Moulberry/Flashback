@@ -1,23 +1,25 @@
 package com.moulberry.flashback.state;
 
-import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.editor.ui.ReplayUI;
 import com.moulberry.flashback.keyframe.Keyframe;
-import com.moulberry.flashback.keyframe.handler.KeyframeHandler;
 import com.moulberry.flashback.keyframe.KeyframeType;
+import com.moulberry.flashback.keyframe.handler.KeyframeHandler;
+import com.moulberry.flashback.keyframe.handler.MinecraftKeyframeHandler;
+import com.moulberry.flashback.keyframe.handler.ReplayServerKeyframeHandler;
 import com.moulberry.flashback.keyframe.impl.TimelapseKeyframe;
 import com.moulberry.flashback.keyframe.interpolation.SidedInterpolationType;
+import com.moulberry.flashback.keyframe.types.TimelapseKeyframeType;
 
 import java.util.Map;
 import java.util.TreeMap;
 
 public class KeyframeTrack {
 
-    public final KeyframeType keyframeType;
+    public final KeyframeType<?> keyframeType;
     public TreeMap<Integer, Keyframe> keyframesByTick = new TreeMap<>();
     public boolean enabled = true;
 
-    public KeyframeTrack(KeyframeType keyframeType) {
+    public KeyframeTrack(KeyframeType<?> keyframeType) {
         this.keyframeType = keyframeType;
     }
 
@@ -26,7 +28,7 @@ public class KeyframeTrack {
             return false;
         }
 
-        if (this.keyframeType == KeyframeType.TIMELAPSE) {
+        if (this.keyframeType == TimelapseKeyframeType.INSTANCE) {
             return this.tryApplyKeyframesTimelapse(t, tick);
         }
 

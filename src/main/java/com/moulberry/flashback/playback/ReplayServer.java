@@ -21,8 +21,10 @@ import com.moulberry.flashback.record.FlashbackMeta;
 import com.moulberry.flashback.record.Recorder;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.handler.codec.DecoderException;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.longs.LongSet;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
@@ -45,10 +47,12 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.level.TicketType;
 import net.minecraft.server.level.progress.ChunkProgressListenerFactory;
 import net.minecraft.server.network.ConfigurationTask;
+import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.server.packs.repository.PackRepository;
 import net.minecraft.server.players.PlayerList;
 import net.minecraft.world.BossEvent;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.flag.FeatureFlagSet;
 import net.minecraft.world.level.ChunkPos;
@@ -72,14 +76,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.TreeMap;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BooleanSupplier;
 import java.util.function.Function;
-import java.util.zip.ZipEntry;
 
 public class ReplayServer extends IntegratedServer {
 
@@ -109,6 +111,8 @@ public class ReplayServer extends IntegratedServer {
     private boolean processedSnapshot = false;
     private volatile boolean fastForwarding = false;
 
+    private int printFailedDecodePacketCount = 8;
+
     private final UUID playbackUUID;
     private final FlashbackMeta metadata;
     private final TreeMap<Integer, PlayableChunk> playableChunksByStart = new TreeMap<>();
@@ -124,6 +128,7 @@ public class ReplayServer extends IntegratedServer {
 
     private Component shutdownReason = null;
     private FileSystem playbackFileSystem = null;
+    private boolean initializedWithSnapshot = false;
 
     public ReplayServer(Thread thread, Minecraft minecraft, LevelStorageSource.LevelStorageAccess levelStorageAccess, PackRepository packRepository, WorldStem worldStem, Services services,
                         ChunkProgressListenerFactory chunkProgressListenerFactory, UUID playbackUUID, Path path) {
@@ -255,6 +260,22 @@ public class ReplayServer extends IntegratedServer {
             }
 
             @Override
+            public void sendPlayerPermissionLevel(ServerPlayer serverPlayer) {
+                if (serverPlayer instanceof FakePlayer) {
+                    return;
+                }
+                super.sendPlayerPermissionLevel(serverPlayer);
+            }
+
+            @Override
+            public void sendAllPlayerInfo(ServerPlayer serverPlayer) {
+                if (serverPlayer instanceof FakePlayer) {
+                    return;
+                }
+                super.sendAllPlayerInfo(serverPlayer);
+            }
+
+            @Override
             public void broadcast(@Nullable Player player, double x, double y, double z, double distance, ResourceKey<Level> resourceKey, Packet<?> packet) {
                 UUID audioSourceEntity = null;
 
@@ -286,6 +307,10 @@ public class ReplayServer extends IntegratedServer {
 
             @Override
             public void sendLevelInfo(ServerPlayer serverPlayer, ServerLevel serverLevel) {
+                if (serverPlayer instanceof FakePlayer) {
+                    return;
+                }
+
                 super.sendLevelInfo(serverPlayer, serverLevel);
 
                 // Send all resource packs
@@ -322,10 +347,6 @@ public class ReplayServer extends IntegratedServer {
 
         this.loadLevel();
         this.overworld().noSave = true;
-
-        // Play initial snapshot
-        ReplayReader replayReader = this.playableChunksByStart.get(0).getOrLoadReplayReader(this.registryAccess());
-        replayReader.handleSnapshot(this);
 
         return true;
     }
@@ -500,7 +521,20 @@ public class ReplayServer extends IntegratedServer {
     public void handleGamePacket(RegistryFriendlyByteBuf friendlyByteBuf) {
         this.configurationPacketHandler.flushPendingConfiguration();
 
-        Packet<? super ClientGamePacketListener> packet = this.gamePacketCodec.decode(friendlyByteBuf);
+        Packet<? super ClientGamePacketListener> packet;
+        try {
+            packet = this.gamePacketCodec.decode(friendlyByteBuf);
+        } catch (DecoderException decoderException) {
+            // Failed to decode packet, lets try ignoring it
+            if (printFailedDecodePacketCount > 0) {
+                Flashback.LOGGER.error("Failed to decode packet from replay stream", decoderException);
+                printFailedDecodePacketCount -= 1;
+            }
+
+            this.gamePacketHandler.flushPendingEntities();
+            friendlyByteBuf.readerIndex(friendlyByteBuf.writerIndex());
+            return;
+        }
         if (!AllowPendingEntityPacketSet.allowPendingEntity(packet)) {
             this.gamePacketHandler.flushPendingEntities();
         }
@@ -623,6 +657,14 @@ public class ReplayServer extends IntegratedServer {
 
     @Override
     public void tickServer(BooleanSupplier booleanSupplier) {
+        if (!this.initializedWithSnapshot) {
+            this.initializedWithSnapshot = true;
+
+            // Play initial snapshot
+            ReplayReader replayReader = this.playableChunksByStart.get(0).getOrLoadReplayReader(this.registryAccess());
+            replayReader.handleSnapshot(this);
+        }
+
         this.lastReplayTick = this.currentTick;
         this.lastTickTimeNanos = this.nextTickTimeNanos - this.tickRateManager().nanosecondsPerTick();
 

@@ -5,6 +5,8 @@ import com.moulberry.flashback.FlashbackGson;
 import com.moulberry.flashback.keyframe.Keyframe;
 import com.moulberry.flashback.keyframe.KeyframeType;
 import com.moulberry.flashback.keyframe.handler.KeyframeHandler;
+import com.moulberry.flashback.keyframe.types.CameraKeyframeType;
+import com.moulberry.flashback.keyframe.types.CameraOrbitKeyframeType;
 import com.moulberry.flashback.visuals.ReplayVisuals;
 import org.jetbrains.annotations.Nullable;
 
@@ -31,6 +33,7 @@ public class EditorState {
     public int exportEndTicks = -1;
 
     public UUID audioSourceEntity = null;
+    public Set<UUID> hideDuringExport = new HashSet<>();
 
     public void setKeyframe(int trackIndex, int tick, Keyframe keyframe) {
         if (trackIndex >= this.keyframeTracks.size()) {
@@ -146,14 +149,14 @@ public class EditorState {
     }
 
     public void applyKeyframes(KeyframeHandler keyframeHandler, float tick) {
-        EnumSet<KeyframeType> applied = EnumSet.noneOf(KeyframeType.class);
+        Set<KeyframeType<?>> applied = new HashSet<>();
         for (KeyframeTrack keyframeTrack : this.keyframeTracks) {
             // Ignore lines that are disabled
             if (!keyframeTrack.enabled) {
                 continue;
             }
 
-            KeyframeType baseType = keyframeTrack.keyframeType == KeyframeType.CAMERA_ORBIT ? KeyframeType.CAMERA : keyframeTrack.keyframeType;
+            KeyframeType<?> baseType = keyframeTrack.keyframeType == CameraOrbitKeyframeType.INSTANCE ? CameraKeyframeType.INSTANCE : keyframeTrack.keyframeType;
 
             // Already applied a keyframe of this type earlier, skip
             if (applied.contains(baseType)) {

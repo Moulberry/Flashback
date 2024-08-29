@@ -3,8 +3,10 @@ package com.moulberry.flashback.keyframe.impl;
 import com.google.gson.*;
 import com.moulberry.flashback.Interpolation;
 import com.moulberry.flashback.keyframe.Keyframe;
+import com.moulberry.flashback.keyframe.KeyframeType;
 import com.moulberry.flashback.keyframe.handler.KeyframeHandler;
 import com.moulberry.flashback.keyframe.interpolation.InterpolationType;
+import com.moulberry.flashback.keyframe.types.SpeedKeyframeType;
 import com.moulberry.flashback.spline.CatmullRom;
 import imgui.ImGui;
 
@@ -22,6 +24,11 @@ public class TickrateKeyframe extends Keyframe {
     public TickrateKeyframe(float tickrate, InterpolationType interpolationType) {
         this.tickrate = tickrate;
         this.interpolationType(interpolationType);
+    }
+
+    @Override
+    public KeyframeType<?> keyframeType() {
+        return SpeedKeyframeType.INSTANCE;
     }
 
     @Override

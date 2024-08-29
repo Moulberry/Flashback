@@ -52,8 +52,13 @@ public class MixinGui {
 
     @Inject(method = "canRenderCrosshairForSpectator", at = @At("HEAD"), cancellable = true)
     public void canRenderCrosshairForSpectator(HitResult hitResult, CallbackInfoReturnable<Boolean> cir) {
+        if (Flashback.isExporting()) {
+            cir.setReturnValue(false);
+            return;
+        }
         if (ReplayUI.isActive() && ReplayUI.imguiGlfw.getMouseHandledBy() == CustomImGuiImplGlfw.MouseHandledBy.GAME) {
             cir.setReturnValue(true);
+            return;
         }
         if (Flashback.getSpectatingPlayer() != null) {
             cir.setReturnValue(true);

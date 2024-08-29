@@ -1,12 +1,16 @@
 package com.moulberry.flashback.playback;
 
 import com.mojang.authlib.GameProfile;
+import com.moulberry.flashback.ext.ServerLevelExt;
+import net.minecraft.network.protocol.game.CommonPlayerSpawnInfo;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ClientInformation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.stats.Stat;
+import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.item.crafting.RecipeHolder;
+import net.minecraft.world.level.biome.BiomeManager;
 
 import java.util.Collection;
 import java.util.UUID;
@@ -20,6 +24,14 @@ public class ReplayPlayer extends ServerPlayer {
     }
 
     @Override
+    public CommonPlayerSpawnInfo createCommonSpawnInfo(ServerLevel serverLevel) {
+        return new CommonPlayerSpawnInfo(serverLevel.dimensionTypeRegistration(), serverLevel.dimension(),
+            ((ServerLevelExt)serverLevel).flashback$getSeedHash(), this.gameMode.getGameModeForPlayer(),
+            this.gameMode.getPreviousGameModeForPlayer(),
+            serverLevel.isDebug(), serverLevel.isFlat(), this.getLastDeathLocation(), this.getPortalCooldown());
+    }
+
+    @Override
     public int awardRecipes(Collection<RecipeHolder<?>> collection) {
         return 0;
     }
@@ -28,5 +40,21 @@ public class ReplayPlayer extends ServerPlayer {
     public void awardStat(Stat<?> stat, int i) {
     }
 
+    @Override
+    public void indicateDamage(double d, double e) {
+    }
 
+    @Override
+    public void handleDamageEvent(DamageSource damageSource) {
+    }
+
+    @Override
+    public boolean hurt(DamageSource damageSource, float f) {
+        return false;
+    }
+
+    @Override
+    public boolean isInvulnerableTo(DamageSource damageSource) {
+        return true;
+    }
 }

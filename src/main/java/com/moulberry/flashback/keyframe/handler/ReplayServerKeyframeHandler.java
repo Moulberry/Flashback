@@ -1,9 +1,12 @@
 package com.moulberry.flashback.keyframe.handler;
 
 import com.moulberry.flashback.keyframe.KeyframeType;
+import com.moulberry.flashback.keyframe.types.SpeedKeyframeType;
+import com.moulberry.flashback.keyframe.types.TimelapseKeyframeType;
 import com.moulberry.flashback.playback.ReplayServer;
 
 import java.util.EnumSet;
+import java.util.Set;
 
 public class ReplayServerKeyframeHandler implements KeyframeHandler {
 
@@ -19,8 +22,8 @@ public class ReplayServerKeyframeHandler implements KeyframeHandler {
     }
 
     @Override
-    public EnumSet<KeyframeType> supportedKeyframes() {
-        return EnumSet.of(KeyframeType.SPEED, KeyframeType.TIMELAPSE);
+    public Set<KeyframeType<?>> supportedKeyframes() {
+        return Set.of(SpeedKeyframeType.INSTANCE, TimelapseKeyframeType.INSTANCE);
     }
 
     @Override

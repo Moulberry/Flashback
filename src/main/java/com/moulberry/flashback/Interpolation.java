@@ -1,6 +1,7 @@
 package com.moulberry.flashback;
 
 import net.minecraft.util.Mth;
+import org.joml.Quaterniond;
 import org.joml.Quaternionf;
 
 public class Interpolation {
@@ -18,8 +19,8 @@ public class Interpolation {
         return from + Mth.wrapDegrees(to - from) * amount;
     }
 
-    public static Quaternionf linear(Quaternionf from, Quaternionf to, float amount) {
-        return from.slerp(to, amount, new Quaternionf());
+    public static Quaterniond linear(Quaterniond from, Quaterniond to, float amount) {
+        return from.slerp(to, amount, new Quaterniond());
     }
 
 }

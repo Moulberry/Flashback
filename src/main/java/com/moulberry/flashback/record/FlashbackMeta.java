@@ -13,6 +13,7 @@ public class FlashbackMeta {
     public UUID replayIdentifier = UUID.randomUUID();
     public String name = "Unnamed";
     public String versionString = null;
+    public String bobbyWorldName = null;
     public int dataVersion = 0;
     public int protocolVersion = 0;
 
@@ -32,6 +33,9 @@ public class FlashbackMeta {
         }
         if (this.protocolVersion != 0) {
             meta.addProperty("protocol_version", this.protocolVersion);
+        }
+        if (this.bobbyWorldName != null) {
+            meta.addProperty("bobby_world_name", this.bobbyWorldName);
         }
 
         if (this.totalTicks > 0) {
@@ -71,6 +75,9 @@ public class FlashbackMeta {
         }
         if (meta.has("protocol_version")) {
             flashbackMeta.protocolVersion = meta.get("protocol_version").getAsInt();
+        }
+        if (meta.has("bobby_world_name")) {
+            flashbackMeta.bobbyWorldName = meta.get("bobby_world_name").getAsString();
         }
 
         // Total ticks

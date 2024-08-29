@@ -9,8 +9,10 @@ import com.google.gson.JsonSerializationContext;
 import com.google.gson.JsonSerializer;
 import com.moulberry.flashback.Interpolation;
 import com.moulberry.flashback.keyframe.Keyframe;
+import com.moulberry.flashback.keyframe.KeyframeType;
 import com.moulberry.flashback.keyframe.handler.KeyframeHandler;
 import com.moulberry.flashback.keyframe.interpolation.InterpolationType;
+import com.moulberry.flashback.keyframe.types.CameraShakeKeyframeType;
 import com.moulberry.flashback.spline.CatmullRom;
 
 import java.lang.reflect.Type;
@@ -32,6 +34,11 @@ public class CameraShakeKeyframe extends Keyframe {
         this.frequencyY = frequencyY;
         this.amplitudeY = amplitudeY;
         this.interpolationType(interpolationType);
+    }
+
+    @Override
+    public KeyframeType<?> keyframeType() {
+        return CameraShakeKeyframeType.INSTANCE;
     }
 
     @Override

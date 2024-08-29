@@ -28,6 +28,7 @@
     "visuals.MixinFogRenderer",
     "visuals.MixinGui",
     "visuals.MixinLevelRenderer",
+    "visuals.MixinLivingEntityRenderer",
     "visuals.MixinLoadingOverlay",
     "visuals.MixinMouseHandler",
     "visuals.MixinOptions"
@@ -38,7 +39,10 @@
   "mixins": [
     "MixinThreadedLevelLightEngine",
     "compat.MixinAxiomEditorUI",
+    "compat.MixinFabricMinecraftServer",
     "compat.MixinSodiumWorldRenderer",
+    "compat.bobby.FakeChunkManagerAccessor",
+    "compat.bobby.MixinBobbyFakeChunkManager",
     "playback.MixinAttributeInstance",
     "playback.MixinChunkHolder",
     "playback.MixinEntity",
@@ -57,6 +61,7 @@
     "replay_server.MixinServerConfigurationPacketListenerImpl",
     "replay_server.MixinServerEntity",
     "replay_server.MixinServerGamePacketListenerImpl",
+    "replay_server.MixinServerLevel",
     "replay_server.MixinServerLoginPacketListenerImpl",
     "replay_server.MixinTickRateManager"
   ]

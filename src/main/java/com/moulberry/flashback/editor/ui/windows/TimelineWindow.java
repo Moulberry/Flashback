@@ -7,21 +7,17 @@ import com.moulberry.flashback.Utils;
 import com.moulberry.flashback.editor.SavedTrack;
 import com.moulberry.flashback.editor.SelectedKeyframes;
 import com.moulberry.flashback.editor.ui.ReplayUI;
-import com.moulberry.flashback.ext.MinecraftExt;
+import com.moulberry.flashback.keyframe.KeyframeType;
+import com.moulberry.flashback.keyframe.KeyframeRegistry;
 import com.moulberry.flashback.keyframe.handler.MinecraftKeyframeHandler;
+import com.moulberry.flashback.keyframe.types.TimelapseKeyframeType;
 import com.moulberry.flashback.state.EditorStateHistoryAction;
-import com.moulberry.flashback.keyframe.impl.CameraOrbitKeyframe;
-import com.moulberry.flashback.keyframe.impl.CameraShakeKeyframe;
 import com.moulberry.flashback.keyframe.impl.TimelapseKeyframe;
 import com.moulberry.flashback.state.EditorStateHistoryEntry;
 import com.moulberry.flashback.state.EditorStateManager;
 import com.moulberry.flashback.state.EditorState;
 import com.moulberry.flashback.keyframe.Keyframe;
-import com.moulberry.flashback.keyframe.KeyframeType;
 import com.moulberry.flashback.keyframe.impl.CameraKeyframe;
-import com.moulberry.flashback.keyframe.impl.FOVKeyframe;
-import com.moulberry.flashback.keyframe.impl.TickrateKeyframe;
-import com.moulberry.flashback.keyframe.impl.TimeOfDayKeyframe;
 import com.moulberry.flashback.keyframe.interpolation.InterpolationType;
 import com.moulberry.flashback.playback.ReplayServer;
 import com.moulberry.flashback.editor.ui.ImGuiHelper;
@@ -33,20 +29,17 @@ import imgui.flag.ImGuiMouseButton;
 import imgui.flag.ImGuiMouseCursor;
 import imgui.flag.ImGuiPopupFlags;
 import imgui.flag.ImGuiStyleVar;
+import imgui.flag.ImGuiWindowFlags;
 import imgui.type.ImFloat;
 import imgui.type.ImInt;
-import imgui.type.ImString;
 import it.unimi.dsi.fastutil.ints.*;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.player.LocalPlayer;
-import net.minecraft.world.phys.Vec3;
+import net.minecraft.client.gui.screens.Screen;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector2f;
-import org.joml.Vector3f;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.*;
-import java.util.function.Consumer;
 
 public class TimelineWindow {
 
@@ -67,23 +60,7 @@ public class TimelineWindow {
     @Nullable
     private static Vector2f dragSelectOrigin = null;
 
-    private static final float[] fovKeyframeInput = new float[]{70.0f};
-    private static final float[] speedKeyframeInput = new float[]{1.0f};
-    private static final ImInt timeOfDayKeyframeInput = new ImInt(6000);
-    private static boolean cameraShakeSplitXYKeyframeInput = false;
-    private static final float[] cameraShakeFrequencyXKeyframeInput = new float[]{1.0f};
-    private static final float[] cameraShakeAmplitudeXKeyframeInput = new float[]{0.0f};
-    private static final float[] cameraShakeFrequencyYKeyframeInput = new float[]{1.0f};
-    private static final float[] cameraShakeAmplitudeYKeyframeInput = new float[]{0.0f};
-    private static final ImString timelapseKeyframeInput = ImGuiHelper.createResizableImString("0s");
-    static {
-        timelapseKeyframeInput.inputData.allowedChars = "0123456789tsmh";
-    }
-
-    private static final float[] cameraOrbitCenter = new float[]{0.0f, 0.0f, 0.0f};
-    private static final ImFloat cameraOrbitDistance = new ImFloat(8.0f);
-    private static final ImFloat cameraOrbitYaw = new ImFloat(0.0f);
-    private static final ImFloat cameraOrbitPitch = new ImFloat(0.0f);
+    private static KeyframeType.KeyframeCreatePopup<?> createKeyframeWithPopup = null;
 
     private static float mouseX;
     private static float mouseY;
@@ -136,11 +113,12 @@ public class TimelineWindow {
             return;
         }
 
-
         String timestamp = ticksToTimestamp(cursorTicks);
 
+        boolean hoveredBody = mouseX > x && mouseX < x + width && mouseY > y && mouseY < y + height;
+
         ImGuiHelper.pushStyleVar(ImGuiStyleVar.WindowPadding, 0, 0);
-        boolean timelineVisible = ImGui.begin("Timeline (" + timestamp + "/" + cursorTicks + ")###Timeline");
+        boolean timelineVisible = ImGui.begin("Timeline (" + timestamp + "/" + cursorTicks + ")###Timeline", hoveredBody ? ImGuiWindowFlags.NoMove : ImGuiWindowFlags.None);
         ImGuiHelper.popStyleVar();
 
         cursorTicks = replayServer.getReplayTick();
@@ -221,7 +199,7 @@ public class TimelineWindow {
 
             cursorTicks = currentReplayTick;
             if (grabbedPlayback) {
-                cursorTicks = timelineXToReplayTick(mouseX);
+                cursorTicks = timelineXToReplayTick(mouseX - x);
             } else if (replayServer.jumpToTick >= 0) {
                 cursorTicks = replayServer.jumpToTick;
             } else if (pendingStepBackwardsTicks > 0) {
@@ -276,7 +254,7 @@ public class TimelineWindow {
                 zoomBarExpanded = true;
             }
             zoomBarHovered = mouseY >= y + height - zoomBarHeight && mouseY <= y + height &&
-                mouseX >= x + zoomBarMin && mouseX <= x + zoomBarMax;
+                mouseX >= zoomBarMin && mouseX <= zoomBarMax;
 
             renderKeyframeElements(replayServer, editorState, x, y + middleY, cursorTicks, middleX);
 
@@ -319,13 +297,13 @@ public class TimelineWindow {
                 drawList.addRectFilled(x + middleX +1, y + height - zoomBarHeight, x + width, y + height, 0xFF404040, zoomBarHeight);
             }
             if (zoomBarHovered || grabbedZoomBar) {
-                drawList.addRectFilled(x + zoomBarMin + zoomBarHeight /2f, y + height - zoomBarHeight, x + zoomBarMax - zoomBarHeight /2f, y + height, -1, zoomBarHeight);
+                drawList.addRectFilled(zoomBarMin + zoomBarHeight/2f, y + height - zoomBarHeight, zoomBarMax - zoomBarHeight/2f, y + height, -1, zoomBarHeight);
 
                 // Left/right resize
-                drawList.addCircleFilled(x + zoomBarMin + zoomBarHeight /2f, y + height - zoomBarHeight /2f, zoomBarHeight /2f, 0xffaaaa00);
-                drawList.addCircleFilled(x + zoomBarMax - zoomBarHeight /2f, y + height - zoomBarHeight /2f, zoomBarHeight /2f, 0xffaaaa00);
+                drawList.addCircleFilled(zoomBarMin + zoomBarHeight/2f, y + height - zoomBarHeight/2f, zoomBarHeight/2f, 0xffaaaa00);
+                drawList.addCircleFilled(zoomBarMax - zoomBarHeight/2f, y + height - zoomBarHeight/2f, zoomBarHeight/2f, 0xffaaaa00);
             } else {
-                drawList.addRectFilled(x + zoomBarMin, y + height - zoomBarHeight, x + zoomBarMax, y + height, -1, zoomBarHeight);
+                drawList.addRectFilled(zoomBarMin, y + height - zoomBarHeight, zoomBarMax, y + height, -1, zoomBarHeight);
             }
 
             // Pause/play button
@@ -450,13 +428,13 @@ public class TimelineWindow {
                     if (grabbedExportBarResizeLeft) {
                         ImGui.setMouseCursor(ImGuiMouseCursor.ResizeEW);
 
-                        int target = timelineXToReplayTick(mouseX);
+                        int target = timelineXToReplayTick(mouseX - x);
                         editorState.setExportTicks(target, -1, totalTicks);
                     }
                     if (grabbedExportBarResizeRight) {
                         ImGui.setMouseCursor(ImGuiMouseCursor.ResizeEW);
 
-                        int target = timelineXToReplayTick(mouseX);
+                        int target = timelineXToReplayTick(mouseX - x);
                         editorState.setExportTicks(-1, target, totalTicks);
                     }
                     if (zoomBarWidth > 1f && grabbedZoomBar) {
@@ -484,7 +462,7 @@ public class TimelineWindow {
                         editorState.markDirty();
                     }
                     if (grabbedPlayback) {
-                        int desiredTick = timelineXToReplayTick(mouseX);
+                        int desiredTick = timelineXToReplayTick(mouseX - x);
 
                         if (desiredTick > currentReplayTick) {
                             replayServer.goToReplayTick(desiredTick);
@@ -687,6 +665,12 @@ public class TimelineWindow {
             // Pause button
             if (hoveredPause) {
                 replayServer.replayPaused = !replayServer.replayPaused;
+                if (!replayServer.replayPaused) {
+                    Screen screen = Minecraft.getInstance().screen;
+                    if (screen != null && screen.isPauseScreen()) {
+                        Minecraft.getInstance().setScreen(null);
+                    }
+                }
                 return;
             }
 
@@ -738,9 +722,9 @@ public class TimelineWindow {
         }
 
         if (zoomBarHovered) {
-            if (mouseX <= x + zoomBarMin + zoomBarHeight) {
+            if (mouseX <= zoomBarMin + zoomBarHeight) {
                 grabbedZoomBarResizeLeft = leftClicked;
-            } else if (mouseX >= x + zoomBarMax - zoomBarHeight) {
+            } else if (mouseX >= zoomBarMax - zoomBarHeight) {
                 grabbedZoomBarResizeRight = leftClicked;
             }
             grabbedZoomBar = leftClicked;
@@ -776,7 +760,7 @@ public class TimelineWindow {
             if (trackIndex >= 0 && trackIndex < editorState.keyframeTracks.size()) {
                 KeyframeTrack keyframeTrack = editorState.keyframeTracks.get(trackIndex);
 
-                int tick = timelineXToReplayTick(mouseX);
+                int tick = timelineXToReplayTick(mouseX - x);
 
                 Map.Entry<Integer, Keyframe> floor = keyframeTrack.keyframesByTick.floorEntry(tick);
                 Map.Entry<Integer, Keyframe> ceil = keyframeTrack.keyframesByTick.ceilingEntry(tick);
@@ -995,7 +979,7 @@ public class TimelineWindow {
         }
 
         if (grabbedPlayback) {
-            int desiredTick = timelineXToReplayTick(mouseX);
+            int desiredTick = timelineXToReplayTick(mouseX - x);
             replayServer.goToReplayTick(desiredTick);
             replayServer.replayPaused = true;
             grabbedPlayback = false;
@@ -1221,6 +1205,8 @@ public class TimelineWindow {
 
                 Keyframe keyframe = entry.getValue();
 
+                float midY = y + 2 + (trackIndex+0.5f) * lineHeight;
+
                 if (selectedKeyframesForTrack != null && selectedKeyframesForTrack.keyframeTicks().contains(tick)) {
                     int newTick = tick;
 
@@ -1238,16 +1224,87 @@ public class TimelineWindow {
                     int keyframeX = replayTickToTimelineX(newTick);
 
                     float midX = x + keyframeX;
-                    float midY = y + 2 + (trackIndex+0.5f) * lineHeight;
 
                     drawKeyframe(foregroundDrawList, keyframe.interpolationType(), midX, midY, keyframeTrack.enabled ? 0xFF0000FF : 0x800000FF);
                 } else {
                     int keyframeX = replayTickToTimelineX(tick);
 
                     float midX = x + keyframeX;
-                    float midY = y + 2 + (trackIndex+0.5f) * lineHeight;
 
-                    drawKeyframe(drawList, keyframe.interpolationType(), midX, midY, keyframeTrack.enabled ? -1 : 0x80FFFFFF);
+                    int colour = -1;
+                    if (keyframeTrack.keyframeType == TimelapseKeyframeType.INSTANCE) {
+                        if (keyframeTrack.keyframesByTick.size() == 1) {
+                            colour = 0xFF155FFF;
+
+                            if (Math.abs(mouseX - midX) < KEYFRAME_SIZE && Math.abs(mouseY - midY) < KEYFRAME_SIZE) {
+                                ImGuiHelper.drawTooltip("Timelapse requires two keyframes");
+                            }
+                        } else {
+                            var floorEntry = keyframeTrack.keyframesByTick.floorEntry(tick - 1);
+                            if (floorEntry != null && floorEntry.getValue() instanceof TimelapseKeyframe timelapseKeyframe) {
+                                if (timelapseKeyframe.ticks >= ((TimelapseKeyframe) keyframe).ticks) {
+                                    colour = 0xFF155FFF;
+
+                                    if (Math.abs(mouseX - midX) < KEYFRAME_SIZE && Math.abs(mouseY - midY) < KEYFRAME_SIZE) {
+                                        ImGuiHelper.drawTooltip("This keyframe's Time must be greater than the Time on the left.\nThe left keyframe must be set to the base time, e.g. 0s and the right keyframe must be set to the duration of the timelapse e.g. 10s");
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    if (!keyframeTrack.enabled) {
+                        colour &= 0xFFFFFF;
+                        colour |= 0x80000000;
+                    }
+
+                    drawKeyframe(drawList, keyframe.interpolationType(), midX, midY, colour);
+                }
+
+                if ((selectedKeyframesForTrack == null || grabMovementInfo == null) && keyframeTrack.keyframeType == TimelapseKeyframeType.INSTANCE) {
+                    var floorEntry = keyframeTrack.keyframesByTick.floorEntry(tick - 1);
+                    if (floorEntry != null) {
+                        TimelapseKeyframe left = (TimelapseKeyframe) floorEntry.getValue();
+                        TimelapseKeyframe right = (TimelapseKeyframe) keyframe;
+
+                        int leftX = replayTickToTimelineX(floorEntry.getKey());
+                        int rightX = replayTickToTimelineX(tick);
+
+                        int tickDelta = right.ticks - left.ticks;
+                        String message;
+                        int textColour = -1;
+                        if (tickDelta <= 0) {
+                            message = "INVALID";
+                            textColour = 0xFF155FFF;
+                        } else {
+                            message = Utils.timeToString(tickDelta);
+                        }
+
+                        float textY = midY - lineHeight*0.3f;
+                        float midX = (leftX + rightX)/2f;
+
+                        float textWidth = ImGuiHelper.calcTextWidth("Duration: " + message);
+                        if (textWidth <= rightX - leftX) {
+                            ImGui.getWindowDrawList().addText(x + midX - textWidth/2, textY,
+                                textColour, "Duration: " + message);
+                        } else {
+                            textWidth = ImGuiHelper.calcTextWidth(message);
+                            if (textWidth <= rightX - leftX) {
+                                ImGui.getWindowDrawList().addText(x + midX - textWidth/2, textY,
+                                    textColour, message);
+                            }
+                        }
+
+                        float startLine1 = x + leftX + KEYFRAME_SIZE;
+                        float endLine1 = x + midX - textWidth/2f - 5;
+                        float startLine2 = x + midX + textWidth/2f + 5;
+                        float endLine2 = x + rightX - KEYFRAME_SIZE;
+                        if (startLine1 < endLine1) {
+                            ImGui.getWindowDrawList().addLine(startLine1, midY, endLine1, midY, 0x80FFFFFF);
+                        }
+                        if (startLine2 < endLine2) {
+                            ImGui.getWindowDrawList().addLine(startLine2, midY, endLine2, midY, 0x80FFFFFF);
+                        }
+                    }
                 }
             }
         }
@@ -1309,187 +1366,55 @@ public class TimelineWindow {
         float buttonSize = ImGui.getTextLineHeight();
         float spacingX = ImGui.getStyle().getItemSpacingX();
 
+        boolean hasOpenPopup = false;
+
         for (int trackIndex = 0; trackIndex < editorState.keyframeTracks.size(); trackIndex++) {
             KeyframeTrack keyframeTrack = editorState.keyframeTracks.get(trackIndex);
-            KeyframeType keyframeType = keyframeTrack.keyframeType;
+            KeyframeType<?> keyframeType = keyframeTrack.keyframeType;
 
             ImGui.pushID(trackIndex);
 
             ImGui.setCursorPosX(8);
 
             if (keyframeTrack.enabled) {
-                ImGui.text(keyframeType.name);
+                ImGui.text(keyframeType.name());
             } else {
-                ImGui.textDisabled(keyframeType.name);
+                ImGui.textDisabled(keyframeType.name());
             }
 
             ImGui.sameLine();
 
-            float buttonX = middleX - (buttonSize + spacingX) * 3;
+            float buttonX = x + middleX - (buttonSize + spacingX) * 3;
             float buttonY = ImGui.getCursorScreenPosY();
-            ImGui.setCursorPosX(buttonX);
+            ImGui.setCursorPosX(buttonX - x);
             if (ImGui.button("##Add", buttonSize, buttonSize)) {
-                LocalPlayer player = Minecraft.getInstance().player;
-                Keyframe keyframe = switch (keyframeType) {
-                    case CAMERA -> new CameraKeyframe(player);
-                    case CAMERA_ORBIT -> {
-                        Vec3 eyePosition = player.getEyePosition();
-                        cameraOrbitCenter[0] = (float) eyePosition.x;
-                        cameraOrbitCenter[1] = (float) eyePosition.y;
-                        cameraOrbitCenter[2] = (float) eyePosition.z;
-                        ImGui.openPopup("##EnterCameraOrbit");
-                        yield null;
-                    }
-                    case FOV -> {
-                        fovKeyframeInput[0] = editorState.replayVisuals.overrideFov ? editorState.replayVisuals.overrideFovAmount : Minecraft.getInstance().options.fov().get();
-                        ImGui.openPopup("##EnterFov");
-                        yield null;
-                    }
-                    case SPEED -> {
-                        speedKeyframeInput[0] = replayServer.getDesiredTickRate(false) / 20.0f;
-                        ImGui.openPopup("##EnterSpeed");
-                        yield null;
-                    }
-                    case TIMELAPSE -> {
-                        ImGui.openPopup("##EnterTimelapse");
-                        yield null;
-                    }
-                    case TIME_OF_DAY -> {
-                        if (editorState.replayVisuals.overrideTimeOfDay >= 0) {
-                            timeOfDayKeyframeInput.set((int) editorState.replayVisuals.overrideTimeOfDay);
-                        } else {
-                            timeOfDayKeyframeInput.set((int)(Minecraft.getInstance().level.getDayTime() % 24000));
-                        }
-                        ImGui.openPopup("##EnterTime");
-                        yield null;
-                    }
-                    case CAMERA_SHAKE -> {
-                        if (editorState.replayVisuals.overrideCameraShake) {
-                            cameraShakeSplitXYKeyframeInput = editorState.replayVisuals.cameraShakeSplitParams;
-                            cameraShakeFrequencyXKeyframeInput[0] = editorState.replayVisuals.cameraShakeXFrequency;
-                            cameraShakeAmplitudeXKeyframeInput[0] = editorState.replayVisuals.cameraShakeXAmplitude;
-                            cameraShakeFrequencyYKeyframeInput[0] = editorState.replayVisuals.cameraShakeYFrequency;
-                            cameraShakeAmplitudeYKeyframeInput[0] = editorState.replayVisuals.cameraShakeYAmplitude;
-                            ImGui.openPopup("##EnterCameraShake");
-                            yield null;
-                        } else {
-                            cameraShakeSplitXYKeyframeInput = false;
-                            cameraShakeFrequencyXKeyframeInput[0] = 1.0f;
-                            cameraShakeAmplitudeXKeyframeInput[0] = 0.0f;
-                            cameraShakeFrequencyYKeyframeInput[0] = 1.0f;
-                            cameraShakeAmplitudeYKeyframeInput[0] = 0.0f;
-                            ImGui.openPopup("##EnterCameraShake");
-                            yield null;
-                        }
-                    }
-                };
+                Keyframe keyframe = keyframeType.createDirect();
                 if (keyframe != null) {
                     editorState.setKeyframe(trackIndex, cursorTicks, keyframe);
+                } else {
+                    if (keyframeType == TimelapseKeyframeType.INSTANCE && keyframeTrack.keyframesByTick.isEmpty()) {
+                        editorState.setKeyframe(trackIndex, cursorTicks, new TimelapseKeyframe(0));
+                    } else {
+                        createKeyframeWithPopup = keyframeType.createPopup();
+                        if (createKeyframeWithPopup != null) {
+                            ImGui.openPopup("##CreateKeyframe");
+                        }
+                    }
                 }
             }
             drawList.addRectFilled(buttonX + 2, buttonY + buttonSize/2 - 1, buttonX + buttonSize - 2, buttonY + buttonSize/2 + 1, -1);
             drawList.addRectFilled(buttonX + buttonSize/2 - 1, buttonY + 2, buttonX + buttonSize/2 + 1, buttonY + buttonSize - 2, -1);
             ImGuiHelper.tooltip("Add keyframe");
 
-            if (ImGui.beginPopup("##EnterSpeed")) {
-                ImGui.sliderFloat("Speed", speedKeyframeInput, 0.1f, 10f);
-                if (ImGui.button("Add")) {
-                    editorState.setKeyframe(trackIndex, cursorTicks, new TickrateKeyframe(speedKeyframeInput[0] * 20.0f));
-                    ImGui.closeCurrentPopup();
-                }
-                ImGui.sameLine();
-                if (ImGui.button("Cancel")) {
-                    ImGui.closeCurrentPopup();
-                }
-                ImGui.endPopup();
-            }
-            if (ImGui.beginPopup("##EnterTimelapse")) {
-                ImGui.inputText("Time", timelapseKeyframeInput);
-                if (ImGui.button("Add")) {
-                    editorState.setKeyframe(trackIndex, cursorTicks, new TimelapseKeyframe(Utils.stringToTime(ImGuiHelper.getString(timelapseKeyframeInput))));
-                    ImGui.closeCurrentPopup();
-                }
-                ImGui.sameLine();
-                if (ImGui.button("Cancel")) {
-                    ImGui.closeCurrentPopup();
-                }
-                ImGui.endPopup();
-            }
-            if (ImGui.beginPopup("##EnterTime")) {
-                ImGui.inputInt("Time", timeOfDayKeyframeInput, 0);
-                if (ImGui.button("Add")) {
-                    editorState.setKeyframe(trackIndex, cursorTicks, new TimeOfDayKeyframe(timeOfDayKeyframeInput.get()));
-                    ImGui.closeCurrentPopup();
-                }
-                ImGui.sameLine();
-                if (ImGui.button("Cancel")) {
-                    ImGui.closeCurrentPopup();
-                }
-                ImGui.endPopup();
-            }
-            if (ImGui.beginPopup("##EnterFov")) {
-                ImGui.sliderFloat("FOV", fovKeyframeInput, 1f, 110f);
-                if (ImGui.button("Add")) {
-                    editorState.setKeyframe(trackIndex, cursorTicks, new FOVKeyframe(fovKeyframeInput[0]));
-                    ImGui.closeCurrentPopup();
-                }
-                ImGui.sameLine();
-                if (ImGui.button("Cancel")) {
-                    ImGui.closeCurrentPopup();
-                }
-                ImGui.endPopup();
-            }
-            if (ImGui.beginPopup("##EnterCameraOrbit")) {
-                ImGui.inputFloat3("Position", cameraOrbitCenter);
-                ImGui.inputFloat("Distance", cameraOrbitDistance);
-                ImGui.inputFloat("Yaw", cameraOrbitYaw);
-                ImGui.inputFloat("Pitch", cameraOrbitPitch);
-
-                if (ImGui.button("Add")) {
-                    Vector3f center = new Vector3f(cameraOrbitCenter[0], cameraOrbitCenter[1], cameraOrbitCenter[2]);
-                    Keyframe keyframe = new CameraOrbitKeyframe(center, cameraOrbitDistance.get(), cameraOrbitYaw.get(), cameraOrbitPitch.get());
-                    editorState.setKeyframe(trackIndex, cursorTicks, keyframe);
-                    ImGui.closeCurrentPopup();
-                }
-                ImGui.sameLine();
-                if (ImGui.button("Cancel")) {
-                    ImGui.closeCurrentPopup();
-                }
-                ImGui.endPopup();
-            }
-            if (ImGui.beginPopup("##EnterCameraShake")) {
-                if (ImGui.checkbox("Split Y/X", cameraShakeSplitXYKeyframeInput)) {
-                    cameraShakeSplitXYKeyframeInput = !cameraShakeSplitXYKeyframeInput;
-                    if (!cameraShakeSplitXYKeyframeInput) {
-                        cameraShakeFrequencyYKeyframeInput[0] = cameraShakeFrequencyXKeyframeInput[0];
-                        cameraShakeAmplitudeYKeyframeInput[0] = cameraShakeAmplitudeXKeyframeInput[0];
+            if (ImGui.beginPopup("##CreateKeyframe")) {
+                if (createKeyframeWithPopup != null) {
+                    hasOpenPopup = true;
+                    Keyframe keyframe = createKeyframeWithPopup.render();
+                    if (keyframe != null) {
+                        editorState.setKeyframe(trackIndex, cursorTicks, keyframe);
+                        ImGui.closeCurrentPopup();
                     }
-                }
-
-                if (cameraShakeSplitXYKeyframeInput) {
-                    ImGui.sliderFloat("Frequency X", cameraShakeFrequencyXKeyframeInput, 0.1f, 10.0f, "%.1f");
-                    ImGui.sliderFloat("Amplitude X", cameraShakeAmplitudeXKeyframeInput, 0.0f, 10.0f, "%.1f");
-                    ImGui.sliderFloat("Frequency Y", cameraShakeFrequencyYKeyframeInput, 0.1f, 10.0f, "%.1f");
-                    ImGui.sliderFloat("Amplitude Y", cameraShakeAmplitudeYKeyframeInput, 0.0f, 10.0f, "%.1f");
                 } else {
-                    ImGui.sliderFloat("Frequency", cameraShakeFrequencyXKeyframeInput, 0.1f, 10.0f, "%.1f");
-                    ImGui.sliderFloat("Amplitude", cameraShakeAmplitudeXKeyframeInput, 0.0f, 10.0f, "%.1f");
-                }
-
-                if (ImGui.button("Add")) {
-                    Keyframe keyframe;
-                    if (cameraShakeSplitXYKeyframeInput) {
-                        keyframe = new CameraShakeKeyframe(cameraShakeFrequencyXKeyframeInput[0], cameraShakeAmplitudeXKeyframeInput[0],
-                            cameraShakeFrequencyYKeyframeInput[0], cameraShakeAmplitudeYKeyframeInput[0]);
-                    } else {
-                        keyframe = new CameraShakeKeyframe(cameraShakeFrequencyXKeyframeInput[0], cameraShakeAmplitudeXKeyframeInput[0],
-                            cameraShakeFrequencyXKeyframeInput[0], cameraShakeAmplitudeXKeyframeInput[0]);
-                    }
-                    editorState.setKeyframe(trackIndex, cursorTicks, keyframe);
-                    ImGui.closeCurrentPopup();
-                }
-                ImGui.sameLine();
-                if (ImGui.button("Cancel")) {
                     ImGui.closeCurrentPopup();
                 }
                 ImGui.endPopup();
@@ -1498,7 +1423,7 @@ public class TimelineWindow {
             ImGui.sameLine();
 
             buttonX += buttonSize + spacingX;
-            ImGui.setCursorPosX(buttonX);
+            ImGui.setCursorPosX(buttonX - x);
             if (ImGui.button("##Clear", buttonSize, buttonSize)) {
                 keyframeTrackToClear = trackIndex;
             }
@@ -1508,7 +1433,7 @@ public class TimelineWindow {
             ImGui.sameLine();
 
             buttonX += buttonSize + spacingX;
-            ImGui.setCursorPosX(buttonX);
+            ImGui.setCursorPosX(buttonX - x);
             if (ImGui.button("##ToggleEnabled", buttonSize, buttonSize)) {
                 keyframeTrack.enabled = !keyframeTrack.enabled;
             }
@@ -1523,6 +1448,10 @@ public class TimelineWindow {
             ImGui.separator();
 
             ImGui.popID();
+        }
+
+        if (!hasOpenPopup) {
+            createKeyframeWithPopup = null;
         }
 
         if (keyframeTrackToClear >= 0) {
@@ -1547,16 +1476,16 @@ public class TimelineWindow {
             ImGui.openPopup("##AddKeyframeElement");
         }
         if (ImGui.beginPopup("##AddKeyframeElement")) {
-            for (KeyframeType keyframeType : KeyframeType.KEYFRAME_TYPES) {
-                if (ImGui.selectable(keyframeType.name)) {
+            for (KeyframeType<?> type : KeyframeRegistry.getTypes()) {
+                if (ImGui.selectable(type.name())) {
                     List<EditorStateHistoryAction> undo = new ArrayList<>();
                     List<EditorStateHistoryAction> redo = new ArrayList<>();
 
                     int index = editorState.keyframeTracks.size();
-                    undo.add(new EditorStateHistoryAction.RemoveTrack(keyframeType, index));
-                    redo.add(new EditorStateHistoryAction.AddTrack(keyframeType, index));
+                    undo.add(new EditorStateHistoryAction.RemoveTrack(type, index));
+                    redo.add(new EditorStateHistoryAction.AddTrack(type, index));
 
-                    editorState.push(new EditorStateHistoryEntry(undo, redo, "Create " + keyframeType + " track"));
+                    editorState.push(new EditorStateHistoryEntry(undo, redo, "Create " + type.name() + " track"));
                     ImGui.closeCurrentPopup();
                 }
             }
@@ -1567,7 +1496,7 @@ public class TimelineWindow {
     private static void renderSeparators(int minorsPerMajor, float x, int middleX, float minorSeparatorWidth, int errorOffset, float width, ImDrawList drawList, float y, int timestampHeight, int middleY, int minTicks, int ticksPerMinor, boolean showSubSeconds, int majorSeparatorHeight, int minorSeparatorHeight) {
         int minor = -minorsPerMajor;
         while (true) {
-            float h = x + middleX + minorSeparatorWidth *minor;
+            float h = x + middleX + minorSeparatorWidth * minor;
             int hi = (int) (h + errorOffset);
 
             if (hi >= x + width) {

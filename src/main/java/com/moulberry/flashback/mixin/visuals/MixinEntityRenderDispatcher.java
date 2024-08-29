@@ -25,9 +25,19 @@ public abstract class MixinEntityRenderDispatcher {
     private static void renderHitbox(PoseStack poseStack, VertexConsumer vertexConsumer, Entity entity, float f, float g, float h, float i) {
     }
 
+    @Inject(method = "render", at = @At("HEAD"), cancellable = true)
+    public void renderBefore(Entity entity, double d, double e, double f, float g, float h, PoseStack poseStack, MultiBufferSource multiBufferSource, int i, CallbackInfo ci) {
+        if (Flashback.isExporting()) {
+            EditorState editorState = EditorStateManager.getCurrent();
+            if (editorState != null && editorState.hideDuringExport.contains(entity.getUUID())) {
+                ci.cancel();
+            }
+        }
+    }
+
     // Add a yellow outline to selected entity
     @Inject(method = "render", at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/vertex/PoseStack;popPose()V", shift = At.Shift.BEFORE))
-    public void render(Entity entity, double d, double e, double f, float g, float h, PoseStack poseStack, MultiBufferSource multiBufferSource, int i, CallbackInfo ci) {
+    public void renderAfter(Entity entity, double d, double e, double f, float g, float h, PoseStack poseStack, MultiBufferSource multiBufferSource, int i, CallbackInfo ci) {
         if (Flashback.isInReplay()) {
             if (ReplayUI.isEntitySelected(entity.getUUID())) {
                 renderHitbox(poseStack, multiBufferSource.getBuffer(RenderType.lines()), entity, h, 1.0f, 1.0f, 0.0f);

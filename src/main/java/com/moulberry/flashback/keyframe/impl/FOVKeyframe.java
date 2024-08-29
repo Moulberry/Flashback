@@ -4,8 +4,10 @@ import com.google.gson.*;
 import com.moulberry.flashback.Interpolation;
 import com.moulberry.flashback.Utils;
 import com.moulberry.flashback.keyframe.Keyframe;
+import com.moulberry.flashback.keyframe.KeyframeType;
 import com.moulberry.flashback.keyframe.handler.KeyframeHandler;
 import com.moulberry.flashback.keyframe.interpolation.InterpolationType;
+import com.moulberry.flashback.keyframe.types.FOVKeyframeType;
 import com.moulberry.flashback.spline.CatmullRom;
 import imgui.ImGui;
 
@@ -23,6 +25,11 @@ public class FOVKeyframe extends Keyframe {
     public FOVKeyframe(float fov, InterpolationType interpolationType) {
         this.fov = fov;
         this.interpolationType(interpolationType);
+    }
+
+    @Override
+    public KeyframeType<?> keyframeType() {
+        return FOVKeyframeType.INSTANCE;
     }
 
     @Override

@@ -23,8 +23,7 @@ public class ConfigScreen extends OptionsSubScreen {
     }
 
     public void removed() {
-        Path configFolder = FabricLoader.getInstance().getConfigDir().resolve("flashback");
-        Flashback.getConfig().saveToFolder(configFolder);
+        Flashback.getConfig().saveToDefaultFolder();
     }
 
 }

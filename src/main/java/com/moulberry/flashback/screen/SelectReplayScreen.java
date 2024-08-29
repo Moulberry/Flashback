@@ -1,5 +1,7 @@
 package com.moulberry.flashback.screen;
 
+import com.moulberry.flashback.Flashback;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
@@ -37,6 +39,11 @@ public class SelectReplayScreen extends Screen {
                                                            .bounds(this.width / 2 + 4, this.height - 28, 72, 20).build());
         this.addRenderableWidget(Button.builder(CommonComponents.GUI_BACK, button -> this.minecraft.setScreen(this.lastScreen))
                                                            .bounds(this.width / 2 + 82, this.height - 28, 72, 20).build());
+
+        if (this.width/2 > 154 + 128) {
+            this.addRenderableWidget(Button.builder(Component.literal("Flashback Settings"), btn -> Minecraft.getInstance().setScreen(new ConfigScreen(this)))
+                                           .bounds(this.width - 120 - 8, this.height - 28, 120, 20).build());
+        }
         this.updateButtonStatus(null);
     }
 

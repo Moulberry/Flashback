@@ -78,6 +78,8 @@ public abstract class MixinLevelChunk extends ChunkAccess implements LevelChunkE
             return;
         }
 
+        this.cachedChunkId = -1;
+
         // Update heightmaps
         this.heightmaps.get(Heightmap.Types.MOTION_BLOCKING).update(localX, y, localZ, blockState);
         this.heightmaps.get(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES).update(localX, y, localZ, blockState);

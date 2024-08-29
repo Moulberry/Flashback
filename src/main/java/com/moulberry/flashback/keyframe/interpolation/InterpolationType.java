@@ -1,7 +1,5 @@
 package com.moulberry.flashback.keyframe.interpolation;
 
-import com.moulberry.flashback.keyframe.KeyframeType;
-
 public enum InterpolationType {
 
     SMOOTH(SidedInterpolationType.SMOOTH, SidedInterpolationType.SMOOTH),

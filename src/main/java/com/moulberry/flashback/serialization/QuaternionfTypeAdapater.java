@@ -1,12 +1,11 @@
 package com.moulberry.flashback.serialization;
 
 import com.google.gson.*;
-import net.minecraft.world.phys.Vec3;
 import org.joml.Quaternionf;
 
 import java.lang.reflect.Type;
 
-public class QuaternionTypeAdapater implements JsonSerializer<Quaternionf>, JsonDeserializer<Quaternionf>  {
+public class QuaternionfTypeAdapater implements JsonSerializer<Quaternionf>, JsonDeserializer<Quaternionf>  {
     @Override
     public Quaternionf deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) throws JsonParseException {
         JsonArray jsonArray = json.getAsJsonArray();

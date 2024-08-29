@@ -1,24 +1,21 @@
 package com.moulberry.flashback.keyframe.handler;
 
 import com.moulberry.flashback.keyframe.KeyframeType;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.player.LocalPlayer;
-import net.minecraft.util.Mth;
-import net.minecraft.world.phys.Vec3;
-import org.joml.Quaternionf;
+import org.joml.Vector3d;
 import org.joml.Vector3f;
 
 import java.util.EnumSet;
+import java.util.Set;
 
 public interface KeyframeHandler {
 
-    EnumSet<KeyframeType> supportedKeyframes();
+    Set<KeyframeType<?>> supportedKeyframes();
 
     default boolean alwaysApplyLastKeyframe() {
         return false;
     }
 
-    default void applyCameraPosition(Vector3f position, float yaw, float pitch, float roll) {
+    default void applyCameraPosition(Vector3d position, double yaw, double pitch, double roll) {
         throw new UnsupportedOperationException();
     }
 

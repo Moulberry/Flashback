@@ -4,17 +4,21 @@ import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.pipeline.TextureTarget;
 import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.platform.NativeImage;
+import com.mojang.blaze3d.platform.TextureUtil;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.BufferUploader;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.VertexFormat;
+import com.moulberry.flashback.visuals.ShaderManager;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.ShaderInstance;
 import org.jetbrains.annotations.Nullable;
+import org.lwjgl.opengl.GL11;
+import org.lwjgl.opengl.GL30C;
+import org.lwjgl.opengl.GL32C;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.nio.FloatBuffer;
 import java.util.ArrayList;
 import java.util.List;
@@ -29,22 +33,15 @@ public class SaveableFramebufferQueue implements AutoCloseable {
     private final List<SaveableFramebuffer> available = new ArrayList<>();
     private final List<SaveableFramebuffer> waiting = new ArrayList<>();
 
-    private final RenderTarget flipbuffer;
-    private final ShaderInstance flipShader;
+    private final RenderTarget flipBuffer;
 
     public SaveableFramebufferQueue(int width, int height) {
         this.width = width;
         this.height = height;
-        this.flipbuffer = new TextureTarget(width, height, false, false);
+        this.flipBuffer = new TextureTarget(width, height, false, false);
 
         for (int i = 0; i < CAPACITY; i++) {
             this.available.add(new SaveableFramebuffer());
-        }
-
-        try {
-            this.flipShader = new ShaderInstance(Minecraft.getInstance().getResourceManager(), "blit_screen_flip", DefaultVertexFormat.BLIT_SCREEN);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
         }
     }
 
@@ -55,7 +52,12 @@ public class SaveableFramebufferQueue implements AutoCloseable {
         return this.available.removeFirst();
     }
 
-    private void blitFlip(RenderTarget src) {
+    private void blitFlip(RenderTarget src, boolean supersampling) {
+        int oldFilterMode = src.filterMode;
+        if (supersampling) {
+            src.setFilterMode(GL11.GL_LINEAR);
+        }
+
         GlStateManager._colorMask(true, true, true, true);
         GlStateManager._disableDepthTest();
         GlStateManager._depthMask(false);
@@ -63,27 +65,32 @@ public class SaveableFramebufferQueue implements AutoCloseable {
         GlStateManager._disableBlend();
         RenderSystem.disableCull();
 
-        this.flipbuffer.bindWrite(true);
-        this.flipShader.setSampler("DiffuseSampler", src.colorTextureId);
-        this.flipShader.apply();
+        this.flipBuffer.bindWrite(true);
+        ShaderInstance flipShader = ShaderManager.blitScreenFlip;
+        flipShader.setSampler("DiffuseSampler", src.colorTextureId);
+        flipShader.apply();
         BufferBuilder bufferBuilder = RenderSystem.renderThreadTesselator().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.BLIT_SCREEN);
         bufferBuilder.addVertex(0.0F, 1.0F, 0.0F);
         bufferBuilder.addVertex(1.0F, 1.0F, 0.0F);
         bufferBuilder.addVertex(1.0F, 0.0F, 0.0F);
         bufferBuilder.addVertex(0.0F, 0.0F, 0.0F);
         BufferUploader.draw(bufferBuilder.buildOrThrow());
-        this.flipShader.clear();
+        flipShader.clear();
 
         GlStateManager._depthMask(true);
         GlStateManager._colorMask(true, true, true, true);
         RenderSystem.enableCull();
+
+        if (supersampling) {
+            src.setFilterMode(oldFilterMode);
+        }
     }
 
-    public void startDownload(RenderTarget target, SaveableFramebuffer texture) {
-        //Do an inline flip
-        this.blitFlip(target);
+    public void startDownload(RenderTarget target, SaveableFramebuffer texture, boolean supersampling) {
+        // Do an inline flip
+        this.blitFlip(target, supersampling);
 
-        texture.startDownload(this.flipbuffer, this.width, this.height);
+        texture.startDownload(this.flipBuffer, this.width, this.height);
         this.waiting.add(texture);
     }
 
@@ -118,8 +125,7 @@ public class SaveableFramebufferQueue implements AutoCloseable {
         }
         this.waiting.clear();
         this.available.clear();
-        this.flipbuffer.destroyBuffers();
-        this.flipShader.close();
+        this.flipBuffer.destroyBuffers();
     }
 
 

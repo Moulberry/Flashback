@@ -9,6 +9,14 @@ import com.moulberry.flashback.action.*;
 import com.moulberry.flashback.configuration.FlashbackConfig;
 import com.moulberry.flashback.exporting.ExportJob;
 import com.moulberry.flashback.ext.MinecraftExt;
+import com.moulberry.flashback.keyframe.KeyframeRegistry;
+import com.moulberry.flashback.keyframe.types.CameraKeyframeType;
+import com.moulberry.flashback.keyframe.types.CameraOrbitKeyframeType;
+import com.moulberry.flashback.keyframe.types.CameraShakeKeyframeType;
+import com.moulberry.flashback.keyframe.types.FOVKeyframeType;
+import com.moulberry.flashback.keyframe.types.SpeedKeyframeType;
+import com.moulberry.flashback.keyframe.types.TimeOfDayKeyframeType;
+import com.moulberry.flashback.keyframe.types.TimelapseKeyframeType;
 import com.moulberry.flashback.packet.FlashbackClearParticles;
 import com.moulberry.flashback.packet.FinishedServerTick;
 import com.moulberry.flashback.packet.FlashbackForceClientTick;
@@ -20,6 +28,7 @@ import com.moulberry.flashback.record.Recorder;
 import com.moulberry.flashback.record.ReplayExporter;
 import com.moulberry.flashback.screen.ConfigScreen;
 import com.moulberry.flashback.screen.SaveReplayScreen;
+import com.moulberry.flashback.visuals.ShaderManager;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
@@ -29,6 +38,7 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
+import net.fabricmc.fabric.api.resource.ResourceManagerHelper;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.FileUtil;
 import net.minecraft.Util;
@@ -48,12 +58,12 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.*;
+import net.minecraft.server.packs.PackType;
 import net.minecraft.server.packs.repository.PackRepository;
 import net.minecraft.server.packs.repository.ServerPacksSource;
 import net.minecraft.world.Difficulty;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.flag.FeatureFlags;
 import net.minecraft.world.level.*;
 import net.minecraft.world.level.biome.Biome;
@@ -183,6 +193,16 @@ public class Flashback implements ModInitializer, ClientModInitializer {
         ActionRegistry.register(ActionCreateLocalPlayer.INSTANCE);
         ActionRegistry.register(ActionMoveEntities.INSTANCE);
         ActionRegistry.register(ActionLevelChunkCached.INSTANCE);
+
+        KeyframeRegistry.register(CameraKeyframeType.INSTANCE);
+        KeyframeRegistry.register(CameraOrbitKeyframeType.INSTANCE);
+        KeyframeRegistry.register(CameraShakeKeyframeType.INSTANCE);
+        KeyframeRegistry.register(FOVKeyframeType.INSTANCE);
+        KeyframeRegistry.register(SpeedKeyframeType.INSTANCE);
+        KeyframeRegistry.register(TimelapseKeyframeType.INSTANCE);
+        KeyframeRegistry.register(TimeOfDayKeyframeType.INSTANCE);
+
+        ResourceManagerHelper.get(PackType.CLIENT_RESOURCES).registerReloadListener(ShaderManager.INSTANCE);
 
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) -> {
             var flashback = ClientCommandManager.literal("flashback");
@@ -376,7 +396,7 @@ public class Flashback implements ModInitializer, ClientModInitializer {
 
         if (Flashback.getConfig().showRecordingToasts) {
             SystemToast.add(Minecraft.getInstance().getToasts(), FlashbackSystemToasts.RECORDING_TOAST,
-                    Component.literal("Flashback"), Component.literal("Paused recording"));
+                    Component.literal("Flashback"), Component.literal(pause ? "Paused recording" : "Unpaused recording"));
         }
     }
 

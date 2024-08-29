@@ -5,6 +5,7 @@ import com.mojang.blaze3d.platform.TextureUtil;
 import com.mojang.blaze3d.platform.Window;
 import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.editor.ui.windows.ExportQueueWindow;
+import com.moulberry.flashback.editor.ui.windows.PlayerListWindow;
 import com.moulberry.flashback.editor.ui.windows.SelectedEntityPopup;
 import com.moulberry.flashback.state.EditorState;
 import com.moulberry.flashback.state.EditorStateManager;
@@ -59,6 +60,8 @@ public class ReplayUI {
     public static int frameY = 0;
     public static int frameWidth = 1;
     public static int frameHeight = 1;
+    public static int viewportSizeX = 1;
+    public static int viewportSizeY = 1;
     private static boolean activeLastFrame = false;
 
     public static Matrix4f lastProjectionMatrix = null;
@@ -556,6 +559,8 @@ public class ReplayUI {
             }
             frameWidth = (int) Math.max(1, maxX - minX);
             frameHeight = (int) Math.max(1, maxY - minY);
+            viewportSizeX = (int) ImGui.getMainViewport().getSizeX();
+            viewportSizeY = (int) ImGui.getMainViewport().getSizeY();
 
             EditorState editorState = EditorStateManager.getCurrent();
             Sizing sizing = editorState == null ? Sizing.KEEP_ASPECT_RATIO : editorState.replayVisuals.sizing;
@@ -693,6 +698,7 @@ public class ReplayUI {
         TimelineWindow.render();
         StartExportWindow.render();
         ExportQueueWindow.render();
+        PlayerListWindow.render();
 
         popupOpenLastFrame = ImGui.isPopupOpen("", ImGuiPopupFlags.AnyPopup);
 

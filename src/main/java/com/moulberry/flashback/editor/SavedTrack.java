@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
-public record SavedTrack(KeyframeType type, int track, boolean copiedFromDisabled,
+public record SavedTrack(KeyframeType<?> type, int track, boolean copiedFromDisabled,
                          TreeMap<Integer, Keyframe> keyframes) {
     public int applyToEditorState(EditorState editorState, int cursorTicks, int totalTicks) {
         if (this.keyframes == null || this.keyframes.isEmpty()) {

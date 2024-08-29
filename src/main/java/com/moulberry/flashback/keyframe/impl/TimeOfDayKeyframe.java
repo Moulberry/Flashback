@@ -3,8 +3,10 @@ package com.moulberry.flashback.keyframe.impl;
 import com.google.gson.*;
 import com.moulberry.flashback.Interpolation;
 import com.moulberry.flashback.keyframe.Keyframe;
+import com.moulberry.flashback.keyframe.KeyframeType;
 import com.moulberry.flashback.keyframe.handler.KeyframeHandler;
 import com.moulberry.flashback.keyframe.interpolation.InterpolationType;
+import com.moulberry.flashback.keyframe.types.TimeOfDayKeyframeType;
 import com.moulberry.flashback.spline.CatmullRom;
 import imgui.ImGui;
 import imgui.type.ImInt;
@@ -23,6 +25,11 @@ public class TimeOfDayKeyframe extends Keyframe {
     public TimeOfDayKeyframe(int time, InterpolationType interpolationType) {
         this.time = time;
         this.interpolationType(interpolationType);
+    }
+
+    @Override
+    public KeyframeType<?> keyframeType() {
+        return TimeOfDayKeyframeType.INSTANCE;
     }
 
     @Override

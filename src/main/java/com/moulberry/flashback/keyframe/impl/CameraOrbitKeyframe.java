@@ -9,8 +9,10 @@ import com.google.gson.JsonSerializationContext;
 import com.google.gson.JsonSerializer;
 import com.moulberry.flashback.Interpolation;
 import com.moulberry.flashback.keyframe.Keyframe;
+import com.moulberry.flashback.keyframe.KeyframeType;
 import com.moulberry.flashback.keyframe.handler.KeyframeHandler;
 import com.moulberry.flashback.keyframe.interpolation.InterpolationType;
+import com.moulberry.flashback.keyframe.types.CameraOrbitKeyframeType;
 import com.moulberry.flashback.spline.CatmullRom;
 import com.moulberry.flashback.state.EditorState;
 import com.moulberry.flashback.state.EditorStateManager;
@@ -22,23 +24,23 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Quaternionf;
-import org.joml.Vector3f;
+import org.joml.Vector3d;
 
 import java.lang.reflect.Type;
 import java.util.function.Consumer;
 
 public class CameraOrbitKeyframe extends Keyframe {
 
-    public final Vector3f center;
+    public final Vector3d center;
     public float distance;
     public float yaw;
     public float pitch;
 
-    public CameraOrbitKeyframe(Vector3f center, float distance, float yaw, float pitch) {
+    public CameraOrbitKeyframe(Vector3d center, float distance, float yaw, float pitch) {
         this(center, distance, yaw, pitch, InterpolationType.DEFAULT);
     }
 
-    public CameraOrbitKeyframe(Vector3f center, float distance, float yaw, float pitch, InterpolationType interpolationType) {
+    public CameraOrbitKeyframe(Vector3d center, float distance, float yaw, float pitch, InterpolationType interpolationType) {
         this.center = center;
         this.distance = distance;
         this.yaw = yaw;
@@ -47,13 +49,18 @@ public class CameraOrbitKeyframe extends Keyframe {
     }
 
     @Override
+    public KeyframeType<?> keyframeType() {
+        return CameraOrbitKeyframeType.INSTANCE;
+    }
+
+    @Override
     public Keyframe copy() {
-        return new CameraOrbitKeyframe(new Vector3f(this.center), this.distance, this.yaw, this.pitch, this.interpolationType());
+        return new CameraOrbitKeyframe(new Vector3d(this.center), this.distance, this.yaw, this.pitch, this.interpolationType());
     }
 
     @Override
     public void renderEditKeyframe(Consumer<Consumer<Keyframe>> update) {
-        float[] center = new float[]{this.center.x, this.center.y, this.center.z};
+        float[] center = new float[]{(float) this.center.x, (float) this.center.y, (float) this.center.z};
         if (ImGui.inputFloat3("Position", center)) {
             if (center[0] != this.center.x) {
                 update.accept(keyframe -> ((CameraOrbitKeyframe)keyframe).center.x = center[0]);
@@ -85,7 +92,7 @@ public class CameraOrbitKeyframe extends Keyframe {
         }
     }
 
-    private void apply(KeyframeHandler keyframeHandler, Vector3f center, float distance, float yaw, float pitch) {
+    private void apply(KeyframeHandler keyframeHandler, Vector3d center, float distance, float yaw, float pitch) {
         float pitchRadians = (float) Math.toRadians(pitch);
         float yawRadians = (float) Math.toRadians(-yaw);
         float cosYaw = Mth.cos(yawRadians);
@@ -93,8 +100,8 @@ public class CameraOrbitKeyframe extends Keyframe {
         float cosPitch = Mth.cos(pitchRadians);
         float sinPitch = Mth.sin(pitchRadians);
 
-        Vector3f look = new Vector3f(sinYaw * cosPitch, -sinPitch, cosYaw * cosPitch);
-        Vector3f cameraPosition = new Vector3f(center).sub(look.mul(distance));
+        Vector3d look = new Vector3d(sinYaw * cosPitch, -sinPitch, cosYaw * cosPitch);
+        Vector3d cameraPosition = new Vector3d(center).sub(look.mul(distance));
         LocalPlayer player = Minecraft.getInstance().player;
         if (player != null) {
             cameraPosition.y -= player.getEyeHeight();
@@ -121,7 +128,7 @@ public class CameraOrbitKeyframe extends Keyframe {
         float yaw = Interpolation.linear(this.yaw, other.yaw, amount);
         float pitch = Interpolation.linear(this.pitch, other.pitch, amount);
 
-        Vector3f center = new Vector3f((float) x, (float) y, (float) z);
+        Vector3d center = new Vector3d((float) x, (float) y, (float) z);
         apply(keyframeHandler, center, distance, yaw, pitch);
     }
 
@@ -132,13 +139,13 @@ public class CameraOrbitKeyframe extends Keyframe {
         float time3 = t3 - t0;
 
         // Calculate position
-        Vector3f position = CatmullRom.position(this.center,
+        Vector3d position = CatmullRom.position(this.center,
             ((CameraOrbitKeyframe)p1).center, ((CameraOrbitKeyframe)p2).center,
             ((CameraOrbitKeyframe)p3).center, time1, time2, time3, amount);
 
-        float x = position.x;
-        float y = position.y;
-        float z = position.z;
+        double x = position.x;
+        double y = position.y;
+        double z = position.z;
         float distance = CatmullRom.value(this.distance, ((CameraOrbitKeyframe)p1).distance, ((CameraOrbitKeyframe)p2).distance,
             ((CameraOrbitKeyframe)p3).distance, time1, time2, time3, amount);
         float yaw = CatmullRom.value(this.yaw, ((CameraOrbitKeyframe)p1).yaw, ((CameraOrbitKeyframe)p2).yaw,
@@ -147,9 +154,9 @@ public class CameraOrbitKeyframe extends Keyframe {
             ((CameraOrbitKeyframe)p3).pitch, time1, time2, time3, amount);
 
         if (lerpAmount >= 0) {
-            float linearX = Interpolation.linear(((CameraOrbitKeyframe)p1).center.x, ((CameraOrbitKeyframe)p2).center.x, lerpAmount);
-            float linearY = Interpolation.linear(((CameraOrbitKeyframe)p1).center.y, ((CameraOrbitKeyframe)p2).center.y, lerpAmount);
-            float linearZ = Interpolation.linear(((CameraOrbitKeyframe)p1).center.z, ((CameraOrbitKeyframe)p2).center.z, lerpAmount);
+            double linearX = Interpolation.linear(((CameraOrbitKeyframe)p1).center.x, ((CameraOrbitKeyframe)p2).center.x, lerpAmount);
+            double linearY = Interpolation.linear(((CameraOrbitKeyframe)p1).center.y, ((CameraOrbitKeyframe)p2).center.y, lerpAmount);
+            double linearZ = Interpolation.linear(((CameraOrbitKeyframe)p1).center.z, ((CameraOrbitKeyframe)p2).center.z, lerpAmount);
             float linearDistance = Interpolation.linear(((CameraOrbitKeyframe)p1).distance, ((CameraOrbitKeyframe)p2).distance, amount);
             float linearYaw = Interpolation.linear(((CameraOrbitKeyframe)p1).yaw, ((CameraOrbitKeyframe)p2).yaw, amount);
             float linearPitch = Interpolation.linear(((CameraOrbitKeyframe)p1).pitch, ((CameraOrbitKeyframe)p2).pitch, amount);
@@ -171,14 +178,14 @@ public class CameraOrbitKeyframe extends Keyframe {
             }
         }
 
-        apply(keyframeHandler, new Vector3f(x, y, z), distance, yaw, pitch);
+        apply(keyframeHandler, new Vector3d(x, y, z), distance, yaw, pitch);
     }
 
     public static class TypeAdapter implements JsonSerializer<CameraOrbitKeyframe>, JsonDeserializer<CameraOrbitKeyframe> {
         @Override
         public CameraOrbitKeyframe deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) throws JsonParseException {
             JsonObject jsonObject = json.getAsJsonObject();
-            Vector3f center = context.deserialize(jsonObject.get("center"), Vector3f.class);
+            Vector3d center = context.deserialize(jsonObject.get("center"), Vector3d.class);
             float distance = jsonObject.get("distance").getAsFloat();
             float yaw = jsonObject.get("yaw").getAsFloat();
             float pitch = jsonObject.get("pitch").getAsFloat();

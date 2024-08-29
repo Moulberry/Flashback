@@ -28,6 +28,7 @@ public enum VideoCodec implements ComboOption {
     private final String text;
     private final int codecId;
     private String[] encoders;
+    private boolean supportsTransparency = false;
 
     VideoCodec(String text, int codecId) {
         this.text = text;
@@ -41,6 +42,18 @@ public enum VideoCodec implements ComboOption {
 
     public int codecId() {
         return this.codecId;
+    }
+
+    public boolean supportsTransparency() {
+        if (this == VP9) {
+            // VP9 supports transparency (yuva420p), but apparently most decoders for it do not. Let's not mark it as supporting transparency
+            // See also: https://trac.ffmpeg.org/ticket/8468
+            return false;
+        }
+        if (this.encoders == null) {
+            this.getEncoders();
+        }
+        return this.supportsTransparency;
     }
 
     public String[] getEncoders() {
@@ -69,6 +82,20 @@ public enum VideoCodec implements ComboOption {
 
                             int capabilities = codec.capabilities();
                             String name = codec.name().getString();
+
+                            this.supportsTransparency = false;
+                            for (int i = 0;; i++) {
+                                int pixFmt = codec.pix_fmts().get(i);
+                                if (pixFmt == -1) {
+                                    break;
+                                } else {
+                                    if (PixelFormatHelper.doesPixelFormatSupportTransparency(pixFmt)) {
+                                        System.out.println(name + " supports transparency because of " + PixelFormatHelper.pixelFormatToString(pixFmt));
+                                        this.supportsTransparency = true;
+                                        break;
+                                    }
+                                }
+                            }
 
                             if ((capabilities & avcodec.AV_CODEC_CAP_HARDWARE) != 0) {
                                 encodersHardware.add(name);
@@ -126,7 +153,7 @@ public enum VideoCodec implements ComboOption {
             AVRational time_base = av_inv_q(frameRate);
             codecContext.time_base(time_base);
 
-            int pixelFormat = PixelFormatHelper.getBestPixelFormat(codec.name().getString());
+            int pixelFormat = PixelFormatHelper.getBestPixelFormat(codec.name().getString(), false);
             codecContext.pix_fmt(pixelFormat);
 
             if ((codec.capabilities() & AV_CODEC_CAP_EXPERIMENTAL) != 0) {

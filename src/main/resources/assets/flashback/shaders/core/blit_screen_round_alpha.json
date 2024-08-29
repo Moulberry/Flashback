@@ -1,0 +1,9 @@
+{
+    "vertex": "flashback:blit_screen_round_alpha",
+    "fragment": "flashback:blit_screen_round_alpha",
+    "samplers": [
+        { "name": "DiffuseSampler" }
+    ],
+    "uniforms": [
+    ]
+}

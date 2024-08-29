@@ -17,6 +17,7 @@ public enum VideoContainer implements ComboOption {
     private final String text;
     private final String extension;
     private VideoCodec[] supportedVideoCodecs = null;
+    private VideoCodec[] supportedVideoCodecsWithTransparency = null;
     private AudioCodec[] supportedAudioCodecs = null;
 
     VideoContainer(String text, String extension) {
@@ -33,8 +34,20 @@ public enum VideoContainer implements ComboOption {
         return extension;
     }
 
-    public VideoCodec[] getSupportedVideoCodecs() {
-        if (this.supportedVideoCodecs == null) {
+    public static VideoContainer[] findSupportedContainers(boolean transparency) {
+        List<VideoContainer> containers = new ArrayList<>();
+        for (VideoContainer videoContainer : VideoContainer.values()) {
+            if (videoContainer.getSupportedVideoCodecs(transparency).length != 0) {
+                containers.add(videoContainer);
+            }
+        }
+        return containers.toArray(new VideoContainer[0]);
+    }
+
+    public VideoCodec[] getSupportedVideoCodecs(boolean transparency) {
+        VideoCodec[] codecs = transparency ? this.supportedVideoCodecsWithTransparency : this.supportedVideoCodecs;
+
+        if (codecs == null) {
             List<VideoCodec> supportedCodecs = new ArrayList<>();
             try (AVOutputFormat outputFormat = avformat.av_guess_format(this.extension, "test."+this.extension, null)) {
                 for (VideoCodec codec : VideoCodec.values()) {
@@ -42,6 +55,9 @@ public enum VideoContainer implements ComboOption {
                         continue;
                     }
                     if (codec.getEncoders().length == 0) {
+                        continue;
+                    }
+                    if (transparency && !codec.supportsTransparency()) {
                         continue;
                     }
 
@@ -52,9 +68,14 @@ public enum VideoContainer implements ComboOption {
                 }
             }
 
-            this.supportedVideoCodecs = supportedCodecs.toArray(new VideoCodec[0]);
+            codecs = supportedCodecs.toArray(new VideoCodec[0]);
+            if (transparency) {
+                this.supportedVideoCodecsWithTransparency = codecs;
+            } else {
+                this.supportedVideoCodecs = codecs;
+            }
         }
-        return this.supportedVideoCodecs;
+        return codecs;
     }
 
     public AudioCodec[] getSupportedAudioCodecs() {

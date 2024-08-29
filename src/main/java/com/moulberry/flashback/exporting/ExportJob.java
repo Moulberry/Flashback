@@ -14,14 +14,13 @@ import com.moulberry.flashback.compat.IrisApiWrapper;
 import com.moulberry.flashback.keyframe.KeyframeType;
 import com.moulberry.flashback.keyframe.handler.KeyframeHandler;
 import com.moulberry.flashback.keyframe.handler.MinecraftKeyframeHandler;
+import com.moulberry.flashback.keyframe.types.SpeedKeyframeType;
+import com.moulberry.flashback.keyframe.types.TimelapseKeyframeType;
 import com.moulberry.flashback.state.EditorState;
 import com.moulberry.flashback.state.EditorStateManager;
 import com.moulberry.flashback.playback.ReplayServer;
-import com.moulberry.flashback.state.KeyframeTrack;
 import it.unimi.dsi.fastutil.doubles.DoubleArrayList;
 import it.unimi.dsi.fastutil.doubles.DoubleList;
-import it.unimi.dsi.fastutil.floats.FloatArrayList;
-import it.unimi.dsi.fastutil.floats.FloatList;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.Screenshot;
@@ -48,6 +47,7 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Random;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.LockSupport;
@@ -94,11 +94,11 @@ public class ExportJob {
     }
 
     public int getWidth() {
-        return this.settings.resolutionX();
+        return this.settings.resolutionX() * (this.settings.ssaa() ? 2 : 1);
     }
 
     public int getHeight() {
-        return this.settings.resolutionY();
+        return this.settings.resolutionY() * (this.settings.ssaa() ? 2 : 1);
     }
 
     public Random getParticleRandom() {
@@ -248,11 +248,8 @@ public class ExportJob {
             this.settings.editorState().applyKeyframes(keyframeHandler, (float)(this.settings.startTick() + currentTickDouble));
 
 
-            SaveableFramebuffer saveable;
-            RenderTarget renderTarget;
-
-            saveable = downloader.take();
-            renderTarget = Minecraft.getInstance().mainRenderTarget;
+            SaveableFramebuffer saveable = downloader.take();
+            RenderTarget renderTarget = Minecraft.getInstance().mainRenderTarget;
 
             renderTarget.bindWrite(true);
             RenderSystem.clear(16640, Minecraft.ON_OSX);
@@ -294,7 +291,7 @@ public class ExportJob {
             submitDownloadedFrames(encoder, downloader, false);
 
             saveable.audioBuffer = audioBuffer;
-            downloader.startDownload(renderTarget, saveable);
+            downloader.startDownload(renderTarget, saveable, this.settings.ssaa());
 
             if (cancel) {
                 ExportJobQueue.drainingQueue = false;
@@ -594,8 +591,8 @@ public class ExportJob {
         private float tickrate = 20.0f;
 
         @Override
-        public EnumSet<KeyframeType> supportedKeyframes() {
-            return EnumSet.of(KeyframeType.SPEED, KeyframeType.TIMELAPSE);
+        public Set<KeyframeType<?>> supportedKeyframes() {
+            return Set.of(SpeedKeyframeType.INSTANCE, TimelapseKeyframeType.INSTANCE);
         }
 
         @Override

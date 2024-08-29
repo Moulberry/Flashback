@@ -4,6 +4,7 @@ import com.google.common.reflect.Reflection;
 import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.FlashbackGson;
 import com.moulberry.flashback.SneakyThrow;
+import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.OptionInstance;
 import net.minecraft.network.chat.Component;
@@ -19,7 +20,9 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public class FlashbackConfig {
 
@@ -42,6 +45,8 @@ public class FlashbackConfig {
     @OptionCaption("flashback.option.hide_pause_menu_controls")
     @OptionDescription("flashback.option.hide_pause_menu_controls.description")
     public boolean hidePauseMenuControls = false;
+
+    public Set<String> openedWindows = new HashSet<>();
 
     @SuppressWarnings("unchecked")
     public OptionInstance<?>[] createOptionInstances() {
@@ -108,6 +113,11 @@ public class FlashbackConfig {
         }
 
         return new FlashbackConfig();
+    }
+
+    public void saveToDefaultFolder() {
+        Path configFolder = FabricLoader.getInstance().getConfigDir().resolve("flashback");
+        this.saveToFolder(configFolder);
     }
 
     public void saveToFolder(Path configFolder) {

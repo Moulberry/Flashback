@@ -27,6 +27,7 @@ public abstract class Keyframe {
         this.interpolationType = Objects.requireNonNullElse(interpolationType, InterpolationType.DEFAULT);
     }
 
+    public abstract KeyframeType<?> keyframeType();
     public abstract Keyframe copy();
     public abstract void apply(KeyframeHandler t);
     public abstract void applyInterpolated(KeyframeHandler t, Keyframe other, float amount);
@@ -42,18 +43,6 @@ public abstract class Keyframe {
             String type;
             if (jsonObject.has("type")) {
                 type = jsonObject.get("type").getAsString();
-            } else if (jsonObject.has("position") && jsonObject.has("rotation")) {
-                type = "camera";
-            } else if (jsonObject.has("center") && jsonObject.has("distance")) {
-                type = "camera_orbit";
-            } else if (jsonObject.has("frequencyX") && jsonObject.has("amplitudeX")) {
-                type = "camera_shake";
-            } else if (jsonObject.has("fov")) {
-                type = "fov";
-            } else if (jsonObject.has("tickrate")) {
-                type = "tickrate";
-            } else if (jsonObject.has("time")) {
-                type = "time";
             } else {
                 throw new RuntimeException("Unable to determine type of keyframe for: " + jsonObject);
             }

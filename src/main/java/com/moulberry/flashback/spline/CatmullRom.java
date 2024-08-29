@@ -1,192 +1,193 @@
 package com.moulberry.flashback.spline;
 
 import com.moulberry.flashback.Interpolation;
-import org.joml.Quaternionf;
+import org.joml.Quaterniond;
+import org.joml.Vector3d;
 import org.joml.Vector3f;
 
 public class CatmullRom {
 
-    private static float positionCentripetalTj(Vector3f p1, Vector3f p2) {
-        float dx = p2.x - p1.x;
-        float dy = p2.y - p1.y;
-        float dz = p2.z - p1.z;
-        return (float) Math.pow(dx*dx + dy*dy + dz*dz, 0.25f);
+    private static double positionCentripetalTj(Vector3d p1, Vector3d p2) {
+        double dx = p2.x - p1.x;
+        double dy = p2.y - p1.y;
+        double dz = p2.z - p1.z;
+        return Math.pow(dx*dx + dy*dy + dz*dz, 0.25f);
     }
 
-    public static Vector3f position(Vector3f p0, Vector3f p1, Vector3f p2, Vector3f p3, float time1, float time2, float time3, float amount) {
-        float tj1 = positionCentripetalTj(p0, p1);
-        float tj2 = positionCentripetalTj(p1, p2);
-        float tj3 = positionCentripetalTj(p2, p3);
-        float averageTj = (tj1 + tj2 + tj3) / 3f;
+    public static Vector3d position(Vector3d p0, Vector3d p1, Vector3d p2, Vector3d p3, float time1, float time2, float time3, float amount) {
+        double tj1 = positionCentripetalTj(p0, p1);
+        double tj2 = positionCentripetalTj(p1, p2);
+        double tj3 = positionCentripetalTj(p2, p3);
+        double averageTj = (tj1 + tj2 + tj3) / 3f;
 
         if (averageTj == 0.0) {
-            return new Vector3f(p1);
+            return new Vector3d(p1);
         }
 
-        float averageTime = time3 / 3f;
-        float relation = averageTime / averageTj;
+        double averageTime = time3 / 3f;
+        double relation = averageTime / averageTj;
 
-        float deltaTime1 = 0.0f;
+        double deltaTime1 = 0.0f;
         if (time1 > 0.0f) {
-            float factor1 = (tj1 * relation) / time1;
+            double factor1 = (tj1 * relation) / time1;
             factor1 = Math.max(0.4f, Math.min(2.5f, factor1));
             deltaTime1 = (tj1 * relation) / factor1;
         }
 
-        float deltaTime2 = 0.0f;
+        double deltaTime2 = 0.0f;
         if (time2 - time1 > 0.0f) {
-            float factor2 = (tj2 * relation) / (time2 - time1);
+            double factor2 = (tj2 * relation) / (time2 - time1);
             factor2 = Math.max(0.4f, Math.min(2.5f, factor2));
             deltaTime2 = (tj2 * relation) / factor2;
         }
 
-        float deltaTime3 = 0.0f;
+        double deltaTime3 = 0.0f;
         if (time3 - time2 > 0.0f) {
-            float factor3 = (tj3 * relation) / (time3 - time2);
+            double factor3 = (tj3 * relation) / (time3 - time2);
             factor3 = Math.max(0.4f, Math.min(2.5f, factor3));
             deltaTime3 = (tj3 * relation) / factor3;
         }
 
-        float t0 = 0;
-        float t1 = t0 + deltaTime1;
-        float t2 = t1 + deltaTime2;
-        float t3 = t2 + deltaTime3;
+        double t0 = 0;
+        double t1 = t0 + deltaTime1;
+        double t2 = t1 + deltaTime2;
+        double t3 = t2 + deltaTime3;
 
-        float t = t1 + (t2 - t1) * amount;
+        double t = t1 + (t2 - t1) * amount;
 
-        Vector3f a1;
+        Vector3d a1;
         if (t0 == t1) {
-            a1 = p0.lerp(p1, 0.5f, new Vector3f());
+            a1 = p0.lerp(p1, 0.5f, new Vector3d());
         } else {
-            a1 = p0.lerp(p1, (t - t0)/(t1 - t0), new Vector3f());
+            a1 = p0.lerp(p1, (t - t0)/(t1 - t0), new Vector3d());
         }
 
-        Vector3f a2;
+        Vector3d a2;
         if (t1 == t2) {
-            a2 = p1.lerp(p2, 0.5f, new Vector3f());
+            a2 = p1.lerp(p2, 0.5f, new Vector3d());
         } else {
-            a2 = p1.lerp(p2, (t - t1)/(t2 - t1), new Vector3f());
+            a2 = p1.lerp(p2, (t - t1)/(t2 - t1), new Vector3d());
         }
 
-        Vector3f a3;
+        Vector3d a3;
         if (t2 == t3) {
-            a3 = p2.lerp(p3, 0.5f, new Vector3f());
+            a3 = p2.lerp(p3, 0.5f, new Vector3d());
         } else {
-            a3 = p2.lerp(p3, (t - t2)/(t3 - t2), new Vector3f());
+            a3 = p2.lerp(p3, (t - t2)/(t3 - t2), new Vector3d());
         }
 
-        Vector3f b1;
+        Vector3d b1;
         if (t0 == t2) {
-            b1 = a1.lerp(a2, 0.5f, new Vector3f());
+            b1 = a1.lerp(a2, 0.5f, new Vector3d());
         } else {
-            b1 = a1.lerp(a2, (t - t0)/(t2 - t0), new Vector3f());
+            b1 = a1.lerp(a2, (t - t0)/(t2 - t0), new Vector3d());
         }
 
-        Vector3f b2;
+        Vector3d b2;
         if (t1 == t3) {
-            b2 = a2.lerp(a3, 0.5f, new Vector3f());
+            b2 = a2.lerp(a3, 0.5f, new Vector3d());
         } else {
-            b2 = a2.lerp(a3, (t - t1)/(t3 - t1), new Vector3f());
+            b2 = a2.lerp(a3, (t - t1)/(t3 - t1), new Vector3d());
         }
 
         if (t1 == t2) {
-            return b1.lerp(b2, 0.5f, new Vector3f());
+            return b1.lerp(b2, 0.5f, new Vector3d());
         } else {
-            return b1.lerp(b2, (t - t1)/(t2 - t1), new Vector3f());
+            return b1.lerp(b2, (t - t1)/(t2 - t1), new Vector3d());
         }
     }
 
-    private static float rotationCentripetalTj(Quaternionf p1, Quaternionf p2) {
-        Quaternionf delta = p1.invert(new Quaternionf()).mul(p2);
+    private static double rotationCentripetalTj(Quaterniond p1, Quaterniond p2) {
+        Quaterniond delta = p1.invert(new Quaterniond()).mul(p2);
 
-        float lengthSq = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
-        float length = (float) Math.sqrt(lengthSq);
+        double lengthSq = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
+        double length = Math.sqrt(lengthSq);
 
-        float angleBetween = (float) Math.abs(2 * Math.atan2(length, delta.w));
-        angleBetween = (float) Math.max(0, Math.min(Math.PI, angleBetween));
-        return (float) Math.pow(angleBetween, 0.5f);
+        double angleBetween = Math.abs(2 * Math.atan2(length, delta.w));
+        angleBetween = Math.max(0, Math.min(Math.PI, angleBetween));
+        return Math.pow(angleBetween, 0.5f);
     }
 
-    public static Quaternionf rotation(Quaternionf p0, Quaternionf p1, Quaternionf p2, Quaternionf p3, float time1, float time2, float time3, float amount) {
-        float tj1 = rotationCentripetalTj(p0, p1);
-        float tj2 = rotationCentripetalTj(p1, p2);
-        float tj3 = rotationCentripetalTj(p2, p3);
-        float averageTj = (tj1 + tj2 + tj3) / 3f;
+    public static Quaterniond rotation(Quaterniond p0, Quaterniond p1, Quaterniond p2, Quaterniond p3, float time1, float time2, float time3, float amount) {
+        double tj1 = rotationCentripetalTj(p0, p1);
+        double tj2 = rotationCentripetalTj(p1, p2);
+        double tj3 = rotationCentripetalTj(p2, p3);
+        double averageTj = (tj1 + tj2 + tj3) / 3f;
 
         if (averageTj == 0.0) {
-            return new Quaternionf(p1);
+            return new Quaterniond(p1);
         }
 
-        float averageTime = time3 / 3f;
-        float relation = averageTime / averageTj;
+        double averageTime = time3 / 3f;
+        double relation = averageTime / averageTj;
 
-        float deltaTime1 = 0.0f;
+        double deltaTime1 = 0.0f;
         if (time1 > 0.0f) {
-            float factor1 = (tj1 * relation) / time1;
+            double factor1 = (tj1 * relation) / time1;
             factor1 = Math.max(0.4f, Math.min(2.5f, factor1));
             deltaTime1 = (tj1 * relation) / factor1;
         }
 
-        float deltaTime2 = 0.0f;
+        double deltaTime2 = 0.0f;
         if (time2 - time1 > 0.0f) {
-            float factor2 = (tj2 * relation) / (time2 - time1);
+            double factor2 = (tj2 * relation) / (time2 - time1);
             factor2 = Math.max(0.4f, Math.min(2.5f, factor2));
             deltaTime2 = (tj2 * relation) / factor2;
         }
 
-        float deltaTime3 = 0.0f;
+        double deltaTime3 = 0.0f;
         if (time3 - time2 > 0.0f) {
-            float factor3 = (tj3 * relation) / (time3 - time2);
+            double factor3 = (tj3 * relation) / (time3 - time2);
             factor3 = Math.max(0.4f, Math.min(2.5f, factor3));
             deltaTime3 = (tj3 * relation) / factor3;
         }
 
-        float t0 = 0;
-        float t1 = t0 + deltaTime1;
-        float t2 = t1 + deltaTime2;
-        float t3 = t2 + deltaTime3;
+        double t0 = 0;
+        double t1 = t0 + deltaTime1;
+        double t2 = t1 + deltaTime2;
+        double t3 = t2 + deltaTime3;
 
-        float t = t1 + (t2 - t1) * amount;
+        double t = t1 + (t2 - t1) * amount;
 
-        Quaternionf a1;
+        Quaterniond a1;
         if (t0 == t1) {
-            a1 = p0.nlerp(p1, 0.5f, new Quaternionf()).normalize();
+            a1 = p0.nlerp(p1, 0.5f, new Quaterniond()).normalize();
         } else {
-            a1 = p0.nlerp(p1, (t - t0)/(t1 - t0), new Quaternionf()).normalize();
+            a1 = p0.nlerp(p1, (t - t0)/(t1 - t0), new Quaterniond()).normalize();
         }
 
-        Quaternionf a2;
+        Quaterniond a2;
         if (t1 == t2) {
-            a2 = p1.nlerp(p2, 0.5f, new Quaternionf()).normalize();
+            a2 = p1.nlerp(p2, 0.5f, new Quaterniond()).normalize();
         } else {
-            a2 = p1.nlerp(p2, (t - t1)/(t2 - t1), new Quaternionf()).normalize();
+            a2 = p1.nlerp(p2, (t - t1)/(t2 - t1), new Quaterniond()).normalize();
         }
 
-        Quaternionf a3;
+        Quaterniond a3;
         if (t2 == t3) {
-            a3 = p2.nlerp(p3, 0.5f, new Quaternionf()).normalize();
+            a3 = p2.nlerp(p3, 0.5f, new Quaterniond()).normalize();
         } else {
-            a3 = p2.nlerp(p3, (t - t2)/(t3 - t2), new Quaternionf()).normalize();
+            a3 = p2.nlerp(p3, (t - t2)/(t3 - t2), new Quaterniond()).normalize();
         }
 
-        Quaternionf b1;
+        Quaterniond b1;
         if (t0 == t2) {
-            b1 = a1.nlerp(a2, 0.5f, new Quaternionf()).normalize();
+            b1 = a1.nlerp(a2, 0.5f, new Quaterniond()).normalize();
         } else {
-            b1 = a1.nlerp(a2, (t - t0)/(t2 - t0), new Quaternionf()).normalize();
+            b1 = a1.nlerp(a2, (t - t0)/(t2 - t0), new Quaterniond()).normalize();
         }
 
-        Quaternionf b2;
+        Quaterniond b2;
         if (t1 == t3) {
-            b2 = a2.nlerp(a3, 0.5f, new Quaternionf()).normalize();
+            b2 = a2.nlerp(a3, 0.5f, new Quaterniond()).normalize();
         } else {
-            b2 = a2.nlerp(a3, (t - t1)/(t3 - t1), new Quaternionf()).normalize();
+            b2 = a2.nlerp(a3, (t - t1)/(t3 - t1), new Quaterniond()).normalize();
         }
 
         if (t1 == t2) {
-            return b1.nlerp(b2, 0.5f, new Quaternionf()).normalize();
+            return b1.nlerp(b2, 0.5f, new Quaterniond()).normalize();
         } else {
-            return b1.nlerp(b2, (t - t1)/(t2 - t1), new Quaternionf()).normalize();
+            return b1.nlerp(b2, (t - t1)/(t2 - t1), new Quaterniond()).normalize();
         }
     }
 

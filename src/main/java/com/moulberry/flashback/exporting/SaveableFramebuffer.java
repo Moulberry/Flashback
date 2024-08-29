@@ -3,6 +3,8 @@ package com.moulberry.flashback.exporting;
 import com.mojang.blaze3d.pipeline.MainTarget;
 import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.platform.NativeImage;
+import com.mojang.blaze3d.systems.RenderSystem;
+import net.minecraft.client.Minecraft;
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.opengl.GL30C;
 import org.lwjgl.system.MemoryUtil;
@@ -19,7 +21,6 @@ public class SaveableFramebuffer implements AutoCloseable {
     public SaveableFramebuffer() {
         this.pboId = -1;
     }
-
 
     public void startDownload(RenderTarget framebuffer, int width, int height) {
         if (this.isDownloading) {

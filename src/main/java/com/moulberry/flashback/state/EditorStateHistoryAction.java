@@ -16,7 +16,7 @@ public interface EditorStateHistoryAction {
 
     void apply(EditorState editorState);
 
-    record SetKeyframe(KeyframeType type, int trackIndex, int tick, Keyframe keyframe) implements EditorStateHistoryAction {
+    record SetKeyframe(KeyframeType<?> type, int trackIndex, int tick, Keyframe keyframe) implements EditorStateHistoryAction {
         @Override
         public void apply(EditorState editorState) {
             if (this.trackIndex < editorState.keyframeTracks.size()) {
@@ -31,7 +31,7 @@ public interface EditorStateHistoryAction {
             @Override
             public SetKeyframe deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) throws JsonParseException {
                 JsonObject jsonObject = json.getAsJsonObject();
-                KeyframeType type = context.deserialize(jsonObject.get("keyframe_type"), KeyframeType.class);
+                KeyframeType<?> type = context.deserialize(jsonObject.get("keyframe_type"), KeyframeType.class);
                 int trackIndex = jsonObject.get("trackIndex").getAsInt();
                 int tick = jsonObject.get("tick").getAsInt();
                 Keyframe keyframe = context.deserialize(jsonObject.get("keyframe"), Keyframe.class);
@@ -51,7 +51,7 @@ public interface EditorStateHistoryAction {
         }
     }
 
-    record RemoveKeyframe(KeyframeType type, int trackIndex, int tick) implements EditorStateHistoryAction {
+    record RemoveKeyframe(KeyframeType<?> type, int trackIndex, int tick) implements EditorStateHistoryAction {
         @Override
         public void apply(EditorState editorState) {
             if (this.trackIndex < editorState.keyframeTracks.size()) {
@@ -66,7 +66,7 @@ public interface EditorStateHistoryAction {
             @Override
             public RemoveKeyframe deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) throws JsonParseException {
                 JsonObject jsonObject = json.getAsJsonObject();
-                KeyframeType type = context.deserialize(jsonObject.get("keyframe_type"), KeyframeType.class);
+                KeyframeType<?> type = context.deserialize(jsonObject.get("keyframe_type"), KeyframeType.class);
                 int trackIndex = jsonObject.get("trackIndex").getAsInt();
                 int tick = jsonObject.get("tick").getAsInt();
                 return new RemoveKeyframe(type, trackIndex, tick);
@@ -84,7 +84,7 @@ public interface EditorStateHistoryAction {
         }
     }
 
-    record AddTrack(KeyframeType type, int trackIndex) implements EditorStateHistoryAction {
+    record AddTrack(KeyframeType<?> type, int trackIndex) implements EditorStateHistoryAction {
         @Override
         public void apply(EditorState editorState) {
             if (this.trackIndex <= editorState.keyframeTracks.size()) {
@@ -96,7 +96,7 @@ public interface EditorStateHistoryAction {
             @Override
             public AddTrack deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) throws JsonParseException {
                 JsonObject jsonObject = json.getAsJsonObject();
-                KeyframeType type = context.deserialize(jsonObject.get("keyframe_type"), KeyframeType.class);
+                KeyframeType<?> type = context.deserialize(jsonObject.get("keyframe_type"), KeyframeType.class);
                 int trackIndex = jsonObject.get("trackIndex").getAsInt();
                 return new AddTrack(type, trackIndex);
             }
@@ -112,7 +112,7 @@ public interface EditorStateHistoryAction {
         }
     }
 
-    record RemoveTrack(KeyframeType type, int trackIndex) implements EditorStateHistoryAction {
+    record RemoveTrack(KeyframeType<?> type, int trackIndex) implements EditorStateHistoryAction {
         @Override
         public void apply(EditorState editorState) {
             if (this.trackIndex < editorState.keyframeTracks.size()) {
@@ -127,7 +127,7 @@ public interface EditorStateHistoryAction {
             @Override
             public RemoveTrack deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) throws JsonParseException {
                 JsonObject jsonObject = json.getAsJsonObject();
-                KeyframeType type = context.deserialize(jsonObject.get("keyframe_type"), KeyframeType.class);
+                KeyframeType<?> type = context.deserialize(jsonObject.get("keyframe_type"), KeyframeType.class);
                 int trackIndex = jsonObject.get("trackIndex").getAsInt();
                 return new RemoveTrack(type, trackIndex);
             }

@@ -1,7 +1,15 @@
 package com.moulberry.flashback.keyframe;
 
-public enum KeyframeType {
+import com.moulberry.flashback.keyframe.handler.KeyframeHandler;
+import com.moulberry.flashback.state.KeyframeTrack;
+import org.jetbrains.annotations.Nullable;
 
+import java.util.function.Consumer;
+
+// todo: WIP DON'T COMMIT
+public interface KeyframeType<T extends Keyframe> {
+
+    /*
     CAMERA("Camera"),
     CAMERA_ORBIT("Camera Orbit"),
     FOV("FOV"),
@@ -9,13 +17,22 @@ public enum KeyframeType {
     TIMELAPSE("Timelapse"),
     TIME_OF_DAY("Time of day"),
     CAMERA_SHAKE("Camera Shake");
+     */
 
-    public static final KeyframeType[] KEYFRAME_TYPES = values();
+    String name();
+    String id();
+    @Nullable T createDirect();
+    @Nullable KeyframeCreatePopup<T> createPopup();
 
-    public final String name;
+    default boolean allowChangingInterpolationType() {
+        return true;
+    }
+    default boolean allowChangingTimelineTick() {
+        return true;
+    }
 
-    KeyframeType(String name) {
-        this.name = name;
+    interface KeyframeCreatePopup<T extends Keyframe> {
+        @Nullable T render();
     }
 
 }

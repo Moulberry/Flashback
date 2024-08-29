@@ -5,7 +5,7 @@ import com.moulberry.flashback.state.EditorState;
 import com.moulberry.flashback.state.KeyframeTrack;
 import it.unimi.dsi.fastutil.ints.IntSet;
 
-public record SelectedKeyframes(KeyframeType type, int trackIndex, IntSet keyframeTicks) {
+public record SelectedKeyframes(KeyframeType<?> type, int trackIndex, IntSet keyframeTicks) {
     public boolean checkValid(EditorState state) {
         if (this.trackIndex < 0 || this.trackIndex >= state.keyframeTracks.size()) {
             return false;
