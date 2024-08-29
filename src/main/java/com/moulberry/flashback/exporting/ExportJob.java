@@ -247,21 +247,12 @@ public class ExportJob {
             KeyframeHandler keyframeHandler = new MinecraftKeyframeHandler(Minecraft.getInstance());
             this.settings.editorState().applyKeyframes(keyframeHandler, (float)(this.settings.startTick() + currentTickDouble));
 
-            boolean asyncFrameCapture = !IrisApiWrapper.isIrisAvailable() || !IrisApiWrapper.isShaderPackInUse();
 
-            RenderTarget oldTarget = null;
-            SaveableFramebuffer saveable = null;
+            SaveableFramebuffer saveable;
             RenderTarget renderTarget;
 
-            if (asyncFrameCapture) {
-                oldTarget = Minecraft.getInstance().getMainRenderTarget();
-                saveable = downloader.take();
-                renderTarget = saveable.getFramebuffer(this.settings.resolutionX(), this.settings.resolutionY());
-
-                Minecraft.getInstance().mainRenderTarget = renderTarget;
-            } else {
-                renderTarget = Minecraft.getInstance().mainRenderTarget;
-            }
+            saveable = downloader.take();
+            renderTarget = Minecraft.getInstance().mainRenderTarget;
 
             renderTarget.bindWrite(true);
             RenderSystem.clear(16640, Minecraft.ON_OSX);
@@ -296,30 +287,14 @@ public class ExportJob {
                 SOFTLoopback.alcRenderSamplesSOFT(device, audioBuffer, renderSamples);
             }
 
-            if (asyncFrameCapture) {
-                Minecraft.getInstance().mainRenderTarget = oldTarget;
+            this.shouldChangeFramebufferSize = false;
+            cancel = finishFrame(renderTarget, infoRenderTarget, tickIndex, ticks.size());
+            this.shouldChangeFramebufferSize = true;
 
-                this.shouldChangeFramebufferSize = false;
-                cancel = finishFrame(renderTarget, infoRenderTarget, tickIndex, ticks.size());
-                this.shouldChangeFramebufferSize = true;
+            submitDownloadedFrames(encoder, downloader, false);
 
-                submitDownloadedFrames(encoder, downloader, false);
-
-                saveable.audioBuffer = audioBuffer;
-                downloader.startDownload(saveable);
-            } else {
-                this.shouldChangeFramebufferSize = false;
-                cancel = finishFrame(renderTarget, infoRenderTarget, tickIndex, ticks.size());
-                this.shouldChangeFramebufferSize = true;
-
-                start = System.nanoTime();
-                NativeImage image = Screenshot.takeScreenshot(renderTarget);
-                downloadTimeNanos += System.nanoTime() - start;
-
-                start = System.nanoTime();
-                encoder.encode(image, audioBuffer);
-                encodeTimeNanos += System.nanoTime() - start;
-            }
+            saveable.audioBuffer = audioBuffer;
+            downloader.startDownload(renderTarget, saveable);
 
             if (cancel) {
                 ExportJobQueue.drainingQueue = false;
