@@ -1,0 +1,20 @@
+{
+  "flashback.select_replay": "Seleccionar Replay",
+  "flashback.select_replay.open": "Abrir Replay",
+  "flashback.select_replay.loading_replays": "Cargando Replays",
+  "flashback.select_replay.replay": "Replay",
+  "flashback.select_replay.data_read": "Lendo datos do replay...",
+  "flashback.select_replay.delete_question": "Estás seguro de que queres eliminar este replay?",
+  "flashback.select_replay.duration": "Duración: %s",
+
+  "flashback.option.automatically_start": "Iniciar Automaticamente",
+  "flashback.option.automatically_start.description": "Inicia automaticamente unha gravación de replay ao unirse a un mundo/servidor",
+  "flashback.option.automatically_finish": "Finalizar Automaticamente",
+  "flashback.option.automatically_finish.description": "Finaliza automaticamente unha gravación de replay ao saír do mundo/servidor",
+  "flashback.option.show_recording_toasts": "Mostrar Notificacións de Gravación",
+  "flashback.option.show_recording_toasts.description": "Mostra notificacións na parte superior dereita ao iniciar/detener unha gravación de replay",
+  "flashback.option.quicksave": "Gardar Rapidamente",
+  "flashback.option.quicksave.description": "Garda o replay cos valores predeterminados en lugar de abrir a pantalla de Gardar Replay",
+  "flashback.option.hide_pause_menu_controls": "Ocultar Controis do Menú de Pausa",
+  "flashback.option.hide_pause_menu_controls.description": "Oculta os controis do menú de Pausa (ESC) para iniciar/finalizar un replay. Os comandos seguirán funcionando"
+}
