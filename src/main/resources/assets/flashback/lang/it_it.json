@@ -1,0 +1,20 @@
+{
+  "flashback.select_replay": "Seleziona Replay",
+  "flashback.select_replay.open": "Apri Replay",
+  "flashback.select_replay.loading_replays": "Caricamento Replays",
+  "flashback.select_replay.replay": "Replay",
+  "flashback.select_replay.data_read": "Lettura dati del replay...",
+  "flashback.select_replay.delete_question": "Sei sicuro di voler eliminare questo replay?",
+  "flashback.select_replay.duration": "Durata: %s",
+
+  "flashback.option.automatically_start": "Avvia Automaticamente",
+  "flashback.option.automatically_start.description": "Avvia automaticamente una registrazione del replay quando entri in un mondo/servidore",
+  "flashback.option.automatically_finish": "Termina Automaticamente",
+  "flashback.option.automatically_finish.description": "Termina automaticamente una registrazione del replay quando esci dal mondo/servidore",
+  "flashback.option.show_recording_toasts": "Mostra Notifiche di Registrazione",
+  "flashback.option.show_recording_toasts.description": "Mostra notifiche in alto a destra quando avvii/arresti una registrazione del replay",
+  "flashback.option.quicksave": "Salva Rapidamente",
+  "flashback.option.quicksave.description": "Salva il replay con i valori predefiniti invece di aprire la schermata di Salva Replay",
+  "flashback.option.hide_pause_menu_controls": "Nascondi Controlli del Menu Pausa",
+  "flashback.option.hide_pause_menu_controls.description": "Nasconde i controlli del menu di Pausa (ESC) per avviare/terminare un replay. I comandi continueranno a funzionare"
+}
