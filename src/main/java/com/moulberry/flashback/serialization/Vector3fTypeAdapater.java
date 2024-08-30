@@ -6,7 +6,8 @@ import org.joml.Vector3f;
 
 import java.lang.reflect.Type;
 
-public class Vector3fTypeAdapater implements JsonSerializer<Vector3f>, JsonDeserializer<Vector3f>  {
+public class
+Vector3fTypeAdapater implements JsonSerializer<Vector3f>, JsonDeserializer<Vector3f>  {
     @Override
     public Vector3f deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) throws JsonParseException {
         JsonArray jsonArray = json.getAsJsonArray();

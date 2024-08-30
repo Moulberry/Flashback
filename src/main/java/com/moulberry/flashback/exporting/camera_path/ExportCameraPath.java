@@ -1,0 +1,371 @@
+package com.moulberry.flashback.exporting.camera_path;
+
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
+import com.google.gson.stream.JsonWriter;
+import com.moulberry.flashback.keyframe.KeyframeType;
+import com.moulberry.flashback.keyframe.handler.KeyframeHandler;
+import com.moulberry.flashback.state.EditorState;
+import com.moulberry.flashback.state.KeyframeTrack;
+import com.moulberry.flashback.visuals.CameraPath;
+import org.joml.Quaternionf;
+import org.joml.Vector3f;
+
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Base64;
+import java.util.EnumSet;
+import java.util.List;
+
+public class ExportCameraPath {
+    private ExportGLTF exportGLTF;
+
+    public ExportCameraPath(ExportGLTF exportGLTF){
+        this.exportGLTF = exportGLTF;
+    }
+
+    public void export(){
+        Gson gson = new GsonBuilder().disableHtmlEscaping().create();
+        JsonObject gltfFile = exportGLTF(0); // temp, only tries to export the first element
+
+        String outputPath = exportGLTF.output().toString().substring(0,
+                exportGLTF.output().toString().lastIndexOf('\\')) + "/" + exportGLTF.name() + ".gltf";
+
+        String jsonString = gson.toJson(gltfFile);
+
+        try (FileWriter fileWriter = new FileWriter(outputPath)) {
+            fileWriter.write(jsonString);
+            System.out.println("GLTF file exported successfully to " + outputPath);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private JsonObject generateGLTF(DiscreteCameraPath cameraPath){
+        if(cameraPath.positions.isEmpty() || cameraPath.rotations.isEmpty()){
+            System.out.println("CameraPath is empty.");
+            return null;
+        }
+
+        Vector3f initialLocation = cameraPath.positions.getFirst();
+        Quaternionf initialRotation = cameraPath.rotations.getFirst();
+
+        JsonObject gltfFile = new JsonObject();
+
+        // asset
+        JsonObject assetSection = new JsonObject();
+        assetSection.addProperty("generator", "Flashback Camera Path to glTF (by Gilan)");
+        assetSection.addProperty("version", "2.0");
+        gltfFile.add("asset", assetSection);
+
+        // scene
+        gltfFile.addProperty("scene", 0);
+
+        // scenes
+        JsonArray scenesArray = new JsonArray();
+        JsonObject scene = new JsonObject();
+        scene.addProperty("name", "Scene");
+        JsonArray sceneNodesArray = new JsonArray();
+        sceneNodesArray.add(0);
+        scene.add("nodes", sceneNodesArray);
+        scenesArray.add(scene);
+        gltfFile.add("scenes", scenesArray);
+
+        // nodes
+        JsonArray nodesArray = new JsonArray();
+        JsonObject camera = new JsonObject();
+        camera.addProperty("camera", 0);
+        camera.addProperty("name", "Camera");
+        JsonArray rotation = new JsonArray();
+        rotation.add(initialRotation.x);
+        rotation.add(initialRotation.y);
+        rotation.add(initialRotation.z);
+        rotation.add(initialRotation.w);
+        camera.add("rotation", rotation);
+        JsonArray translation = new JsonArray();
+        translation.add(initialLocation.x);
+        translation.add(initialRotation.z); // switch to z up
+        translation.add(initialRotation.y);
+        camera.add("translation", translation);
+        nodesArray.add(camera);
+        gltfFile.add("nodes", nodesArray);
+
+        // cameras
+        JsonArray cameraArray = new JsonArray();
+        JsonObject cameraObject = new JsonObject();
+        cameraObject.addProperty("name", "Camera");
+        JsonObject perspective = new JsonObject();
+        perspective.addProperty("aspectRatio", 1.7777777777777777); // hard-coded for now, replace with current aspect ratio
+        perspective.addProperty("yfov", 0.39959652046304894); // hard-coded for now, replace later, and allow for keyframed fov changes
+        perspective.addProperty("zfar", 1000); // constant, might just leave as it can be edited in 3D editor
+        perspective.addProperty("znear", 0.10000000149011612); // constant, might just leave as it can be edited in 3D editor
+        cameraObject.add("perspective", perspective);
+        cameraObject.addProperty("type", "perspective");
+        cameraArray.add(cameraObject);
+        gltfFile.add("cameras", cameraArray);
+
+        // animations
+        JsonArray animationsArray = new JsonArray();
+        JsonObject animationObject = new JsonObject();
+
+        JsonArray channelsArray = new JsonArray();
+        JsonObject channelTranslation = new JsonObject();
+        JsonObject channelRotation = new JsonObject();
+
+        JsonObject targetTranslation = new JsonObject();
+        JsonObject targetRotation = new JsonObject();
+        targetTranslation.addProperty("node", 0);
+        targetTranslation.addProperty("path", "translation");
+
+        targetRotation.addProperty("node", 0);
+        targetRotation.addProperty("path", "rotation");
+
+
+        channelTranslation.addProperty("sampler", 0);
+        channelTranslation.add("target", targetTranslation);
+
+        channelRotation.addProperty("sampler", 1);
+        channelRotation.add("target", targetRotation);
+
+        channelsArray.add(channelTranslation);
+        channelsArray.add(channelRotation);
+
+        animationObject.add("channels", channelsArray);
+        animationObject.addProperty("name", "CameraAction");
+
+        JsonArray samplersArray = new JsonArray();
+
+        JsonObject sampler0 = new JsonObject();
+        sampler0.addProperty("input", 0);
+        sampler0.addProperty("interpolation", "LINEAR");
+        sampler0.addProperty("output", 1);
+
+        JsonObject sampler1 = new JsonObject();
+        sampler1.addProperty("input", 0);
+        sampler1.addProperty("interpolation", "LINEAR");
+        sampler1.addProperty("output", 2);
+
+        samplersArray.add(sampler0);
+        samplersArray.add(sampler1);
+
+        animationObject.add("samplers", samplersArray);
+
+        animationsArray.add(animationObject);
+
+        gltfFile.add("animations", animationsArray);
+
+        // accessors
+        JsonArray accessorsArray = new JsonArray();
+
+        JsonObject accessor0 = new JsonObject();
+        accessor0.addProperty("bufferView", 0);
+        accessor0.addProperty("componentType", 5126);
+        accessor0.addProperty("count", cameraPath.positions().size());
+        JsonArray maxArray0 = new JsonArray();
+        maxArray0.add(2.5);
+        accessor0.add("max", maxArray0);
+        JsonArray minArray0 = new JsonArray();
+        minArray0.add(0);
+        accessor0.add("min", minArray0);
+        accessor0.addProperty("type", "SCALAR");
+
+        JsonObject accessor1 = new JsonObject();
+        accessor1.addProperty("bufferView", 1);
+        accessor1.addProperty("componentType", 5126);
+        accessor1.addProperty("count", cameraPath.positions().size());
+        accessor1.addProperty("type", "VEC3");
+
+        JsonObject accessor2 = new JsonObject();
+        accessor2.addProperty("bufferView", 2);
+        accessor2.addProperty("componentType", 5126);
+        accessor2.addProperty("count", cameraPath.positions().size());
+        accessor2.addProperty("type", "VEC4");
+
+        accessorsArray.add(accessor0);
+        accessorsArray.add(accessor1);
+        accessorsArray.add(accessor2);
+
+        gltfFile.add("accessors", accessorsArray);
+
+        // bufferViews
+        JsonArray bufferViews = new JsonArray();
+
+        // time buffer
+        int timeBufferOffset = 0;
+        int timeBufferSize = 4 * cameraPath.positions().size();
+        JsonObject timeBuffer = new JsonObject();
+        timeBuffer.addProperty("buffer", 0);
+        timeBuffer.addProperty("byteLength", timeBufferSize);
+        timeBuffer.addProperty("byteOffset", timeBufferOffset);
+
+        // translation buffer
+        int translationBufferOffset = timeBufferSize;
+        int translationBufferSize = 4 * 3 * cameraPath.positions().size();
+        JsonObject translationBuffer = new JsonObject();
+        translationBuffer.addProperty("buffer", 0);
+        translationBuffer.addProperty("byteLength", translationBufferSize);
+        translationBuffer.addProperty("byteOffset", translationBufferOffset);
+
+        // rotation buffer byteLength = 4 * 4 * cameraPath.rotations().size
+        int rotationBufferOffset = timeBufferSize + translationBufferSize;
+        int rotationBufferSize = 4 * 4 * cameraPath.rotations.size();
+        JsonObject rotationBuffer = new JsonObject();
+        rotationBuffer.addProperty("buffer", 0);
+        rotationBuffer.addProperty("byteLength", rotationBufferSize);
+        rotationBuffer.addProperty("byteOffset", rotationBufferOffset);
+
+        bufferViews.add(timeBuffer);
+        bufferViews.add(translationBuffer);
+        bufferViews.add(rotationBuffer);
+
+        gltfFile.add("bufferViews", bufferViews);
+
+        // Create base64 data
+        String data = createBase64Data(cameraPath);
+
+        // Buffers
+        JsonArray buffers = new JsonArray();
+        JsonObject buffer = new JsonObject();
+        buffer.addProperty("byteLength", timeBufferSize + translationBufferSize + rotationBufferSize);
+        buffer.addProperty("uri", data);
+        buffers.add(buffer);
+
+        gltfFile.add("buffers", buffers);
+
+        return gltfFile;
+    }
+
+    private String createBase64Data(DiscreteCameraPath cameraPath){
+        String header = "data:application/octet-stream;base64,";
+
+        // time data = 0 -> end in seconds. AND a step every (current step * 1/20)
+        byte[] timeData = new byte[4 * (cameraPath.positions().size())];
+        for(int i = 0;i<cameraPath.positions().size();i++){
+            float time = ((float) i) * (0.05f);
+
+            byte[] timeBinary = ByteBuffer.allocate(4).order(ByteOrder.LITTLE_ENDIAN).putFloat(time).array();
+            System.arraycopy(timeBinary, 0, timeData, i * 4, 4);
+        }
+
+        // translation buffer
+        byte[] translationData = new byte[4 * 3 * (cameraPath.positions().size())];
+        for(int i = 0;i<cameraPath.positions().size();i++){
+            float translationX = cameraPath.positions().get(i).x;
+            float translationY = cameraPath.positions().get(i).y;
+            float translationZ = cameraPath.positions().get(i).z;
+
+            byte[] translationBinary = ByteBuffer.allocate(12).order(ByteOrder.LITTLE_ENDIAN)
+                    .putFloat(translationX)
+                    .putFloat(translationY)
+                    .putFloat(translationZ)
+                    .array();
+
+            System.arraycopy(translationBinary, 0, translationData, i * 12, 12);
+        }
+
+        // rotation buffer
+        byte[] rotationData = new byte[4 * 4 * (cameraPath.rotations.size())];
+        for(int i = 0;i<cameraPath.rotations().size();i++){
+
+            Quaternionf rotatedQuaternion = cameraPath.rotations().get(i);
+            Quaternionf rotationAroundY = new Quaternionf().rotateY((float) Math.toRadians(180));
+            rotatedQuaternion.mul(rotationAroundY);
+
+            if(i == (cameraPath.rotations.size() - 1)){
+                System.out.println(cameraPath.rotations.get(i));
+                System.out.println(rotatedQuaternion);
+            }
+
+            float rotationX = rotatedQuaternion.x;
+            float rotationY = rotatedQuaternion.y;
+            float rotationZ = rotatedQuaternion.z;
+            float rotationW = rotatedQuaternion.w;
+
+            byte[] rotationBinary = ByteBuffer.allocate(16).order(ByteOrder.LITTLE_ENDIAN)
+                    .putFloat(rotationX)
+                    .putFloat(rotationY)
+                    .putFloat(rotationZ)
+                    .putFloat(rotationW)
+                    .array();
+
+            System.arraycopy(rotationBinary, 0, rotationData, i * 16, 16);
+        }
+
+        int totalLength = timeData.length + translationData.length + rotationData.length;
+        byte[] combinedData = new byte[totalLength];
+
+        int currentPos = 0;
+        System.arraycopy(timeData, 0, combinedData, currentPos, timeData.length);
+        currentPos += timeData.length;
+
+        System.arraycopy(translationData, 0, combinedData, currentPos, translationData.length);
+        currentPos += translationData.length;
+
+        System.arraycopy(rotationData, 0, combinedData, currentPos, rotationData.length);
+
+        return header + Base64.getEncoder().encodeToString(combinedData);
+    }
+
+    private JsonObject exportGLTF(int index) {
+        KeyframeTrack selectedKeyframeTrack = exportGLTF.editorState().keyframeTracks.get(index);
+
+        if(selectedKeyframeTrack.keyframeType != KeyframeType.CAMERA) return null;
+
+        CapturingKeyframeHandler handler = new CapturingKeyframeHandler();
+        DiscreteCameraPath cameraPath = generatePath(exportGLTF.startTick(),
+                exportGLTF.endTick(), exportGLTF.editorState(), handler);
+
+        return generateGLTF(cameraPath);
+    }
+
+    private DiscreteCameraPath generatePath(int fromTick, int toTick, EditorState editorState, CapturingKeyframeHandler handler) {
+        List<Vector3f> cameraLocations = new ArrayList<>();
+        List<Quaternionf> cameraRotations = new ArrayList<>();
+
+        int step = (toTick - fromTick) / 2000 + 1;
+
+        for (int tick = fromTick; tick <= toTick; tick += step) {
+            editorState.applyKeyframes(handler, tick);
+
+            cameraLocations.add(handler.position);
+            cameraRotations.add(handler.angle);
+        }
+
+        return new DiscreteCameraPath(cameraLocations, cameraRotations);
+    }
+
+    public record DiscreteCameraPath(List<Vector3f> positions, List<Quaternionf> rotations){
+
+    }
+
+    private static final EnumSet<KeyframeType> SUPPORTED_CAMERA_KEYFRAMES = EnumSet.of(KeyframeType.CAMERA);
+
+    private static class CapturingKeyframeHandler implements KeyframeHandler {
+        private Vector3f position;
+        private Quaternionf angle;
+
+        @Override
+        public EnumSet<KeyframeType> supportedKeyframes() {
+            return SUPPORTED_CAMERA_KEYFRAMES;
+        }
+
+        @Override
+        public boolean alwaysApplyLastKeyframe() {
+            return true;
+        }
+
+        @Override
+        public void applyCameraPosition(Vector3f position, float yaw, float pitch, float roll) {
+            this.position = position;
+            this.angle = new Quaternionf().rotationYXZ((float) -Math.toRadians(yaw), (float) Math.toRadians(pitch), (float) -Math.toRadians(roll));
+        }
+    }
+
+}

@@ -11,6 +11,8 @@ import com.moulberry.flashback.FixedDeltaTracker;
 import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.Utils;
 import com.moulberry.flashback.compat.IrisApiWrapper;
+import com.moulberry.flashback.exporting.camera_path.ExportCameraPath;
+import com.moulberry.flashback.exporting.camera_path.ExportGLTF;
 import com.moulberry.flashback.keyframe.KeyframeType;
 import com.moulberry.flashback.keyframe.handler.KeyframeHandler;
 import com.moulberry.flashback.keyframe.handler.MinecraftKeyframeHandler;
@@ -36,6 +38,7 @@ import org.lwjgl.glfw.GLFW;
 import org.lwjgl.openal.SOFTLoopback;
 
 import java.io.IOException;
+import java.net.URI;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
@@ -110,6 +113,12 @@ public class ExportJob {
     }
 
     public void run() {
+
+        // debug thing
+        ExportGLTF exportGLTF = new ExportGLTF("output", settings.editorState(), 1.0, settings.startTick(), settings.endTick(), settings.output());
+        new ExportCameraPath(exportGLTF).export();
+        //
+
         ReplayServer replayServer = Flashback.getReplayServer();
         if (this.running || replayServer == null) {
             throw new IllegalStateException("run() called twice");
