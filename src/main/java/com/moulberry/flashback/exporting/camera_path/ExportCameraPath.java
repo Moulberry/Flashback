@@ -4,21 +4,17 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
-import com.google.gson.stream.JsonWriter;
 import com.moulberry.flashback.keyframe.KeyframeType;
 import com.moulberry.flashback.keyframe.handler.KeyframeHandler;
 import com.moulberry.flashback.state.EditorState;
 import com.moulberry.flashback.state.KeyframeTrack;
-import com.moulberry.flashback.visuals.CameraPath;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
-import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.EnumSet;
@@ -26,17 +22,19 @@ import java.util.List;
 
 public class ExportCameraPath {
     private ExportGLTF exportGLTF;
+    private DiscreteCameraPath discreteCameraPath;
 
     public ExportCameraPath(ExportGLTF exportGLTF){
         this.exportGLTF = exportGLTF;
+        this.discreteCameraPath = new DiscreteCameraPath();
     }
 
     public void export(){
         Gson gson = new GsonBuilder().disableHtmlEscaping().create();
-        JsonObject gltfFile = exportGLTF(0); // temp, only tries to export the first element
+        JsonObject gltfFile = generateGLTF(discreteCameraPath);
 
         String outputPath = exportGLTF.output().toString().substring(0,
-                exportGLTF.output().toString().lastIndexOf('\\')) + "/" + exportGLTF.name() + ".gltf";
+                exportGLTF.output().toString().lastIndexOf('\\')) + "/" + exportGLTF.name() + "_camera_path.gltf";
 
         String jsonString = gson.toJson(gltfFile);
 
@@ -49,13 +47,13 @@ public class ExportCameraPath {
     }
 
     private JsonObject generateGLTF(DiscreteCameraPath cameraPath){
-        if(cameraPath.positions.isEmpty() || cameraPath.rotations.isEmpty()){
+        if(cameraPath.getPositions().isEmpty() || cameraPath.getRotations().isEmpty()){
             System.out.println("CameraPath is empty.");
             return null;
         }
 
-        Vector3f initialLocation = cameraPath.positions.getFirst();
-        Quaternionf initialRotation = cameraPath.rotations.getFirst();
+        Vector3f initialLocation = cameraPath.getPositions().getFirst();
+        Quaternionf initialRotation = cameraPath.getRotations().getFirst();
 
         JsonObject gltfFile = new JsonObject();
 
@@ -167,7 +165,7 @@ public class ExportCameraPath {
         JsonObject accessor0 = new JsonObject();
         accessor0.addProperty("bufferView", 0);
         accessor0.addProperty("componentType", 5126);
-        accessor0.addProperty("count", cameraPath.positions().size());
+        accessor0.addProperty("count", cameraPath.getPositions().size());
         JsonArray maxArray0 = new JsonArray();
         maxArray0.add(2.5);
         accessor0.add("max", maxArray0);
@@ -179,13 +177,13 @@ public class ExportCameraPath {
         JsonObject accessor1 = new JsonObject();
         accessor1.addProperty("bufferView", 1);
         accessor1.addProperty("componentType", 5126);
-        accessor1.addProperty("count", cameraPath.positions().size());
+        accessor1.addProperty("count", cameraPath.getPositions().size());
         accessor1.addProperty("type", "VEC3");
 
         JsonObject accessor2 = new JsonObject();
         accessor2.addProperty("bufferView", 2);
         accessor2.addProperty("componentType", 5126);
-        accessor2.addProperty("count", cameraPath.positions().size());
+        accessor2.addProperty("count", cameraPath.getPositions().size());
         accessor2.addProperty("type", "VEC4");
 
         accessorsArray.add(accessor0);
@@ -199,7 +197,7 @@ public class ExportCameraPath {
 
         // time buffer
         int timeBufferOffset = 0;
-        int timeBufferSize = 4 * cameraPath.positions().size();
+        int timeBufferSize = 4 * cameraPath.getPositions().size();
         JsonObject timeBuffer = new JsonObject();
         timeBuffer.addProperty("buffer", 0);
         timeBuffer.addProperty("byteLength", timeBufferSize);
@@ -207,7 +205,7 @@ public class ExportCameraPath {
 
         // translation buffer
         int translationBufferOffset = timeBufferSize;
-        int translationBufferSize = 4 * 3 * cameraPath.positions().size();
+        int translationBufferSize = 4 * 3 * cameraPath.getPositions().size();
         JsonObject translationBuffer = new JsonObject();
         translationBuffer.addProperty("buffer", 0);
         translationBuffer.addProperty("byteLength", translationBufferSize);
@@ -215,7 +213,7 @@ public class ExportCameraPath {
 
         // rotation buffer byteLength = 4 * 4 * cameraPath.rotations().size
         int rotationBufferOffset = timeBufferSize + translationBufferSize;
-        int rotationBufferSize = 4 * 4 * cameraPath.rotations.size();
+        int rotationBufferSize = 4 * 4 * cameraPath.getRotations().size();
         JsonObject rotationBuffer = new JsonObject();
         rotationBuffer.addProperty("buffer", 0);
         rotationBuffer.addProperty("byteLength", rotationBufferSize);
@@ -245,21 +243,21 @@ public class ExportCameraPath {
     private String createBase64Data(DiscreteCameraPath cameraPath){
         String header = "data:application/octet-stream;base64,";
 
-        // time data = 0 -> end in seconds. AND a step every (current step * 1/20)
-        byte[] timeData = new byte[4 * (cameraPath.positions().size())];
-        for(int i = 0;i<cameraPath.positions().size();i++){
-            float time = ((float) i) * (0.05f);
+        // time data = 0 -> end in seconds
+        byte[] timeData = new byte[4 * (cameraPath.getPositions().size())];
+        for(int i = 0;i<cameraPath.getPositions().size();i++){
+            float time = (float) (((float) i) * (1 / exportGLTF.frameRate())); // step by 1 / frameRate
 
             byte[] timeBinary = ByteBuffer.allocate(4).order(ByteOrder.LITTLE_ENDIAN).putFloat(time).array();
             System.arraycopy(timeBinary, 0, timeData, i * 4, 4);
         }
 
         // translation buffer
-        byte[] translationData = new byte[4 * 3 * (cameraPath.positions().size())];
-        for(int i = 0;i<cameraPath.positions().size();i++){
-            float translationX = cameraPath.positions().get(i).x;
-            float translationY = cameraPath.positions().get(i).y;
-            float translationZ = cameraPath.positions().get(i).z;
+        byte[] translationData = new byte[4 * 3 * (cameraPath.getPositions().size())];
+        for(int i = 0;i<cameraPath.getPositions().size();i++){
+            float translationX = cameraPath.getPositions().get(i).x;
+            float translationY = cameraPath.getPositions().get(i).y;
+            float translationZ = cameraPath.getPositions().get(i).z;
 
             byte[] translationBinary = ByteBuffer.allocate(12).order(ByteOrder.LITTLE_ENDIAN)
                     .putFloat(translationX)
@@ -271,22 +269,14 @@ public class ExportCameraPath {
         }
 
         // rotation buffer
-        byte[] rotationData = new byte[4 * 4 * (cameraPath.rotations.size())];
-        for(int i = 0;i<cameraPath.rotations().size();i++){
+        byte[] rotationData = new byte[4 * 4 * (cameraPath.getRotations().size())];
+        for(int i = 0;i<cameraPath.getRotations().size();i++){
+            float rotationX = cameraPath.getRotations().get(i).x;
+            float rotationY = cameraPath.getRotations().get(i).y;
+            float rotationZ = cameraPath.getRotations().get(i).z;
+            float rotationW = cameraPath.getRotations().get(i).w;
 
-            Quaternionf rotatedQuaternion = cameraPath.rotations().get(i);
-            Quaternionf rotationAroundY = new Quaternionf().rotateY((float) Math.toRadians(180));
-            rotatedQuaternion.mul(rotationAroundY);
-
-            if(i == (cameraPath.rotations.size() - 1)){
-                System.out.println(cameraPath.rotations.get(i));
-                System.out.println(rotatedQuaternion);
-            }
-
-            float rotationX = rotatedQuaternion.x;
-            float rotationY = rotatedQuaternion.y;
-            float rotationZ = rotatedQuaternion.z;
-            float rotationW = rotatedQuaternion.w;
+            System.out.println(rotationX + " : " + rotationY + " : " + rotationZ + " : " + rotationW);
 
             byte[] rotationBinary = ByteBuffer.allocate(16).order(ByteOrder.LITTLE_ENDIAN)
                     .putFloat(rotationX)
@@ -313,59 +303,8 @@ public class ExportCameraPath {
         return header + Base64.getEncoder().encodeToString(combinedData);
     }
 
-    private JsonObject exportGLTF(int index) {
-        KeyframeTrack selectedKeyframeTrack = exportGLTF.editorState().keyframeTracks.get(index);
-
-        if(selectedKeyframeTrack.keyframeType != KeyframeType.CAMERA) return null;
-
-        CapturingKeyframeHandler handler = new CapturingKeyframeHandler();
-        DiscreteCameraPath cameraPath = generatePath(exportGLTF.startTick(),
-                exportGLTF.endTick(), exportGLTF.editorState(), handler);
-
-        return generateGLTF(cameraPath);
-    }
-
-    private DiscreteCameraPath generatePath(int fromTick, int toTick, EditorState editorState, CapturingKeyframeHandler handler) {
-        List<Vector3f> cameraLocations = new ArrayList<>();
-        List<Quaternionf> cameraRotations = new ArrayList<>();
-
-        int step = (toTick - fromTick) / 2000 + 1;
-
-        for (int tick = fromTick; tick <= toTick; tick += step) {
-            editorState.applyKeyframes(handler, tick);
-
-            cameraLocations.add(handler.position);
-            cameraRotations.add(handler.angle);
-        }
-
-        return new DiscreteCameraPath(cameraLocations, cameraRotations);
-    }
-
-    public record DiscreteCameraPath(List<Vector3f> positions, List<Quaternionf> rotations){
-
-    }
-
-    private static final EnumSet<KeyframeType> SUPPORTED_CAMERA_KEYFRAMES = EnumSet.of(KeyframeType.CAMERA);
-
-    private static class CapturingKeyframeHandler implements KeyframeHandler {
-        private Vector3f position;
-        private Quaternionf angle;
-
-        @Override
-        public EnumSet<KeyframeType> supportedKeyframes() {
-            return SUPPORTED_CAMERA_KEYFRAMES;
-        }
-
-        @Override
-        public boolean alwaysApplyLastKeyframe() {
-            return true;
-        }
-
-        @Override
-        public void applyCameraPosition(Vector3f position, float yaw, float pitch, float roll) {
-            this.position = position;
-            this.angle = new Quaternionf().rotationYXZ((float) -Math.toRadians(yaw), (float) Math.toRadians(pitch), (float) -Math.toRadians(roll));
-        }
+    public void addToPath(Vector3f position, Quaternionf rotation){
+        discreteCameraPath.addPositionAndRotation(position, rotation);
     }
 
 }

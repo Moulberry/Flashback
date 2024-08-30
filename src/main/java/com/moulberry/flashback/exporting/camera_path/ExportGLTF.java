@@ -8,7 +8,7 @@ import java.nio.file.Path;
 
 public record ExportGLTF(@Nullable String name, EditorState editorState,
                          // Properties
-                         double scale, int startTick, int endTick,
+                         double frameRate, int startTick, int endTick,
                          // Output
                          Path output) {
 

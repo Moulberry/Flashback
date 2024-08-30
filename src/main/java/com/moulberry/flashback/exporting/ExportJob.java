@@ -34,11 +34,12 @@ import net.minecraft.client.renderer.ShaderInstance;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Matrix4f;
+import org.joml.Quaternionf;
+import org.joml.Vector3f;
 import org.lwjgl.glfw.GLFW;
 import org.lwjgl.openal.SOFTLoopback;
 
 import java.io.IOException;
-import java.net.URI;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
@@ -114,10 +115,9 @@ public class ExportJob {
 
     public void run() {
 
-        // debug thing
-        ExportGLTF exportGLTF = new ExportGLTF("output", settings.editorState(), 1.0, settings.startTick(), settings.endTick(), settings.output());
-        new ExportCameraPath(exportGLTF).export();
-        //
+        // Create empty glTF path
+        ExportGLTF exportGLTF = new ExportGLTF("output", settings.editorState(), settings.framerate(), settings.startTick(), settings.endTick(), settings.output());
+        ExportCameraPath cameraPath = new ExportCameraPath(exportGLTF);
 
         ReplayServer replayServer = Flashback.getReplayServer();
         if (this.running || replayServer == null) {
@@ -142,7 +142,7 @@ public class ExportJob {
 
             try (AsyncVideoEncoder encoder = new AsyncVideoEncoder(this.settings, tempFileName);
                     SaveableFramebufferQueue downloader = new SaveableFramebufferQueue(this.settings.resolutionX(), this.settings.resolutionY())) {
-                doExport(encoder, downloader, infoRenderTarget);
+                doExport(encoder, downloader, infoRenderTarget, cameraPath);
             }
 
             Files.move(exportTempFile, this.settings.output(), StandardCopyOption.REPLACE_EXISTING);
@@ -174,7 +174,7 @@ public class ExportJob {
         }
     }
 
-    private void doExport(AsyncVideoEncoder encoder, SaveableFramebufferQueue downloader, TextureTarget infoRenderTarget) {
+    private void doExport(AsyncVideoEncoder encoder, SaveableFramebufferQueue downloader, TextureTarget infoRenderTarget, ExportCameraPath exportCameraPath) {
         ReplayServer replayServer = Flashback.getReplayServer();
         if (replayServer == null) {
             return;
@@ -273,6 +273,12 @@ public class ExportJob {
             Minecraft.getInstance().timer.pausedDeltaTickResidual = (float) partialTick;
 
             start = System.nanoTime();
+
+            // Fetch camera position and rotation for glTF export
+            Vector3f cameraPosition = Minecraft.getInstance().gameRenderer.getMainCamera().getPosition().toVector3f();
+            Quaternionf cameraRotation = Minecraft.getInstance().gameRenderer.getMainCamera().rotation();
+            exportCameraPath.addToPath(cameraPosition, cameraRotation);
+
             Minecraft.getInstance().gameRenderer.render(new FixedDeltaTracker(deltaTicksFloat, (float) partialTick), true);
             renderTimeNanos += System.nanoTime() - start;
 
@@ -310,6 +316,9 @@ public class ExportJob {
 
         submitDownloadedFrames(encoder, downloader, true);
         encoder.finish();
+
+        // Build and Export the Camera glTF file
+        exportCameraPath.export();
     }
 
     private void updateRandoms(Random random, Random mathRandom) {
