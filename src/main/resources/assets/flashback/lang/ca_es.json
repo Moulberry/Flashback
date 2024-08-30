@@ -1,0 +1,20 @@
+{
+  "flashback.select_replay": "Selecciona Replay",
+  "flashback.select_replay.open": "Obrir Replay",
+  "flashback.select_replay.loading_replays": "Carregant Replays",
+  "flashback.select_replay.replay": "Replay",
+  "flashback.select_replay.data_read": "Llegint dades del replay...",
+  "flashback.select_replay.delete_question": "Estàs segur que vols suprimir aquest replay?",
+  "flashback.select_replay.duration": "Durada: %s",
+
+  "flashback.option.automatically_start": "Iniciar Automàticament",
+  "flashback.option.automatically_start.description": "Inicia automàticament una gravació de replay en unir-se a un món/servidor",
+  "flashback.option.automatically_finish": "Finalitzar Automàticament",
+  "flashback.option.automatically_finish.description": "Finalitza automàticament una gravació de replay en sortir del món/servidor",
+  "flashback.option.show_recording_toasts": "Mostrar Notificacions de Gravació",
+  "flashback.option.show_recording_toasts.description": "Mostra notificacions a la part superior dreta en iniciar/aturar una gravació de replay",
+  "flashback.option.quicksave": "Desar Ràpidament",
+  "flashback.option.quicksave.description": "Desa el replay amb els valors predeterminats en lloc d'obrir la pantalla de Desa Replay",
+  "flashback.option.hide_pause_menu_controls": "Amagar els Controls del Menú de Pausa",
+  "flashback.option.hide_pause_menu_controls.description": "Amaga els controls del menú de Pausa (ESC) per iniciar/finalitzar un replay. Les comandes seguiran funcionant"
+}
