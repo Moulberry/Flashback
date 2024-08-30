@@ -1,0 +1,20 @@
+{
+  "flashback.select_replay": "Sélectionner Replay",
+  "flashback.select_replay.open": "Ouvrir Replay",
+  "flashback.select_replay.loading_replays": "Chargement des Replays",
+  "flashback.select_replay.replay": "Replay",
+  "flashback.select_replay.data_read": "Lecture des données du replay...",
+  "flashback.select_replay.delete_question": "Êtes-vous sûr de vouloir supprimer ce replay ?",
+  "flashback.select_replay.duration": "Durée: %s",
+
+  "flashback.option.automatically_start": "Démarrer Automatiquement",
+  "flashback.option.automatically_start.description": "Démarre automatiquement un enregistrement de replay en rejoignant un monde/serveur",
+  "flashback.option.automatically_finish": "Terminer Automatiquement",
+  "flashback.option.automatically_finish.description": "Termine automatiquement un enregistrement de replay en quittant le monde/serveur",
+  "flashback.option.show_recording_toasts": "Afficher les Notifications d'Enregistrement",
+  "flashback.option.show_recording_toasts.description": "Affiche des notifications en haut à droite lors du démarrage/arrêt d'un enregistrement de replay",
+  "flashback.option.quicksave": "Sauvegarde Rapide",
+  "flashback.option.quicksave.description": "Enregistre le replay avec les valeurs par défaut au lieu d'ouvrir l'écran de Sauvegarde Replay",
+  "flashback.option.hide_pause_menu_controls": "Masquer les Contrôles du Menu Pause",
+  "flashback.option.hide_pause_menu_controls.description": "Masque les contrôles du menu Pause (ESC) pour démarrer/terminer un replay. Les commandes fonctionneront toujours"
+}
