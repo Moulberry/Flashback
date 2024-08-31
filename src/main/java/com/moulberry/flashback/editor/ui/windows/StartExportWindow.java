@@ -56,6 +56,7 @@ public class StartExportWindow {
     private static final ImString bitrate = ImGuiHelper.createResizableImString("20m");
 
     private static boolean recordAudio = false;
+    private static boolean exportCameraPath = false;
     private static boolean transparentBackground = false;
     private static AudioCodec audioCodec = AudioCodec.AAC;
 
@@ -180,6 +181,12 @@ public class StartExportWindow {
                 }
             } else {
                 recordAudio = false;
+            }
+
+            ImGuiHelper.separatorWithText("Camera Options");
+
+            if(ImGui.checkbox("Export Camera Path as glTF", exportCameraPath)) {
+                exportCameraPath = !exportCameraPath;
             }
 
             ImGui.dummy(0, 10);
@@ -348,7 +355,7 @@ public class StartExportWindow {
                     player.position(), player.getYRot(), player.getXRot(),
                     resolution[0], resolution[1], start, end,
                     Math.max(1, framerate.get()), resetRng, container, videoCodec, encoder, numBitrate, transparent, ssaa,
-                    recordAudio, path);
+                    recordAudio, exportCameraPath, path);
             }
 
             return null;

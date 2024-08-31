@@ -34,8 +34,5 @@ public class DiscreteCameraPath {
     public void addPositionAndRotation(Vector3f position, Quaternionf rotation) {
         this.positions.add(position);
         this.rotations.add(new Quaternionf(rotation));
-
-        System.out.println("Rotation: " + rotation);
-        System.out.println("List: " + getRotations());
     }
 }

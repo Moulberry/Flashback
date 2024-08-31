@@ -19,6 +19,8 @@ public record ExportSettings(@Nullable String name, EditorState editorState,
                              VideoContainer container, VideoCodec codec, String encoder, int bitrate, boolean transparent, boolean ssaa,
                              // Audio
                              boolean recordAudio,
+                             // Camera
+                             boolean exportCameraPath,
                              // Output
                              Path output) {
 

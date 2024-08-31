@@ -116,8 +116,12 @@ public class ExportJob {
     public void run() {
 
         // Create empty glTF path
-        ExportGLTF exportGLTF = new ExportGLTF("output", settings.editorState(), settings.framerate(), settings.startTick(), settings.endTick(), settings.output());
-        ExportCameraPath cameraPath = new ExportCameraPath(exportGLTF);
+        ExportGLTF exportGLTF;
+        ExportCameraPath cameraPath = null;
+        if(settings.exportCameraPath()){
+            exportGLTF = new ExportGLTF("output", settings.editorState(), settings.framerate(), settings.startTick(), settings.endTick(), settings.output());
+            cameraPath = new ExportCameraPath(exportGLTF);
+        }
 
         ReplayServer replayServer = Flashback.getReplayServer();
         if (this.running || replayServer == null) {
@@ -275,9 +279,11 @@ public class ExportJob {
             start = System.nanoTime();
 
             // Fetch camera position and rotation for glTF export
-            Vector3f cameraPosition = Minecraft.getInstance().gameRenderer.getMainCamera().getPosition().toVector3f();
-            Quaternionf cameraRotation = Minecraft.getInstance().gameRenderer.getMainCamera().rotation();
-            exportCameraPath.addToPath(cameraPosition, cameraRotation);
+            if(exportCameraPath != null){
+                Vector3f cameraPosition = Minecraft.getInstance().gameRenderer.getMainCamera().getPosition().toVector3f();
+                Quaternionf cameraRotation = Minecraft.getInstance().gameRenderer.getMainCamera().rotation();
+                exportCameraPath.addToPath(cameraPosition, cameraRotation);
+            }
 
             Minecraft.getInstance().gameRenderer.render(new FixedDeltaTracker(deltaTicksFloat, (float) partialTick), true);
             renderTimeNanos += System.nanoTime() - start;
@@ -318,7 +324,7 @@ public class ExportJob {
         encoder.finish();
 
         // Build and Export the Camera glTF file
-        exportCameraPath.export();
+        if(exportCameraPath != null) exportCameraPath.export();
     }
 
     private void updateRandoms(Random random, Random mathRandom) {

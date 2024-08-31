@@ -276,8 +276,6 @@ public class ExportCameraPath {
             float rotationZ = cameraPath.getRotations().get(i).z;
             float rotationW = cameraPath.getRotations().get(i).w;
 
-            System.out.println(rotationX + " : " + rotationY + " : " + rotationZ + " : " + rotationW);
-
             byte[] rotationBinary = ByteBuffer.allocate(16).order(ByteOrder.LITTLE_ENDIAN)
                     .putFloat(rotationX)
                     .putFloat(rotationY)
