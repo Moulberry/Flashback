@@ -185,7 +185,7 @@ public class StartExportWindow {
 
             ImGuiHelper.separatorWithText("Camera Options");
 
-            if(ImGui.checkbox("Export Camera Path as glTF", exportCameraPath)) {
+            if(ImGui.checkbox("Export Camera Path as .glTF", exportCameraPath)) {
                 exportCameraPath = !exportCameraPath;
             }
 

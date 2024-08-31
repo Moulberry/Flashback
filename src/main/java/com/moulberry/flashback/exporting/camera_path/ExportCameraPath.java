@@ -103,9 +103,9 @@ public class ExportCameraPath {
         cameraObject.addProperty("name", "Camera");
         JsonObject perspective = new JsonObject();
         perspective.addProperty("aspectRatio", exportGLTF.editorState().replayVisuals.changeAspectRatio.aspectRatio());
-        perspective.addProperty("yfov", 1.22173); // hard-coded for now, replace later, and allow for keyframed fov changes
-        perspective.addProperty("zfar", 1000); // constant, might just leave as it can be edited in 3D editor
-        perspective.addProperty("znear", 0.10000000149011612); // constant, might just leave as it can be edited in 3D editor
+        perspective.addProperty("yfov", (float) Math.toRadians(exportGLTF.editorState().replayVisuals.overrideFovAmount));
+        perspective.addProperty("zfar", 1000);
+        perspective.addProperty("znear", 0.1);
         cameraObject.add("perspective", perspective);
         cameraObject.addProperty("type", "perspective");
         cameraArray.add(cameraObject);
