@@ -118,9 +118,11 @@ public class ExportCameraPath {
         JsonArray channelsArray = new JsonArray();
         JsonObject channelTranslation = new JsonObject();
         JsonObject channelRotation = new JsonObject();
+        JsonObject channelFov = new JsonObject();
 
         JsonObject targetTranslation = new JsonObject();
         JsonObject targetRotation = new JsonObject();
+        JsonObject targetFov = new JsonObject();
 
         targetTranslation.addProperty("node", 0);
         targetTranslation.addProperty("path", "translation");
@@ -128,14 +130,21 @@ public class ExportCameraPath {
         targetRotation.addProperty("node", 0);
         targetRotation.addProperty("path", "rotation");
 
+        targetFov.addProperty("node", 0);
+        targetFov.addProperty("path", "perspective/yfov");
+
         channelTranslation.addProperty("sampler", 0);
         channelTranslation.add("target", targetTranslation);
 
         channelRotation.addProperty("sampler", 1);
         channelRotation.add("target", targetRotation);
 
+        channelFov.addProperty("sampler", 2);
+        channelFov.add("target", targetFov);
+
         channelsArray.add(channelTranslation);
         channelsArray.add(channelRotation);
+        channelsArray.add(channelFov);
 
         animationObject.add("channels", channelsArray);
         animationObject.addProperty("name", "CameraAction");
@@ -152,8 +161,14 @@ public class ExportCameraPath {
         sampler1.addProperty("interpolation", "LINEAR");
         sampler1.addProperty("output", 2);
 
+        JsonObject sampler2 = new JsonObject();
+        sampler2.addProperty("input", 0);
+        sampler2.addProperty("interpolation", "LINEAR");
+        sampler2.addProperty("output", 3);
+
         samplersArray.add(sampler0);
         samplersArray.add(sampler1);
+        samplersArray.add(sampler2);
 
         animationObject.add("samplers", samplersArray);
 
@@ -169,7 +184,7 @@ public class ExportCameraPath {
         accessor0.addProperty("componentType", 5126);
         accessor0.addProperty("count", cameraPath.getPositions().size());
         JsonArray maxArray0 = new JsonArray();
-        maxArray0.add(2.5);
+        maxArray0.add(cameraPath.getPositions().size() / exportGLTF.frameRate());
         accessor0.add("max", maxArray0);
         JsonArray minArray0 = new JsonArray();
         minArray0.add(0);
@@ -188,9 +203,22 @@ public class ExportCameraPath {
         accessor2.addProperty("count", cameraPath.getPositions().size());
         accessor2.addProperty("type", "VEC4");
 
+        JsonObject accessor3 = new JsonObject();
+        accessor3.addProperty("bufferView", 3);
+        accessor3.addProperty("componentType", 5126); // FLOAT
+        accessor3.addProperty("count", cameraPath.getFovs().size());
+        JsonArray maxArray3 = new JsonArray();
+        maxArray3.add(2.0); // max FOV value in radians (115 degrees)
+        accessor3.add("max", maxArray3);
+        JsonArray minArray3 = new JsonArray();
+        minArray3.add(0.5); // min FOV value in radians (28 degrees)
+        accessor3.add("min", minArray3);
+        accessor3.addProperty("type", "SCALAR");
+
         accessorsArray.add(accessor0);
         accessorsArray.add(accessor1);
         accessorsArray.add(accessor2);
+        accessorsArray.add(accessor3);
 
         gltfFile.add("accessors", accessorsArray);
 
@@ -221,9 +249,18 @@ public class ExportCameraPath {
         rotationBuffer.addProperty("byteLength", rotationBufferSize);
         rotationBuffer.addProperty("byteOffset", rotationBufferOffset);
 
+        // FOV buffer
+        int fovBufferOffset = rotationBufferOffset + rotationBufferSize;
+        int fovBufferSize = 4 * cameraPath.getFovs().size(); // 4 bytes for each float
+        JsonObject fovBuffer = new JsonObject();
+        fovBuffer.addProperty("buffer", 0);
+        fovBuffer.addProperty("byteLength", fovBufferSize);
+        fovBuffer.addProperty("byteOffset", fovBufferOffset);
+
         bufferViews.add(timeBuffer);
         bufferViews.add(translationBuffer);
         bufferViews.add(rotationBuffer);
+        bufferViews.add(fovBuffer);
 
         gltfFile.add("bufferViews", bufferViews);
 
@@ -233,7 +270,7 @@ public class ExportCameraPath {
         // Buffers
         JsonArray buffers = new JsonArray();
         JsonObject buffer = new JsonObject();
-        buffer.addProperty("byteLength", timeBufferSize + translationBufferSize + rotationBufferSize);
+        buffer.addProperty("byteLength", timeBufferSize + translationBufferSize + rotationBufferSize + fovBufferSize);
         buffer.addProperty("uri", data);
         buffers.add(buffer);
 
@@ -290,7 +327,19 @@ public class ExportCameraPath {
             System.arraycopy(rotationBinary, 0, rotationData, i * 16, 16);
         }
 
-        int totalLength = timeData.length + translationData.length + rotationData.length;
+        // FOV buffer
+        byte[] fovData = new byte[4 * (cameraPath.getFovs().size())];
+        for(int i = 0; i < cameraPath.getFovs().size(); i++){
+            float fov = cameraPath.getFovs().get(i);
+
+            byte[] fovBinary = ByteBuffer.allocate(4).order(ByteOrder.LITTLE_ENDIAN)
+                    .putFloat(fov)
+                    .array();
+
+            System.arraycopy(fovBinary, 0, fovData, i * 4, 4);
+        }
+
+        int totalLength = timeData.length + translationData.length + rotationData.length + fovData.length;
         byte[] combinedData = new byte[totalLength];
 
         int currentPos = 0;
@@ -301,6 +350,9 @@ public class ExportCameraPath {
         currentPos += translationData.length;
 
         System.arraycopy(rotationData, 0, combinedData, currentPos, rotationData.length);
+        currentPos += rotationData.length;
+
+        System.arraycopy(fovData, 0, combinedData, currentPos, fovData.length);
 
         return header + Base64.getEncoder().encodeToString(combinedData);
     }
