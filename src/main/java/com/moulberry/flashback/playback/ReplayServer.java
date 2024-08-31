@@ -105,8 +105,7 @@ public class ReplayServer extends IntegratedServer {
     private StreamCodec<ByteBuf, Packet<? super ClientGamePacketListener>> gamePacketCodec;
     private final StreamCodec<ByteBuf, Packet<? super ClientConfigurationPacketListener>> configurationPacketCodec;
     private final List<ReplayPlayer> replayViewers = new ArrayList<>();
-    public boolean followLocalPlayerNextTick = false;
-    public boolean followLocalPlayerNextTickIfFar = false;
+    public boolean followLocalPlayerNextTickIfWrongDimension = false;
     public boolean isProcessingSnapshot = false;
     private boolean processedSnapshot = false;
     private volatile boolean fastForwarding = false;
@@ -963,9 +962,9 @@ public class ReplayServer extends IntegratedServer {
         }
 
         for (ReplayPlayer replayViewer : this.getReplayViewers()) {
-            boolean shouldFollow = replayViewer.followLocalPlayerNextTick || this.followLocalPlayerNextTick;
-            if (this.followLocalPlayerNextTickIfFar) {
-                shouldFollow |= replayViewer.level() != currentLevel || replayViewer.distanceToSqr(follow) > 256*256;
+            boolean shouldFollow = replayViewer.followLocalPlayerNextTick;
+            if (this.followLocalPlayerNextTickIfWrongDimension) {
+                shouldFollow |= replayViewer.level() != currentLevel;
             }
             if (shouldFollow) {
                 replayViewer.followLocalPlayerNextTick = false;
@@ -974,8 +973,7 @@ public class ReplayServer extends IntegratedServer {
             }
         }
 
-        this.followLocalPlayerNextTick = false;
-        this.followLocalPlayerNextTickIfFar = false;
+        this.followLocalPlayerNextTickIfWrongDimension = false;
     }
 
     private void stopWithReason(Component reason) {

@@ -31,7 +31,8 @@
     "visuals.MixinLivingEntityRenderer",
     "visuals.MixinLoadingOverlay",
     "visuals.MixinMouseHandler",
-    "visuals.MixinOptions"
+    "visuals.MixinOptions",
+    "visuals.MixinRenderStateShard"
   ],
   "injectors": {
     "defaultRequire": 1
@@ -42,7 +43,9 @@
     "compat.MixinFabricMinecraftServer",
     "compat.MixinSodiumWorldRenderer",
     "compat.bobby.FakeChunkManagerAccessor",
+    "compat.bobby.MixinBobby",
     "compat.bobby.MixinBobbyFakeChunkManager",
+    "compat.iris.MixinIrisSystemTimeUniforms",
     "playback.MixinAttributeInstance",
     "playback.MixinChunkHolder",
     "playback.MixinEntity",

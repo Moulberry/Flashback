@@ -2,10 +2,13 @@ package com.moulberry.flashback;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
+import com.mojang.brigadier.arguments.BoolArgumentType;
+import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.realmsclient.RealmsMainScreen;
 import com.mojang.serialization.Lifecycle;
 import com.moulberry.flashback.action.*;
+import com.moulberry.flashback.command.BetterColorArgument;
 import com.moulberry.flashback.configuration.FlashbackConfig;
 import com.moulberry.flashback.exporting.ExportJob;
 import com.moulberry.flashback.ext.MinecraftExt;
@@ -26,6 +29,7 @@ import com.moulberry.flashback.playback.ReplayServer;
 import com.moulberry.flashback.record.FlashbackMeta;
 import com.moulberry.flashback.record.Recorder;
 import com.moulberry.flashback.record.ReplayExporter;
+import com.moulberry.flashback.record.ReplayMarker;
 import com.moulberry.flashback.screen.ConfigScreen;
 import com.moulberry.flashback.screen.SaveReplayScreen;
 import com.moulberry.flashback.visuals.ShaderManager;
@@ -40,6 +44,7 @@ import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.resource.ResourceManagerHelper;
 import net.fabricmc.loader.api.FabricLoader;
+import net.minecraft.ChatFormatting;
 import net.minecraft.FileUtil;
 import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
@@ -52,6 +57,7 @@ import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.server.IntegratedServer;
 import net.minecraft.commands.Commands;
+import net.minecraft.commands.arguments.ColorArgument;
 import net.minecraft.core.*;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
@@ -77,6 +83,7 @@ import net.minecraft.world.level.storage.LevelStorageSource;
 import net.minecraft.world.level.storage.PrimaryLevelData;
 import org.apache.commons.io.FileUtils;
 import org.jetbrains.annotations.Nullable;
+import org.joml.Vector3f;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -210,6 +217,26 @@ public class Flashback implements ModInitializer, ClientModInitializer {
             flashback.then(ClientCommandManager.literal("finish").executes(this::finishRecordingReplay));
             flashback.then(ClientCommandManager.literal("end").executes(this::finishRecordingReplay));
             flashback.then(ClientCommandManager.literal("config").executes(this::openFlashbackConfig));
+            flashback.then(ClientCommandManager.literal("mark")
+                .executes(command -> {
+                    this.addMarker(command, null, null, null);
+                    return 0;
+                }).then(ClientCommandManager.argument("color", BetterColorArgument.color()).executes(command -> {
+                    int colour = command.getArgument("color", Integer.class);
+                    this.addMarker(command, colour, null, null);
+                    return 0;
+                }).then(ClientCommandManager.argument("savePosition", BoolArgumentType.bool()).executes(command -> {
+                    int colour = command.getArgument("color", Integer.class);
+                    boolean savePosition = command.getArgument("savePosition", Boolean.class);
+                    this.addMarker(command, colour, savePosition, null);
+                    return 0;
+                }).then(ClientCommandManager.argument("description", StringArgumentType.greedyString()).executes(command -> {
+                    int colour = command.getArgument("color", Integer.class);
+                    boolean savePosition = command.getArgument("savePosition", Boolean.class);
+                    String description = command.getArgument("description", String.class);
+                    this.addMarker(command, colour, savePosition, description);
+                    return 0;
+                })))));
             dispatcher.register(flashback);
         });
 
@@ -255,6 +282,35 @@ public class Flashback implements ModInitializer, ClientModInitializer {
             }
         });
 	}
+
+    private void addMarker(CommandContext<FabricClientCommandSource> command, @Nullable Integer colour, @Nullable Boolean savePosition, @Nullable String description) {
+        if (RECORDER == null) {
+            command.getSource().sendError(Component.literal("Not recording"));
+            return;
+        }
+
+        if (colour == null) {
+            colour = 0xFF5555;
+        }
+
+        ReplayMarker.MarkerPosition position = null;
+        if (savePosition == null || savePosition) {
+            Entity camera = Minecraft.getInstance().getCameraEntity();
+            if (camera != null) {
+                position = new ReplayMarker.MarkerPosition(camera.getEyePosition().toVector3f(),
+                    camera.level().dimension().toString());
+            }
+        }
+
+        if (description != null) {
+            description = description.trim();
+            if (description.isEmpty()) {
+                description = null;
+            }
+        }
+
+        RECORDER.addMarker(new ReplayMarker(colour, position, description));
+    }
 
     private void deleteUnusedReplayStates() {
         Path flashbackDir = Flashback.getDataDirectory();

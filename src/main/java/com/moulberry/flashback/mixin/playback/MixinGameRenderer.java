@@ -69,30 +69,6 @@ public abstract class MixinGameRenderer {
     @Shadow
     private boolean effectActive;
 
-    @Inject(method = "render", at = @At("HEAD"), cancellable = true)
-    public void render(DeltaTracker deltaTracker, boolean bl, CallbackInfo ci) {
-        if (Flashback.isExporting()) {
-            int i = (int)(this.minecraft.mouseHandler.xpos() * (double)this.minecraft.getWindow().getGuiScaledWidth() / (double)this.minecraft.getWindow().getScreenWidth());
-            int j = (int)(this.minecraft.mouseHandler.ypos() * (double)this.minecraft.getWindow().getGuiScaledHeight() / (double)this.minecraft.getWindow().getScreenHeight());
-            RenderSystem.viewport(0, 0, this.minecraft.getWindow().getWidth(), this.minecraft.getWindow().getHeight());
-            boolean bl2 = this.minecraft.isGameLoadFinished();
-            if (bl2 && bl && this.minecraft.level != null) {
-                this.minecraft.getProfiler().push("level");
-                this.renderLevel(deltaTracker);
-                this.minecraft.levelRenderer.doEntityOutline();
-                if (this.postEffect != null && this.effectActive) {
-                    RenderSystem.disableBlend();
-                    RenderSystem.disableDepthTest();
-                    RenderSystem.resetTextureMatrix();
-                    this.postEffect.process(deltaTracker.getGameTimeDeltaTicks());
-                }
-                this.minecraft.getMainRenderTarget().bindWrite(true);
-            }
-
-            ci.cancel();
-        }
-    }
-
     @WrapOperation(method = "renderItemInHand", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/multiplayer/MultiPlayerGameMode;getPlayerMode()Lnet/minecraft/world/level/GameType;"))
     public GameType getPlayerMode(MultiPlayerGameMode instance, Operation<GameType> original) {
         if (Flashback.getSpectatingPlayer() != null) {

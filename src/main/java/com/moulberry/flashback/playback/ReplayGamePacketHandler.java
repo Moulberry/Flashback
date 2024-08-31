@@ -145,7 +145,10 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
                 }
             }
 
+            ((ServerLevelExt) level).flashback$setCanSpawnEntities(true);
             level.addFreshEntity(pendingEntity);
+            ((ServerLevelExt) level).flashback$setCanSpawnEntities(false);
+
             ChunkPos chunkPos = new ChunkPos(pendingEntity.blockPosition());
             level.getChunkSource().addRegionTicket(ReplayServer.ENTITY_LOAD_TICKET, chunkPos, 3, chunkPos);
         }
@@ -263,7 +266,10 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
             existingEntity.discard();
         }
 
-        this.level().addFreshEntity(entity);
+        ServerLevel level = this.level();
+        ((ServerLevelExt) level).flashback$setCanSpawnEntities(true);
+        level.addFreshEntity(entity);
+        ((ServerLevelExt) level).flashback$setCanSpawnEntities(false);
     }
 
     @Override
@@ -636,7 +642,8 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
         GameProfile gameProfile = ByteBufCodecs.GAME_PROFILE.decode(registryFriendlyByteBuf);
         GameType gameType = GameType.byId(registryFriendlyByteBuf.readVarInt());
 
-        if (this.getEntityOrPending(this.localPlayerId) == null) {
+        Entity existing = this.localPlayerId == -1 ? null : this.getEntityOrPending(this.localPlayerId);
+        if (existing == null) {
             this.spawnPlayer(addEntityPacket, gameProfile, gameType);
         }
     }
@@ -669,7 +676,6 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
                 false, commonPlayerSpawnInfo.seed(), List.of(), false, null);
             serverLevel.noSave = true;
             this.replayServer.levels.put(dimension, serverLevel);
-            this.replayServer.followLocalPlayerNextTick = true;
 
             if (oldLevel != null) {
                 this.replayServer.closeLevel(oldLevel);
@@ -677,16 +683,14 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
         }
 
         ServerLevel newLevel = this.replayServer.getLevel(dimension);
+        ((ServerLevelExt) newLevel).flashback$setCanSpawnEntities(false);
         ((ServerLevelExt) newLevel).flashback$setSeedHash(commonPlayerSpawnInfo.seed());
+        this.replayServer.followLocalPlayerNextTickIfWrongDimension = true;
 
         if (newLevel == oldLevel) {
             // Change to new dimension
             this.currentDimension = commonPlayerSpawnInfo.dimension();
             this.replayServer.spawnLevel = this.currentDimension;
-
-            if (!this.replayServer.isProcessingSnapshot) {
-                this.replayServer.followLocalPlayerNextTickIfFar = true;
-            }
             return;
         }
 
@@ -695,9 +699,10 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
             localPlayer.teleportTo(newLevel, 0.0, 0.0, 0.0, Set.of(), 0.0f, 0.0f);
         }
         for (ReplayPlayer replayViewer : this.replayServer.getReplayViewers()) {
-            replayViewer.teleportTo(newLevel, 0.0, 0.0, 0.0, Set.of(), 0.0f, 0.0f);
+            replayViewer.teleportTo(newLevel, replayViewer.getX(), replayViewer.getY(), replayViewer.getZ(), Set.of(),
+                replayViewer.getYRot(), replayViewer.getXRot());
+            replayViewer.followLocalPlayerNextTick = true;
         }
-        this.replayServer.followLocalPlayerNextTick = true;
 
         // Delete current dimension
         if (this.currentDimension == Level.OVERWORLD) {

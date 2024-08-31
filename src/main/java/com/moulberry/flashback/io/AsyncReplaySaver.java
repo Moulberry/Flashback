@@ -1,5 +1,6 @@
 package com.moulberry.flashback.io;
 
+import com.mojang.authlib.GameProfile;
 import com.mojang.blaze3d.platform.NativeImage;
 import com.moulberry.flashback.CachedChunkPacket;
 import com.moulberry.flashback.Flashback;
@@ -196,7 +197,12 @@ public class AsyncReplaySaver {
                         registryFriendlyByteBuf.writeFloat(localPlayer.getYHeadRot());
                         registryFriendlyByteBuf.writeVec3(localPlayer.getDeltaMovement());
 
-                        ByteBufCodecs.GAME_PROFILE.encode(registryFriendlyByteBuf, localPlayer.getGameProfile());
+                        GameProfile currentProfile = localPlayer.getGameProfile();
+                        GameProfile newProfile = new GameProfile(currentProfile.getId(), currentProfile.getName());
+                        newProfile.getProperties().putAll(Minecraft.getInstance().getGameProfile().getProperties());
+                        newProfile.getProperties().putAll(currentProfile.getProperties());
+
+                        ByteBufCodecs.GAME_PROFILE.encode(registryFriendlyByteBuf, newProfile);
 
                         registryFriendlyByteBuf.writeVarInt(Minecraft.getInstance().gameMode.getPlayerMode().getId());
 

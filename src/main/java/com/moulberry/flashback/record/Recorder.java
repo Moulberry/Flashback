@@ -139,6 +139,10 @@ public class Recorder {
         }
     }
 
+    public void addMarker(ReplayMarker marker) {
+        this.metadata.replayMarkers.put(this.writtenTicks, marker);
+    }
+
     public void setRegistryAccess(RegistryAccess registryAccess) {
         this.asyncReplaySaver.submit(writer -> writer.setRegistryAccess(registryAccess));
         this.gamePacketCodec = GameProtocols.CLIENTBOUND_TEMPLATE.bind(RegistryFriendlyByteBuf.decorator(registryAccess)).codec();
@@ -224,6 +228,10 @@ public class Recorder {
 
             int chunkId = this.metadata.chunks.size();
             String chunkName = "c" + chunkId + ".flashback";
+
+            if (changedDimensions && Flashback.getConfig().markDimensionChanges) {
+                this.addMarker(new ReplayMarker(0xAA00AA, null, "Changed Dimension"));
+            }
 
             var chunkMeta = new FlashbackChunkMeta();
             chunkMeta.duration = this.writtenTicksInChunk;
@@ -385,6 +393,10 @@ public class Recorder {
                 this.lastPositions.put(entity, position);
                 changedPositions.add(new IdWithPosition(entity.getId(), position));
             }
+        }
+
+        if (changedPositions.isEmpty()) {
+            return;
         }
 
         this.asyncReplaySaver.submit(writer -> {

@@ -46,6 +46,10 @@ public class FlashbackConfig {
     @OptionDescription("flashback.option.hide_pause_menu_controls.description")
     public boolean hidePauseMenuControls = false;
 
+    @OptionCaption("flashback.option.mark_dimension_changes")
+    @OptionDescription("flashback.option.mark_dimension_changes.description")
+    public boolean markDimensionChanges = true;
+
     public Set<String> openedWindows = new HashSet<>();
 
     @SuppressWarnings("unchecked")

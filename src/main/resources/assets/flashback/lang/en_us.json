@@ -16,5 +16,7 @@
   "flashback.option.quicksave": "Quicksave",
   "flashback.option.quicksave.description": "Save the replay with default values instead of opening the Save Replay screen",
   "flashback.option.hide_pause_menu_controls": "Hide Pause Controls",
-  "flashback.option.hide_pause_menu_controls.description": "Hide Pause (ESC) menu controls for starting/finishing a replay. The commands will still work"
+  "flashback.option.hide_pause_menu_controls.description": "Hide Pause (ESC) menu controls for starting/finishing a replay. The commands will still work",
+  "flashback.option.mark_dimension_changes": "Mark Dimension Changes",
+  "flashback.option.mark_dimension_changes.description": "Automatically add a marker to the replay when switching dimensions"
 }

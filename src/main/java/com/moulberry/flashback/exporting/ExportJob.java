@@ -72,6 +72,8 @@ public class ExportJob {
     private long encodeTimeNanos = 0;
     private long downloadTimeNanos = 0;
 
+    private double currentTickDouble = 0.0;
+
     private double audioSamples = 0.0;
 
     private final AtomicBoolean finishedServerTick = new AtomicBoolean(false);
@@ -99,6 +101,10 @@ public class ExportJob {
 
     public int getHeight() {
         return this.settings.resolutionY() * (this.settings.ssaa() ? 2 : 1);
+    }
+
+    public double getCurrentTickDouble() {
+        return this.currentTickDouble;
     }
 
     public Random getParticleRandom() {
@@ -189,7 +195,7 @@ public class ExportJob {
         double lastTickDouble = 0;
 
         for (int tickIndex = 0; tickIndex < ticks.size(); tickIndex++) {
-            double currentTickDouble = ticks.getDouble(tickIndex);
+            this.currentTickDouble = ticks.getDouble(tickIndex);
             float deltaTicksFloat = (float)(currentTickDouble - lastTickDouble);
             lastTickDouble = currentTickDouble;
             int currentTick = (int) currentTickDouble;
