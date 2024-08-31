@@ -7,12 +7,14 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class DiscreteCameraPath {
-    private final List<Vector3f> positions;
-    private final List<Quaternionf> rotations;
+    private List<Vector3f> positions;
+    private List<Quaternionf> rotations;
+    private List<Float> fovs;
 
     public DiscreteCameraPath() {
         this.positions = new ArrayList<>();
         this.rotations = new ArrayList<>();
+        this.fovs = new ArrayList<>();
     }
 
     public List<Vector3f> getPositions() {
@@ -23,12 +25,20 @@ public class DiscreteCameraPath {
         return rotations;
     }
 
+    public List<Float> getFovs() {
+        return fovs;
+    }
+
     public void addPosition(Vector3f position) {
         this.positions.add(position);
     }
 
     public void addRotation(Quaternionf rotation) {
         this.rotations.add(rotation);
+    }
+
+    public void addFov(float fov){
+        fovs.add(fov);
     }
 
     public void addPositionAndRotation(Vector3f position, Quaternionf rotation) {

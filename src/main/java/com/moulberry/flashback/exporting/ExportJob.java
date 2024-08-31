@@ -21,6 +21,7 @@ import com.moulberry.flashback.keyframe.types.TimelapseKeyframeType;
 import com.moulberry.flashback.state.EditorState;
 import com.moulberry.flashback.state.EditorStateManager;
 import com.moulberry.flashback.playback.ReplayServer;
+import com.moulberry.flashback.visuals.CameraRotation;
 import it.unimi.dsi.fastutil.doubles.DoubleArrayList;
 import it.unimi.dsi.fastutil.doubles.DoubleList;
 import net.minecraft.client.Camera;
@@ -282,7 +283,8 @@ public class ExportJob {
             if(exportCameraPath != null){
                 Vector3f cameraPosition = Minecraft.getInstance().gameRenderer.getMainCamera().getPosition().toVector3f();
                 Quaternionf cameraRotation = Minecraft.getInstance().gameRenderer.getMainCamera().rotation();
-                exportCameraPath.addToPath(cameraPosition, cameraRotation);
+                exportCameraPath.addToPath(cameraPosition, CameraRotation.modifyViewQuaternion(cameraRotation),
+                        (float) Math.toRadians(settings.editorState().replayVisuals.overrideFovAmount));
             }
 
             Minecraft.getInstance().gameRenderer.render(new FixedDeltaTracker(deltaTicksFloat, (float) partialTick), true);

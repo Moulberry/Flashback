@@ -6,8 +6,10 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.moulberry.flashback.keyframe.KeyframeType;
 import com.moulberry.flashback.keyframe.handler.KeyframeHandler;
+import com.moulberry.flashback.keyframe.handler.MinecraftKeyframeHandler;
 import com.moulberry.flashback.state.EditorState;
 import com.moulberry.flashback.state.KeyframeTrack;
+import net.minecraft.client.Minecraft;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
@@ -100,8 +102,8 @@ public class ExportCameraPath {
         JsonObject cameraObject = new JsonObject();
         cameraObject.addProperty("name", "Camera");
         JsonObject perspective = new JsonObject();
-        perspective.addProperty("aspectRatio", 1.7777777777777777); // hard-coded for now, replace with current aspect ratio
-        perspective.addProperty("yfov", 0.39959652046304894); // hard-coded for now, replace later, and allow for keyframed fov changes
+        perspective.addProperty("aspectRatio", exportGLTF.editorState().replayVisuals.changeAspectRatio.aspectRatio());
+        perspective.addProperty("yfov", 1.22173); // hard-coded for now, replace later, and allow for keyframed fov changes
         perspective.addProperty("zfar", 1000); // constant, might just leave as it can be edited in 3D editor
         perspective.addProperty("znear", 0.10000000149011612); // constant, might just leave as it can be edited in 3D editor
         cameraObject.add("perspective", perspective);
@@ -119,12 +121,12 @@ public class ExportCameraPath {
 
         JsonObject targetTranslation = new JsonObject();
         JsonObject targetRotation = new JsonObject();
+
         targetTranslation.addProperty("node", 0);
         targetTranslation.addProperty("path", "translation");
 
         targetRotation.addProperty("node", 0);
         targetRotation.addProperty("path", "rotation");
-
 
         channelTranslation.addProperty("sampler", 0);
         channelTranslation.add("target", targetTranslation);
@@ -271,10 +273,12 @@ public class ExportCameraPath {
         // rotation buffer
         byte[] rotationData = new byte[4 * 4 * (cameraPath.getRotations().size())];
         for(int i = 0;i<cameraPath.getRotations().size();i++){
-            float rotationX = cameraPath.getRotations().get(i).x;
-            float rotationY = cameraPath.getRotations().get(i).y;
-            float rotationZ = cameraPath.getRotations().get(i).z;
-            float rotationW = cameraPath.getRotations().get(i).w;
+
+            Quaternionf rolledQuaternion = new Quaternionf(cameraPath.getRotations().get(i));
+            float rotationX = rolledQuaternion.x;
+            float rotationY = rolledQuaternion.y;
+            float rotationZ = rolledQuaternion.z;
+            float rotationW = rolledQuaternion.w;
 
             byte[] rotationBinary = ByteBuffer.allocate(16).order(ByteOrder.LITTLE_ENDIAN)
                     .putFloat(rotationX)
@@ -301,8 +305,9 @@ public class ExportCameraPath {
         return header + Base64.getEncoder().encodeToString(combinedData);
     }
 
-    public void addToPath(Vector3f position, Quaternionf rotation){
+    public void addToPath(Vector3f position, Quaternionf rotation, float fov){
         discreteCameraPath.addPositionAndRotation(position, rotation);
+        discreteCameraPath.addFov(fov);
     }
 
 }
