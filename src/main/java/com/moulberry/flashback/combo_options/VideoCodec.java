@@ -45,9 +45,11 @@ public enum VideoCodec implements ComboOption {
     }
 
     public boolean supportsTransparency() {
-        if (this == VP9) {
+        if (this == VP9 || this == H264 || this == H265) {
             // VP9 supports transparency (yuva420p), but apparently most decoders for it do not. Let's not mark it as supporting transparency
             // See also: https://trac.ffmpeg.org/ticket/8468
+
+            // H264/H265 sometimes claim to support transparency but don't, also ignore them as well
             return false;
         }
         if (this.encoders == null) {

@@ -11,6 +11,7 @@ import com.moulberry.flashback.keyframe.KeyframeType;
 import com.moulberry.flashback.keyframe.KeyframeRegistry;
 import com.moulberry.flashback.keyframe.handler.MinecraftKeyframeHandler;
 import com.moulberry.flashback.keyframe.types.TimelapseKeyframeType;
+import com.moulberry.flashback.record.ReplayMarker;
 import com.moulberry.flashback.state.EditorStateHistoryAction;
 import com.moulberry.flashback.keyframe.impl.TimelapseKeyframe;
 import com.moulberry.flashback.state.EditorStateHistoryEntry;
@@ -256,6 +257,12 @@ public class TimelineWindow {
             zoomBarHovered = mouseY >= y + height - zoomBarHeight && mouseY <= y + height &&
                 mouseX >= zoomBarMin && mouseX <= zoomBarMax;
 
+            // Middle divider (x)
+            drawList.addLine(x + middleX, y + timestampHeight, x + middleX, y + height, -1);
+
+            // Middle divider (y)
+            drawList.addLine(0, y + middleY, width, y + middleY, -1);
+
             renderKeyframeElements(replayServer, editorState, x, y + middleY, cursorTicks, middleX);
 
             drawList.pushClipRect(x + middleX, y, x + width, y + height);
@@ -267,6 +274,32 @@ public class TimelineWindow {
             drawList.popClipRect();
 
             renderSeparators(minorsPerMajor, x, middleX, minorSeparatorWidth, errorOffset, width, drawList, y, timestampHeight, middleY, minTicks, ticksPerMinor, showSubSeconds, majorSeparatorHeight, minorSeparatorHeight);
+
+            // render markers
+            {
+
+                for (int tick = minTicks; tick <= minTicks + availableTicks; tick++) {
+                    Map.Entry<Integer, ReplayMarker> markerEntry = metadata.replayMarkers.ceilingEntry(tick);
+                    if (markerEntry == null || markerEntry.getKey() > minTicks + availableTicks) {
+                        break;
+                    }
+
+                    int markerTick = markerEntry.getKey();
+                    ReplayMarker marker = markerEntry.getValue();
+
+                    float markerX = x + replayTickToTimelineX(markerTick);
+                    int colour = marker.colour();
+                    colour = ((colour >> 16) & 0xFF) | (colour & 0xFF00) | ((colour << 16) & 0xFF0000) | 0xFF000000; // change endianness
+                    drawList.addCircleFilled(markerX, y+middleY, 5, colour);
+
+                    if (!ImGui.isAnyMouseDown() && marker.description() != null && Math.abs(markerX - mouseX) <= 5 && Math.abs(y+middleY - mouseY) <= 5) {
+                        ImGuiHelper.drawTooltip(marker.description());
+                    }
+
+                    tick = markerTick + 1;
+                }
+            }
+
             renderPlaybackHead(cursorX, x, middleX, width, cursorTicks, currentReplayTick, drawList, y, middleY, timestampHeight, height, zoomBarHeight);
 
             if (dragSelectOrigin != null) {
@@ -286,11 +319,6 @@ public class TimelineWindow {
             if (editorState.zoomMax >= 1.0) {
                 drawList.addLine(x + width -2, y + timestampHeight, x + width -2, y + height - zoomBarHeight, -1);
             }
-            // Middle divider (x)
-            drawList.addLine(x + middleX, y + timestampHeight, x + middleX, y + height, -1);
-
-            // Middle divider (y)
-            drawList.addLine(0, y + middleY, width, y + middleY, -1);
 
             // Zoom Bar
             if (zoomBarExpanded) {
@@ -488,20 +516,20 @@ public class TimelineWindow {
         boolean pressedCopy = ctrlPressed && ImGui.isKeyPressed(GLFW.GLFW_KEY_C, false);
         boolean pressedPaste = ctrlPressed && ImGui.isKeyPressed(GLFW.GLFW_KEY_V, false);
 
-        boolean pressedDelete = ImGui.isKeyPressed(GLFW.GLFW_KEY_DELETE) || ImGui.isKeyPressed(GLFW.GLFW_KEY_BACKSPACE);
+        boolean pressedDelete = ImGui.isKeyPressed(GLFW.GLFW_KEY_DELETE, false) || ImGui.isKeyPressed(GLFW.GLFW_KEY_BACKSPACE, false);
 
-        if (ImGui.isKeyPressed(GLFW.GLFW_KEY_LEFT)) {
+        if (ImGui.isKeyPressed(GLFW.GLFW_KEY_LEFT, false)) {
             pendingStepBackwardsTicks += 1;
         } else if (pendingStepBackwardsTicks > 0 && !ImGui.isKeyDown(GLFW.GLFW_KEY_LEFT)) {
             replayServer.goToReplayTick(Math.max(0, replayServer.getReplayTick() - pendingStepBackwardsTicks));
             replayServer.forceApplyKeyframes.set(true);
             pendingStepBackwardsTicks = 0;
         }
-        if (ImGui.isKeyPressed(GLFW.GLFW_KEY_RIGHT)) {
+        if (ImGui.isKeyPressed(GLFW.GLFW_KEY_RIGHT, false)) {
             replayServer.goToReplayTick(Math.min(totalTicks, cursorTicks + 1));
             replayServer.forceApplyKeyframes.set(true);
         }
-        if (ImGui.isKeyPressed(GLFW.GLFW_KEY_UP)) {
+        if (ImGui.isKeyPressed(GLFW.GLFW_KEY_UP, false)) {
             int nextKeyframeTick;
             if (editorState.exportStartTicks >= 0 && editorState.exportStartTicks > cursorTicks) {
                 nextKeyframeTick = editorState.exportStartTicks;
@@ -510,6 +538,13 @@ public class TimelineWindow {
             } else {
                 nextKeyframeTick = totalTicks;
             }
+
+            FlashbackMeta meta = replayServer.getMetadata();
+            Integer nextMarker = meta.replayMarkers.ceilingKey(cursorTicks + 1);
+            if (nextMarker != null && nextMarker < nextKeyframeTick) {
+                nextKeyframeTick = nextMarker;
+            }
+
             for (KeyframeTrack track : editorState.keyframeTracks) {
                 Integer ceilingKey = track.keyframesByTick.ceilingKey(cursorTicks+1);
                 if (ceilingKey != null && ceilingKey < nextKeyframeTick) {
@@ -519,7 +554,7 @@ public class TimelineWindow {
             replayServer.goToReplayTick(nextKeyframeTick);
             replayServer.forceApplyKeyframes.set(true);
         }
-        if (ImGui.isKeyPressed(GLFW.GLFW_KEY_DOWN)) {
+        if (ImGui.isKeyPressed(GLFW.GLFW_KEY_DOWN, false)) {
             int previousKeyframeTick;
             if (editorState.exportEndTicks >= 0 && editorState.exportEndTicks < cursorTicks) {
                 previousKeyframeTick = editorState.exportEndTicks;
@@ -528,6 +563,13 @@ public class TimelineWindow {
             } else {
                 previousKeyframeTick = 0;
             }
+
+            FlashbackMeta meta = replayServer.getMetadata();
+            Integer lastMarker = meta.replayMarkers.floorKey(cursorTicks - 1);
+            if (lastMarker != null && lastMarker > previousKeyframeTick) {
+                previousKeyframeTick = lastMarker;
+            }
+
             for (KeyframeTrack track : editorState.keyframeTracks) {
                 Integer floorKey = track.keyframesByTick.floorKey(cursorTicks-1);
                 if (floorKey != null && floorKey > previousKeyframeTick) {
@@ -537,10 +579,10 @@ public class TimelineWindow {
             replayServer.goToReplayTick(previousKeyframeTick);
             replayServer.forceApplyKeyframes.set(true);
         }
-        if (ImGui.isKeyPressed(GLFW.GLFW_KEY_Z) && (ImGui.isKeyDown(GLFW.GLFW_KEY_LEFT_CONTROL) || ImGui.isKeyDown(GLFW.GLFW_KEY_RIGHT_CONTROL))) {
+        if (ImGui.isKeyPressed(GLFW.GLFW_KEY_Z, false) && (ImGui.isKeyDown(GLFW.GLFW_KEY_LEFT_CONTROL) || ImGui.isKeyDown(GLFW.GLFW_KEY_RIGHT_CONTROL))) {
             editorState.undo(ReplayUI::setInfoOverlayShort);
         }
-        if (ImGui.isKeyPressed(GLFW.GLFW_KEY_Y) && (ImGui.isKeyDown(GLFW.GLFW_KEY_LEFT_CONTROL) || ImGui.isKeyDown(GLFW.GLFW_KEY_RIGHT_CONTROL))) {
+        if (ImGui.isKeyPressed(GLFW.GLFW_KEY_Y, false) && (ImGui.isKeyDown(GLFW.GLFW_KEY_LEFT_CONTROL) || ImGui.isKeyDown(GLFW.GLFW_KEY_RIGHT_CONTROL))) {
             editorState.redo(ReplayUI::setInfoOverlayShort);
         }
 
@@ -642,7 +684,14 @@ public class TimelineWindow {
         if (hoveredControls) {
             // Skip backwards
             if (hoveredSkipBackwards) {
-                replayServer.goToReplayTick(0);
+                FlashbackMeta meta = replayServer.getMetadata();
+                Integer lastMarker = meta.replayMarkers.floorKey(cursorTicks - 1);
+
+                if (lastMarker != null) {
+                    replayServer.goToReplayTick(lastMarker);
+                } else {
+                    replayServer.goToReplayTick(0);
+                }
                 return;
             }
 
@@ -693,7 +742,14 @@ public class TimelineWindow {
 
             // Skip forward
             if (hoveredSkipForwards) {
-                replayServer.goToReplayTick(replayServer.getTotalReplayTicks());
+                FlashbackMeta meta = replayServer.getMetadata();
+                Integer nextMarker = meta.replayMarkers.ceilingKey(cursorTicks + 1);
+
+                if (nextMarker != null) {
+                    replayServer.goToReplayTick(nextMarker);
+                } else {
+                    replayServer.goToReplayTick(replayServer.getTotalReplayTicks());
+                }
                 return;
             }
         }

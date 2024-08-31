@@ -1,8 +1,11 @@
 package com.moulberry.flashback.mixin.replay_server;
 
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.mojang.authlib.GameProfile;
 import com.mojang.authlib.properties.Property;
 import com.moulberry.flashback.playback.ReplayServer;
+import net.minecraft.network.protocol.login.ClientboundGameProfilePacket;
 import net.minecraft.network.protocol.login.ServerboundHelloPacket;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerLoginPacketListenerImpl;
@@ -41,6 +44,15 @@ public abstract class MixinServerLoginPacketListenerImpl {
             this.startClientVerification(gameProfile);
             ci.cancel();
         }
+    }
+
+    // Disable strict error handling
+    @WrapOperation(method = "finishLoginAndWaitForClient", at = @At(value = "NEW", target = "net/minecraft/network/protocol/login/ClientboundGameProfilePacket"))
+    public ClientboundGameProfilePacket wrapCreateClientboundGameProfilePacket(GameProfile gameProfile, boolean strict, Operation<ClientboundGameProfilePacket> original) {
+        if (this.server instanceof ReplayServer) {
+            strict = false;
+        }
+        return original.call(gameProfile, strict);
     }
 
 }

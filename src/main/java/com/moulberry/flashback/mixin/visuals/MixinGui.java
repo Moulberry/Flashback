@@ -8,6 +8,7 @@ import com.moulberry.flashback.editor.ui.ReplayUI;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.gui.Gui;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.HitResult;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -46,6 +47,15 @@ public class MixinGui {
     public void renderOverlayMessage(GuiGraphics guiGraphics, DeltaTracker deltaTracker, CallbackInfo ci) {
         EditorState editorState = EditorStateManager.getCurrent();
         if (editorState != null && !editorState.replayVisuals.showActionBar) {
+            ci.cancel();
+        }
+    }
+
+    @Inject(method = "renderVignette", at = @At("HEAD"), cancellable = true)
+    public void renderVignette(GuiGraphics guiGraphics, Entity entity, CallbackInfo ci) {
+        // The vignette ruins the transparency when trying to export with alpha
+        // The vignette is also probably unwanted in general when trying to record, so lets just get rid of it
+        if (Flashback.isInReplay()) {
             ci.cancel();
         }
     }
