@@ -58,6 +58,10 @@ public class SimpleVoiceChatRecorder {
     }
 
     private static void submitSoundPacket(FlashbackVoiceChatSound soundPacket) {
+        if (!Flashback.getConfig().recordVoiceChat) {
+            return;
+        }
+
         Flashback.RECORDER.submitCustomTask(writer -> {
             writer.startAction(ActionSimpleVoiceChatSound.INSTANCE);
             FlashbackVoiceChatSound.STREAM_CODEC.encode(writer.friendlyByteBuf(), soundPacket);

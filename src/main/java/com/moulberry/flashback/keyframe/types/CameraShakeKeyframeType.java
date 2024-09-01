@@ -71,10 +71,10 @@ public class CameraShakeKeyframeType implements KeyframeType<CameraShakeKeyframe
             if (ImGui.button("Add")) {
                 if (cameraShakeSplitXYKeyframeInput[0]) {
                     return new CameraShakeKeyframe(cameraShakeFrequencyXKeyframeInput[0], cameraShakeAmplitudeXKeyframeInput[0],
-                        cameraShakeFrequencyYKeyframeInput[0], cameraShakeAmplitudeYKeyframeInput[0]);
+                        cameraShakeFrequencyYKeyframeInput[0], cameraShakeAmplitudeYKeyframeInput[0], true);
                 } else {
                     return new CameraShakeKeyframe(cameraShakeFrequencyXKeyframeInput[0], cameraShakeAmplitudeXKeyframeInput[0],
-                        cameraShakeFrequencyXKeyframeInput[0], cameraShakeAmplitudeXKeyframeInput[0]);
+                        cameraShakeFrequencyXKeyframeInput[0], cameraShakeAmplitudeXKeyframeInput[0], false);
                 }
             }
             ImGui.sameLine();

@@ -22,7 +22,9 @@
   "flashback.option.mark_dimension_changes": "Mark Dimension Changes",
   "flashback.option.mark_dimension_changes.description": "Automatically add a marker to the replay when switching dimensions",
   "flashback.option.record_hotbar": "Record Hotbar",
-  "flashback.option.record_hotbar.description": "Adds first-person hotbar information to recorded replays",
+  "flashback.option.record_hotbar.description": "Adds first-person hotbar information into the replay",
   "flashback.option.local_player_updates_per_second": "First-person Updates",
-  "flashback.option.local_player_updates_per_second.description": "The update rate per second for the position/angle of the first-person player"
+  "flashback.option.local_player_updates_per_second.description": "The update rate per second for the position/angle of the first-person player",
+  "flashback.option.record_voice_chat": "Record Voice Chat",
+  "flashback.option.record_voice_chat.description": "Adds voice chat from SimpleVoiceChat into the replay"
 }

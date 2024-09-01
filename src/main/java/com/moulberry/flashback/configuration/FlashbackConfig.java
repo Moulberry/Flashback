@@ -55,8 +55,13 @@ public class FlashbackConfig {
 
     @OptionCaption("flashback.option.local_player_updates_per_second")
     @OptionDescription("flashback.option.local_player_updates_per_second.description")
-    @IntOptionRange(min = 20, max = 120, step = 20)
+    @OptionIntRange(min = 20, max = 120, step = 20)
     public int localPlayerUpdatesPerSecond = 20;
+
+    @OptionCaption("flashback.option.record_voice_chat")
+    @OptionDescription("flashback.option.record_voice_chat.description")
+    @OptionIfModLoaded("voicechat")
+    public boolean recordVoiceChat = false;
 
     public Set<String> openedWindows = new HashSet<>();
     public long nextUnsupportedModLoaderWarning = 0;
@@ -74,6 +79,11 @@ public class FlashbackConfig {
 
                 OptionCaption caption = field.getDeclaredAnnotation(OptionCaption.class);
                 if (caption == null) {
+                    continue;
+                }
+
+                OptionIfModLoaded ifModLoaded = field.getDeclaredAnnotation(OptionIfModLoaded.class);
+                if (ifModLoaded != null && !FabricLoader.getInstance().isModLoaded(ifModLoaded.value())) {
                     continue;
                 }
 
@@ -97,7 +107,7 @@ public class FlashbackConfig {
                         }
                     }));
                 } else if (field.getType() == int.class) {
-                    IntOptionRange range = field.getDeclaredAnnotation(IntOptionRange.class);
+                    OptionIntRange range = field.getDeclaredAnnotation(OptionIntRange.class);
                     if (range == null) {
                         continue;
                     }
