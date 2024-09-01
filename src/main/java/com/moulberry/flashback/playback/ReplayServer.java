@@ -4,12 +4,18 @@ import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.mojang.authlib.GameProfile;
 import com.moulberry.flashback.Flashback;
+import com.moulberry.flashback.action.PositionAndAngle;
 import com.moulberry.flashback.ext.LevelChunkExt;
 import com.moulberry.flashback.TempFolderProvider;
 import com.moulberry.flashback.keyframe.handler.ReplayServerKeyframeHandler;
+import com.moulberry.flashback.packet.FlashbackAccurateEntityPosition;
 import com.moulberry.flashback.packet.FlashbackClearParticles;
 import com.moulberry.flashback.packet.FlashbackForceClientTick;
 import com.moulberry.flashback.packet.FlashbackInstantlyLerp;
+import com.moulberry.flashback.packet.FlashbackRemoteExperience;
+import com.moulberry.flashback.packet.FlashbackRemoteFoodData;
+import com.moulberry.flashback.packet.FlashbackRemoteSelectHotbarSlot;
+import com.moulberry.flashback.packet.FlashbackRemoteSetSlot;
 import com.moulberry.flashback.state.EditorState;
 import com.moulberry.flashback.state.EditorStateManager;
 import com.moulberry.flashback.ext.MinecraftExt;
@@ -30,6 +36,7 @@ import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.server.IntegratedServer;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.codec.StreamCodec;
@@ -53,8 +60,11 @@ import net.minecraft.server.players.PlayerList;
 import net.minecraft.world.BossEvent;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.flag.FeatureFlagSet;
+import net.minecraft.world.food.FoodData;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.WorldDataConfiguration;
@@ -75,9 +85,11 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.TreeMap;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BooleanSupplier;
@@ -108,7 +120,7 @@ public class ReplayServer extends IntegratedServer {
     public boolean followLocalPlayerNextTickIfWrongDimension = false;
     public boolean isProcessingSnapshot = false;
     private boolean processedSnapshot = false;
-    private volatile boolean fastForwarding = false;
+    public volatile boolean fastForwarding = false;
 
     private int printFailedDecodePacketCount = 8;
 
@@ -409,6 +421,18 @@ public class ReplayServer extends IntegratedServer {
         }
     }
 
+    public float getPartialServerTick() {
+        if (this.replayPaused || this.isPaused()) {
+            return 1.0f;
+        } else {
+            long currentNanos = Util.getNanos();
+            long nanosPerTick = this.tickRateManager().nanosecondsPerTick();
+
+            double partial = (currentNanos - this.lastTickTimeNanos) / (double) nanosPerTick;
+            return Math.max(0, Math.min(1, (float) partial));
+        }
+    }
+
     public int getTotalReplayTicks() {
         return this.totalTicks;
     }
@@ -546,6 +570,13 @@ public class ReplayServer extends IntegratedServer {
         this.gamePacketHandler.handleCreateLocalPlayer(friendlyByteBuf);
     }
 
+    public void handleAccuratePlayerPosition(RegistryFriendlyByteBuf friendlyByteBuf) {
+        var packet = FlashbackAccurateEntityPosition.STREAM_CODEC.decode(friendlyByteBuf);
+        for (ReplayPlayer replayViewer : this.replayViewers) {
+            ServerPlayNetworking.send(replayViewer, packet);
+        }
+    }
+
     public void handleMoveEntities(RegistryFriendlyByteBuf friendlyByteBuf) {
         this.gamePacketHandler.flushPendingEntities();
         this.configurationPacketHandler.flushPendingConfiguration();
@@ -622,7 +653,8 @@ public class ReplayServer extends IntegratedServer {
 
     public void clearLevel(ServerLevel serverLevel) {
         for (ServerPlayer player : new ArrayList<>(serverLevel.players())) {
-            if (player instanceof ReplayPlayer) {
+            if (player instanceof ReplayPlayer replayPlayer) {
+                replayPlayer.lastFirstPersonDataUUID = null;
                 continue;
             }
             player.connection.disconnect(Component.empty());
@@ -664,15 +696,30 @@ public class ReplayServer extends IntegratedServer {
             replayReader.handleSnapshot(this);
         }
 
+//        this.accurateEntityPositions = this.pendingAccurateEntityPositions;
+//        this.pendingAccurateEntityPositions = new ConcurrentHashMap<>();
         this.lastReplayTick = this.currentTick;
         this.lastTickTimeNanos = this.nextTickTimeNanos - this.tickRateManager().nanosecondsPerTick();
 
         // Update list of replay viewers
         this.replayViewers.clear();
+
         for (ServerPlayer player : this.getPlayerList().getPlayers()) {
             if (player instanceof ReplayPlayer replayPlayer) {
-                Entity cameraEntity = replayPlayer.getCamera();
-                replayPlayer.spectatingUuid = cameraEntity == null || cameraEntity == replayPlayer ? null : cameraEntity.getUUID();
+                if (replayPlayer.isShiftKeyDown()) {
+                    replayPlayer.spectatingUuid = null;
+                    replayPlayer.spectatingUuidTickCount = 0;
+                } else {
+                    Entity cameraEntity = replayPlayer.getCamera();
+                    if (cameraEntity != null && cameraEntity != replayPlayer) {
+                        replayPlayer.spectatingUuid = cameraEntity.getUUID();
+                        replayPlayer.spectatingUuidTickCount = 20;
+                    } else if (replayPlayer.spectatingUuidTickCount > 0) {
+                        replayPlayer.spectatingUuidTickCount -= 1;
+                    } else {
+                        replayPlayer.spectatingUuid = null;
+                    }
+                }
                 this.replayViewers.add(replayPlayer);
             }
         }
@@ -723,6 +770,80 @@ public class ReplayServer extends IntegratedServer {
         }
 
         this.tryFollowLocalPlayer();
+
+        // Update first person data
+        for (ReplayPlayer replayViewer : this.replayViewers) {
+            // Ensure replay viewers are still spectating
+            if (replayViewer.spectatingUuid != null) {
+                Entity camera = replayViewer.getCamera();
+                if (camera == null || camera == replayViewer || camera.isRemoved()) {
+                    Entity targetEntity = replayViewer.serverLevel().getEntity(replayViewer.spectatingUuid);
+                    if (targetEntity != null && !targetEntity.isRemoved()) {
+                        replayViewer.setCamera(targetEntity);
+                    }
+                }
+            }
+
+            Entity camera = replayViewer.getCamera();
+            if (camera != replayViewer && camera instanceof Player playerCamera) {
+                Inventory inventory = playerCamera.getInventory();
+                if (!Objects.equals(replayViewer.lastFirstPersonDataUUID, playerCamera.getUUID())) {
+                    replayViewer.lastFirstPersonDataUUID = playerCamera.getUUID();
+
+                    replayViewer.lastFirstPersonExperienceProgress = playerCamera.experienceProgress;
+                    replayViewer.lastFirstPersonTotalExperience = playerCamera.totalExperience;
+                    replayViewer.lastFirstPersonExperienceLevel = playerCamera.experienceLevel;
+                    ServerPlayNetworking.send(replayViewer, new FlashbackRemoteExperience(playerCamera.getId(), playerCamera.experienceProgress,
+                        playerCamera.totalExperience, playerCamera.experienceLevel));
+
+                    FoodData foodData = playerCamera.getFoodData();
+                    replayViewer.lastFirstPersonFoodLevel = foodData.getFoodLevel();
+                    replayViewer.lastFirstPersonSaturationLevel = foodData.getSaturationLevel();
+                    ServerPlayNetworking.send(replayViewer, new FlashbackRemoteFoodData(playerCamera.getId(), foodData.getFoodLevel(), foodData.getSaturationLevel()));
+
+                    replayViewer.lastFirstPersonSelectedSlot = inventory.selected;
+                    ServerPlayNetworking.send(replayViewer, new FlashbackRemoteSelectHotbarSlot(playerCamera.getId(), inventory.selected));
+
+                    for (int i = 0; i < 9; i++) {
+                        ItemStack hotbarItem = inventory.getItem(i);
+                        replayViewer.lastFirstPersonHotbarItems[i] = hotbarItem.copy();
+                        ServerPlayNetworking.send(replayViewer, new FlashbackRemoteSetSlot(playerCamera.getId(), i, hotbarItem.copy()));
+                    }
+                } else {
+                    if (replayViewer.lastFirstPersonExperienceProgress != playerCamera.experienceProgress ||
+                            replayViewer.lastFirstPersonTotalExperience != playerCamera.totalExperience ||
+                            replayViewer.lastFirstPersonExperienceLevel != playerCamera.experienceLevel) {
+                        replayViewer.lastFirstPersonExperienceProgress = playerCamera.experienceProgress;
+                        replayViewer.lastFirstPersonTotalExperience = playerCamera.totalExperience;
+                        replayViewer.lastFirstPersonExperienceLevel = playerCamera.experienceLevel;
+                        ServerPlayNetworking.send(replayViewer, new FlashbackRemoteExperience(playerCamera.getId(), playerCamera.experienceProgress,
+                            playerCamera.totalExperience, playerCamera.experienceLevel));
+                    }
+
+                    FoodData foodData = playerCamera.getFoodData();
+                    if (replayViewer.lastFirstPersonFoodLevel != foodData.getFoodLevel() || replayViewer.lastFirstPersonSaturationLevel != foodData.getSaturationLevel()) {
+                        replayViewer.lastFirstPersonFoodLevel = foodData.getFoodLevel();
+                        replayViewer.lastFirstPersonSaturationLevel = foodData.getSaturationLevel();
+                        ServerPlayNetworking.send(replayViewer, new FlashbackRemoteFoodData(playerCamera.getId(), foodData.getFoodLevel(), foodData.getSaturationLevel()));
+                    }
+
+                    if (replayViewer.lastFirstPersonSelectedSlot != inventory.selected) {
+                        replayViewer.lastFirstPersonSelectedSlot = inventory.selected;
+                        ServerPlayNetworking.send(replayViewer, new FlashbackRemoteSelectHotbarSlot(playerCamera.getId(), inventory.selected));
+                    }
+
+                    for (int i = 0; i < 9; i++) {
+                        ItemStack hotbarItem = inventory.getItem(i);
+                        if (!ItemStack.matches(replayViewer.lastFirstPersonHotbarItems[i], hotbarItem)) {
+                            replayViewer.lastFirstPersonHotbarItems[i] = hotbarItem.copy();
+                            ServerPlayNetworking.send(replayViewer, new FlashbackRemoteSetSlot(playerCamera.getId(), i, hotbarItem.copy()));
+                        }
+                    }
+                }
+            } else {
+                replayViewer.lastFirstPersonDataUUID = null;
+            }
+        }
 
         // Update resourcepacks
         if (this.remotePacks.isEmpty()) {
@@ -808,21 +929,6 @@ public class ReplayServer extends IntegratedServer {
                     replayViewer.connection.chunkSender.sendNextChunks(replayViewer);
                     ServerPlayNetworking.send(replayViewer, FlashbackInstantlyLerp.INSTANCE);
                     ServerPlayNetworking.send(replayViewer, FlashbackClearParticles.INSTANCE);
-
-                    // Ensure replay viewers are still spectating
-                    if (replayViewer.spectatingUuid != null) {
-                        Entity camera = replayViewer.getCamera();
-                        if (camera == null || camera == replayViewer || camera.isRemoved()) {
-                            Entity targetEntity = replayViewer.serverLevel().getEntity(replayViewer.spectatingUuid);
-                            if (targetEntity != null && !targetEntity.isRemoved()) {
-                                replayViewer.setCamera(targetEntity);
-                            } else {
-                                replayViewer.spectatingUuid = null;
-                            }
-                        } else {
-                            replayViewer.spectatingUuid = null;
-                        }
-                    }
                 }
                 for (ServerLevel level : this.getAllLevels()) {
                     for (ServerPlayer player : level.players()) {

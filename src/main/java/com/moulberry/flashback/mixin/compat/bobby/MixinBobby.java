@@ -11,10 +11,11 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 
 @IfModLoaded("bobby")
-@Mixin(value = Bobby.class, remap = false)
+@Mixin(value = Bobby.class)
 public class MixinBobby {
 
-    @WrapOperation(method = "isEnabled", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/Minecraft;getSingleplayerServer()Lnet/minecraft/client/server/IntegratedServer;"))
+    @WrapOperation(method = "isEnabled", require = 0, remap = false, at = @At(value = "INVOKE",
+        target = "Lnet/minecraft/client/Minecraft;getSingleplayerServer()Lnet/minecraft/client/server/IntegratedServer;"))
     public IntegratedServer isEnabled_getSingleplayerServer(Minecraft instance, Operation<IntegratedServer> original) {
         IntegratedServer server = original.call(instance);
         if (server instanceof ReplayServer) {

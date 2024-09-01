@@ -2,19 +2,25 @@ package com.moulberry.flashback.mixin.playback;
 
 import com.google.common.base.MoreObjects;
 import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.math.Axis;
 import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.ext.ItemInHandRendererExt;
+import com.moulberry.flashback.ext.RemotePlayerExt;
 import net.minecraft.client.player.AbstractClientPlayer;
+import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.ItemInHandRenderer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.ModifyArg;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.UUID;
@@ -43,6 +49,42 @@ public abstract class MixinItemInHandRenderer implements ItemInHandRendererExt {
     @Shadow
     private ItemStack offHandItem;
 
+    @Shadow
+    private static boolean isChargedCrossbow(ItemStack itemStack) {
+        return false;
+    }
+
+    @Unique
+    private static final int RENDER_MAIN_HAND = 1;
+    @Unique
+    private static final int RENDER_OFF_HAND = 2;
+    @Unique
+    private static final int RENDER_BOTH_HANDS = RENDER_MAIN_HAND | RENDER_OFF_HAND;
+
+    @Unique
+    private static int evaluateWhichHandsToRender(AbstractClientPlayer player) {
+        ItemStack mainStack = player.getMainHandItem();
+        ItemStack offStack = player.getOffhandItem();
+        boolean isHoldingBow = mainStack.is(Items.BOW) || offStack.is(Items.BOW);
+        boolean isHoldingCrossbow = mainStack.is(Items.CROSSBOW) || offStack.is(Items.CROSSBOW);
+        if (!isHoldingBow && !isHoldingCrossbow) {
+            return RENDER_BOTH_HANDS;
+        }
+        if (player.isUsingItem()) {
+            ItemStack useStack = player.getUseItem();
+            InteractionHand interactionHand = player.getUsedItemHand();
+            if (!useStack.is(Items.BOW) && !useStack.is(Items.CROSSBOW)) {
+                return interactionHand == InteractionHand.MAIN_HAND && isChargedCrossbow(player.getOffhandItem()) ? RENDER_MAIN_HAND : RENDER_BOTH_HANDS;
+            } else {
+                return interactionHand == InteractionHand.MAIN_HAND ? RENDER_MAIN_HAND : RENDER_OFF_HAND;
+            }
+        }
+        if (isChargedCrossbow(mainStack)) {
+            return RENDER_MAIN_HAND;
+        }
+        return RENDER_BOTH_HANDS;
+    }
+
     @Override
     public void flashback$renderHandsWithItems(float partialTick, PoseStack poseStack, MultiBufferSource.BufferSource bufferSource, AbstractClientPlayer clientPlayer, int i) {
         float m;
@@ -50,19 +92,19 @@ public abstract class MixinItemInHandRenderer implements ItemInHandRendererExt {
         float g = clientPlayer.getAttackAnim(partialTick);
         InteractionHand interactionHand = MoreObjects.firstNonNull(clientPlayer.swingingArm, InteractionHand.MAIN_HAND);
         float h = Mth.lerp(partialTick, clientPlayer.xRotO, clientPlayer.getXRot());
-        // todo: hand selection
-        // ItemInHandRenderer.HandRenderSelection handRenderSelection = evaluateWhichHandsToRender(clientPlayer);
-        // todo: bob
-//        float j = Mth.lerp((float)f, (float)clientPlayer.xBobO, (float)clientPlayer.xBob);
-//        float k = Mth.lerp((float)f, (float)clientPlayer.yBobO, (float)clientPlayer.yBob);
-//        poseStack.mulPose(Axis.XP.rotationDegrees((clientPlayer.getViewXRot(f) - j) * 0.1f));
-//        poseStack.mulPose(Axis.YP.rotationDegrees((clientPlayer.getViewYRot(f) - k) * 0.1f));
-        if (true) {
+         int handRenderSelection = evaluateWhichHandsToRender(clientPlayer);
+        if (clientPlayer instanceof RemotePlayerExt remotePlayerExt) {
+//            float xBob = remotePlayerExt.flashback$getXBob(partialTick);
+//            float yBob = remotePlayerExt.flashback$getYBob(partialTick);
+//            poseStack.mulPose(Axis.XP.rotationDegrees((clientPlayer.getViewXRot(partialTick) - xBob) * 0.1f));
+//            poseStack.mulPose(Axis.YP.rotationDegrees((clientPlayer.getViewYRot(partialTick) - yBob) * 0.1f));
+        }
+        if ((handRenderSelection & RENDER_MAIN_HAND) != 0) {
             l = interactionHand == InteractionHand.MAIN_HAND ? g : 0.0f;
             m = 1.0f - Mth.lerp(partialTick, this.oMainHandHeight, this.mainHandHeight);
             renderArmWithItem(clientPlayer, partialTick, h, InteractionHand.MAIN_HAND, l, this.mainHandItem, m, poseStack, bufferSource, i);
         }
-        if (true) {
+        if ((handRenderSelection & RENDER_OFF_HAND) != 0) {
             l = interactionHand == InteractionHand.OFF_HAND ? g : 0.0f;
             m = 1.0f - Mth.lerp(partialTick, this.oOffHandHeight, this.offHandHeight);
             renderArmWithItem(clientPlayer, partialTick, h, InteractionHand.OFF_HAND, l, this.offHandItem, m, poseStack, bufferSource, i);
@@ -70,9 +112,32 @@ public abstract class MixinItemInHandRenderer implements ItemInHandRendererExt {
         bufferSource.endBatch();
     }
 
-    // todo: change first person FOV when pulling bows, etc.
+    @ModifyArg(method = "renderPlayerArm", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/entity/EntityRenderDispatcher;getRenderer(Lnet/minecraft/world/entity/Entity;)Lnet/minecraft/client/renderer/entity/EntityRenderer;"))
+    public Entity renderPlayerArm_getRenderer(Entity entity) {
+        AbstractClientPlayer spectatingPlayer = Flashback.getSpectatingPlayer();
+        if (spectatingPlayer != null) {
+            return spectatingPlayer;
+        }
+        return entity;
+    }
 
-    // todo: show arm (need to replace usage of LocalPlayer in renderPlayerArm
+    @ModifyArg(method = "renderPlayerArm", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/entity/player/PlayerRenderer;renderLeftHand(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;ILnet/minecraft/client/player/AbstractClientPlayer;)V"))
+    public AbstractClientPlayer renderPlayerArm_renderLeftHand(AbstractClientPlayer entity) {
+        AbstractClientPlayer spectatingPlayer = Flashback.getSpectatingPlayer();
+        if (spectatingPlayer != null) {
+            return spectatingPlayer;
+        }
+        return entity;
+    }
+
+    @ModifyArg(method = "renderPlayerArm", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/entity/player/PlayerRenderer;renderRightHand(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;ILnet/minecraft/client/player/AbstractClientPlayer;)V"))
+    public AbstractClientPlayer renderPlayerArm_renderRightHand(AbstractClientPlayer entity) {
+        AbstractClientPlayer spectatingPlayer = Flashback.getSpectatingPlayer();
+        if (spectatingPlayer != null) {
+            return spectatingPlayer;
+        }
+        return entity;
+    }
 
     @Unique
     private UUID lastSpectatingPlayer = null;
@@ -104,15 +169,9 @@ public abstract class MixinItemInHandRenderer implements ItemInHandRendererExt {
             if (ItemStack.matches(this.offHandItem, newOffHandItem)) {
                 this.offHandItem = newOffHandItem;
             }
-            if (false /*clientPlayer.isHandsBusy()*/) {
-                this.mainHandHeight = Mth.clamp((float)(this.mainHandHeight - 0.4f), (float)0.0f, (float)1.0f);
-                this.offHandHeight = Mth.clamp((float)(this.offHandHeight - 0.4f), (float)0.0f, (float)1.0f);
-            } else {
-                // todo: attack strength
-                float f = 1.0f;//spectatingPlayer.getAttackStrengthScale(1.0f);
-                this.mainHandHeight += Mth.clamp((this.mainHandItem == newMainHandItem ? f * f * f : 0.0f) - this.mainHandHeight, -0.4f, 0.4f);
-                this.offHandHeight += Mth.clamp((float)(this.offHandItem == newOffHandItem ? 1 : 0) - this.offHandHeight, -0.4f, 0.4f);
-            }
+            float str = spectatingPlayer.getAttackStrengthScale(1.0f);
+            this.mainHandHeight += Mth.clamp((this.mainHandItem == newMainHandItem ? str * str * str : 0.0f) - this.mainHandHeight, -0.4f, 0.4f);
+            this.offHandHeight += Mth.clamp((float)(this.offHandItem == newOffHandItem ? 1 : 0) - this.offHandHeight, -0.4f, 0.4f);
             if (this.mainHandHeight < 0.1f) {
                 this.mainHandItem = newMainHandItem;
             }

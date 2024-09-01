@@ -26,7 +26,10 @@
 		],
 		"modmenu": [
 			"com.moulberry.flashback.FlashbackModMenuApiImpl"
-		]
+		],
+        "voicechat": [
+            "com.moulberry.flashback.compat.simple_voice_chat.SimpleVoiceChatPlugin"
+        ]
 	},
 	"accessWidener": "flashback.accesswidener",
 	"mixins": [
@@ -39,7 +42,6 @@
 		"fabric-api": "*"
 	},
     "breaks": {
-        "essential": "<=1.3.4",
-        "feather": "*"
+        "essential": "<=1.3.4.1"
     }
 }

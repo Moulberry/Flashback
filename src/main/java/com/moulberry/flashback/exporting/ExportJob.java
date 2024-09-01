@@ -3,27 +3,24 @@ package com.moulberry.flashback.exporting;
 import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.pipeline.TextureTarget;
 import com.mojang.blaze3d.platform.GlStateManager;
-import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.blaze3d.platform.Window;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.*;
 import com.moulberry.flashback.FixedDeltaTracker;
 import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.Utils;
-import com.moulberry.flashback.compat.IrisApiWrapper;
 import com.moulberry.flashback.keyframe.KeyframeType;
 import com.moulberry.flashback.keyframe.handler.KeyframeHandler;
 import com.moulberry.flashback.keyframe.handler.MinecraftKeyframeHandler;
 import com.moulberry.flashback.keyframe.types.SpeedKeyframeType;
 import com.moulberry.flashback.keyframe.types.TimelapseKeyframeType;
 import com.moulberry.flashback.state.EditorState;
-import com.moulberry.flashback.state.EditorStateManager;
 import com.moulberry.flashback.playback.ReplayServer;
+import com.moulberry.flashback.visuals.AccurateEntityPositionHandler;
 import it.unimi.dsi.fastutil.doubles.DoubleArrayList;
 import it.unimi.dsi.fastutil.doubles.DoubleList;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.Screenshot;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.player.LocalPlayer;
@@ -43,7 +40,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
-import java.util.EnumSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Random;
@@ -253,6 +249,7 @@ public class ExportJob {
             KeyframeHandler keyframeHandler = new MinecraftKeyframeHandler(Minecraft.getInstance());
             this.settings.editorState().applyKeyframes(keyframeHandler, (float)(this.settings.startTick() + currentTickDouble));
 
+            AccurateEntityPositionHandler.apply(Minecraft.getInstance().level, (float) partialTick);
 
             SaveableFramebuffer saveable = downloader.take();
             RenderTarget renderTarget = Minecraft.getInstance().mainRenderTarget;
@@ -406,14 +403,11 @@ public class ExportJob {
     }
 
     private void updateSoundSound(Minecraft minecraft) {
-        EditorState editorState = EditorStateManager.getCurrent();
-        if (editorState != null && editorState.audioSourceEntity != null && minecraft.level != null) {
-            Entity sourceEntity = minecraft.level.getEntities().get(editorState.audioSourceEntity);
-            if (sourceEntity != null) {
-                Camera dummyCamera = new Camera();
-                dummyCamera.eyeHeight = sourceEntity.getEyeHeight();
-                dummyCamera.setup(minecraft.level, sourceEntity, false, false, 1.0f);
-                minecraft.getSoundManager().updateSource(dummyCamera);
+        EditorState editorState = this.settings.editorState();
+        if (editorState != null) {
+            Camera audioCamera = editorState.getAudioCamera();
+            if (audioCamera != null) {
+                minecraft.getSoundManager().updateSource(audioCamera);
                 return;
             }
         }

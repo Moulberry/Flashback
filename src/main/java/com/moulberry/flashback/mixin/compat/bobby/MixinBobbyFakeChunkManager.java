@@ -20,7 +20,7 @@ import java.util.function.Supplier;
 @Mixin(value = FakeChunkManager.class, remap = false)
 public class MixinBobbyFakeChunkManager {
 
-    @Inject(method = "getCurrentWorldOrServerName", at = @At("HEAD"), cancellable = true)
+    @Inject(method = "getCurrentWorldOrServerName", require = 0, at = @At("HEAD"), cancellable = true)
     private static void getCurrentWorldOrServerName(ClientPacketListener networkHandler, CallbackInfoReturnable<String> cir) {
         ReplayServer replayServer = Flashback.getReplayServer();
         if (replayServer != null) {
@@ -34,7 +34,7 @@ public class MixinBobbyFakeChunkManager {
         }
     }
 
-    @Inject(method = "save", at = @At("HEAD"), cancellable = true)
+    @Inject(method = "save", at = @At("HEAD"), require = 0, cancellable = true)
     public void save(LevelChunk chunk, CallbackInfoReturnable<Supplier<LevelChunk>> cir) {
         if (Flashback.isInReplay()) {
             Pair<LevelChunk, Supplier<LevelChunk>> copy = ChunkSerializer.shallowCopy(chunk);

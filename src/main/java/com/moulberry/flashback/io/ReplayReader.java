@@ -7,6 +7,8 @@ import com.moulberry.flashback.action.ActionRegistry;
 import io.netty.buffer.ByteBuf;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
+import it.unimi.dsi.fastutil.ints.IntSet;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -20,6 +22,7 @@ public class ReplayReader {
     private RegistryAccess registryAccess;
     private Action lastAction = null;
     private final Int2ObjectMap<Action> actions = new Int2ObjectOpenHashMap<>();
+    private final IntSet ignoredActions = new IntOpenHashSet();
 
     public ReplayReader(ByteBuf byteBuf, RegistryAccess registryAccess) {
         this.friendlyByteBuf = new FriendlyByteBuf(byteBuf);
@@ -36,9 +39,13 @@ public class ReplayReader {
             Action action = ActionRegistry.getAction(actionName);
 
             if (action == null) {
-                throw new RuntimeException("Missing action: " + actionName);
+                if (actionName.getPath().endsWith("optional")) {
+                    this.ignoredActions.add(i);
+                } else {
+                    throw new RuntimeException("Missing action: " + actionName);
+                }
             } else {
-                this.actions.put(this.actions.size(), action);
+                this.actions.put(i, action);
             }
         }
 
@@ -65,6 +72,11 @@ public class ReplayReader {
             int id = this.friendlyByteBuf.readVarInt();
             Action action = this.actions.get(id);
             if (action == null) {
+                if (this.ignoredActions.contains(id)) {
+                    int size = this.friendlyByteBuf.readInt();
+                    this.friendlyByteBuf.skipBytes(size);
+                    continue;
+                }
                 throw new RuntimeException("Unknown action id: " + id + ". Last action was " + this.lastAction.name());
             }
             this.lastAction = action;
@@ -93,6 +105,11 @@ public class ReplayReader {
         int id = this.friendlyByteBuf.readVarInt();
         Action action = this.actions.get(id);
         if (action == null) {
+            if (this.ignoredActions.contains(id)) {
+                int size = this.friendlyByteBuf.readInt();
+                this.friendlyByteBuf.skipBytes(size);
+                return true;
+            }
             throw new RuntimeException("Unknown action id: " + id + ". Last action was " + this.lastAction.name());
         }
         this.lastAction = action;
