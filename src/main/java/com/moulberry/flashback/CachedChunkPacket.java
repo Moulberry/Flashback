@@ -25,7 +25,6 @@ import java.util.Comparator;
 import java.util.Objects;
 
 public class CachedChunkPacket {
-
     private final byte[] bigHash;
     private final int hashCode;
     public int index;
@@ -37,7 +36,7 @@ public class CachedChunkPacket {
     }
 
     private static byte[] computePacketBigHash(ClientboundLevelChunkWithLightPacket packet) {
-        MessageDigest digest = null;
+        MessageDigest digest;
         try {
             digest = MessageDigest.getInstance("SHA-512");
         } catch (NoSuchAlgorithmException e) {
