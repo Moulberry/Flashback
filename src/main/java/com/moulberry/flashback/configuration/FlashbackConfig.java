@@ -66,6 +66,14 @@ public class FlashbackConfig {
     public Set<String> openedWindows = new HashSet<>();
     public long nextUnsupportedModLoaderWarning = 0;
 
+    public boolean flightCameraDirection = false;
+    public float flightMomentum = 1.0f;
+    public boolean flightLockX = false;
+    public boolean flightLockY = false;
+    public boolean flightLockZ = false;
+    public boolean flightLockYaw = false;
+    public boolean flightLockPitch = false;
+
     @SuppressWarnings("unchecked")
     public OptionInstance<?>[] createOptionInstances() {
         List<OptionInstance<?>> options = new ArrayList<>();

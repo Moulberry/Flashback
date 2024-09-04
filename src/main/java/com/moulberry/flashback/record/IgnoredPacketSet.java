@@ -16,6 +16,11 @@ public class IgnoredPacketSet {
     }
 
     private static final Set<Class<?>> IGNORED = Set.of(
+        // Ignored because these are added directly by mixin/record/MixinClientLevel
+        ClientboundLevelEventPacket.class,
+        ClientboundSoundPacket.class,
+        ClientboundSoundEntityPacket.class,
+
         // Common
         ClientboundStoreCookiePacket.class,
         ClientboundCustomReportDetailsPacket.class,
@@ -76,8 +81,7 @@ public class IgnoredPacketSet {
         ClientboundChunkBatchStartPacket.class,
         ClientboundChunkBatchFinishedPacket.class,
         ClientboundDebugSamplePacket.class,
-        ClientboundPongResponsePacket.class,
-        ClientboundLevelEventPacket.class
+        ClientboundPongResponsePacket.class
     );
 
 }

@@ -12,7 +12,10 @@ public enum VideoContainer implements ComboOption {
     MP4("MP4", "mp4"),
     MKV("MKV", "mkv"),
     AVI("AVI", "avi"),
-    MOV("MOV", "mov");
+    MOV("MOV", "mov"),
+    WEBP("WebP", "webp"),
+    WEBM("WebM", "webm"),
+    GIF("GIF", "gif");
 
     private final String text;
     private final String extension;

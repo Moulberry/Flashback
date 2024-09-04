@@ -1079,10 +1079,6 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
 
     @Override
     public void handleSoundEvent(ClientboundSoundPacket clientboundSoundPacket) {
-        if (Flashback.EXPORT_JOB == null && this.replayServer.replayPaused) {
-            return;
-        }
-
         Holder<SoundEvent> sound = clientboundSoundPacket.getSound();
         double x = clientboundSoundPacket.getX();
         double y = clientboundSoundPacket.getY();
@@ -1094,10 +1090,6 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
 
     @Override
     public void handleSoundEntityEvent(ClientboundSoundEntityPacket clientboundSoundEntityPacket) {
-        if (Flashback.EXPORT_JOB == null && this.replayServer.replayPaused) {
-            return;
-        }
-
         Entity entity = this.level().getEntity(clientboundSoundEntityPacket.getId());
         if (entity == null) {
             return;

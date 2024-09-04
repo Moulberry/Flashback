@@ -17,6 +17,7 @@ public class ReplayVisuals {
     public boolean renderPlayers = true;
     public boolean renderParticles = true;
     public boolean renderSky = true;
+    public float[] skyColour = new float[]{0f, 1f, 0f};
     public boolean renderNametags = true;
 
     public boolean overrideFog = false;

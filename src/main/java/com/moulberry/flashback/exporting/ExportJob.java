@@ -127,6 +127,8 @@ public class ExportJob {
 
         TextureTarget infoRenderTarget = null;
 
+        int oldGuiScale = Minecraft.getInstance().options.guiScale().get();
+
         try {
             Files.createDirectories(exportTempFolder);
 
@@ -145,6 +147,7 @@ public class ExportJob {
             this.running = false;
             this.shouldChangeFramebufferSize = false;
 
+            Minecraft.getInstance().options.guiScale().set(oldGuiScale);
             Minecraft.getInstance().resizeDisplay();
 
             try {
@@ -180,7 +183,12 @@ public class ExportJob {
         this.updateRandoms(random, mathRandom);
 
         shouldChangeFramebufferSize = true;
+        // Double gui scale if using SSAA which doubles resolution
+        if (this.settings.ssaa()) {
+            Minecraft.getInstance().options.guiScale().set(Minecraft.getInstance().options.guiScale().get() * 2);
+        }
         Minecraft.getInstance().resizeDisplay();
+
 
         DoubleList ticks = calculateTicks(this.settings.editorState(), this.settings.startTick(), this.settings.endTick(), this.settings.framerate());
 
@@ -279,11 +287,13 @@ public class ExportJob {
             if (this.settings.recordAudio()) {
                 long device = Minecraft.getInstance().getSoundManager().soundEngine.library.currentDevice;
 
-                audioSamples += 44100 / this.settings.framerate();
+                audioSamples += 48000 / this.settings.framerate();
                 int renderSamples = (int) audioSamples;
                 audioSamples -= renderSamples;
 
-                audioBuffer = ByteBuffer.allocateDirect(renderSamples * 4).order(ByteOrder.nativeOrder()).asFloatBuffer();
+                int channels = this.settings.stereoAudio() ? 2 : 1;
+
+                audioBuffer = ByteBuffer.allocateDirect(renderSamples * 4 * channels).order(ByteOrder.nativeOrder()).asFloatBuffer();
                 SOFTLoopback.alcRenderSamplesSOFT(device, audioBuffer, renderSamples);
             }
 

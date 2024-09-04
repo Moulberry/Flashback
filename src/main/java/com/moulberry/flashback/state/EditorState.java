@@ -53,10 +53,10 @@ public class EditorState {
         Keyframe old = track.keyframesByTick.get(tick);
         if (old != null) {
             undo.add(new EditorStateHistoryAction.SetKeyframe(track.keyframeType, trackIndex, tick, old.copy()));
-            description = "Replaced " + track.keyframeType + " keyframe";
+            description = "Replaced " + track.keyframeType.name() + " keyframe";
         } else {
             undo.add(new EditorStateHistoryAction.RemoveKeyframe(track.keyframeType, trackIndex, tick));
-            description = "Added " + track.keyframeType + " keyframe";
+            description = "Added " + track.keyframeType.name() + " keyframe";
         }
         redo.add(new EditorStateHistoryAction.SetKeyframe(track.keyframeType, trackIndex, tick, keyframe.copy()));
 

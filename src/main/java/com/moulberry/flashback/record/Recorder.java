@@ -48,6 +48,8 @@ import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.resources.RegistryOps;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.RegistryLayer;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.TagNetworkSerialization;
 import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
@@ -147,11 +149,19 @@ public class Recorder {
         }
     }
 
+    public boolean readyToWrite() {
+        return !this.closeForWriting && !this.needsInitialSnapshot && !this.wasPaused;
+    }
+
     public void addMarker(ReplayMarker marker) {
         this.metadata.replayMarkers.put(this.writtenTicks, marker);
     }
 
     public void submitCustomTask(Consumer<ReplayWriter> consumer) {
+        if (!this.readyToWrite()) {
+            return;
+        }
+
         this.asyncReplaySaver.submit(consumer);
     }
 
@@ -632,15 +642,31 @@ public class Recorder {
     }
 
     public void writeLevelEvent(int type, BlockPos blockPos, int data, boolean globalEvent) {
-        if (this.closeForWriting || this.needsInitialSnapshot || this.wasPaused) {
+        if (!this.readyToWrite()) {
             return;
         }
 
         this.pendingPackets.add(new PacketWithPhase(new ClientboundLevelEventPacket(type, blockPos, data, globalEvent), ConnectionProtocol.PLAY));
     }
 
+    public void writeSound(Holder<SoundEvent> holder, SoundSource soundSource, double x, double y, double z, float volume, float pitch, long seed) {
+        if (!this.readyToWrite()) {
+            return;
+        }
+
+        this.pendingPackets.add(new PacketWithPhase(new ClientboundSoundPacket(holder, soundSource, x, y, z, volume, pitch, seed), ConnectionProtocol.PLAY));
+    }
+
+    public void writeEntitySound(Holder<SoundEvent> holder, SoundSource soundSource, Entity entity, float volume, float pitch, long seed) {
+        if (!this.readyToWrite()) {
+            return;
+        }
+
+        this.pendingPackets.add(new PacketWithPhase(new ClientboundSoundEntityPacket(holder, soundSource, entity, volume, pitch, seed), ConnectionProtocol.PLAY));
+    }
+
     public void writePacketAsync(Packet<?> packet, ConnectionProtocol phase) {
-        if (this.closeForWriting || this.needsInitialSnapshot || this.wasPaused) {
+        if (!this.readyToWrite()) {
             return;
         }
 

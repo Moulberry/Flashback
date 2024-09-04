@@ -98,8 +98,16 @@ public class AsyncVideoEncoder implements AutoCloseable {
             Flashback.LOGGER.info("Encoding video with pixel format {}", PixelFormatHelper.pixelFormatToString(dstPixelFormat));
             boolean needsRescale = SRC_PIXEL_FORMAT != dstPixelFormat;
 
-            final FFmpegFrameRecorder recorder = new FFmpegFrameRecorder(
-                    filename, width, height, settings.recordAudio() ? 1 : 0);
+            int audioChannels = 0;
+            if (settings.recordAudio()) {
+                if (settings.stereoAudio()) {
+                    audioChannels = 2;
+                } else {
+                    audioChannels = 1;
+                }
+            }
+
+            final FFmpegFrameRecorder recorder = new FFmpegFrameRecorder(filename, width, height, audioChannels);
 
             recorder.setVideoBitrate(bitrate);
             recorder.setVideoCodec(settings.codec().codecId());
@@ -110,10 +118,10 @@ public class AsyncVideoEncoder implements AutoCloseable {
             recorder.setGopSize((int) Math.max(20, Math.min(240, Math.ceil(fps * 2))));
 
             if (settings.recordAudio()) {
-                recorder.setAudioCodec(avcodec.AV_CODEC_ID_AAC);
+                recorder.setAudioCodec(settings.audioCodec().codecId());
                 recorder.setSampleFormat(avutil.AV_SAMPLE_FMT_FLTP);
-                recorder.setSampleRate(44100);
-                recorder.setAudioBitrate(320000);
+                recorder.setSampleRate(48000);
+                recorder.setAudioBitrate(256000);
             }
 
             recorder.start();

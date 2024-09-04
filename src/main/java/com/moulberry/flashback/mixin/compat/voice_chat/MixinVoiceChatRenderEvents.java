@@ -6,12 +6,14 @@ import de.maxhenkel.voicechat.voice.client.RenderEvents;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.resources.ResourceLocation;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Pseudo;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @IfModLoaded("voicechat")
+@Pseudo
 @Mixin(value = RenderEvents.class, remap = false)
 public class MixinVoiceChatRenderEvents {
 

@@ -14,15 +14,18 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
 
+import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
+
 public class ReplayReader {
 
     private final FriendlyByteBuf friendlyByteBuf;
     private final int replaySnapshotOffset;
     private final int replayActionsOffset;
     private RegistryAccess registryAccess;
-    private Action lastAction = null;
+    private ResourceLocation lastActionName = null;
     private final Int2ObjectMap<Action> actions = new Int2ObjectOpenHashMap<>();
-    private final IntSet ignoredActions = new IntOpenHashSet();
+    private final Int2ObjectMap<ResourceLocation> ignoredActions = new Int2ObjectOpenHashMap<>();
 
     public ReplayReader(ByteBuf byteBuf, RegistryAccess registryAccess) {
         this.friendlyByteBuf = new FriendlyByteBuf(byteBuf);
@@ -40,7 +43,7 @@ public class ReplayReader {
 
             if (action == null) {
                 if (actionName.getPath().endsWith("optional")) {
-                    this.ignoredActions.add(i);
+                    this.ignoredActions.put(i, actionName);
                 } else {
                     throw new RuntimeException("Missing action: " + actionName);
                 }
@@ -50,6 +53,9 @@ public class ReplayReader {
         }
 
         int snapshotSize = this.friendlyByteBuf.readInt();
+        if (snapshotSize < 0) {
+            throw new RuntimeException("Invalid snapshot size: " + snapshotSize + " (0x" + Integer.toHexString(snapshotSize) + ")");
+        }
         this.replaySnapshotOffset = this.friendlyByteBuf.readerIndex();
         this.friendlyByteBuf.skipBytes(snapshotSize);
         this.replayActionsOffset = this.friendlyByteBuf.readerIndex();
@@ -72,14 +78,15 @@ public class ReplayReader {
             int id = this.friendlyByteBuf.readVarInt();
             Action action = this.actions.get(id);
             if (action == null) {
-                if (this.ignoredActions.contains(id)) {
+                if (this.ignoredActions.containsKey(id)) {
+                    this.lastActionName = this.ignoredActions.get(id);
                     int size = this.friendlyByteBuf.readInt();
                     this.friendlyByteBuf.skipBytes(size);
                     continue;
                 }
-                throw new RuntimeException("Unknown action id: " + id + ". Last action was " + this.lastAction.name());
+                throw new RuntimeException("Unknown action id: " + id + ". Last action was " + this.lastActionName);
             }
-            this.lastAction = action;
+            this.lastActionName = action.name();
 
             int size = this.friendlyByteBuf.readInt();
             ByteBuf slice = this.friendlyByteBuf.readSlice(size);
@@ -87,7 +94,7 @@ public class ReplayReader {
             action.handle(replayServer, registryFriendlyByteBuf);
 
             if (slice.readerIndex() < size) {
-                throw new RuntimeException("Action " + this.lastAction.name() + " failed to fully read. Had " + size + " bytes available, only read " + slice.readerIndex());
+                throw new RuntimeException("Action " + this.lastActionName + " failed to fully read. Had " + size + " bytes available, only read " + slice.readerIndex());
             }
         }
 
@@ -105,14 +112,15 @@ public class ReplayReader {
         int id = this.friendlyByteBuf.readVarInt();
         Action action = this.actions.get(id);
         if (action == null) {
-            if (this.ignoredActions.contains(id)) {
+            if (this.ignoredActions.containsKey(id)) {
+                this.lastActionName = this.ignoredActions.get(id);
                 int size = this.friendlyByteBuf.readInt();
                 this.friendlyByteBuf.skipBytes(size);
                 return true;
             }
-            throw new RuntimeException("Unknown action id: " + id + ". Last action was " + this.lastAction.name());
+            throw new RuntimeException("Unknown action id: " + id + ". Last action was " + this.lastActionName);
         }
-        this.lastAction = action;
+        this.lastActionName = action.name();
 
         int size = this.friendlyByteBuf.readInt();
         ByteBuf slice = this.friendlyByteBuf.readSlice(size);
@@ -120,7 +128,7 @@ public class ReplayReader {
         action.handle(replayServer, registryFriendlyByteBuf);
 
         if (slice.readerIndex() < size) {
-            throw new RuntimeException("Action " + this.lastAction.name() + " failed to fully read. Had " + size + " bytes available, only read " + slice.readerIndex());
+            throw new RuntimeException("Action " + this.lastActionName + " failed to fully read. Had " + size + " bytes available, only read " + slice.readerIndex());
         }
 
         return true;

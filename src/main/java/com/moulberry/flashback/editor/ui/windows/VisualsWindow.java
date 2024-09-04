@@ -1,15 +1,27 @@
 package com.moulberry.flashback.editor.ui.windows;
 
 import com.moulberry.flashback.Flashback;
+import com.moulberry.flashback.keyframe.Keyframe;
+import com.moulberry.flashback.keyframe.KeyframeType;
+import com.moulberry.flashback.keyframe.impl.CameraShakeKeyframe;
+import com.moulberry.flashback.keyframe.impl.FOVKeyframe;
+import com.moulberry.flashback.keyframe.impl.TimeOfDayKeyframe;
+import com.moulberry.flashback.keyframe.types.FOVKeyframeType;
 import com.moulberry.flashback.playback.ReplayServer;
 import com.moulberry.flashback.record.FlashbackMeta;
 import com.moulberry.flashback.state.EditorState;
+import com.moulberry.flashback.state.EditorStateHistoryAction;
+import com.moulberry.flashback.state.EditorStateHistoryEntry;
 import com.moulberry.flashback.state.EditorStateManager;
+import com.moulberry.flashback.state.KeyframeTrack;
 import com.moulberry.flashback.visuals.ReplayVisuals;
 import com.moulberry.flashback.combo_options.Sizing;
 import com.moulberry.flashback.editor.ui.ImGuiHelper;
 import imgui.ImGui;
+import imgui.flag.ImGuiColorEditFlags;
 import net.minecraft.client.Minecraft;
+
+import java.util.List;
 
 public class VisualsWindow {
 
@@ -77,6 +89,19 @@ public class VisualsWindow {
                 editorState.markDirty();
             }
 
+            if (!visuals.renderSky) {
+                if (ImGui.colorButton("Sky Colour", visuals.skyColour)) {
+                    ImGui.openPopup("##EditSkyColour");
+                }
+                ImGui.sameLine();
+                ImGui.text("Sky Colour");
+
+                if (ImGui.beginPopup("##EditSkyColour")) {
+                    ImGui.colorPicker3("Sky Colour", visuals.skyColour);
+                    ImGui.endPopup();
+                }
+            }
+
             if (ImGui.checkbox("Render Nametags", visuals.renderNametags)) {
                 visuals.renderNametags = !visuals.renderNametags;
                 editorState.markDirty();
@@ -110,6 +135,12 @@ public class VisualsWindow {
                 editorState.markDirty();
             }
             if (visuals.overrideFov) {
+                ImGui.sameLine();
+                if (ImGui.smallButton("+")) {
+                    addKeyframe(editorState, replayServer, new FOVKeyframe(visuals.overrideFovAmount));
+                }
+                ImGuiHelper.tooltip("Add FOV keyframe");
+
                 floatBuffer[0] = visuals.overrideFovAmount;
                 if (ImGui.sliderFloat("FOV", floatBuffer, 1.0f, 110.0f, "%.1f")) {
                     visuals.setFov(floatBuffer[0]);
@@ -127,6 +158,12 @@ public class VisualsWindow {
                 editorState.markDirty();
             }
             if (visuals.overrideTimeOfDay >= 0) {
+                ImGui.sameLine();
+                if (ImGui.smallButton("+")) {
+                    addKeyframe(editorState, replayServer, new TimeOfDayKeyframe((int) visuals.overrideTimeOfDay));
+                }
+                ImGuiHelper.tooltip("Add Time keyframe");
+
                 intBuffer[0] = (int) visuals.overrideTimeOfDay;
                 if (ImGui.sliderInt("Time", intBuffer, 0, 24000)) {
                     visuals.overrideTimeOfDay = intBuffer[0];
@@ -140,6 +177,19 @@ public class VisualsWindow {
                 editorState.markDirty();
             }
             if (visuals.overrideCameraShake) {
+                ImGui.sameLine();
+                if (ImGui.smallButton("+")) {
+                    if (visuals.cameraShakeSplitParams) {
+                        addKeyframe(editorState, replayServer, new CameraShakeKeyframe(visuals.cameraShakeXFrequency, visuals.cameraShakeXAmplitude,
+                            visuals.cameraShakeYFrequency, visuals.cameraShakeYAmplitude, true));
+                    } else {
+                        float frequency = (visuals.cameraShakeXFrequency + visuals.cameraShakeYFrequency)/2.0f;
+                        float amplitude = (visuals.cameraShakeXAmplitude + visuals.cameraShakeYAmplitude)/2.0f;
+                        addKeyframe(editorState, replayServer, new CameraShakeKeyframe(frequency, amplitude, frequency, amplitude, false));
+                    }
+                }
+                ImGuiHelper.tooltip("Add Camera Shake keyframe");
+
                 if (ImGui.checkbox("Split Y/X", visuals.cameraShakeSplitParams)) {
                     visuals.cameraShakeSplitParams = !visuals.cameraShakeSplitParams;
                     editorState.markDirty();
@@ -238,5 +288,38 @@ public class VisualsWindow {
             }
         }
         ImGui.end();
+    }
+
+    private static void addKeyframe(EditorState editorState, ReplayServer replayServer, Keyframe keyframe) {
+        KeyframeType<?> keyframeType = keyframe.keyframeType();
+
+        // Try add to existing enabled keyframe track
+        for (int i = 0; i < editorState.keyframeTracks.size(); i++) {
+            KeyframeTrack keyframeTrack = editorState.keyframeTracks.get(i);
+            if (keyframeTrack.enabled && keyframeTrack.keyframeType == keyframeType) {
+                editorState.setKeyframe(i, replayServer.getReplayTick(), keyframe);
+                return;
+            }
+        }
+
+        // Try add to any keyframe track
+        for (int i = 0; i < editorState.keyframeTracks.size(); i++) {
+            KeyframeTrack keyframeTrack = editorState.keyframeTracks.get(i);
+            if (keyframeTrack.keyframeType == keyframeType) {
+                editorState.setKeyframe(i, replayServer.getReplayTick(), keyframe);
+                return;
+            }
+        }
+
+        String description = "Added " + keyframeType.name() + " keyframe";
+        int newKeyframeTrackIndex = editorState.keyframeTracks.size();
+        editorState.push(new EditorStateHistoryEntry(
+            List.of(new EditorStateHistoryAction.RemoveTrack(keyframeType, newKeyframeTrackIndex)),
+            List.of(
+                new EditorStateHistoryAction.AddTrack(keyframeType, newKeyframeTrackIndex),
+                new EditorStateHistoryAction.SetKeyframe(keyframeType, newKeyframeTrackIndex, replayServer.getReplayTick(), keyframe)
+            ),
+            description
+        ));
     }
 }

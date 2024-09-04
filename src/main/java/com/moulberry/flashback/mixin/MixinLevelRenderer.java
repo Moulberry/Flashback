@@ -115,7 +115,8 @@ public abstract class MixinLevelRenderer {
             if (Flashback.isExporting() && Flashback.EXPORT_JOB.getSettings().transparent()) {
                 RenderSystem.clearColor(0.0f, 0.0f, 0.0f, 0.0F);
             } else {
-                RenderSystem.clearColor(0.0f, 1.0f, 0.0f, 0.0F);
+                float[] skyColour = editorState.replayVisuals.skyColour;
+                RenderSystem.clearColor(skyColour[0], skyColour[1], skyColour[2], 0.0F);
             }
 
         }

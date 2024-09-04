@@ -5,6 +5,7 @@ import com.mojang.blaze3d.platform.TextureUtil;
 import com.mojang.blaze3d.platform.Window;
 import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.editor.ui.windows.ExportQueueWindow;
+import com.moulberry.flashback.editor.ui.windows.MovementWindow;
 import com.moulberry.flashback.editor.ui.windows.PlayerListWindow;
 import com.moulberry.flashback.editor.ui.windows.SelectedEntityPopup;
 import com.moulberry.flashback.state.EditorState;
@@ -25,7 +26,6 @@ import net.minecraft.client.gui.screens.ProgressScreen;
 import net.minecraft.client.gui.screens.ReceivingLevelScreen;
 import net.minecraft.client.multiplayer.MultiPlayerGameMode;
 import net.minecraft.client.player.LocalPlayer;
-import net.minecraft.commands.arguments.EntityAnchorArgument;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
@@ -55,6 +55,7 @@ public class ReplayUI {
     private static final CustomImGuiImplGl3 imguiGl3 = new CustomImGuiImplGl3();
     private static boolean initialized = false;
 
+    private static boolean isFrameFocused = false;
     private static boolean isFrameHovered = false;
     public static int frameX = 0;
     public static int frameY = 0;
@@ -63,6 +64,10 @@ public class ReplayUI {
     public static int viewportSizeX = 1;
     public static int viewportSizeY = 1;
     private static boolean activeLastFrame = false;
+
+    private static int focusMainWindowCounter = 0;
+
+    public static boolean hasAnyPopupOpen = false;
 
     public static Matrix4f lastProjectionMatrix = null;
     public static Quaternionf lastViewQuaternion = null;
@@ -126,7 +131,7 @@ public class ReplayUI {
         Path relativePath = FabricLoader.getInstance().getGameDir().relativize(path);
         ImGui.getIO().setIniFilename(relativePath.toString());
 
-        ImGui.getIO().addConfigFlags(ImGuiConfigFlags.NavEnableKeyboard);
+        // ImGui.getIO().addConfigFlags(ImGuiConfigFlags.NavEnableKeyboard);
         ImGui.getIO().addConfigFlags(ImGuiConfigFlags.DockingEnable);
         // ImGui.getIO().addConfigFlags(ImGuiConfigFlags.ViewportsEnable);
         ImGui.getIO().setConfigMacOSXBehaviors(Minecraft.ON_OSX);
@@ -486,6 +491,7 @@ public class ReplayUI {
         if (!isActiveInternal()) {
             transitionActiveState(false);
             imguiGlfw.updateReleaseAllKeys(true);
+            focusMainWindowCounter = 5;
             return;
         } else {
             imguiGlfw.updateReleaseAllKeys(false);
@@ -513,14 +519,16 @@ public class ReplayUI {
         imguiGlfw.newFrame();
         ImGui.newFrame();
 
-        navClose = ImGui.getIO().getNavInputs(ImGuiNavInput.Cancel) != 0;
+        hasAnyPopupOpen = ImGui.isPopupOpen("", ImGuiPopupFlags.AnyPopup);
+
+        navClose = hasAnyPopupOpen && ImGui.getIO().getNavInputs(ImGuiNavInput.Cancel) != 0.0f;
         if (wasNavClose != navClose) {
             wasNavClose = navClose;
         } else if (wasNavClose) {
             navClose = false;
         }
 
-        if (ImGui.isPopupOpen("", ImGuiPopupFlags.AnyPopup)) {
+        if (hasAnyPopupOpen) {
             ImGui.getIO().addConfigFlags(ImGuiConfigFlags.NavEnableKeyboard);
         } else {
             ImGui.getIO().removeConfigFlags(ImGuiConfigFlags.NavEnableKeyboard);
@@ -535,6 +543,7 @@ public class ReplayUI {
         int mainDock = ImGui.dockSpaceOverViewport(ImGui.getMainViewport(), ImGuiDockNodeFlags.NoDockingInCentralNode);
         imgui.internal.ImGui.dockBuilderGetCentralNode(mainDock).addLocalFlags(imgui.internal.flag.ImGuiDockNodeFlags.NoTabBar);
 
+        isFrameFocused = false;
         isFrameHovered = false;
         ImGui.setNextWindowDockID(mainDock);
         ImGuiHelper.pushStyleVar(ImGuiStyleVar.WindowPadding, 0, 0);
@@ -543,6 +552,11 @@ public class ReplayUI {
 
         if (ImGui.begin("Main", ImGuiWindowFlags.NoMove | ImGuiWindowFlags.NoNavInputs | ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoBackground | ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoCollapse |
                 ImGuiWindowFlags.NoSavedSettings)) {
+            if (focusMainWindowCounter > 0) {
+                focusMainWindowCounter -= 1;
+                ImGui.setWindowFocus();
+            }
+
             ImGuiHelper.popStyleVar();
 
             float minX = ImGui.getWindowContentRegionMinX();
@@ -584,6 +598,11 @@ public class ReplayUI {
                     frameX += (frameWidth - newWidth)/2;
                     frameWidth = newWidth;
                 }
+            }
+
+            if (ImGui.isWindowFocused()) {
+                ImGui.getWindowDrawList().addRect(frameX+1, frameY+1, frameX+frameWidth-1, frameY+frameHeight-1, 0xFFC25823);
+                isFrameFocused = true;
             }
 
             if (infoOverlayText != null) {
@@ -673,7 +692,9 @@ public class ReplayUI {
 
                 if (Minecraft.getInstance().screen != null) {
                     ImGui.captureMouseFromApp(false);
-                } else if (isMovingCamera()) {
+                }
+                boolean isMovingCamera = isMovingCamera();
+                if (isFrameFocused || isMovingCamera) {
                     LocalPlayer player = Minecraft.getInstance().player;
                     if (player != null) {
                         int wheelY = (int) Math.signum(ImGui.getIO().getMouseWheel());
@@ -685,7 +706,8 @@ public class ReplayUI {
                             player.getAbilities().setFlyingSpeed(flyingSpeed);
                         }
                     }
-                } else if (ImGui.getIO().getWantCaptureMouse() && !popupOpenLastFrame && !ImGui.isPopupOpen("", ImGuiPopupFlags.AnyPopup)) {
+                }
+                if (!isMovingCamera && ImGui.getIO().getWantCaptureMouse() && !popupOpenLastFrame && !ImGui.isPopupOpen("", ImGuiPopupFlags.AnyPopup)) {
                     fireCancelNavInput |= handleBasicInputs();
                 }
             }
@@ -699,6 +721,7 @@ public class ReplayUI {
         StartExportWindow.render();
         ExportQueueWindow.render();
         PlayerListWindow.render();
+        MovementWindow.render();
 
         popupOpenLastFrame = ImGui.isPopupOpen("", ImGuiPopupFlags.AnyPopup);
 
@@ -723,15 +746,11 @@ public class ReplayUI {
         transitionActiveState(true);
     }
 
-    public static boolean isMainFrameHovered() {
-        return isFrameHovered;
+    public static boolean isMainFrameActive() {
+        return isFrameFocused;
     }
 
     private static boolean handleBasicInputs() {
-//        if (ImGui.isMouseClicked(ImGuiMouseButton.Left) && UserAction.LEFT_MOUSE.call(null) == UserAction.ActionResult.USED_STOP) {
-//            return true;
-//        }
-
         if (ImGui.isMouseClicked(GLFW.GLFW_MOUSE_BUTTON_RIGHT)) {
             HitResult result = getLookTarget();
             if (result instanceof EntityHitResult entityHitResult) {
@@ -747,66 +766,11 @@ public class ReplayUI {
         if (ImGui.isMouseClicked(GLFW.GLFW_MOUSE_BUTTON_LEFT)) {
             int key = -GLFW.GLFW_MOUSE_BUTTON_LEFT-1;
             if (key != 0) {
-                imguiGlfw.setGrabbed(true, key, frameX + frameWidth / 2f, frameY + frameHeight / 2f);
+                imguiGlfw.setGrabbed(true, key, true, frameX + frameWidth / 2f, frameY + frameHeight / 2f);
             }
             return true;
         }
 
-//        if (Keybinds.ADJUST_RADIUS.isPressed(false)) {
-//            if (ToolManager.isToolActive() && ToolManager.getCurrentTool().initiateAdjustment()) {
-//                int key = Keybinds.ADJUST_RADIUS.getKey();
-//                if (key != 0) {
-//                    imguiGlfw.setGrabbed(false, key, -1, -1);
-//                }
-//
-//                adjustingTool = true;
-//                adjustingToolOffsetX = 0;
-//                adjustingToolOffsetY = 0;
-//
-//                return true;
-//            }
-//        } else if (Keybinds.ROTATE_CAMERA.isPressed(false)) {
-//            movementControls = EditorMovementControls.rotate();
-//            return true;
-//        } else if (Keybinds.PICK_BLOCK.isPressed(false)) {
-//            RayCaster.RaycastResult result = Tool.raycastBlock();
-//            if (result != null) {
-//                BlockState blockState = Minecraft.getInstance().level.getBlockState(result.blockPos());
-//                CustomBlockState customBlockState = ServerCustomBlocks.getCustomStateFor(blockState);
-//                activeBlockHistory.setActive(Objects.requireNonNullElse(customBlockState, (CustomBlockState) blockState));
-//                return true;
-//            }
-//        } else if (Keybinds.USE_TOOL.isPressed(false)) {
-//            if (UserAction.RIGHT_MOUSE.call(null) != UserAction.ActionResult.NOT_HANDLED || ToolManager.isToolActive()) {
-//                return true;
-//            }
-//        } else if (Keybinds.ARCBALL_CAMERA.isPressed(false)) {
-//            Tool currentTool = ToolManager.isToolActive() ? ToolManager.getCurrentTool() : null;
-//            if (currentTool instanceof RulerTool || currentTool instanceof ModifyTool || Configuration.keybind.useCenterOfScreenForArcball) {
-//                movementControls = EditorMovementControls.arcballFromRaycast();
-//                if (movementControls != EditorMovementControls.none()) {
-//                    int key = Keybinds.ARCBALL_CAMERA.getKey();
-//                    if (key != 0) {
-//                        imguiGlfw.setGrabbed(false, key, frameX + frameWidth / 2f, frameY + frameHeight / 2f);
-//                    }
-//                    return true;
-//                }
-//            } else {
-//                pendingDepthActions.add(PendingDepthAction.ARCBALL);
-//                return true;
-//            }
-//        } else if (Keybinds.PAN_CAMERA.isPressed(false)) {
-//            movementControls = EditorMovementControls.pan();
-//            return true;
-//        }
-
-//        if (Keybinds.CROSSHAIR_CAMERA.isPressed(false)) {
-//            int key = Keybinds.CROSSHAIR_CAMERA.getKey();
-//            if (key != 0) {
-//                imguiGlfw.setGrabbed(true, key, frameX + frameWidth / 2f, frameY + frameHeight / 2f);
-//            }
-//            return true;
-//        }
         return false;
     }
 

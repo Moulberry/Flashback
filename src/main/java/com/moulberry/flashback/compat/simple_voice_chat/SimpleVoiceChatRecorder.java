@@ -5,14 +5,19 @@ import com.moulberry.flashback.packet.FlashbackVoiceChatSound;
 import de.maxhenkel.voicechat.api.events.ClientReceiveSoundEvent;
 import de.maxhenkel.voicechat.api.events.ClientSoundEvent;
 import de.maxhenkel.voicechat.voice.client.ClientManager;
+import net.minecraft.client.Minecraft;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.UUID;
 
 public class SimpleVoiceChatRecorder {
 
+    private static boolean shouldWritePacket() {
+        return Flashback.RECORDER != null && Flashback.RECORDER.readyToWrite() && Flashback.getConfig().recordVoiceChat;
+    }
+
     public static void onReceiveEntitySound(ClientReceiveSoundEvent.EntitySound event) {
-        if (Flashback.RECORDER == null) {
+        if (!shouldWritePacket()) {
             return;
         }
 
@@ -21,7 +26,7 @@ public class SimpleVoiceChatRecorder {
     }
 
     public static void onReceiveLocationalSound(ClientReceiveSoundEvent.LocationalSound event) {
-        if (Flashback.RECORDER == null) {
+        if (!shouldWritePacket()) {
             return;
         }
 
@@ -31,7 +36,7 @@ public class SimpleVoiceChatRecorder {
     }
 
     public static void onReceiveStaticSound(ClientReceiveSoundEvent.StaticSound event) {
-        if (Flashback.RECORDER == null) {
+        if (!shouldWritePacket()) {
             return;
         }
 
@@ -40,7 +45,7 @@ public class SimpleVoiceChatRecorder {
     }
 
     public static void onSendSound(ClientSoundEvent event) {
-        if (Flashback.RECORDER == null) {
+        if (!shouldWritePacket()) {
             return;
         }
 
@@ -58,14 +63,14 @@ public class SimpleVoiceChatRecorder {
     }
 
     private static void submitSoundPacket(FlashbackVoiceChatSound soundPacket) {
-        if (!Flashback.getConfig().recordVoiceChat) {
-            return;
-        }
-
-        Flashback.RECORDER.submitCustomTask(writer -> {
-            writer.startAction(ActionSimpleVoiceChatSound.INSTANCE);
-            FlashbackVoiceChatSound.STREAM_CODEC.encode(writer.friendlyByteBuf(), soundPacket);
-            writer.finishAction(ActionSimpleVoiceChatSound.INSTANCE);
+        Minecraft.getInstance().submit(() -> {
+            if (shouldWritePacket()) {
+                Flashback.RECORDER.submitCustomTask(writer -> {
+                    writer.startAction(ActionSimpleVoiceChatSound.INSTANCE);
+                    FlashbackVoiceChatSound.STREAM_CODEC.encode(writer.friendlyByteBuf(), soundPacket);
+                    writer.finishAction(ActionSimpleVoiceChatSound.INSTANCE);
+                });
+            }
         });
     }
 

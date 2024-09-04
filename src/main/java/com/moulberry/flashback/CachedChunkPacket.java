@@ -14,14 +14,18 @@ import java.util.Arrays;
 import java.util.Comparator;
 
 public class CachedChunkPacket {
+    private final int x;
+    private final int z;
     private final byte[] bigHash;
     private final int hashCode;
     public int index;
 
     public CachedChunkPacket(ClientboundLevelChunkWithLightPacket packet, int index) {
-        this.index = index;
+        this.x = packet.getX();
+        this.z = packet.getZ();
         this.bigHash = computePacketBigHash(packet);
         this.hashCode = Arrays.hashCode(this.bigHash);
+        this.index = index;
     }
 
     private static byte[] computePacketBigHash(ClientboundLevelChunkWithLightPacket packet) {
@@ -29,13 +33,19 @@ public class CachedChunkPacket {
         try {
             digest = MessageDigest.getInstance("SHA-512");
         } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException(e);
+            try {
+                digest = MessageDigest.getInstance("SHA-256");
+            } catch (NoSuchAlgorithmException e2) {
+                throw new RuntimeException(e2);
+            }
         }
+
         digest.update(intToByteArray(packet.getX()));
         digest.update(intToByteArray(packet.getZ()));
         digest.update(packet.getChunkData().buffer);
 
         FriendlyByteBuf frenBuffer = new FriendlyByteBuf(Unpooled.buffer());
+
         packet.lightData.write(frenBuffer);
         digest.update(frenBuffer.array(), 0, frenBuffer.writerIndex());
         frenBuffer.resetWriterIndex();
@@ -44,11 +54,12 @@ public class CachedChunkPacket {
         digest.update(frenBuffer.array(), 0, frenBuffer.writerIndex());
         frenBuffer.resetWriterIndex();
 
-        //Ensure stable ordering
+        // Sort to ensure stable ordering
         var copy = new ArrayList<>(packet.getChunkData().blockEntitiesData);
-        copy.sort(Comparator.comparing(a->a.y^a.packedXZ));
+        copy.sort(Comparator.comparingInt(a -> (a.y << 8) | a.packedXZ));
+
         for (ClientboundLevelChunkPacketData.BlockEntityInfo blockEntitiesData : copy) {
-            digest.update(intToByteArray(blockEntitiesData.packedXZ));
+            digest.update((byte) blockEntitiesData.packedXZ);
             digest.update(intToByteArray(blockEntitiesData.y));
             digest.update(BlockEntityType.getKey(blockEntitiesData.type).toString().getBytes(StandardCharsets.UTF_8));
             if (blockEntitiesData.tag != null) {
@@ -81,6 +92,9 @@ public class CachedChunkPacket {
         if (this == o) return true;
         if (!(o instanceof CachedChunkPacket that)) return false;
         if (this.hashCode() != that.hashCode()) {
+            return false;
+        }
+        if (this.x != that.x || this.z != that.z) {
             return false;
         }
 
