@@ -30,6 +30,9 @@ import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.DecoderException;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.ints.IntIterator;
+import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
+import it.unimi.dsi.fastutil.ints.IntSet;
 import it.unimi.dsi.fastutil.longs.LongSet;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.Util;
@@ -48,7 +51,9 @@ import net.minecraft.network.protocol.game.*;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.Services;
 import net.minecraft.server.WorldStem;
+import net.minecraft.server.level.ChunkMap;
 import net.minecraft.server.level.ClientInformation;
+import net.minecraft.server.level.ServerEntity;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.level.TicketType;
@@ -57,7 +62,9 @@ import net.minecraft.server.network.ConfigurationTask;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.server.packs.repository.PackRepository;
 import net.minecraft.server.players.PlayerList;
+import net.minecraft.util.Mth;
 import net.minecraft.world.BossEvent;
+import net.minecraft.world.entity.Display;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Inventory;
@@ -77,8 +84,11 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
+import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.SimpleFileVisitor;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
@@ -136,6 +146,7 @@ public class ReplayServer extends IntegratedServer {
     private final Map<UUID, BossEvent> bossEvents = new HashMap<>();
     private Component tabListHeader = Component.empty();
     private Component tabListFooter = Component.empty();
+    private final Map<ResourceKey<Level>, IntSet> needsPositionUpdate = new HashMap<>();
 
     private Component shutdownReason = null;
     private FileSystem playbackFileSystem = null;
@@ -586,6 +597,11 @@ public class ReplayServer extends IntegratedServer {
             ResourceKey<Level> dimension = friendlyByteBuf.readResourceKey(Registries.DIMENSION);
             ServerLevel level = this.levels.get(dimension);
 
+            IntSet positionUpdateSet = null;
+            if (level != null) {
+                positionUpdateSet = this.needsPositionUpdate.computeIfAbsent(dimension, k -> new IntOpenHashSet());
+            }
+
             int count = friendlyByteBuf.readVarInt();
             for (int j = 0; j < count; j++) {
                 int id = friendlyByteBuf.readVarInt();
@@ -605,6 +621,8 @@ public class ReplayServer extends IntegratedServer {
                         if (entity.onGround() != onGround) {
                             entity.setOnGround(onGround);
                         }
+
+                        positionUpdateSet.add(id);
                     }
                 }
             }
@@ -921,6 +939,48 @@ public class ReplayServer extends IntegratedServer {
         // Tick underlying server
         super.tickServer(booleanSupplier);
 
+        // Teleport entities
+        if (!this.needsPositionUpdate.isEmpty()) {
+            for (Map.Entry<ResourceKey<Level>, IntSet> entry : this.needsPositionUpdate.entrySet()) {
+                ResourceKey<Level> dimension = entry.getKey();
+                IntSet entities = entry.getValue();
+
+                ServerLevel level = this.getLevel(dimension);
+                if (level != null) {
+                    Int2ObjectMap<ChunkMap.TrackedEntity> entityMap = level.getChunkSource().chunkMap.entityMap;
+
+                    IntIterator iterator = entities.intIterator();
+                    while (iterator.hasNext()) {
+                        int entityId = iterator.nextInt();
+
+                        ChunkMap.TrackedEntity trackedEntity = entityMap.get(entityId);
+                        if (trackedEntity == null) {
+                            continue;
+                        }
+
+                        ServerEntity serverEntity = trackedEntity.serverEntity;
+
+                        Vec3 trackingPosition = serverEntity.entity.trackingPosition();
+
+                        int quantizedYRot = Mth.floor(serverEntity.entity.getYRot() * 256.0F / 360.0F);
+                        int quantizedXRot = Mth.floor(serverEntity.entity.getXRot() * 256.0F / 360.0F);
+
+                        if (!serverEntity.positionCodec.getBase().equals(trackingPosition)) {
+                            trackedEntity.broadcast(new ClientboundTeleportEntityPacket(serverEntity.entity));
+                            serverEntity.positionCodec.setBase(trackingPosition);
+                            serverEntity.lastSentYRot = quantizedYRot;
+                            serverEntity.lastSentXRot = quantizedXRot;
+                        } else if (quantizedYRot != serverEntity.lastSentYRot || quantizedXRot != serverEntity.lastSentXRot) {
+                            trackedEntity.broadcast(new ClientboundMoveEntityPacket.Rot(entityId, (byte) quantizedYRot, (byte) quantizedXRot, serverEntity.wasOnGround));
+                            serverEntity.lastSentYRot = quantizedYRot;
+                            serverEntity.lastSentXRot = quantizedXRot;
+                        }
+                    }
+                }
+            }
+            this.needsPositionUpdate.clear();
+        }
+
         if (Flashback.EXPORT_JOB == null) {
             if (this.processedSnapshot) {
                 this.processedSnapshot = false;
@@ -1114,7 +1174,7 @@ public class ReplayServer extends IntegratedServer {
 
         // Stop server
         super.stopServer();
-        this.clearReplayTempFolder();
+        TempFolderProvider.deleteTemp(TempFolderProvider.TempFolderType.SERVER, this.playbackUUID);
 
         if (this.playbackFileSystem != null) {
             try {
@@ -1126,7 +1186,22 @@ public class ReplayServer extends IntegratedServer {
     }
 
     public void clearReplayTempFolder() {
-        TempFolderProvider.deleteTemp(TempFolderProvider.TempFolderType.SERVER, this.playbackUUID);
+        Path temp = TempFolderProvider.createTemp(TempFolderProvider.TempFolderType.SERVER, this.playbackUUID);
+
+        // Delete all files, but not directories
+        try {
+            Files.walkFileTree(temp, new SimpleFileVisitor<>() {
+                @Override
+                public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+                    if (!Files.isDirectory(file)) {
+                        Files.deleteIfExists(file);
+                    }
+                    return FileVisitResult.CONTINUE;
+                }
+            });
+        } catch (IOException e) {
+            Flashback.LOGGER.error("Unable to delete replay temp folder", e);
+        }
     }
 
     @Override

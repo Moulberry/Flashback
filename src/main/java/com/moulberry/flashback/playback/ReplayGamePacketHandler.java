@@ -46,6 +46,7 @@ import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.ExperienceOrb;
+import net.minecraft.world.entity.Leashable;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
@@ -342,6 +343,7 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
 
     @Override
     public void handleBlockUpdate(ClientboundBlockUpdatePacket clientboundBlockUpdatePacket) {
+        System.out.println(clientboundBlockUpdatePacket.getPos());
         this.setBlockState(this.level(), clientboundBlockUpdatePacket.getPos(),
             clientboundBlockUpdatePacket.getBlockState());
         forward(clientboundBlockUpdatePacket);
@@ -443,9 +445,13 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
     @Override
     public void handleEntityLinkPacket(ClientboundSetEntityLinkPacket clientboundSetEntityLinkPacket) {
         Entity source = this.level().getEntity(clientboundSetEntityLinkPacket.getSourceId());
-        if (source instanceof Mob mob) {
-            Entity dest = this.level().getEntity(clientboundSetEntityLinkPacket.getDestId());
-            mob.setLeashedTo(dest, true);
+        if (source instanceof Leashable leashable) {
+            if (clientboundSetEntityLinkPacket.getDestId() == 0) {
+                leashable.setLeashedTo(null, true);
+            } else {
+                Entity dest = this.level().getEntity(clientboundSetEntityLinkPacket.getDestId());
+                leashable.setLeashedTo(dest, true);
+            }
         }
     }
 

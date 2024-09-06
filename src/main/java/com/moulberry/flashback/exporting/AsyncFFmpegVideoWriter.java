@@ -3,25 +3,19 @@ package com.moulberry.flashback.exporting;
 import com.mojang.blaze3d.platform.NativeImage;
 import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.SneakyThrow;
-import com.moulberry.flashback.mixin.record.MixinFFmpegFrameRecorder;
-import net.fabricmc.loader.api.FabricLoader;
-import org.bytedeco.ffmpeg.avutil.AVComponentDescriptor;
 import org.bytedeco.ffmpeg.avutil.AVFrame;
 import org.bytedeco.ffmpeg.avutil.AVPixFmtDescriptor;
-import org.bytedeco.ffmpeg.global.avcodec;
 import org.bytedeco.ffmpeg.global.avutil;
 import org.bytedeco.ffmpeg.global.swscale;
 import org.bytedeco.ffmpeg.swscale.SwsContext;
 import org.bytedeco.javacpp.BytePointer;
 import org.bytedeco.javacpp.DoublePointer;
-import org.bytedeco.javacpp.Pointer;
 import org.bytedeco.javacpp.PointerPointer;
 import org.bytedeco.javacv.FFmpegFrameRecorder;
 import org.bytedeco.javacv.FFmpegLogCallback;
 import org.bytedeco.javacv.Frame;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.lwjgl.opengl.GL11;
 import org.lwjgl.system.MemoryUtil;
 
 import java.io.IOException;
@@ -34,10 +28,9 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.LockSupport;
 
 import static org.bytedeco.ffmpeg.global.avutil.*;
-import static org.bytedeco.ffmpeg.global.swscale.SWS_BILINEAR;
 import static org.bytedeco.ffmpeg.global.swscale.sws_freeContext;
 
-public class AsyncVideoEncoder implements AutoCloseable {
+public class AsyncFFmpegVideoWriter implements AutoCloseable, VideoWriter {
 
     @Nullable
     private final ArrayBlockingQueue<ImageFrame> rescaleQueue;
@@ -52,8 +45,6 @@ public class AsyncVideoEncoder implements AutoCloseable {
 
     private final AtomicReference<Throwable> threadedError = new AtomicReference<>(null);
 
-    public static final int SRC_PIXEL_FORMAT = avutil.AV_PIX_FMT_RGBA;
-
     private record ImageFrame(long pointer, int size, int width, int height, int channels, int imageDepth, int stride, int pixelFormat,
                               @Nullable FloatBuffer audioBuffer) implements AutoCloseable {
         public void close() {
@@ -61,7 +52,7 @@ public class AsyncVideoEncoder implements AutoCloseable {
         }
     }
 
-    public AsyncVideoEncoder(ExportSettings settings, String filename) {
+    public AsyncFFmpegVideoWriter(ExportSettings settings, String filename) {
         int width = settings.resolutionX();
         int height = settings.resolutionY();
 
@@ -96,7 +87,7 @@ public class AsyncVideoEncoder implements AutoCloseable {
 
             int dstPixelFormat = PixelFormatHelper.getBestPixelFormat(settings.encoder(), wantTransparency);
             Flashback.LOGGER.info("Encoding video with pixel format {}", PixelFormatHelper.pixelFormatToString(dstPixelFormat));
-            boolean needsRescale = SRC_PIXEL_FORMAT != dstPixelFormat;
+            boolean needsRescale = ExportJob.SRC_PIXEL_FORMAT != dstPixelFormat;
 
             int audioChannels = 0;
             if (settings.recordAudio()) {
@@ -338,7 +329,7 @@ public class AsyncVideoEncoder implements AutoCloseable {
         while (true) {
             try {
                 ImageFrame imageFrame = new ImageFrame(src.pixels, (int) src.size, src.getWidth(), src.getHeight(),
-                        4, Frame.DEPTH_INT, src.getWidth(), SRC_PIXEL_FORMAT, audioBuffer);
+                        4, Frame.DEPTH_INT, src.getWidth(), ExportJob.SRC_PIXEL_FORMAT, audioBuffer);
                 if (this.rescaleQueue != null) {
                     this.rescaleQueue.put(imageFrame);
                 } else {

@@ -692,23 +692,24 @@ public class ReplayUI {
 
                 if (Minecraft.getInstance().screen != null) {
                     ImGui.captureMouseFromApp(false);
-                }
-                boolean isMovingCamera = isMovingCamera();
-                if (isFrameFocused || isMovingCamera) {
-                    LocalPlayer player = Minecraft.getInstance().player;
-                    if (player != null) {
-                        int wheelY = (int) Math.signum(ImGui.getIO().getMouseWheel());
-                        if (wheelY != 0) {
-                            final float defaultFlyingSpeed = 0.05f;
-                            float flyingSpeed = Mth.clamp(player.getAbilities().getFlyingSpeed() + (float)wheelY * defaultFlyingSpeed / 10f,
+                } else {
+                    boolean isMovingCamera = isMovingCamera();
+                    if (isFrameFocused || isMovingCamera) {
+                        LocalPlayer player = Minecraft.getInstance().player;
+                        if (player != null) {
+                            int wheelY = (int) Math.signum(ImGui.getIO().getMouseWheel());
+                            if (wheelY != 0) {
+                                final float defaultFlyingSpeed = 0.05f;
+                                float flyingSpeed = Mth.clamp(player.getAbilities().getFlyingSpeed() + (float)wheelY * defaultFlyingSpeed / 10f,
                                     defaultFlyingSpeed / 10f, defaultFlyingSpeed * 10.0f);
-                            setInfoOverlay(String.format("Flying Speed: %.1f", flyingSpeed / defaultFlyingSpeed));
-                            player.getAbilities().setFlyingSpeed(flyingSpeed);
+                                setInfoOverlay(String.format("Flying Speed: %.1f", flyingSpeed / defaultFlyingSpeed));
+                                player.getAbilities().setFlyingSpeed(flyingSpeed);
+                            }
                         }
                     }
-                }
-                if (!isMovingCamera && ImGui.getIO().getWantCaptureMouse() && !popupOpenLastFrame && !ImGui.isPopupOpen("", ImGuiPopupFlags.AnyPopup)) {
-                    fireCancelNavInput |= handleBasicInputs();
+                    if (!isMovingCamera && ImGui.getIO().getWantCaptureMouse() && !popupOpenLastFrame && !ImGui.isPopupOpen("", ImGuiPopupFlags.AnyPopup)) {
+                        fireCancelNavInput |= handleBasicInputs();
+                    }
                 }
             }
         } else {

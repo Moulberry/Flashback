@@ -20,6 +20,7 @@ import com.moulberry.flashback.editor.ui.ImGuiHelper;
 import imgui.ImGui;
 import imgui.flag.ImGuiColorEditFlags;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.FogRenderer;
 
 import java.util.List;
 
@@ -125,6 +126,28 @@ public class VisualsWindow {
                 if (ImGui.sliderFloat("End", floatBuffer, 0.0f, 512.0f)) {
                     visuals.overrideFogEnd = floatBuffer[0];
                     editorState.markDirty();
+                }
+            }
+
+            if (ImGui.checkbox("Override Fog Colour", visuals.overrideFogColour)) {
+                visuals.overrideFogColour = !visuals.overrideFogColour;
+                if (visuals.overrideFogColour) {
+                    visuals.fogColour[0] = FogRenderer.fogRed;
+                    visuals.fogColour[1] = FogRenderer.fogGreen;
+                    visuals.fogColour[2] = FogRenderer.fogBlue;
+                }
+                editorState.markDirty();
+            }
+            if (visuals.overrideFogColour) {
+                if (ImGui.colorButton("Fog Colour", visuals.fogColour)) {
+                    ImGui.openPopup("##EditFogColour");
+                }
+                ImGui.sameLine();
+                ImGui.text("Fog Colour");
+
+                if (ImGui.beginPopup("##EditFogColour")) {
+                    ImGui.colorPicker3("Fog Colour", visuals.fogColour);
+                    ImGui.endPopup();
                 }
             }
 

@@ -69,13 +69,13 @@ public class PixelFormatHelper {
             supportedFormats.add(avutil.AV_PIX_FMT_NONE);
 
             if (transparent) {
-                int format = avcodec.avcodec_find_best_pix_fmt_of_list(supportedFormats.toIntArray(), AsyncVideoEncoder.SRC_PIXEL_FORMAT, 1, new int[1]);
+                int format = avcodec.avcodec_find_best_pix_fmt_of_list(supportedFormats.toIntArray(), ExportJob.SRC_PIXEL_FORMAT, 1, new int[1]);
                 if (format != avutil.AV_PIX_FMT_NONE) {
                     return format;
                 }
             }
 
-            return avcodec.avcodec_find_best_pix_fmt_of_list(supportedFormats.toIntArray(), AsyncVideoEncoder.SRC_PIXEL_FORMAT, 0, new int[1]);
+            return avcodec.avcodec_find_best_pix_fmt_of_list(supportedFormats.toIntArray(), ExportJob.SRC_PIXEL_FORMAT, 0, new int[1]);
         }
     }
 

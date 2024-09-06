@@ -8,7 +8,9 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.*;
 import com.moulberry.flashback.FixedDeltaTracker;
 import com.moulberry.flashback.Flashback;
+import com.moulberry.flashback.SneakyThrow;
 import com.moulberry.flashback.Utils;
+import com.moulberry.flashback.combo_options.VideoContainer;
 import com.moulberry.flashback.keyframe.KeyframeType;
 import com.moulberry.flashback.keyframe.handler.KeyframeHandler;
 import com.moulberry.flashback.keyframe.handler.MinecraftKeyframeHandler;
@@ -28,6 +30,7 @@ import net.minecraft.client.renderer.FogRenderer;
 import net.minecraft.client.renderer.ShaderInstance;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
+import org.bytedeco.ffmpeg.global.avutil;
 import org.joml.Matrix4f;
 import org.lwjgl.glfw.GLFW;
 import org.lwjgl.openal.SOFTLoopback;
@@ -73,6 +76,8 @@ public class ExportJob {
     private double audioSamples = 0.0;
 
     private final AtomicBoolean finishedServerTick = new AtomicBoolean(false);
+
+    public static final int SRC_PIXEL_FORMAT = avutil.AV_PIX_FMT_RGBA;
 
     public ExportJob(ExportSettings settings) {
         this.settings = settings;
@@ -135,12 +140,14 @@ public class ExportJob {
             RenderTarget mainTarget = Minecraft.getInstance().mainRenderTarget;
             infoRenderTarget = new TextureTarget(mainTarget.width, mainTarget.height, false, Minecraft.ON_OSX);
 
-            try (AsyncVideoEncoder encoder = new AsyncVideoEncoder(this.settings, tempFileName);
-                    SaveableFramebufferQueue downloader = new SaveableFramebufferQueue(this.settings.resolutionX(), this.settings.resolutionY())) {
+            try (VideoWriter encoder = createVideoWriter(this.settings, tempFileName);
+                 SaveableFramebufferQueue downloader = new SaveableFramebufferQueue(this.settings.resolutionX(), this.settings.resolutionY())) {
                 doExport(encoder, downloader, infoRenderTarget);
             }
 
-            Files.move(exportTempFile, this.settings.output(), StandardCopyOption.REPLACE_EXISTING);
+            if (this.settings.container() != VideoContainer.PNG_SEQUENCE) {
+                Files.move(exportTempFile, this.settings.output(), StandardCopyOption.REPLACE_EXISTING);
+            }
         } catch (IOException e) {
             throw new RuntimeException(e);
         } finally {
@@ -170,7 +177,15 @@ public class ExportJob {
         }
     }
 
-    private void doExport(AsyncVideoEncoder encoder, SaveableFramebufferQueue downloader, TextureTarget infoRenderTarget) {
+    private static VideoWriter createVideoWriter(ExportSettings settings, String tempFileName) {
+        if (settings.container() == VideoContainer.PNG_SEQUENCE) {
+            return new PNGSequenceVideoWriter(settings);
+        } else {
+            return new AsyncFFmpegVideoWriter(settings, tempFileName);
+        }
+    }
+
+    private void doExport(VideoWriter videoWriter, SaveableFramebufferQueue downloader, TextureTarget infoRenderTarget) {
         ReplayServer replayServer = Flashback.getReplayServer();
         if (replayServer == null) {
             return;
@@ -301,7 +316,7 @@ public class ExportJob {
             cancel = finishFrame(renderTarget, infoRenderTarget, tickIndex, ticks.size());
             this.shouldChangeFramebufferSize = true;
 
-            submitDownloadedFrames(encoder, downloader, false);
+            submitDownloadedFrames(videoWriter, downloader, false);
 
             saveable.audioBuffer = audioBuffer;
             downloader.startDownload(renderTarget, saveable, this.settings.ssaa());
@@ -312,8 +327,8 @@ public class ExportJob {
             }
         }
 
-        submitDownloadedFrames(encoder, downloader, true);
-        encoder.finish();
+        submitDownloadedFrames(videoWriter, downloader, true);
+        videoWriter.finish();
     }
 
     private void updateRandoms(Random random, Random mathRandom) {
@@ -432,7 +447,7 @@ public class ExportJob {
         }
     }
 
-    private void submitDownloadedFrames(AsyncVideoEncoder encoder, SaveableFramebufferQueue downloader, boolean drain) {
+    private void submitDownloadedFrames(VideoWriter videoWriter, SaveableFramebufferQueue downloader, boolean drain) {
         SaveableFramebufferQueue.DownloadedFrame frame;
         while (true) {
             long start = System.nanoTime();
@@ -444,7 +459,7 @@ public class ExportJob {
             }
 
             start = System.nanoTime();
-            encoder.encode(frame.image(), frame.audioBuffer());
+            videoWriter.encode(frame.image(), frame.audioBuffer());
             encodeTimeNanos += System.nanoTime() - start;
         }
     }

@@ -8,6 +8,8 @@ out vec4 fragColor;
 
 void main() {
     vec4 color = texture(DiffuseSampler, texCoord);
-    color.a = round(color.a);
+    if (color.a > 0.0) {
+        color.a = 1.0;
+    }
     fragColor = color;
 }
