@@ -15,7 +15,7 @@ public class MainMenuBar {
     }
 
     public static void renderInner() {
-        if (ImGui.menuItem("Export")) {
+        if (ImGui.menuItem("Export Video")) {
             StartExportWindow.open();
         }
 
@@ -26,20 +26,31 @@ public class MainMenuBar {
             }
         }
 
+        ImGui.separator();
+
+        if (ImGui.menuItem("Player List")) {
+            toggleWindow("player_list");
+        }
+        if (ImGui.menuItem("Movement")) {
+            toggleWindow("movement");
+        }
+
+        ImGui.separator();
+
         if (ImGui.menuItem("Hide (F1)")) {
             Minecraft.getInstance().options.hideGui = true;
         }
+    }
 
-        if (ImGui.menuItem("Player List")) {
-            var openedWindows = Flashback.getConfig().openedWindows;
-            boolean playerListIsOpen = openedWindows.contains("player_list");
-            if (playerListIsOpen) {
-                openedWindows.remove("player_list");
-            } else {
-                openedWindows.add("player_list");
-            }
-            Flashback.getConfig().saveToDefaultFolder();
+    private static void toggleWindow(String windowName) {
+        var openedWindows = Flashback.getConfig().openedWindows;
+        boolean playerListIsOpen = openedWindows.contains(windowName);
+        if (playerListIsOpen) {
+            openedWindows.remove(windowName);
+        } else {
+            openedWindows.add(windowName);
         }
+        Flashback.getConfig().saveToDefaultFolder();
     }
 
 }

@@ -1,7 +1,9 @@
 package com.moulberry.flashback.editor.ui.windows;
 
+import com.moulberry.flashback.editor.ui.ImGuiHelper;
 import com.moulberry.flashback.state.EditorState;
 import imgui.ImGui;
+import imgui.type.ImString;
 import net.minecraft.client.Minecraft;
 import net.minecraft.commands.arguments.EntityAnchorArgument;
 import net.minecraft.world.entity.Entity;

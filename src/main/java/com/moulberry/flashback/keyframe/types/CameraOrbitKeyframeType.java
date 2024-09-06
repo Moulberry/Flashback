@@ -1,5 +1,6 @@
 package com.moulberry.flashback.keyframe.types;
 
+import com.moulberry.flashback.editor.ui.ImGuiHelper;
 import com.moulberry.flashback.keyframe.Keyframe;
 import com.moulberry.flashback.keyframe.KeyframeType;
 import com.moulberry.flashback.keyframe.impl.CameraKeyframe;
@@ -39,9 +40,9 @@ public class CameraOrbitKeyframeType implements KeyframeType<CameraOrbitKeyframe
     @Override
     public KeyframeCreatePopup<CameraOrbitKeyframe> createPopup() {
        float[] cameraOrbitCenter = new float[]{0.0f, 0.0f, 0.0f};
-       ImFloat cameraOrbitDistance = new ImFloat(8.0f);
-       ImFloat cameraOrbitYaw = new ImFloat(0.0f);
-       ImFloat cameraOrbitPitch = new ImFloat(0.0f);
+       float[] cameraOrbitDistance = new float[]{8.0f};
+       float[] cameraOrbitYaw = new float[]{0.0f};
+       float[] cameraOrbitPitch = new float[]{0.0f};
 
        Entity entity = Minecraft.getInstance().cameraEntity;
        if (entity != null) {
@@ -52,14 +53,14 @@ public class CameraOrbitKeyframeType implements KeyframeType<CameraOrbitKeyframe
        }
 
         return () -> {
-            ImGui.inputFloat3("Position", cameraOrbitCenter);
-            ImGui.inputFloat("Distance", cameraOrbitDistance);
-            ImGui.inputFloat("Yaw", cameraOrbitYaw);
-            ImGui.inputFloat("Pitch", cameraOrbitPitch);
+            ImGuiHelper.inputFloat("Position", cameraOrbitCenter);
+            ImGuiHelper.inputFloat("Distance", cameraOrbitDistance);
+            ImGuiHelper.inputFloat("Yaw", cameraOrbitYaw);
+            ImGuiHelper.inputFloat("Pitch", cameraOrbitPitch);
 
             if (ImGui.button("Add")) {
                 Vector3d center = new Vector3d(cameraOrbitCenter[0], cameraOrbitCenter[1], cameraOrbitCenter[2]);
-                return new CameraOrbitKeyframe(center, cameraOrbitDistance.get(), cameraOrbitYaw.get(), cameraOrbitPitch.get());
+                return new CameraOrbitKeyframe(center, cameraOrbitDistance[0], cameraOrbitYaw[0], cameraOrbitPitch[0]);
             }
             ImGui.sameLine();
             if (ImGui.button("Cancel")) {

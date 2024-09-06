@@ -14,25 +14,31 @@ import com.moulberry.flashback.keyframe.handler.KeyframeHandler;
 import com.moulberry.flashback.keyframe.interpolation.InterpolationType;
 import com.moulberry.flashback.keyframe.types.CameraShakeKeyframeType;
 import com.moulberry.flashback.spline.CatmullRom;
+import com.moulberry.flashback.state.EditorState;
+import com.moulberry.flashback.state.EditorStateManager;
+import imgui.ImGui;
 
 import java.lang.reflect.Type;
+import java.util.function.Consumer;
 
 public class CameraShakeKeyframe extends Keyframe {
 
-    private final float frequencyX;
-    private final float amplitudeX;
-    private final float frequencyY;
-    private final float amplitudeY;
+    private float frequencyX;
+    private float amplitudeX;
+    private float frequencyY;
+    private float amplitudeY;
+    private boolean splitParams;
 
-    public CameraShakeKeyframe(float frequencyX, float amplitudeX, float frequencyY, float amplitudeY) {
-        this(frequencyX, amplitudeX, frequencyY, amplitudeY, InterpolationType.DEFAULT);
+    public CameraShakeKeyframe(float frequencyX, float amplitudeX, float frequencyY, float amplitudeY, boolean splitParams) {
+        this(frequencyX, amplitudeX, frequencyY, amplitudeY, splitParams, InterpolationType.DEFAULT);
     }
 
-    public CameraShakeKeyframe(float frequencyX, float amplitudeX, float frequencyY, float amplitudeY, InterpolationType interpolationType) {
+    public CameraShakeKeyframe(float frequencyX, float amplitudeX, float frequencyY, float amplitudeY, boolean splitParams, InterpolationType interpolationType) {
         this.frequencyX = frequencyX;
         this.amplitudeX = amplitudeX;
         this.frequencyY = frequencyY;
         this.amplitudeY = amplitudeY;
+        this.splitParams = splitParams;
         this.interpolationType(interpolationType);
     }
 
@@ -43,7 +49,77 @@ public class CameraShakeKeyframe extends Keyframe {
 
     @Override
     public Keyframe copy() {
-        return new CameraShakeKeyframe(this.frequencyX, this.amplitudeX, this.frequencyY, this.amplitudeY, this.interpolationType());
+        return new CameraShakeKeyframe(this.frequencyX, this.amplitudeX, this.frequencyY, this.amplitudeY, this.splitParams, this.interpolationType());
+    }
+
+    @Override
+    public void renderEditKeyframe(Consumer<Consumer<Keyframe>> update) {
+        ImGui.setNextItemWidth(160);
+        if (ImGui.checkbox("Split Y/X", this.splitParams)) {
+            boolean splitParams = this.splitParams;
+            update.accept(keyframe -> {
+                CameraShakeKeyframe cameraShakeKeyframe = (CameraShakeKeyframe) keyframe;
+                cameraShakeKeyframe.splitParams = !splitParams;
+                cameraShakeKeyframe.frequencyY = cameraShakeKeyframe.frequencyX;
+                cameraShakeKeyframe.amplitudeY = cameraShakeKeyframe.amplitudeX;
+            });
+        }
+
+        if (this.splitParams) {
+            float[] input = new float[]{this.frequencyX};
+            ImGui.setNextItemWidth(160);
+            if (ImGui.sliderFloat("Frequency X", input, 0.1f, 10.0f, "%.1f") && input[0] != this.frequencyX) {
+                update.accept(keyframe -> {
+                    ((CameraShakeKeyframe)keyframe).splitParams = true;
+                    ((CameraShakeKeyframe)keyframe).frequencyX = input[0];
+                });
+            }
+
+            input[0] = this.amplitudeX;
+            ImGui.setNextItemWidth(160);
+            if (ImGui.sliderFloat("Amplitude X", input, 0.0f, 10.0f, "%.1f") && input[0] != this.amplitudeX) {
+                update.accept(keyframe -> {
+                    ((CameraShakeKeyframe)keyframe).splitParams = true;
+                    ((CameraShakeKeyframe)keyframe).amplitudeX = input[0];
+                });
+            }
+
+            input[0] = this.frequencyY;
+            ImGui.setNextItemWidth(160);
+            if (ImGui.sliderFloat("Frequency Y", input, 0.1f, 10.0f, "%.1f") && input[0] != this.frequencyY) {
+                update.accept(keyframe -> {
+                    ((CameraShakeKeyframe)keyframe).splitParams = true;
+                    ((CameraShakeKeyframe)keyframe).frequencyY = input[0];
+                });
+            }
+
+            input[0] = this.amplitudeY;
+            ImGui.setNextItemWidth(160);
+            if (ImGui.sliderFloat("Amplitude Y", input, 0.0f, 10.0f, "%.1f") && input[0] != this.amplitudeY) {
+                update.accept(keyframe -> {
+                    ((CameraShakeKeyframe)keyframe).splitParams = true;
+                    ((CameraShakeKeyframe)keyframe).amplitudeY = input[0];
+                });
+            }
+        } else {
+            float[] input = new float[]{this.frequencyX};
+            ImGui.setNextItemWidth(160);
+            if (ImGui.sliderFloat("Frequency", input, 0.1f, 10.0f, "%.1f") && input[0] != this.frequencyX) {
+                update.accept(keyframe -> {
+                    ((CameraShakeKeyframe)keyframe).frequencyX = input[0];
+                    ((CameraShakeKeyframe)keyframe).frequencyY = input[0];
+                });
+            }
+
+            input[0] = this.amplitudeX;
+            ImGui.setNextItemWidth(160);
+            if (ImGui.sliderFloat("Amplitude", input, 0.0f, 10.0f, "%.1f") && input[0] != this.amplitudeX) {
+                update.accept(keyframe -> {
+                    ((CameraShakeKeyframe)keyframe).amplitudeX = input[0];
+                    ((CameraShakeKeyframe)keyframe).amplitudeY = input[0];
+                });
+            }
+        }
     }
 
     @Override
@@ -111,8 +187,9 @@ public class CameraShakeKeyframe extends Keyframe {
             float amplitudeX = jsonObject.get("amplitudeX").getAsFloat();
             float frequencyY = jsonObject.get("frequencyY").getAsFloat();
             float amplitudeY = jsonObject.get("amplitudeY").getAsFloat();
+            boolean splitParams = jsonObject.has("splitParams") && jsonObject.get("splitParams").getAsBoolean();
             InterpolationType interpolationType = context.deserialize(jsonObject.get("interpolation_type"), InterpolationType.class);
-            return new CameraShakeKeyframe(frequencyX, amplitudeX, frequencyY, amplitudeY, interpolationType);
+            return new CameraShakeKeyframe(frequencyX, amplitudeX, frequencyY, amplitudeY, splitParams, interpolationType);
         }
 
         @Override
@@ -122,6 +199,9 @@ public class CameraShakeKeyframe extends Keyframe {
             jsonObject.addProperty("amplitudeX", src.amplitudeX);
             jsonObject.addProperty("frequencyY", src.frequencyY);
             jsonObject.addProperty("amplitudeY", src.amplitudeY);
+            if (src.splitParams) {
+                jsonObject.addProperty("splitParams", true);
+            }
             jsonObject.addProperty("type", "camera_shake");
             jsonObject.add("interpolation_type", context.serialize(src.interpolationType()));
             return jsonObject;

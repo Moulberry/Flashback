@@ -1,5 +1,8 @@
 accessWidener	v1	named
 
+# Options
+accessible class net/minecraft/client/OptionInstance$IntRangeBase
+
 # Client data
 accessible class net/minecraft/client/multiplayer/ClientChunkCache$Storage
 accessible field net/minecraft/client/multiplayer/ClientChunkCache storage Lnet/minecraft/client/multiplayer/ClientChunkCache$Storage;
@@ -76,6 +79,9 @@ extendable method net/minecraft/server/MinecraftServer synchronizeTime (Lnet/min
 
 accessible class net/minecraft/server/level/ThreadedLevelLightEngine$TaskType
 accessible field net/minecraft/server/network/PlayerChunkSender pendingChunks Lit/unimi/dsi/fastutil/longs/LongSet;
+accessible field net/minecraft/server/level/ChunkMap entityMap Lit/unimi/dsi/fastutil/ints/Int2ObjectMap;
+accessible class net/minecraft/server/level/ChunkMap$TrackedEntity
+accessible field net/minecraft/server/level/ChunkMap$TrackedEntity serverEntity Lnet/minecraft/server/level/ServerEntity;
 
 # Packets
 accessible field net/minecraft/network/protocol/game/ClientboundPlayerInfoUpdatePacket entries Ljava/util/List;
@@ -110,6 +116,7 @@ accessible field net/minecraft/server/level/ServerEntity lastSentXRot I
 accessible field net/minecraft/server/level/ServerEntity lastSentYHeadRot I
 accessible field net/minecraft/server/level/ServerEntity wasOnGround Z
 accessible field net/minecraft/server/level/ServerEntity trackedDataValues Ljava/util/List;
+accessible field net/minecraft/server/level/ServerEntity updateInterval I
 
 # Replay UI
 accessible field net/minecraft/client/gui/screens/Screen renderables Ljava/util/List;
@@ -123,6 +130,9 @@ accessible field com/mojang/blaze3d/platform/Window height I
 # Visuals
 accessible field net/minecraft/client/Camera eyeHeight F
 accessible method net/minecraft/client/multiplayer/ClientLevel getEntities ()Lnet/minecraft/world/level/entity/LevelEntityGetter;
+accessible field net/minecraft/client/renderer/FogRenderer fogRed F
+accessible field net/minecraft/client/renderer/FogRenderer fogGreen F
+accessible field net/minecraft/client/renderer/FogRenderer fogBlue F
 
 # Exporting
 accessible field net/minecraft/client/Minecraft clientTickCount J
@@ -148,5 +158,6 @@ accessible field net/minecraft/client/multiplayer/ClientPacketListener random Ln
 accessible field net/minecraft/client/sounds/SoundManager soundEngine Lnet/minecraft/client/sounds/SoundEngine;
 accessible field net/minecraft/client/sounds/SoundEngine library Lcom/mojang/blaze3d/audio/Library;
 accessible field com/mojang/blaze3d/audio/Library currentDevice J
+accessible field com/mojang/blaze3d/audio/Library context J
 accessible field net/minecraft/client/sounds/SoundEngine executor Lnet/minecraft/client/sounds/SoundEngineExecutor;
 accessible field net/minecraft/client/sounds/SoundEngineExecutor thread Ljava/lang/Thread;

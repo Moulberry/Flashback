@@ -10,7 +10,7 @@ import com.moulberry.flashback.action.*;
 import com.moulberry.flashback.io.AsyncReplaySaver;
 import com.moulberry.flashback.io.ReplayWriter;
 import com.moulberry.flashback.mixin.compat.bobby.FakeChunkManagerAccessor;
-import de.johni0702.minecraft.bobby.FakeChunkManager;
+import com.moulberry.flashback.packet.FlashbackAccurateEntityPosition;
 import io.netty.buffer.ByteBuf;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.SharedConstants;
@@ -34,8 +34,6 @@ import net.minecraft.nbt.Tag;
 import net.minecraft.network.ConnectionProtocol;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.PlayerChatMessage;
-import net.minecraft.network.chat.SignedMessageBody;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.common.ClientboundResourcePackPopPacket;
@@ -50,15 +48,19 @@ import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.resources.RegistryOps;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.RegistryLayer;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.TagNetworkSerialization;
 import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.Leashable;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.flag.FeatureFlags;
+import net.minecraft.world.food.FoodData;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.GameRules;
@@ -69,6 +71,7 @@ import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.saveddata.maps.MapDecoration;
 import net.minecraft.world.level.saveddata.maps.MapId;
 import net.minecraft.world.level.saveddata.maps.MapItemSavedData;
+import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.scores.*;
 
 import java.nio.file.Path;
@@ -77,6 +80,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.ForkJoinTask;
 import java.util.concurrent.atomic.AtomicReferenceArray;
+import java.util.function.Consumer;
 
 public class Recorder {
 
@@ -107,8 +111,15 @@ public class Recorder {
     // Local player data
     private final List<Object> lastPlayerEntityMeta = new ArrayList<>();
     private final Map<EquipmentSlot, ItemStack> lastPlayerEquipment = new EnumMap<>(EquipmentSlot.class);
+    private final ItemStack[] lastHotbarItems = new ItemStack[9];
     private BlockPos lastDestroyPos = null;
     private int lastDestroyProgress = -1;
+    private int lastSelectedSlot = -1;
+    private float lastExperienceProgress = -1;
+    private int lastTotalExperience = -1;
+    private int lastExperienceLevel = -1;
+    private int lastFoodLevel = -1;
+    private float lastSaturationLevel = -1;
     private boolean wasSwinging = false;
     private int lastSwingTime = -1;
 
@@ -139,8 +150,20 @@ public class Recorder {
         }
     }
 
+    public boolean readyToWrite() {
+        return !this.closeForWriting && !this.needsInitialSnapshot && !this.wasPaused;
+    }
+
     public void addMarker(ReplayMarker marker) {
         this.metadata.replayMarkers.put(this.writtenTicks, marker);
+    }
+
+    public void submitCustomTask(Consumer<ReplayWriter> consumer) {
+        if (!this.readyToWrite()) {
+            return;
+        }
+
+        this.asyncReplaySaver.submit(consumer);
     }
 
     public void setRegistryAccess(RegistryAccess registryAccess) {
@@ -160,6 +183,29 @@ public class Recorder {
         builder.append(CHUNK_LENGTH_SECONDS*20);
         builder.append(")");
         return builder.toString();
+    }
+
+    private long lastPositionNanos;
+    private PositionAndAngle lastPlayerPositionAndAngle = null;
+    private Vec3 nextPlayerPosition = null;
+    private final TreeMap<Long, PositionAndAngle> partialPositions = new TreeMap<>();
+
+    public void trackPartialPosition(Entity entity, float partialTick) {
+        int localPlayerUpdatesPerSecond = Flashback.getConfig().localPlayerUpdatesPerSecond;
+        if (localPlayerUpdatesPerSecond <= 20) {
+            return;
+        }
+
+        long currentNanos = System.nanoTime();
+
+        double x = Mth.lerp(partialTick, entity.xo, entity.getX());
+        double y = Mth.lerp(partialTick, entity.yo, entity.getY());
+        double z = Mth.lerp(partialTick, entity.zo, entity.getZ());
+        float yaw = entity.getViewYRot(partialTick);
+        float pitch = entity.getViewXRot(partialTick);
+
+        this.nextPlayerPosition = new Vec3(entity.getX(), entity.getY(), entity.getZ());
+        this.partialPositions.put(currentNanos, new PositionAndAngle(x, y, z, yaw, pitch));
     }
 
     public void endTick(boolean close) {
@@ -185,10 +231,76 @@ public class Recorder {
         boolean isLevelLoaded = !(Minecraft.getInstance().screen instanceof ReceivingLevelScreen);
         boolean changedDimensions = false;
 
+        int localPlayerUpdatesPerSecond = Flashback.getConfig().localPlayerUpdatesPerSecond;
+        boolean trackAccurateFirstPersonPosition = localPlayerUpdatesPerSecond > 20;
+
         if (minecraft.level != null && (minecraft.getOverlay() == null || !minecraft.getOverlay().isPauseScreen()) &&
                 !minecraft.isPaused() && !this.isPaused && isLevelLoaded) {
             this.writeEntityPositions();
             this.writeLocalData();
+
+            if (trackAccurateFirstPersonPosition) {
+                long nanos = System.nanoTime();
+
+                LocalPlayer player = Minecraft.getInstance().player;
+                if (player == null || this.nextPlayerPosition == null) {
+                    this.lastPlayerPositionAndAngle = null;
+                } else if (this.lastPlayerPositionAndAngle == null) {
+                    this.lastPlayerPositionAndAngle = new PositionAndAngle(this.nextPlayerPosition.x, this.nextPlayerPosition.y, this.nextPlayerPosition.z,
+                        player.getYRot(), player.getXRot());
+                } else {
+                    int divisions = localPlayerUpdatesPerSecond / 20;
+                    PositionAndAngle newPosition = new PositionAndAngle(this.nextPlayerPosition.x, this.nextPlayerPosition.y, this.nextPlayerPosition.z,
+                        player.getYRot(), player.getXRot());
+
+                    if (!this.lastPlayerPositionAndAngle.equals(newPosition)) {
+                        List<PositionAndAngle> interpolatedPositions = new ArrayList<>();
+
+                        for (int i = 0; i <= divisions; i++) {
+                            double amount = (double) i / divisions;
+                            double partialNanos = this.lastPositionNanos + (nanos - this.lastPositionNanos) * amount;
+                            long partialNanosRounded = (long) partialNanos;
+
+                            Long floorNanos = this.lastPositionNanos;
+                            PositionAndAngle floorPosition = this.lastPlayerPositionAndAngle;
+                            Long ceilNanos = nanos;
+                            PositionAndAngle ceilPosition = newPosition;
+
+                            Map.Entry<Long, PositionAndAngle> floorEntry = this.partialPositions.floorEntry(partialNanosRounded);
+                            Map.Entry<Long, PositionAndAngle> ceilEntry = this.partialPositions.ceilingEntry(partialNanosRounded + 1);
+
+                            if (floorEntry != null) {
+                                floorNanos = floorEntry.getKey();
+                                floorPosition = floorEntry.getValue();
+                            }
+                            if (ceilEntry != null) {
+                                ceilNanos = ceilEntry.getKey();
+                                ceilPosition = ceilEntry.getValue();
+                            }
+
+                            double lerpAmount = 0.5;
+                            if (!Objects.equals(ceilNanos, floorNanos)) {
+                                lerpAmount = (partialNanos - floorNanos) / (ceilNanos - floorNanos);
+                            }
+
+                            PositionAndAngle interpolatedPosition = floorPosition.lerp(ceilPosition, lerpAmount);
+                            interpolatedPositions.add(interpolatedPosition);
+                        }
+
+                        FlashbackAccurateEntityPosition accurateEntityPosition = new FlashbackAccurateEntityPosition(player.getId(), interpolatedPositions);
+                        this.asyncReplaySaver.submit(writer -> {
+                            writer.startAction(ActionAccuratePlayerPosition.INSTANCE);
+                            FlashbackAccurateEntityPosition.STREAM_CODEC.encode(writer.friendlyByteBuf(), accurateEntityPosition);
+                            writer.finishAction(ActionAccuratePlayerPosition.INSTANCE);
+                        });
+
+                        this.lastPlayerPositionAndAngle = newPosition;
+                    }
+                }
+
+                this.partialPositions.clear();
+                this.lastPositionNanos = nanos;
+            }
 
             this.asyncReplaySaver.submit(writer -> writer.startAndFinishAction(ActionNextTick.INSTANCE));
             this.writtenTicksInChunk += 1;
@@ -207,6 +319,16 @@ public class Recorder {
             } else if (this.lastDimensionType != dimension) {
                 this.lastDimensionType = dimension;
                 changedDimensions = true;
+            }
+        } else if (trackAccurateFirstPersonPosition) {
+            this.partialPositions.clear();
+            this.lastPositionNanos = System.nanoTime();
+
+            LocalPlayer player = Minecraft.getInstance().player;
+            if (player != null) {
+                this.lastPlayerPositionAndAngle = new PositionAndAngle(player.getX(), player.getY(), player.getZ(), player.getYRot(), player.getXRot());
+            } else {
+                this.lastPlayerPositionAndAngle = null;
             }
         }
 
@@ -285,10 +407,40 @@ public class Recorder {
             this.lastPlayerEquipment.clear();
             this.lastDestroyPos = null;
             this.lastDestroyProgress = -1;
+            this.lastSelectedSlot = -1;
+            this.lastExperienceProgress = -1;
+            this.lastTotalExperience = -1;
+            this.lastExperienceLevel = -1;
+            this.lastFoodLevel = -1;
+            this.lastSaturationLevel = -1;
+            Arrays.fill(this.lastHotbarItems, null);
             return;
         }
 
         List<Packet<? super ClientGamePacketListener>> gamePackets = new ArrayList<>();
+
+        if (Flashback.getConfig().recordHotbar) {
+            if (player.experienceProgress != this.lastExperienceProgress || player.totalExperience != this.lastTotalExperience ||
+                    player.experienceLevel != this.lastExperienceLevel) {
+                this.lastExperienceProgress = player.experienceProgress;
+                this.lastTotalExperience = player.totalExperience;
+                this.lastExperienceLevel = player.experienceLevel;
+                gamePackets.add(new ClientboundSetExperiencePacket(player.experienceProgress, player.totalExperience, player.experienceLevel));
+            }
+
+            FoodData foodData = player.getFoodData();
+            if (foodData.getFoodLevel() != this.lastFoodLevel || foodData.getSaturationLevel() != this.lastSaturationLevel) {
+                this.lastFoodLevel = foodData.getFoodLevel();
+                this.lastSaturationLevel = foodData.getSaturationLevel();
+                gamePackets.add(new ClientboundSetHealthPacket(player.getHealth(), foodData.getFoodLevel(), foodData.getSaturationLevel()));
+            }
+
+            int selectedSlot = player.getInventory().selected;
+            if (selectedSlot != this.lastSelectedSlot) {
+                gamePackets.add(new ClientboundSetCarriedItemPacket(selectedSlot));
+                this.lastSelectedSlot = selectedSlot;
+            }
+        }
 
         // Update entity data
         SynchedEntityData.DataItem<?>[] items = Minecraft.getInstance().player.getEntityData().itemsById;
@@ -327,6 +479,21 @@ public class Recorder {
         }
         if (!changedSlots.isEmpty()) {
             gamePackets.add(new ClientboundSetEquipmentPacket(player.getId(), changedSlots));
+        }
+
+        if (Flashback.getConfig().recordHotbar) {
+            for (int i = 0; i < this.lastHotbarItems.length; i++) {
+                ItemStack hotbarItem = player.getInventory().getItem(i);
+
+                if (this.lastHotbarItems[i] == null) {
+                    this.lastHotbarItems[i] = hotbarItem.copy();
+                } else if (!ItemStack.matches(this.lastHotbarItems[i], hotbarItem)) {
+                    ItemStack copied = hotbarItem.copy();
+                    this.lastHotbarItems[i] = copied;
+                    gamePackets.add(new ClientboundContainerSetSlotPacket(-2, 0, i, copied));
+
+                }
+            }
         }
 
         // Update breaking
@@ -476,15 +643,31 @@ public class Recorder {
     }
 
     public void writeLevelEvent(int type, BlockPos blockPos, int data, boolean globalEvent) {
-        if (this.closeForWriting || this.needsInitialSnapshot || this.wasPaused) {
+        if (!this.readyToWrite()) {
             return;
         }
 
         this.pendingPackets.add(new PacketWithPhase(new ClientboundLevelEventPacket(type, blockPos, data, globalEvent), ConnectionProtocol.PLAY));
     }
 
+    public void writeSound(Holder<SoundEvent> holder, SoundSource soundSource, double x, double y, double z, float volume, float pitch, long seed) {
+        if (!this.readyToWrite()) {
+            return;
+        }
+
+        this.pendingPackets.add(new PacketWithPhase(new ClientboundSoundPacket(holder, soundSource, x, y, z, volume, pitch, seed), ConnectionProtocol.PLAY));
+    }
+
+    public void writeEntitySound(Holder<SoundEvent> holder, SoundSource soundSource, Entity entity, float volume, float pitch, long seed) {
+        if (!this.readyToWrite()) {
+            return;
+        }
+
+        this.pendingPackets.add(new PacketWithPhase(new ClientboundSoundEntityPacket(holder, soundSource, entity, volume, pitch, seed), ConnectionProtocol.PLAY));
+    }
+
     public void writePacketAsync(Packet<?> packet, ConnectionProtocol phase) {
-        if (this.closeForWriting || this.needsInitialSnapshot || this.wasPaused) {
+        if (!this.readyToWrite()) {
             return;
         }
 
@@ -734,6 +917,20 @@ public class Recorder {
             }
         }
 
+        if (Flashback.getConfig().recordHotbar) {
+            gamePackets.add(new ClientboundSetExperiencePacket(localPlayer.experienceProgress, localPlayer.totalExperience, localPlayer.experienceLevel));
+
+            FoodData foodData = localPlayer.getFoodData();
+            gamePackets.add(new ClientboundSetHealthPacket(localPlayer.getHealth(), foodData.getFoodLevel(), foodData.getSaturationLevel()));
+
+            gamePackets.add(new ClientboundSetCarriedItemPacket(localPlayer.getInventory().selected));
+
+            for (int i = 0; i < 9; i++) {
+                ItemStack hotbarItem = localPlayer.getInventory().getItem(i);
+                gamePackets.add(new ClientboundContainerSetSlotPacket(-2, 0, i, hotbarItem.copy()));
+            }
+        }
+
         // Entity data
         for (Entity entity : level.entitiesForRendering()) {
             if (PacketHelper.shouldIgnoreEntity(entity)) {
@@ -774,8 +971,8 @@ public class Recorder {
                 gamePackets.add(new ClientboundSetPassengersPacket(entity.getVehicle()));
             }
 
-            if (entity instanceof Mob mob && mob.isLeashed()) {
-                gamePackets.add(new ClientboundSetEntityLinkPacket(mob, mob.getLeashHolder()));
+            if (entity instanceof Leashable leashable && leashable.isLeashed()) {
+                gamePackets.add(new ClientboundSetEntityLinkPacket(entity, leashable.getLeashHolder()));
             }
         }
 

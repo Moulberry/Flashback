@@ -1,6 +1,6 @@
 package com.moulberry.flashback.configuration;
 
-import com.google.common.reflect.Reflection;
+import com.mojang.serialization.Codec;
 import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.FlashbackGson;
 import com.moulberry.flashback.SneakyThrow;
@@ -9,8 +9,6 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.client.OptionInstance;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
-import org.apache.logging.log4j.core.util.ReflectionUtil;
-import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
@@ -22,6 +20,7 @@ import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 public class FlashbackConfig {
@@ -50,7 +49,30 @@ public class FlashbackConfig {
     @OptionDescription("flashback.option.mark_dimension_changes.description")
     public boolean markDimensionChanges = true;
 
+    @OptionCaption("flashback.option.record_hotbar")
+    @OptionDescription("flashback.option.record_hotbar.description")
+    public boolean recordHotbar = false;
+
+    @OptionCaption("flashback.option.local_player_updates_per_second")
+    @OptionDescription("flashback.option.local_player_updates_per_second.description")
+    @OptionIntRange(min = 20, max = 120, step = 20)
+    public int localPlayerUpdatesPerSecond = 20;
+
+    @OptionCaption("flashback.option.record_voice_chat")
+    @OptionDescription("flashback.option.record_voice_chat.description")
+    @OptionIfModLoaded("voicechat")
+    public boolean recordVoiceChat = false;
+
     public Set<String> openedWindows = new HashSet<>();
+    public long nextUnsupportedModLoaderWarning = 0;
+
+    public boolean flightCameraDirection = false;
+    public float flightMomentum = 1.0f;
+    public boolean flightLockX = false;
+    public boolean flightLockY = false;
+    public boolean flightLockZ = false;
+    public boolean flightLockYaw = false;
+    public boolean flightLockPitch = false;
 
     @SuppressWarnings("unchecked")
     public OptionInstance<?>[] createOptionInstances() {
@@ -65,6 +87,11 @@ public class FlashbackConfig {
 
                 OptionCaption caption = field.getDeclaredAnnotation(OptionCaption.class);
                 if (caption == null) {
+                    continue;
+                }
+
+                OptionIfModLoaded ifModLoaded = field.getDeclaredAnnotation(OptionIfModLoaded.class);
+                if (ifModLoaded != null && !FabricLoader.getInstance().isModLoaded(ifModLoaded.value())) {
                     continue;
                 }
 
@@ -87,6 +114,21 @@ public class FlashbackConfig {
                             throw SneakyThrow.sneakyThrow(e);
                         }
                     }));
+                } else if (field.getType() == int.class) {
+                    OptionIntRange range = field.getDeclaredAnnotation(OptionIntRange.class);
+                    if (range == null) {
+                        continue;
+                    }
+
+                    options.add(new OptionInstance(caption.value(), tooltipSupplier, (component, integer) -> {
+                        return Component.translatable("options.generic_value", component, Component.translatable("flashback.option.per_second", integer));
+                    }, new IntRangeWithStep(range.min(), range.max(), range.step()), field.getInt(this), (integer) -> {
+                        try {
+                            field.set(this, integer);
+                        } catch (Exception e) {
+                            throw SneakyThrow.sneakyThrow(e);
+                        }
+                    }));
                 }
             } catch (Exception e) {
                 Flashback.LOGGER.error("Error while trying to convert config field to OptionInstance", e);
@@ -94,6 +136,53 @@ public class FlashbackConfig {
         }
 
         return options.toArray(new OptionInstance[0]);
+    }
+
+    public record IntRangeWithStep(int minInclusive, int maxInclusive, int step) implements OptionInstance.IntRangeBase {
+        public Optional<Integer> validateValue(Integer integer) {
+            int intValue = integer;
+
+            if (intValue < minInclusive || intValue > maxInclusive) {
+                return Optional.empty();
+            } else if (step > 0 && intValue != maxInclusive) {
+                int distance = intValue - minInclusive;
+                distance = distance/step*step;
+                intValue = minInclusive + distance;
+            }
+            return Optional.of(intValue);
+        }
+
+        @Override
+        public Integer fromSliderValue(double d) {
+            if (d >= 1.0) {
+                return maxInclusive;
+            }
+
+            int distance = (int)((maxInclusive - minInclusive) * d);
+            if (step > 0) {
+                distance = distance/step*step;
+            }
+            return minInclusive + distance;
+        }
+
+        public Codec<Integer> codec() {
+            return Codec.intRange(this.minInclusive, this.maxInclusive + 1);
+        }
+
+        @Override
+        public int minInclusive() {
+            return this.minInclusive;
+        }
+
+        @Override
+        public int maxInclusive() {
+            return this.maxInclusive;
+        }
+
+        @Override
+        public boolean applyValueImmediately() {
+            return true;
+        }
     }
 
     public static FlashbackConfig tryLoadFromFolder(Path configFolder) {

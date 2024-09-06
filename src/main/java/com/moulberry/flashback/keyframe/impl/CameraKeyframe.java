@@ -2,6 +2,7 @@ package com.moulberry.flashback.keyframe.impl;
 
 import com.google.gson.*;
 import com.moulberry.flashback.Interpolation;
+import com.moulberry.flashback.editor.ui.ImGuiHelper;
 import com.moulberry.flashback.keyframe.Keyframe;
 import com.moulberry.flashback.keyframe.KeyframeType;
 import com.moulberry.flashback.keyframe.handler.KeyframeHandler;
@@ -72,7 +73,7 @@ public class CameraKeyframe extends Keyframe {
     @Override
     public void renderEditKeyframe(Consumer<Consumer<Keyframe>> update) {
         float[] center = new float[]{(float) this.position.x, (float) this.position.y, (float) this.position.z};
-        if (ImGui.inputFloat3("Position", center)) {
+        if (ImGuiHelper.inputFloat("Position", center)) {
             if (center[0] != this.position.x) {
                 update.accept(keyframe -> ((CameraKeyframe)keyframe).position.x = center[0]);
             }
@@ -83,22 +84,22 @@ public class CameraKeyframe extends Keyframe {
                 update.accept(keyframe -> ((CameraKeyframe)keyframe).position.z = center[2]);
             }
         }
-        ImFloat input = new ImFloat(this.yaw);
-        if (ImGui.inputFloat("Yaw", input)) {
-            if (input.get() != this.yaw) {
-                update.accept(keyframe -> ((CameraKeyframe)keyframe).yaw = input.get());
+        float[] input = new float[]{this.yaw};
+        if (ImGuiHelper.inputFloat("Yaw", input)) {
+            if (input[0] != this.yaw) {
+                update.accept(keyframe -> ((CameraKeyframe)keyframe).yaw = input[0]);
             }
         }
-        input.set(this.pitch);
-        if (ImGui.inputFloat("Pitch", input)) {
-            if (input.get() != this.pitch) {
-                update.accept(keyframe -> ((CameraKeyframe)keyframe).pitch = input.get());
+        input[0] = this.pitch;
+        if (ImGuiHelper.inputFloat("Pitch", input)) {
+            if (input[0] != this.pitch) {
+                update.accept(keyframe -> ((CameraKeyframe)keyframe).pitch = input[0]);
             }
         }
-        input.set(this.roll);
-        if (ImGui.inputFloat("Roll", input)) {
-            if (input.get() != this.roll) {
-                update.accept(keyframe -> ((CameraKeyframe)keyframe).roll = input.get());
+        input[0] = this.roll;
+        if (ImGuiHelper.inputFloat("Roll", input)) {
+            if (input[0] != this.roll) {
+                update.accept(keyframe -> ((CameraKeyframe)keyframe).roll = input[0]);
             }
         }
     }

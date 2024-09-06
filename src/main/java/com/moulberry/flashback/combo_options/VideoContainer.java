@@ -12,7 +12,11 @@ public enum VideoContainer implements ComboOption {
     MP4("MP4", "mp4"),
     MKV("MKV", "mkv"),
     AVI("AVI", "avi"),
-    MOV("MOV", "mov");
+    MOV("MOV", "mov"),
+    PNG_SEQUENCE("PNG Sequence", "png"),
+    WEBP("WebP", "webp"),
+    WEBM("WebM", "webm"),
+    GIF("GIF", "gif");
 
     private final String text;
     private final String extension;
@@ -37,7 +41,7 @@ public enum VideoContainer implements ComboOption {
     public static VideoContainer[] findSupportedContainers(boolean transparency) {
         List<VideoContainer> containers = new ArrayList<>();
         for (VideoContainer videoContainer : VideoContainer.values()) {
-            if (videoContainer.getSupportedVideoCodecs(transparency).length != 0) {
+            if (videoContainer == VideoContainer.PNG_SEQUENCE || videoContainer.getSupportedVideoCodecs(transparency).length != 0) {
                 containers.add(videoContainer);
             }
         }
@@ -49,21 +53,24 @@ public enum VideoContainer implements ComboOption {
 
         if (codecs == null) {
             List<VideoCodec> supportedCodecs = new ArrayList<>();
-            try (AVOutputFormat outputFormat = avformat.av_guess_format(this.extension, "test."+this.extension, null)) {
-                for (VideoCodec codec : VideoCodec.values()) {
-                    if (codec == VideoCodec.AV1 && this != VideoContainer.MP4) {
-                        continue;
-                    }
-                    if (codec.getEncoders().length == 0) {
-                        continue;
-                    }
-                    if (transparency && !codec.supportsTransparency()) {
-                        continue;
-                    }
 
-                    int ret = avformat.avformat_query_codec(outputFormat, codec.codecId(), avcodec.FF_COMPLIANCE_NORMAL);
-                    if (ret == 1) {
-                        supportedCodecs.add(codec);
+            if (this != VideoContainer.PNG_SEQUENCE) {
+                try (AVOutputFormat outputFormat = avformat.av_guess_format(this.extension, "test."+this.extension, null)) {
+                    for (VideoCodec codec : VideoCodec.values()) {
+                        if (codec == VideoCodec.AV1 && this != VideoContainer.MP4) {
+                            continue;
+                        }
+                        if (codec.getEncoders().length == 0) {
+                            continue;
+                        }
+                        if (transparency && !codec.supportsTransparency()) {
+                            continue;
+                        }
+
+                        int ret = avformat.avformat_query_codec(outputFormat, codec.codecId(), avcodec.FF_COMPLIANCE_NORMAL);
+                        if (ret == 1) {
+                            supportedCodecs.add(codec);
+                        }
                     }
                 }
             }
@@ -81,19 +88,20 @@ public enum VideoContainer implements ComboOption {
     public AudioCodec[] getSupportedAudioCodecs() {
         if (this.supportedAudioCodecs == null) {
             List<AudioCodec> supportedCodecs = new ArrayList<>();
-            try (AVOutputFormat outputFormat = avformat.av_guess_format(this.extension, "test."+this.extension, null)) {
-                for (AudioCodec codec : AudioCodec.values()) {
-                    if (codec.getEncoders().length == 0) {
-                        continue;
-                    }
+            if (this != VideoContainer.PNG_SEQUENCE) {
+                try (AVOutputFormat outputFormat = avformat.av_guess_format(this.extension, "test."+this.extension, null)) {
+                    for (AudioCodec codec : AudioCodec.values()) {
+                        if (codec.getEncoders().length == 0) {
+                            continue;
+                        }
 
-                    int ret = avformat.avformat_query_codec(outputFormat, codec.codecId(), avcodec.FF_COMPLIANCE_NORMAL);
-                    if (ret == 1) {
-                        supportedCodecs.add(codec);
+                        int ret = avformat.avformat_query_codec(outputFormat, codec.codecId(), avcodec.FF_COMPLIANCE_NORMAL);
+                        if (ret == 1) {
+                            supportedCodecs.add(codec);
+                        }
                     }
                 }
             }
-
             this.supportedAudioCodecs = supportedCodecs.toArray(new AudioCodec[0]);
         }
         return this.supportedAudioCodecs;

@@ -1,6 +1,7 @@
 package com.moulberry.flashback.keyframe.types;
 
 import com.moulberry.flashback.Flashback;
+import com.moulberry.flashback.editor.ui.ImGuiHelper;
 import com.moulberry.flashback.keyframe.KeyframeType;
 import com.moulberry.flashback.keyframe.impl.TickrateKeyframe;
 import com.moulberry.flashback.keyframe.impl.TimeOfDayKeyframe;
@@ -36,18 +37,18 @@ public class TimeOfDayKeyframeType implements KeyframeType<TimeOfDayKeyframe> {
 
     @Override
     public KeyframeCreatePopup<TimeOfDayKeyframe> createPopup() {
-        ImInt timeOfDayKeyframeInput = new ImInt();
+        int[] timeOfDayKeyframeInput = new int[1];
         EditorState editorState = EditorStateManager.getCurrent();
         if (editorState != null && editorState.replayVisuals.overrideTimeOfDay >= 0) {
-            timeOfDayKeyframeInput.set((int) editorState.replayVisuals.overrideTimeOfDay);
+            timeOfDayKeyframeInput[0] = (int) editorState.replayVisuals.overrideTimeOfDay;
         } else {
-            timeOfDayKeyframeInput.set((int)(Minecraft.getInstance().level.getDayTime() % 24000));
+            timeOfDayKeyframeInput[0] = (int)(Minecraft.getInstance().level.getDayTime() % 24000);
         }
 
         return () -> {
-            ImGui.inputInt("Time", timeOfDayKeyframeInput, 0);
+            ImGuiHelper.inputInt("Time", timeOfDayKeyframeInput);
             if (ImGui.button("Add")) {
-                return new TimeOfDayKeyframe(timeOfDayKeyframeInput.get());
+                return new TimeOfDayKeyframe(timeOfDayKeyframeInput[0]);
             }
             ImGui.sameLine();
             if (ImGui.button("Cancel")) {

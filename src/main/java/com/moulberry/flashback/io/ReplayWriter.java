@@ -50,7 +50,7 @@ public class ReplayWriter {
         // Actions
         List<Action> actions = ActionRegistry.getActions();
         this.dataBuffer.writeVarInt(actions.size());
-        for (Action action : ActionRegistry.getActions()) {
+        for (Action action : actions) {
             this.dataBuffer.writeResourceLocation(action.name());
             this.registeredActions.put(action, this.registeredActions.size());
         }
@@ -70,7 +70,7 @@ public class ReplayWriter {
         if (this.state == STATE_EMPTY) {
             this.state = STATE_WRITING_SNAPSHOT;
             this.snapshotSizeWriterIndex = this.dataBuffer.writerIndex();
-            this.dataBuffer.writeInt(0);
+            this.dataBuffer.writeInt(0xDEADBEEF);
         } else {
             throw new IllegalStateException("Can only start snapshot in STATE_EMPTY");
         }

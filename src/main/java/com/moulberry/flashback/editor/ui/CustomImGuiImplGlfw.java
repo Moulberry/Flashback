@@ -23,6 +23,7 @@ import imgui.flag.ImGuiMouseCursor;
 import imgui.flag.ImGuiNavInput;
 import imgui.flag.ImGuiViewportFlags;
 import imgui.lwjgl3.glfw.ImGuiImplGlfwNative;
+import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.phys.Vec2;
 import org.lwjgl.PointerBuffer;
@@ -127,9 +128,7 @@ public class CustomImGuiImplGlfw {
     private final double[] grabbedOriginalMouseX = new double[1];
     private final double[] grabbedOriginalMouseY = new double[1];
     private int grabLinkedKey = -1;
-
-    private List<Vec2> interframeMousePositions = new ArrayList<>();
-    private List<Vec2> capturedInterframeMousePositions = new ArrayList<>();
+    private boolean releaseGrabOnUp = false;
 
     public float contentScale = 1.0f;
 
@@ -168,7 +167,7 @@ public class CustomImGuiImplGlfw {
         GLFW.glfwSetCursorPos(this.mainWindowPtr, this.grabbedOriginalMouseX[0], this.grabbedOriginalMouseY[0]);
     }
 
-    public void setGrabbed(boolean passthroughToGame, int grabLinkedKey, double x, double y) {
+    public void setGrabbed(boolean passthroughToGame, int grabLinkedKey, boolean releaseGrabOnUp, double x, double y) {
         if (grabLinkedKey != 0) {
             if (grabLinkedKey < 0) {
                 if (GLFW.glfwGetMouseButton(this.mainWindowPtr, -grabLinkedKey-1) == GLFW_RELEASE) {
@@ -185,6 +184,7 @@ public class CustomImGuiImplGlfw {
 
         if (grabLinkedKey != 0) {
             this.grabLinkedKey = grabLinkedKey;
+            this.releaseGrabOnUp = releaseGrabOnUp;
         }
         if (x >= 0 && y >= 0) {
             this.grabbedOriginalMouseX[0] = x;
@@ -232,8 +232,10 @@ public class CustomImGuiImplGlfw {
             return;
         }
 
-        if (this.grabbed != null && action == GLFW_RELEASE && this.grabLinkedKey < 0 && button == -this.grabLinkedKey-1) {
-            this.ungrab();
+        if (this.grabbed != null && this.grabLinkedKey < 0 && button == -this.grabLinkedKey-1) {
+            if ((action == GLFW_RELEASE) == this.releaseGrabOnUp) {
+                this.ungrab();
+            }
         }
 
         MouseHandledBy handledBy = this.getMouseHandledBy();
@@ -260,7 +262,7 @@ public class CustomImGuiImplGlfw {
             this.io.setMouseWheelH(this.io.getMouseWheelH() + (float) xOffset);
             this.io.setMouseWheel(this.io.getMouseWheel() + (float) yOffset);
 
-            if (Minecraft.getInstance().screen == null || !ReplayUI.isMainFrameHovered()) {
+            if (Minecraft.getInstance().screen == null || !ReplayUI.isMainFrameActive()) {
                 return;
             }
         }
@@ -328,27 +330,46 @@ public class CustomImGuiImplGlfw {
             }
         }
 
-        if (action != GLFW_RELEASE && GLFW.glfwGetKey(windowId, GLFW_KEY_F3) != GLFW_RELEASE) {
+        boolean forcePassToGame = action != GLFW_RELEASE && ((key == GLFW_KEY_ESCAPE && !io.getWantTextInput() && !ReplayUI.hasAnyPopupOpen) ||
+                (key >= GLFW_KEY_F1 && key <= GLFW_KEY_F25) || GLFW.glfwGetKey(windowId, GLFW_KEY_F3) != GLFW_RELEASE);
+        if (forcePassToGame) {
             this.prevUserCallbackKey.invoke(windowId, minecraftKey, scancode, action, mods);
-            if (keyInBoundsForGame) this.keyPressedGame[minecraftKey] = action != GLFW_RELEASE;
+            if (keyInBoundsForGame) this.keyPressedGame[minecraftKey] = true;
             return;
         }
 
-        boolean passToMinecraft = (ReplayUI.isMainFrameHovered() && this.io.getMouseDown(ImGuiMouseButton.Left) || !this.io.getWantCaptureKeyboard()) && !this.io.getWantTextInput();
+        boolean passToMinecraft = false;
+        boolean passToImGui = false;
 
         if (action == GLFW_RELEASE) {
-            if (keyInBoundsForGame && this.keyPressedGame[minecraftKey]) passToMinecraft = true;
-        } else if (passToMinecraft) {
-//            out:
-//            for (KeybindCategory category : Keybinds.categories) {
-//                if (!category.preventPassToGame()) continue;
-//                for (Keybind keybind : category.keybinds()) {
-//                    if (keybind.wouldBePressed(key, shiftMod, ctrlMod, altMod, superMod)) {
-//                        passToMinecraft = false;
-//                        break out;
-//                    }
-//                }
-//            }
+            if (keyInBoundsForGame && this.keyPressedGame[minecraftKey]) {
+                passToMinecraft = true;
+            }
+            if (key >= 0 && key < this.keyOwnerWindows.length) {
+                passToImGui = true;
+            }
+        } else {
+            if (io.getWantTextInput()) {
+                passToMinecraft = false;
+            } else if (this.grabbed == MouseHandledBy.GAME) {
+                passToMinecraft = true;
+            } else if (ReplayUI.isMainFrameActive()) {
+                for (KeyMapping keyMapping : Minecraft.getInstance().options.keyMappings) {
+                    if (keyMapping.matches(key, scancode)) {
+                        passToMinecraft = true;
+                        break;
+                    }
+                }
+            } else if (Minecraft.getInstance().options.keyUp.matches(key, scancode) ||
+                    Minecraft.getInstance().options.keyLeft.matches(key, scancode) ||
+                    Minecraft.getInstance().options.keyDown.matches(key, scancode) ||
+                    Minecraft.getInstance().options.keyRight.matches(key, scancode) ||
+                    Minecraft.getInstance().options.keyChat.matches(key, scancode) ||
+                    Minecraft.getInstance().options.keyCommand.matches(key, scancode)) {
+                passToMinecraft = true;
+            }
+
+            passToImGui = !passToMinecraft;
         }
 
         if (passToMinecraft && this.prevUserCallbackKey != null && windowId == this.mainWindowPtr) {
@@ -356,7 +377,7 @@ public class CustomImGuiImplGlfw {
             if (keyInBoundsForGame) this.keyPressedGame[minecraftKey] = action != GLFW_RELEASE;
         }
 
-        if (key >= 0 && key < this.keyOwnerWindows.length) {
+        if (passToImGui && key >= 0 && key < this.keyOwnerWindows.length) {
             if (action == GLFW_PRESS || action == GLFW_REPEAT) {
                 io.setKeysDown(key, true);
                 this.keyOwnerWindows[key] = windowId;
@@ -392,8 +413,6 @@ public class CustomImGuiImplGlfw {
         if (handledBy == MouseHandledBy.EDITOR_GRABBED) {
             grabbedCurrMouseX = xpos;
             grabbedCurrMouseY = ypos;
-        } else {
-            this.interframeMousePositions.add(new Vec2((float)xpos, (float)ypos));
         }
     }
 
@@ -444,7 +463,7 @@ public class CustomImGuiImplGlfw {
             return;
         }
 
-        if (!this.io.getWantCaptureKeyboard() && this.prevUserCallbackChar != null && windowId == this.mainWindowPtr) {
+        if (!this.io.getWantCaptureKeyboard() && !this.io.getWantTextInput() && this.prevUserCallbackChar != null && windowId == this.mainWindowPtr) {
             this.prevUserCallbackChar.invoke(windowId, c, mods);
         }
 
@@ -597,37 +616,11 @@ public class CustomImGuiImplGlfw {
         return true;
     }
 
-    public List<Vec2> getCapturedInterframeMousePositions() {
-        return this.capturedInterframeMousePositions;
-    }
-
     /**
      * Updates {@link ImGuiIO} and {@link org.lwjgl.glfw.GLFW} state.
      */
     public void newFrame() {
         this.io.ptr = ImGui.getIO().ptr;
-
-        if (this.interframeMousePositions.isEmpty()) {
-            this.capturedInterframeMousePositions.clear();
-        } else {
-            this.capturedInterframeMousePositions = this.interframeMousePositions;
-            this.interframeMousePositions = new ArrayList<>();
-
-            if (this.io.hasConfigFlags(ImGuiConfigFlags.ViewportsEnable)) {
-                // Multi-viewport mode: mouse position in OS absolute coordinates (io.MousePos is (0,0) when the mouse is on the upper-left of the primary monitor)
-                long windowPtr = this.mouseWindowPtr;
-                if (windowPtr == 0) {
-                    windowPtr = this.mainWindowPtr;
-                }
-                glfwGetWindowPos(windowPtr, this.windowX, this.windowY);
-
-                List<Vec2> offset = new ArrayList<>();
-                for (Vec2 pos : this.capturedInterframeMousePositions) {
-                    offset.add(new Vec2(pos.x + this.windowX[0], pos.y + this.windowY[0]));
-                }
-                this.capturedInterframeMousePositions = offset;
-            }
-        }
 
         glfwGetWindowSize(this.mainWindowPtr, this.winWidth, this.winHeight);
         glfwGetFramebufferSize(this.mainWindowPtr, this.fbWidth, this.fbHeight);

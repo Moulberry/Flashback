@@ -8,6 +8,7 @@ import com.google.gson.JsonParseException;
 import com.google.gson.JsonSerializationContext;
 import com.google.gson.JsonSerializer;
 import com.moulberry.flashback.Interpolation;
+import com.moulberry.flashback.editor.ui.ImGuiHelper;
 import com.moulberry.flashback.keyframe.Keyframe;
 import com.moulberry.flashback.keyframe.KeyframeType;
 import com.moulberry.flashback.keyframe.handler.KeyframeHandler;
@@ -61,7 +62,7 @@ public class CameraOrbitKeyframe extends Keyframe {
     @Override
     public void renderEditKeyframe(Consumer<Consumer<Keyframe>> update) {
         float[] center = new float[]{(float) this.center.x, (float) this.center.y, (float) this.center.z};
-        if (ImGui.inputFloat3("Position", center)) {
+        if (ImGuiHelper.inputFloat("Position", center)) {
             if (center[0] != this.center.x) {
                 update.accept(keyframe -> ((CameraOrbitKeyframe)keyframe).center.x = center[0]);
             }
@@ -72,22 +73,22 @@ public class CameraOrbitKeyframe extends Keyframe {
                 update.accept(keyframe -> ((CameraOrbitKeyframe)keyframe).center.z = center[2]);
             }
         }
-        ImFloat input = new ImFloat(this.distance);
-        if (ImGui.inputFloat("Distance", input)) {
-            if (input.get() != this.distance) {
-                update.accept(keyframe -> ((CameraOrbitKeyframe)keyframe).distance = input.get());
+        float[] input = new float[]{this.distance};
+        if (ImGuiHelper.inputFloat("Distance", input)) {
+            if (input[0] != this.distance) {
+                update.accept(keyframe -> ((CameraOrbitKeyframe)keyframe).distance = input[0]);
             }
         }
-        input.set(this.yaw);
-        if (ImGui.inputFloat("Yaw", input)) {
-            if (input.get() != this.yaw) {
-                update.accept(keyframe -> ((CameraOrbitKeyframe)keyframe).yaw = input.get());
+        input[0] = this.yaw;
+        if (ImGuiHelper.inputFloat("Yaw", input)) {
+            if (input[0] != this.yaw) {
+                update.accept(keyframe -> ((CameraOrbitKeyframe)keyframe).yaw = input[0]);
             }
         }
-        input.set(this.pitch);
-        if (ImGui.inputFloat("Pitch", input)) {
-            if (input.get() != this.pitch) {
-                update.accept(keyframe -> ((CameraOrbitKeyframe)keyframe).pitch = input.get());
+        input[0] = this.pitch;
+        if (ImGuiHelper.inputFloat("Pitch", input)) {
+            if (input[0] != this.pitch) {
+                update.accept(keyframe -> ((CameraOrbitKeyframe)keyframe).pitch = input[0]);
             }
         }
     }

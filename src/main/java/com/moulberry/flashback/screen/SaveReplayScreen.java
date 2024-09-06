@@ -144,6 +144,13 @@ public class SaveReplayScreen extends Screen {
 
         if (!this.replayName.isEmpty() && (this.savePath == null || this.generateFileFromReplayName)) {
             Path replayDir = Flashback.getReplayFolder();
+
+            if (!Files.exists(replayDir)) {
+                try {
+                    Files.createDirectories(replayDir);
+                } catch (IOException ignored) {}
+            }
+
             String filename;
 
             try {

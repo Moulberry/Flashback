@@ -18,6 +18,7 @@ import com.moulberry.flashback.state.EditorState;
 import com.moulberry.flashback.state.EditorStateManager;
 import com.moulberry.flashback.editor.ui.ReplayUI;
 import com.moulberry.flashback.exporting.PerfectFrames;
+import com.moulberry.flashback.visuals.ReplayVisuals;
 import com.moulberry.flashback.visuals.ShaderManager;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import net.minecraft.client.Camera;
@@ -111,11 +112,26 @@ public abstract class MixinLevelRenderer {
     @Inject(method = "renderLevel", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/FogRenderer;levelFogColor()V", shift = At.Shift.AFTER))
     public void renderLevel_levelFogColor(DeltaTracker deltaTracker, boolean bl, Camera camera, GameRenderer gameRenderer, LightTexture lightTexture, Matrix4f matrix4f, Matrix4f matrix4f2, CallbackInfo ci) {
         EditorState editorState = EditorStateManager.getCurrent();
-        if (editorState != null && !editorState.replayVisuals.renderSky) {
-            if (Flashback.isExporting() && Flashback.EXPORT_JOB.getSettings().transparent()) {
-                RenderSystem.clearColor(0.0f, 0.0f, 0.0f, 0.0F);
-            } else {
-                RenderSystem.clearColor(0.0f, 1.0f, 0.0f, 0.0F);
+        if (editorState != null) {
+            ReplayVisuals visuals = editorState.replayVisuals;
+            if (visuals.overrideFogColour) {
+                float[] fogColour = visuals.fogColour;
+                FogRenderer.fogRed = fogColour[0];
+                FogRenderer.fogGreen = fogColour[1];
+                FogRenderer.fogBlue = fogColour[2];
+                RenderSystem.setShaderFogColor(fogColour[0], fogColour[1], fogColour[2]);
+
+                if (visuals.renderSky) {
+                    RenderSystem.clearColor(fogColour[0], fogColour[1], fogColour[2], 1.0F);
+                }
+            }
+            if (!visuals.renderSky) {
+                if (Flashback.isExporting() && Flashback.EXPORT_JOB.getSettings().transparent()) {
+                    RenderSystem.clearColor(0.0f, 0.0f, 0.0f, 0.0F);
+                } else {
+                    float[] skyColour = visuals.skyColour;
+                    RenderSystem.clearColor(skyColour[0], skyColour[1], skyColour[2], 1.0F);
+                }
             }
 
         }

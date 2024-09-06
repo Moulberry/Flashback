@@ -4,9 +4,9 @@ import com.mojang.blaze3d.platform.Window;
 import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.combo_options.AspectRatio;
 import com.moulberry.flashback.combo_options.AudioCodec;
+import com.moulberry.flashback.combo_options.Sizing;
 import com.moulberry.flashback.combo_options.VideoCodec;
 import com.moulberry.flashback.combo_options.VideoContainer;
-import com.moulberry.flashback.compat.IrisApiWrapper;
 import com.moulberry.flashback.exporting.ExportJobQueue;
 import com.moulberry.flashback.state.EditorState;
 import com.moulberry.flashback.state.EditorStateManager;
@@ -16,12 +16,9 @@ import com.moulberry.flashback.exporting.ExportJob;
 import com.moulberry.flashback.exporting.ExportSettings;
 import com.moulberry.flashback.playback.ReplayServer;
 import imgui.ImGui;
-import imgui.flag.ImGuiPopupFlags;
 import imgui.flag.ImGuiWindowFlags;
-import imgui.type.ImFloat;
 import imgui.type.ImString;
 import net.fabricmc.loader.api.FabricLoader;
-import net.irisshaders.iris.api.v0.IrisApi;
 import net.minecraft.FileUtil;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
@@ -30,7 +27,9 @@ import org.jetbrains.annotations.Nullable;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
 
 public class StartExportWindow {
 
@@ -42,7 +41,7 @@ public class StartExportWindow {
 
     private static final int[] resolution = new int[]{1920, 1080};
     private static final int[] startEndTick = new int[]{0, 100};
-    private static final ImFloat framerate = new ImFloat(60);
+    private static final float[] framerate = new float[]{60};
     private static boolean resetRng = false;
     private static boolean ssaa = false;
 
@@ -59,9 +58,17 @@ public class StartExportWindow {
     private static boolean exportCameraPath = false;
     private static boolean transparentBackground = false;
     private static AudioCodec audioCodec = AudioCodec.AAC;
+    private static boolean stereoAudio = false;
 
     private static Path defaultExportPath = null;
     private static final ImString jobName = ImGuiHelper.createResizableImString("");
+
+    private static String installedIncompatibleModsString = null;
+    private static final List<String> potentialIncompatibleMods = List.of(
+        "essential", // causes a crash due to casting the DeltaTracker without an instanceof
+        "g4mespeed", // causes rendering issues due to overriding partial tick time
+        "feather" // causes miscellaneous crashes and issues that are impossible to debug
+    );
 
     static {
         bitrate.inputData.allowedChars = "0123456789kmb";
@@ -71,6 +78,17 @@ public class StartExportWindow {
         EditorState editorState = EditorStateManager.getCurrent();
 
         if (open) {
+            installedIncompatibleModsString = null;
+            for (String potentialIncompatibleMod : potentialIncompatibleMods) {
+                if (FabricLoader.getInstance().isModLoaded(potentialIncompatibleMod)) {
+                    if (installedIncompatibleModsString == null) {
+                        installedIncompatibleModsString = potentialIncompatibleMod;
+                    } else {
+                        installedIncompatibleModsString += ", " + potentialIncompatibleMod;
+                    }
+                }
+            }
+
             ImGui.openPopup("###StartExport");
             Window window = Minecraft.getInstance().getWindow();
 
@@ -83,7 +101,7 @@ public class StartExportWindow {
                 lastFramebufferSize[1] = window.framebufferHeight;
             }
 
-            if (editorState != null) {
+            if (editorState != null && editorState.replayVisuals.sizing == Sizing.CHANGE_ASPECT_RATIO) {
                 AspectRatio aspectRatio = editorState.replayVisuals.changeAspectRatio;
                 if (aspectRatio != null && aspectRatio != lastCustomAspectRatio) {
                     switch (aspectRatio) {
@@ -129,19 +147,20 @@ public class StartExportWindow {
 
             ImGuiHelper.separatorWithText("Capture Options");
 
-            ImGui.inputInt2("Resolution", resolution);
+            ImGuiHelper.inputInt("Resolution", resolution);
+
             if (resolution[0] < 16) resolution[0] = 16;
             if (resolution[1] < 16) resolution[1] = 16;
             if (resolution[0] % 2 != 0) resolution[0] += 1;
             if (resolution[1] % 2 != 0) resolution[1] += 1;
 
-            if (ImGui.inputInt2("Start/end tick", startEndTick)) {
+            if (ImGuiHelper.inputInt("Start/end tick", startEndTick)) {
                 ReplayServer replayServer = Flashback.getReplayServer();
                 if (editorState != null && replayServer != null) {
                     editorState.setExportTicks(startEndTick[0], startEndTick[1], replayServer.getTotalReplayTicks());
                 }
             }
-            ImGui.inputFloat("Framerate", framerate);
+            ImGuiHelper.inputFloat("Framerate", framerate);
 
             if (ImGui.checkbox("Reset RNG", resetRng)) {
                 resetRng = !resetRng;
@@ -168,6 +187,10 @@ public class StartExportWindow {
                 }
 
                 if (recordAudio) {
+                    if (ImGui.checkbox("Stereo (2 channel)", stereoAudio)) {
+                        stereoAudio = !stereoAudio;
+                    }
+
                     AudioCodec newAudioCodec = ImGuiHelper.enumCombo("Audio Codec", audioCodec, supportedAudioCodecs);
                     if (newAudioCodec != audioCodec) {
                         audioCodec = newAudioCodec;
@@ -182,11 +205,19 @@ public class StartExportWindow {
             } else {
                 recordAudio = false;
             }
-
+          
             ImGuiHelper.separatorWithText("Camera Options");
 
             if(ImGui.checkbox("Export Camera Path as .glTF", exportCameraPath)) {
                 exportCameraPath = !exportCameraPath;
+            }
+            if (installedIncompatibleModsString != null) {
+                ImGuiHelper.separatorWithText("Incompatible Mods");
+                ImGui.textWrapped("You have some mods installed which are known to cause crashes/rendering issues.\n" +
+                    "If you encounter problems exporting, please try removing the following mods:");
+                ImGui.pushTextWrapPos();
+                ImGui.textColored(0xFF0000FF, installedIncompatibleModsString);
+                ImGui.popTextWrapPos();
             }
 
             ImGui.dummy(0, 10);
@@ -260,6 +291,10 @@ public class StartExportWindow {
 
         container = ImGuiHelper.enumCombo("Container", container, containers);
 
+        if (container == VideoContainer.PNG_SEQUENCE) {
+            return;
+        }
+
         VideoCodec[] codecs = container.getSupportedVideoCodecs(transparentBackground);
 
         if (codecs.length == 0) {
@@ -271,10 +306,12 @@ public class StartExportWindow {
             videoCodec = codecs[0];
         }
 
-        VideoCodec newCodec = ImGuiHelper.enumCombo("Codec", videoCodec, codecs);
-        if (newCodec != videoCodec) {
-            videoCodec = newCodec;
-            selectedVideoEncoder[0] = 0;
+        if (codecs.length > 1) {
+            VideoCodec newCodec = ImGuiHelper.enumCombo("Codec", videoCodec, codecs);
+            if (newCodec != videoCodec) {
+                videoCodec = newCodec;
+                selectedVideoEncoder[0] = 0;
+            }
         }
 
         String[] encoders = videoCodec.getEncoders();
@@ -282,15 +319,21 @@ public class StartExportWindow {
             ImGuiHelper.combo("Encoder", selectedVideoEncoder, encoders);
         }
 
-        if (ImGui.checkbox("Use Maximum Bitrate", useMaximumBitrate)) {
-            useMaximumBitrate = !useMaximumBitrate;
-        }
-        if (!useMaximumBitrate) {
-            ImGui.inputText("Bitrate", bitrate);
-            if (ImGui.isItemDeactivatedAfterEdit()) {
-                int numBitrate = stringToBitrate(ImGuiHelper.getString(bitrate));
-                bitrate.set(bitrateToString(numBitrate));
+        if (videoCodec != VideoCodec.GIF) {
+            if (ImGui.checkbox("Use Maximum Bitrate", useMaximumBitrate)) {
+                useMaximumBitrate = !useMaximumBitrate;
             }
+            if (!useMaximumBitrate) {
+                ImGui.inputText("Bitrate", bitrate);
+                if (ImGui.isItemDeactivatedAfterEdit()) {
+                    int numBitrate = stringToBitrate(ImGuiHelper.getString(bitrate));
+                    bitrate.set(bitrateToString(numBitrate));
+                }
+            }
+        } else {
+            ImGui.pushTextWrapPos();
+            ImGui.textColored(0xFFFFFFFF, "Warning: GIF output can be extremely large. Please ensure you know the limitations of the GIF format before exporting. You might be better off using WebP which is a similar but better format");
+            ImGui.popTextWrapPos();
         }
     }
 
@@ -301,8 +344,6 @@ public class StartExportWindow {
         } else {
             numBitrate = stringToBitrate(ImGuiHelper.getString(bitrate));
         }
-
-        String encoder = videoCodec.getEncoders()[selectedVideoEncoder[0]];
 
         if (defaultExportPath == null || !Files.exists(defaultExportPath)) {
             defaultExportPath = FabricLoader.getInstance().getGameDir();
@@ -323,9 +364,7 @@ public class StartExportWindow {
             defaultName = "output." + container.extension();
         }
 
-        String defaultExportPathString = defaultExportPath.toString();
-        return AsyncFileDialogs.saveFileDialog(defaultExportPathString, defaultName,
-            container.extension(), container.extension()).thenApply(pathStr -> {
+        Function<String, ExportSettings> callback = pathStr -> {
             if (pathStr != null) {
                 int start = Math.max(0, startEndTick[0]);
                 int end = Math.max(start, startEndTick[1]);
@@ -348,18 +387,43 @@ public class StartExportWindow {
                 }
 
                 boolean transparent = transparentBackground && !editorState.replayVisuals.renderSky;
+                String encoder = videoCodec.getEncoders()[selectedVideoEncoder[0]];
+
+                VideoCodec useVideoCodec = videoCodec;
+                AudioCodec useAudioCodec = audioCodec;
+                boolean shouldRecordAudio = recordAudio;
+
+                if (container == VideoContainer.PNG_SEQUENCE) {
+                    useVideoCodec = null;
+                    encoder = null;
+                    shouldRecordAudio = false;
+                }
+
+                if (!shouldRecordAudio) {
+                    useAudioCodec = null;
+                }
 
                 Path path = Path.of(pathStr);
                 defaultExportPath = path.getParent();
                 return new ExportSettings(name, editorState.copy(),
                     player.position(), player.getYRot(), player.getXRot(),
                     resolution[0], resolution[1], start, end,
-                    Math.max(1, framerate.get()), resetRng, container, videoCodec, encoder, numBitrate, transparent, ssaa,
-                    recordAudio, exportCameraPath, path);
+                    Math.max(1, framerate[0]), resetRng, container, useVideoCodec, encoder, numBitrate, transparent, ssaa,
+                    shouldRecordAudio, stereoAudio, useAudioCodec, exportCameraPath
+                    path);
             }
 
             return null;
-        });
+        };
+
+        String defaultExportPathString = defaultExportPath.toString();
+        if (container == VideoContainer.PNG_SEQUENCE) {
+            return AsyncFileDialogs.openFolderDialog(defaultExportPathString).thenApply(callback);
+        } else {
+            return AsyncFileDialogs.saveFileDialog(defaultExportPathString, defaultName,
+                container.extension(), container.extension()).thenApply(callback);
+        }
+
     }
 
     private static int stringToBitrate(String string) {

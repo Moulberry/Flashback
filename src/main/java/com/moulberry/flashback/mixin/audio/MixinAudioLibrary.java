@@ -47,10 +47,11 @@ public class MixinAudioLibrary {
     public long init_createContext(long deviceHandle, IntBuffer attrList, Operation<Long> original) {
         if (this.usingLoopbackDevice) {
             try (MemoryStack memoryStack = MemoryStack.stackPush()) {
+                int channels = Flashback.EXPORT_JOB.getSettings().stereoAudio() ? SOFTLoopback.ALC_STEREO_SOFT : SOFTLoopback.ALC_MONO_SOFT;
                 IntBuffer intBuffer = memoryStack.callocInt(7)
                                                  .put(SOFTLoopback.ALC_FORMAT_TYPE_SOFT).put(SOFTLoopback.ALC_FLOAT_SOFT)
-                                                 .put(SOFTLoopback.ALC_FORMAT_CHANNELS_SOFT).put(SOFTLoopback.ALC_MONO_SOFT)
-                                                 .put(ALC10.ALC_FREQUENCY).put(44100)
+                                                 .put(SOFTLoopback.ALC_FORMAT_CHANNELS_SOFT).put(channels)
+                                                 .put(ALC10.ALC_FREQUENCY).put(48000)
                                                  .put(0).flip();
                 return ALC10.alcCreateContext(this.currentDevice, intBuffer);
             }

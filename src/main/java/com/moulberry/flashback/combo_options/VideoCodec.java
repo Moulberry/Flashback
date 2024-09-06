@@ -23,7 +23,9 @@ public enum VideoCodec implements ComboOption {
     AV1("AV1", avcodec.AV_CODEC_ID_AV1),
     VP9("VP9", avcodec.AV_CODEC_ID_VP9),
     PRO_RES("Apple ProRes", avcodec.AV_CODEC_ID_PRORES),
-    QUICK_TIME("QuickTime", avcodec.AV_CODEC_ID_QTRLE);
+    QUICK_TIME("QuickTime", avcodec.AV_CODEC_ID_QTRLE),
+    WEBP("WebP", AV_CODEC_ID_WEBP),
+    GIF("GIF", AV_CODEC_ID_GIF);
 
     private final String text;
     private final int codecId;

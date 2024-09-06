@@ -7,12 +7,15 @@ import com.moulberry.flashback.exception.UnsupportedPacketException;
 import com.moulberry.flashback.ext.LevelChunkExt;
 import com.moulberry.flashback.ext.ServerLevelExt;
 import com.moulberry.flashback.ext.ThreadedLevelLightEngineExt;
+import com.moulberry.flashback.packet.FlashbackRemoteExperience;
+import com.moulberry.flashback.packet.FlashbackRemoteFoodData;
+import com.moulberry.flashback.packet.FlashbackRemoteSelectHotbarSlot;
+import com.moulberry.flashback.packet.FlashbackRemoteSetSlot;
 import io.netty.channel.embedded.EmbeddedChannel;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.client.multiplayer.PlayerInfo;
-import net.minecraft.client.player.KeyboardInput;
-import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Holder;
@@ -43,17 +46,16 @@ import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.ExperienceOrb;
+import net.minecraft.world.entity.Leashable;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.AttributeMap;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
-import net.minecraft.world.entity.decoration.HangingEntity;
-import net.minecraft.world.entity.decoration.ItemFrame;
 import net.minecraft.world.entity.decoration.Painting;
-import net.minecraft.world.entity.item.ItemEntity;
-import net.minecraft.world.entity.npc.Villager;
+import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.GameRules;
 import net.minecraft.world.level.GameType;
@@ -221,6 +223,12 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
             }
         }
 
+        for (ReplayPlayer replayViewer : this.replayServer.getReplayViewers()) {
+            if (Objects.equals(replayViewer.lastFirstPersonDataUUID, addEntityPacket.getUUID())) {
+                replayViewer.lastFirstPersonDataUUID = null;
+            }
+        }
+
         Connection connection = new Connection(PacketFlow.SERVERBOUND);
         EmbeddedChannel embeddedChannel = new EmbeddedChannel(connection);
         serverPlayer.recreateFromPacket(addEntityPacket);
@@ -335,6 +343,7 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
 
     @Override
     public void handleBlockUpdate(ClientboundBlockUpdatePacket clientboundBlockUpdatePacket) {
+        System.out.println(clientboundBlockUpdatePacket.getPos());
         this.setBlockState(this.level(), clientboundBlockUpdatePacket.getPos(),
             clientboundBlockUpdatePacket.getBlockState());
         forward(clientboundBlockUpdatePacket);
@@ -408,7 +417,23 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
 
     @Override
     public void handleContainerSetSlot(ClientboundContainerSetSlotPacket clientboundContainerSetSlotPacket) {
-        throw new UnsupportedPacketException(clientboundContainerSetSlotPacket);
+        Entity entity = this.level().getEntity(this.localPlayerId);
+        if (!(entity instanceof Player player)) {
+            return;
+        }
+
+        if (clientboundContainerSetSlotPacket.getContainerId() == -2) {
+            int slot = clientboundContainerSetSlotPacket.getSlot();
+            ItemStack itemStack = clientboundContainerSetSlotPacket.getItem();
+            player.getInventory().setItem(slot, itemStack);
+
+            for (ReplayPlayer replayViewer : this.replayServer.getReplayViewers()) {
+                if (Objects.equals(replayViewer.lastFirstPersonDataUUID, player.getUUID())) {
+                    replayViewer.lastFirstPersonHotbarItems[slot] = itemStack.copy();
+                    ServerPlayNetworking.send(replayViewer, new FlashbackRemoteSetSlot(player.getId(), slot, itemStack.copy()));
+                }
+            }
+        }
     }
 
     @Override
@@ -420,9 +445,13 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
     @Override
     public void handleEntityLinkPacket(ClientboundSetEntityLinkPacket clientboundSetEntityLinkPacket) {
         Entity source = this.level().getEntity(clientboundSetEntityLinkPacket.getSourceId());
-        if (source instanceof Mob mob) {
-            Entity dest = this.level().getEntity(clientboundSetEntityLinkPacket.getDestId());
-            mob.setLeashedTo(dest, true);
+        if (source instanceof Leashable leashable) {
+            if (clientboundSetEntityLinkPacket.getDestId() == 0) {
+                leashable.setLeashedTo(null, true);
+            } else {
+                Entity dest = this.level().getEntity(clientboundSetEntityLinkPacket.getDestId());
+                leashable.setLeashedTo(dest, true);
+            }
         }
     }
 
@@ -896,7 +925,29 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
 
     @Override
     public void handleSetCarriedItem(ClientboundSetCarriedItemPacket clientboundSetCarriedItemPacket) {
-        throw new UnsupportedPacketException(clientboundSetCarriedItemPacket);
+        if (!Inventory.isHotbarSlot(clientboundSetCarriedItemPacket.getSlot())) {
+            return;
+        }
+
+        Entity entity = this.level().getEntity(this.localPlayerId);
+        if (!(entity instanceof Player player)) {
+            return;
+        }
+
+        Inventory inventory = player.getInventory();
+
+        if (inventory.selected == clientboundSetCarriedItemPacket.getSlot()) {
+            return;
+        }
+
+        inventory.selected = clientboundSetCarriedItemPacket.getSlot();
+
+        for (ReplayPlayer replayViewer : this.replayServer.getReplayViewers()) {
+            if (Objects.equals(replayViewer.lastFirstPersonDataUUID, player.getUUID())) {
+                replayViewer.lastFirstPersonSelectedSlot = inventory.selected;
+                ServerPlayNetworking.send(replayViewer, new FlashbackRemoteSelectHotbarSlot(player.getId(), inventory.selected));
+            }
+        }
     }
 
     @Override
@@ -952,6 +1003,16 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
             player.experienceProgress = clientboundSetExperiencePacket.getExperienceProgress();
             player.totalExperience = clientboundSetExperiencePacket.getTotalExperience();
             player.experienceLevel = clientboundSetExperiencePacket.getExperienceLevel();
+
+            for (ReplayPlayer replayViewer : this.replayServer.getReplayViewers()) {
+                if (Objects.equals(replayViewer.lastFirstPersonDataUUID, player.getUUID())) {
+                    replayViewer.lastFirstPersonExperienceProgress = player.experienceProgress;
+                    replayViewer.lastFirstPersonTotalExperience = player.totalExperience;
+                    replayViewer.lastFirstPersonExperienceLevel = player.experienceLevel;
+                    ServerPlayNetworking.send(replayViewer, new FlashbackRemoteExperience(player.getId(), player.experienceProgress,
+                        player.totalExperience, player.experienceLevel));
+                }
+            }
         }
     }
 
@@ -960,8 +1021,20 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
         Entity entity = this.level().getEntity(this.localPlayerId);
         if (entity instanceof Player player) {
             player.setHealth(clientboundSetHealthPacket.getHealth());
-            player.getFoodData().setFoodLevel(clientboundSetHealthPacket.getFood());
-            player.getFoodData().setSaturation(clientboundSetHealthPacket.getSaturation());
+
+            int food = clientboundSetHealthPacket.getFood();
+            float saturation = clientboundSetHealthPacket.getSaturation();
+
+            player.getFoodData().setFoodLevel(food);
+            player.getFoodData().setSaturation(saturation);
+
+            for (ReplayPlayer replayViewer : this.replayServer.getReplayViewers()) {
+                if (Objects.equals(replayViewer.lastFirstPersonDataUUID, player.getUUID())) {
+                    replayViewer.lastFirstPersonFoodLevel = food;
+                    replayViewer.lastFirstPersonSaturationLevel = saturation;
+                    ServerPlayNetworking.send(replayViewer, new FlashbackRemoteFoodData(player.getId(), food, saturation));
+                }
+            }
         }
     }
 
@@ -1012,10 +1085,6 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
 
     @Override
     public void handleSoundEvent(ClientboundSoundPacket clientboundSoundPacket) {
-        if (Flashback.EXPORT_JOB == null && this.replayServer.replayPaused) {
-            return;
-        }
-
         Holder<SoundEvent> sound = clientboundSoundPacket.getSound();
         double x = clientboundSoundPacket.getX();
         double y = clientboundSoundPacket.getY();
@@ -1027,10 +1096,6 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
 
     @Override
     public void handleSoundEntityEvent(ClientboundSoundEntityPacket clientboundSoundEntityPacket) {
-        if (Flashback.EXPORT_JOB == null && this.replayServer.replayPaused) {
-            return;
-        }
-
         Entity entity = this.level().getEntity(clientboundSoundEntityPacket.getId());
         if (entity == null) {
             return;
@@ -1414,7 +1479,6 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
 
     @Override
     public void handleCustomPayload(ClientboundCustomPayloadPacket clientboundCustomPayloadPacket) {
-        // todo: handle some custom packets here?
         forward(clientboundCustomPayloadPacket);
     }
 

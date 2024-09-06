@@ -6,8 +6,12 @@ import imgui.ImVec2;
 import imgui.flag.ImGuiCol;
 import imgui.flag.ImGuiComboFlags;
 import imgui.flag.ImGuiHoveredFlags;
+import imgui.flag.ImGuiInputTextFlags;
+import imgui.flag.ImGuiNavInput;
 import imgui.flag.ImGuiWindowFlags;
 import imgui.type.ImBoolean;
+import imgui.type.ImFloat;
+import imgui.type.ImInt;
 import imgui.type.ImString;
 import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
@@ -132,11 +136,20 @@ public class ImGuiHelper {
     private static StringBuilder specialInput = new StringBuilder();
     private static int backspaceCount = 0;
 
+    private static boolean handledFocusNext = false;
+    private static boolean focusNext = false;
+    private static int focusIndex = 0;
+    private static int focusLastIndex = 0;
+
     public static void endFrame() {
         closeableModalOnTopLast = closeableModalOnTop;
 
         wantSpecialInputLastFrame = wantSpecialInputThisFrame;
         wantSpecialInputThisFrame = false;
+
+        handledFocusNext = false;
+        focusNext = false;
+        focusIndex = 0;
 
         if (!wantSpecialInputLastFrame) specialInput.setLength(0);
     }
@@ -314,6 +327,136 @@ public class ImGuiHelper {
 
         ImGui.setCursorScreenPos(textStartX, ImGui.getCursorScreenPosY());
         ImGui.textColored(ImGui.getColorU32(ImGuiCol.TextDisabled), text);
+    }
+
+    public static boolean inputInt(String label, int[] value) {
+        if (value.length == 0) {
+            ImGui.text(label);
+            return false;
+        }
+
+        boolean valueChanged = false;
+        float availableWidth = ImGui.calcItemWidth();
+        float innerSpacing = ImGui.getStyle().getItemInnerSpacingX();
+        float widthItemOne = Math.max(1, (float) Math.floor((availableWidth - innerSpacing * (value.length - 1)) / value.length));
+        float widthItemLast = Math.max(1, (float) Math.floor(availableWidth - (widthItemOne + innerSpacing) * (value.length - 1)));
+
+        ImGui.beginGroup();
+        ImGui.pushID(label);
+        for (int i=0; i<value.length; i++) {
+            ImGui.pushID(i);
+            if (i > 0) {
+                ImGui.sameLine(0, innerSpacing);
+            }
+
+            ImInt imInt = new ImInt(value[i]);
+            if (i < value.length-1) {
+                ImGui.setNextItemWidth(widthItemOne);
+            } else {
+                ImGui.setNextItemWidth(widthItemLast);
+            }
+
+            focusIndex += 1;
+
+            if (focusIndex == focusLastIndex || focusNext) {
+                ImGui.setKeyboardFocusHere();
+                focusNext = false;
+                focusLastIndex = 0;
+            }
+
+            if (ImGui.inputInt("", imInt, 0)) {
+                valueChanged = true;
+                value[i] = imInt.get();
+            }
+
+            if (!handledFocusNext && ImGui.isItemActive() && ImGui.isKeyPressed(GLFW.GLFW_KEY_TAB, false)) {
+                handledFocusNext = true;
+                if (ImGui.isKeyDown(GLFW.GLFW_KEY_LEFT_SHIFT) || ImGui.isKeyDown(GLFW.GLFW_KEY_RIGHT_SHIFT)) {
+                    focusLastIndex = focusIndex - 1;
+                } else {
+                    focusNext = true;
+                }
+            }
+
+            ImGui.popID();
+        }
+        ImGui.popID();
+
+        // Label
+        String renderedText = label.split("##")[0];
+        if (!renderedText.isEmpty()) {
+            ImGui.sameLine(0, innerSpacing);
+            ImGui.text(renderedText);
+        }
+
+        ImGui.endGroup();
+
+        return valueChanged;
+    }
+
+    public static boolean inputFloat(String label, float[] value) {
+        if (value.length == 0) {
+            ImGui.text(label);
+            return false;
+        }
+
+        boolean valueChanged = false;
+        float availableWidth = ImGui.calcItemWidth();
+        float innerSpacing = ImGui.getStyle().getItemInnerSpacingX();
+        float widthItemOne = Math.max(1, (float) Math.floor((availableWidth - innerSpacing * (value.length - 1)) / value.length));
+        float widthItemLast = Math.max(1, (float) Math.floor(availableWidth - (widthItemOne + innerSpacing) * (value.length - 1)));
+
+        ImGui.beginGroup();
+        ImGui.pushID(label);
+        for (int i=0; i<value.length; i++) {
+            ImGui.pushID(i);
+            if (i > 0) {
+                ImGui.sameLine(0, innerSpacing);
+            }
+
+            ImFloat imFloat = new ImFloat(value[i]);
+            if (i < value.length-1) {
+                ImGui.setNextItemWidth(widthItemOne);
+            } else {
+                ImGui.setNextItemWidth(widthItemLast);
+            }
+
+            focusIndex += 1;
+
+            if (focusIndex == focusLastIndex || focusNext) {
+                ImGui.setKeyboardFocusHere();
+                focusNext = false;
+                focusLastIndex = 0;
+            }
+
+            if (ImGui.inputFloat("", imFloat, 0)) {
+                valueChanged = true;
+                value[i] = imFloat.get();
+            }
+
+            if (!handledFocusNext && ImGui.isItemActive() && ImGui.isKeyPressed(GLFW.GLFW_KEY_TAB, false)) {
+                handledFocusNext = true;
+                if (ImGui.isKeyDown(GLFW.GLFW_KEY_LEFT_SHIFT) || ImGui.isKeyDown(GLFW.GLFW_KEY_RIGHT_SHIFT)) {
+                    focusLastIndex = focusIndex - 1;
+                } else {
+                    focusNext = true;
+                }
+            }
+
+            ImGui.popID();
+        }
+        ImGui.popID();
+
+        // Label
+        String renderedText = label.split("##")[0];
+        if (!renderedText.isEmpty()) {
+            ImGui.sameLine(0, innerSpacing);
+            ImGui.text(renderedText);
+        }
+
+        ImGui.endGroup();
+
+        return valueChanged;
     }
 
     public static boolean radio(String label, int[] currentItem, String[] values) {

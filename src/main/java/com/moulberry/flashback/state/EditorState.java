@@ -8,6 +8,10 @@ import com.moulberry.flashback.keyframe.handler.KeyframeHandler;
 import com.moulberry.flashback.keyframe.types.CameraKeyframeType;
 import com.moulberry.flashback.keyframe.types.CameraOrbitKeyframeType;
 import com.moulberry.flashback.visuals.ReplayVisuals;
+import net.minecraft.client.Camera;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.world.entity.Entity;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
@@ -49,14 +53,36 @@ public class EditorState {
         Keyframe old = track.keyframesByTick.get(tick);
         if (old != null) {
             undo.add(new EditorStateHistoryAction.SetKeyframe(track.keyframeType, trackIndex, tick, old.copy()));
-            description = "Replaced " + track.keyframeType + " keyframe";
+            description = "Replaced " + track.keyframeType.name() + " keyframe";
         } else {
             undo.add(new EditorStateHistoryAction.RemoveKeyframe(track.keyframeType, trackIndex, tick));
-            description = "Added " + track.keyframeType + " keyframe";
+            description = "Added " + track.keyframeType.name() + " keyframe";
         }
         redo.add(new EditorStateHistoryAction.SetKeyframe(track.keyframeType, trackIndex, tick, keyframe.copy()));
 
         this.push(new EditorStateHistoryEntry(undo, redo, description));
+    }
+
+    @Nullable
+    public Camera getAudioCamera() {
+        if (this.audioSourceEntity == null) {
+            return null;
+        }
+
+        ClientLevel level = Minecraft.getInstance().level;
+        if (level == null) {
+            return null;
+        }
+
+        Entity sourceEntity = level.getEntities().get(this.audioSourceEntity);
+        if (sourceEntity == null) {
+            return null;
+        }
+
+        Camera dummyCamera = new Camera();
+        dummyCamera.eyeHeight = sourceEntity.getEyeHeight();
+        dummyCamera.setup(level, sourceEntity, false, false, 1.0f);
+        return dummyCamera;
     }
 
     public void push(EditorStateHistoryEntry entry) {
