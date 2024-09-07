@@ -79,6 +79,9 @@ extendable method net/minecraft/server/MinecraftServer synchronizeTime (Lnet/min
 
 accessible class net/minecraft/server/level/ThreadedLevelLightEngine$TaskType
 accessible field net/minecraft/server/network/PlayerChunkSender pendingChunks Lit/unimi/dsi/fastutil/longs/LongSet;
+accessible field net/minecraft/server/level/ChunkMap entityMap Lit/unimi/dsi/fastutil/ints/Int2ObjectMap;
+accessible class net/minecraft/server/level/ChunkMap$TrackedEntity
+accessible field net/minecraft/server/level/ChunkMap$TrackedEntity serverEntity Lnet/minecraft/server/level/ServerEntity;
 
 # Packets
 accessible field net/minecraft/network/protocol/game/ClientboundPlayerInfoUpdatePacket entries Ljava/util/List;
@@ -113,6 +116,7 @@ accessible field net/minecraft/server/level/ServerEntity lastSentXRot I
 accessible field net/minecraft/server/level/ServerEntity lastSentYHeadRot I
 accessible field net/minecraft/server/level/ServerEntity wasOnGround Z
 accessible field net/minecraft/server/level/ServerEntity trackedDataValues Ljava/util/List;
+accessible field net/minecraft/server/level/ServerEntity updateInterval I
 
 # Replay UI
 accessible field net/minecraft/client/gui/screens/Screen renderables Ljava/util/List;
@@ -126,6 +130,9 @@ accessible field com/mojang/blaze3d/platform/Window height I
 # Visuals
 accessible field net/minecraft/client/Camera eyeHeight F
 accessible method net/minecraft/client/multiplayer/ClientLevel getEntities ()Lnet/minecraft/world/level/entity/LevelEntityGetter;
+accessible field net/minecraft/client/renderer/FogRenderer fogRed F
+accessible field net/minecraft/client/renderer/FogRenderer fogGreen F
+accessible field net/minecraft/client/renderer/FogRenderer fogBlue F
 
 # Exporting
 accessible field net/minecraft/client/Minecraft clientTickCount J

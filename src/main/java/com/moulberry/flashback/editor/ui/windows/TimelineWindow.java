@@ -282,10 +282,9 @@ public class TimelineWindow {
 
             // render markers
             {
-
-                for (int tick = minTicks; tick <= minTicks + availableTicks; tick++) {
+                for (int tick = minTicks-10; tick <= minTicks + availableTicks + 10; tick++) {
                     Map.Entry<Integer, ReplayMarker> markerEntry = metadata.replayMarkers.ceilingEntry(tick);
-                    if (markerEntry == null || markerEntry.getKey() > minTicks + availableTicks) {
+                    if (markerEntry == null || markerEntry.getKey() > minTicks + availableTicks + 10) {
                         break;
                     }
 
@@ -1270,9 +1269,9 @@ public class TimelineWindow {
                 }
             }
 
-            for (int tick = minTicks; tick <= minTicks + availableTicks; tick++) {
+            for (int tick = minTicks - 10; tick <= minTicks + availableTicks + 10; tick++) {
                 var entry = keyframeTimes.ceilingEntry(tick);
-                if (entry == null || entry.getKey() > minTicks + availableTicks) {
+                if (entry == null || entry.getKey() > minTicks + availableTicks + 10) {
                     break;
                 }
                 tick = entry.getKey();

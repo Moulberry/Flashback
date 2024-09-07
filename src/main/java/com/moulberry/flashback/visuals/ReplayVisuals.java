@@ -24,6 +24,9 @@ public class ReplayVisuals {
     public float overrideFogStart = 0.0f;
     public float overrideFogEnd = 256.0f;
 
+    public boolean overrideFogColour = false;
+    public float[] fogColour = new float[]{0f, 1f, 0f};
+
     public boolean overrideFov = false;
     public float overrideFovAmount = 70f;
 

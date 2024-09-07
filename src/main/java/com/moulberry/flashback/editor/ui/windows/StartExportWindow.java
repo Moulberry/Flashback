@@ -29,6 +29,7 @@ import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
 
 public class StartExportWindow {
 
@@ -284,6 +285,10 @@ public class StartExportWindow {
 
         container = ImGuiHelper.enumCombo("Container", container, containers);
 
+        if (container == VideoContainer.PNG_SEQUENCE) {
+            return;
+        }
+
         VideoCodec[] codecs = container.getSupportedVideoCodecs(transparentBackground);
 
         if (codecs.length == 0) {
@@ -334,8 +339,6 @@ public class StartExportWindow {
             numBitrate = stringToBitrate(ImGuiHelper.getString(bitrate));
         }
 
-        String encoder = videoCodec.getEncoders()[selectedVideoEncoder[0]];
-
         if (defaultExportPath == null || !Files.exists(defaultExportPath)) {
             defaultExportPath = FabricLoader.getInstance().getGameDir();
         }
@@ -355,9 +358,7 @@ public class StartExportWindow {
             defaultName = "output." + container.extension();
         }
 
-        String defaultExportPathString = defaultExportPath.toString();
-        return AsyncFileDialogs.saveFileDialog(defaultExportPathString, defaultName,
-            container.extension(), container.extension()).thenApply(pathStr -> {
+        Function<String, ExportSettings> callback = pathStr -> {
             if (pathStr != null) {
                 int start = Math.max(0, startEndTick[0]);
                 int end = Math.max(start, startEndTick[1]);
@@ -380,19 +381,43 @@ public class StartExportWindow {
                 }
 
                 boolean transparent = transparentBackground && !editorState.replayVisuals.renderSky;
+                String encoder = videoCodec.getEncoders()[selectedVideoEncoder[0]];
+
+                VideoCodec useVideoCodec = videoCodec;
+                AudioCodec useAudioCodec = audioCodec;
+                boolean shouldRecordAudio = recordAudio;
+
+                if (container == VideoContainer.PNG_SEQUENCE) {
+                    useVideoCodec = null;
+                    encoder = null;
+                    shouldRecordAudio = false;
+                }
+
+                if (!shouldRecordAudio) {
+                    useAudioCodec = null;
+                }
 
                 Path path = Path.of(pathStr);
                 defaultExportPath = path.getParent();
                 return new ExportSettings(name, editorState.copy(),
                     player.position(), player.getYRot(), player.getXRot(),
                     resolution[0], resolution[1], start, end,
-                    Math.max(1, framerate[0]), resetRng, container, videoCodec, encoder, numBitrate, transparent, ssaa,
-                    recordAudio, stereoAudio, audioCodec,
+                    Math.max(1, framerate[0]), resetRng, container, useVideoCodec, encoder, numBitrate, transparent, ssaa,
+                    shouldRecordAudio, stereoAudio, useAudioCodec,
                     path);
             }
 
             return null;
-        });
+        };
+
+        String defaultExportPathString = defaultExportPath.toString();
+        if (container == VideoContainer.PNG_SEQUENCE) {
+            return AsyncFileDialogs.openFolderDialog(defaultExportPathString).thenApply(callback);
+        } else {
+            return AsyncFileDialogs.saveFileDialog(defaultExportPathString, defaultName,
+                container.extension(), container.extension()).thenApply(callback);
+        }
+
     }
 
     private static int stringToBitrate(String string) {

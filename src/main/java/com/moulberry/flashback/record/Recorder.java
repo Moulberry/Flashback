@@ -55,6 +55,7 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.Leashable;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
@@ -970,8 +971,8 @@ public class Recorder {
                 gamePackets.add(new ClientboundSetPassengersPacket(entity.getVehicle()));
             }
 
-            if (entity instanceof Mob mob && mob.isLeashed()) {
-                gamePackets.add(new ClientboundSetEntityLinkPacket(mob, mob.getLeashHolder()));
+            if (entity instanceof Leashable leashable && leashable.isLeashed()) {
+                gamePackets.add(new ClientboundSetEntityLinkPacket(entity, leashable.getLeashHolder()));
             }
         }
 
