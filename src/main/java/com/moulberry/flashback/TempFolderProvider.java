@@ -28,62 +28,60 @@ public class TempFolderProvider {
         return Flashback.getDataDirectory().resolve("temp");
     }
 
-    public static void tryDeleteStaleFolders() {
+    public static Path getTypedTempFolder(TempFolderType type) {
+        return getSharedTempFolder().resolve(type.id);
+    }
+
+    public static void tryDeleteStaleFolders(TempFolderType type) {
         Path tempFolder = getSharedTempFolder();
 
         if (!Files.exists(tempFolder)) {
             return;
         }
 
-        for (TempFolderType type : TempFolderType.values()) {
-            // todo: special handling for recordings
-
-            Path typedTempFolder = tempFolder.resolve(type.id);
-
-            if (!Files.exists(typedTempFolder)) {
-                continue;
-            }
-
-            Set<Path> toDelete = new HashSet<>();
-
-            try (DirectoryStream<Path> directoryStream = Files.newDirectoryStream(typedTempFolder)) {
-                for (Path path : directoryStream) {
-                    if (!Files.isDirectory(path)) {
-                        continue;
-                    }
-
-                    Path lockFile = path.resolve("flashback_pid");
-
-                    String pidStr = "?";
-                    boolean isStillInUse = false;
-                    try {
-                        pidStr = Files.readString(lockFile);
-                        long pid = Long.parseLong(pidStr);
-                        isStillInUse = ProcessHandle.of(pid).isPresent();
-                    } catch (Exception ignored) {}
-
-                    if (!isStillInUse) {
-                        toDelete.add(path);
-                    } else {
-                        Flashback.LOGGER.error("Cannot delete stale temp folder {}, pid {} is still in use", tempFolder.relativize(path), pidStr);
-                    }
-                }
-            } catch (IOException e) {
-                Flashback.LOGGER.error("Failed to find stale temp folders to delete", e);
-            }
-
-            for (Path path : toDelete) {
-                Flashback.LOGGER.info("Deleting stale temp folder {}", tempFolder.relativize(path));
-                try {
-                    FileUtils.deleteDirectory(path.toFile());
-                } catch (Exception e) {
-                    Flashback.LOGGER.error("Failed to delete stale temp folder", e);
-                }
-            }
-
-            deleteDirectoryIfEmpty(typedTempFolder);
+        Path typedTempFolder = tempFolder.resolve(type.id);
+        if (!Files.exists(typedTempFolder)) {
+            return;
         }
 
+        Set<Path> toDelete = new HashSet<>();
+
+        try (DirectoryStream<Path> directoryStream = Files.newDirectoryStream(typedTempFolder)) {
+            for (Path path : directoryStream) {
+                if (!Files.isDirectory(path)) {
+                    continue;
+                }
+
+                Path lockFile = path.resolve("flashback_pid");
+
+                String pidStr = "?";
+                boolean isStillInUse = false;
+                try {
+                    pidStr = Files.readString(lockFile);
+                    long pid = Long.parseLong(pidStr);
+                    isStillInUse = ProcessHandle.of(pid).isPresent();
+                } catch (Exception ignored) {}
+
+                if (!isStillInUse) {
+                    toDelete.add(path);
+                } else {
+                    Flashback.LOGGER.error("Cannot delete stale temp folder {}, pid {} is still in use", tempFolder.relativize(path), pidStr);
+                }
+            }
+        } catch (IOException e) {
+            Flashback.LOGGER.error("Failed to find stale temp folders to delete", e);
+        }
+
+        for (Path path : toDelete) {
+            Flashback.LOGGER.info("Deleting stale temp folder {}", tempFolder.relativize(path));
+            try {
+                FileUtils.deleteDirectory(path.toFile());
+            } catch (Exception e) {
+                Flashback.LOGGER.error("Failed to delete stale temp folder", e);
+            }
+        }
+
+        deleteDirectoryIfEmpty(typedTempFolder);
         deleteDirectoryIfEmpty(tempFolder);
     }
 

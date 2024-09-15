@@ -19,7 +19,7 @@ public class MixinServerEntity {
 
     @ModifyVariable(method = "<init>", at = @At("HEAD"), argsOnly = true)
     private static int init_modifyUpdateInterval(int updateInterval, @Local(argsOnly = true) ServerLevel level) {
-        if (updateInterval <= 3 && level != null && level.getServer() instanceof ReplayServer) {
+        if (updateInterval < 20 && level != null && level.getServer() instanceof ReplayServer) {
             return 1;
         }
         return updateInterval;

@@ -21,6 +21,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.core.Holder;
 import net.minecraft.core.SectionPos;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.Connection;
 import net.minecraft.network.DisconnectionDetails;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -343,7 +344,6 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
 
     @Override
     public void handleBlockUpdate(ClientboundBlockUpdatePacket clientboundBlockUpdatePacket) {
-        System.out.println(clientboundBlockUpdatePacket.getPos());
         this.setBlockState(this.level(), clientboundBlockUpdatePacket.getPos(),
             clientboundBlockUpdatePacket.getBlockState());
         forward(clientboundBlockUpdatePacket);

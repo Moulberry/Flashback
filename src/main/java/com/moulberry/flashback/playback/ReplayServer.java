@@ -4,7 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.mojang.authlib.GameProfile;
 import com.moulberry.flashback.Flashback;
-import com.moulberry.flashback.action.PositionAndAngle;
+import com.moulberry.flashback.SneakyThrow;
 import com.moulberry.flashback.ext.LevelChunkExt;
 import com.moulberry.flashback.TempFolderProvider;
 import com.moulberry.flashback.keyframe.handler.ReplayServerKeyframeHandler;
@@ -33,13 +33,11 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
-import it.unimi.dsi.fastutil.longs.LongSet;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.server.IntegratedServer;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.codec.StreamCodec;
@@ -59,14 +57,11 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.level.TicketType;
 import net.minecraft.server.level.progress.ChunkProgressListenerFactory;
 import net.minecraft.server.network.ConfigurationTask;
-import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.server.packs.repository.PackRepository;
 import net.minecraft.server.players.PlayerList;
 import net.minecraft.util.Mth;
 import net.minecraft.world.BossEvent;
-import net.minecraft.world.entity.Display;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.flag.FeatureFlagSet;
@@ -80,8 +75,8 @@ import net.minecraft.world.level.storage.LevelStorageSource;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
-import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.FileVisitResult;
@@ -99,7 +94,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.TreeMap;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BooleanSupplier;
@@ -110,6 +104,7 @@ public class ReplayServer extends IntegratedServer {
     private static final Gson GSON = new Gson();
     public static int REPLAY_VIEWER_IDS_START = -981723987;
     public static String REPLAY_VIEWER_NAME = "Replay Viewer";
+    public static final int CHUNK_CACHE_SIZE = 10000;
 
     public volatile int jumpToTick = -1;
     public volatile boolean replayPaused = true;
@@ -138,6 +133,7 @@ public class ReplayServer extends IntegratedServer {
     private final FlashbackMeta metadata;
     private final TreeMap<Integer, PlayableChunk> playableChunksByStart = new TreeMap<>();
     private final Int2ObjectMap<ClientboundLevelChunkWithLightPacket> levelChunkCachedPackets = new Int2ObjectOpenHashMap<>();
+    private final IntSet loadedChunkCacheFiles = new IntOpenHashSet();
     private ReplayReader currentReplayReader = null;
 
     private record RemotePack(UUID id, String url, String hash){}
@@ -183,44 +179,53 @@ public class ReplayServer extends IntegratedServer {
 
             Path levelChunkCachePath = this.playbackFileSystem.getPath("/level_chunk_cache");
             if (Files.exists(levelChunkCachePath)) {
-                int chunkCacheIndex = 0;
-
-                byte[] bytes = Files.readAllBytes(levelChunkCachePath);
-                ByteBuf byteBuf = Unpooled.wrappedBuffer(bytes);
-                while (byteBuf.readerIndex() < byteBuf.writerIndex()) {
-                    int size = byteBuf.readInt();
-
-                    if (size < 0) {
-                        Flashback.LOGGER.error("Expected positive size for chunk packet, got {}", size);
-                        break;
-                    }
-
-                    if (byteBuf.readerIndex() > byteBuf.writerIndex() - size) {
-                        Flashback.LOGGER.error("Ran out of bytes while reading level_chunk_cache, needed {}, had {}",
-                                size, byteBuf.writerIndex() - byteBuf.readerIndex());
-                        break;
-                    }
-
-                    RegistryFriendlyByteBuf registryFriendlyByteBuf = new RegistryFriendlyByteBuf(byteBuf.readSlice(size), this.registryAccess());
-
-                    try {
-                        Packet<?> packet = this.gamePacketCodec.decode(registryFriendlyByteBuf);
-                        if (packet instanceof ClientboundLevelChunkWithLightPacket levelChunkWithLightPacket) {
-                            this.levelChunkCachedPackets.put(chunkCacheIndex, levelChunkWithLightPacket);
-                        } else {
-                            throw new IllegalStateException("Level chunk cache contains wrong packet: " + packet);
-                        }
-                    } catch (Exception e) {
-                        Flashback.LOGGER.error("Encountered error while reading level_chunk_cache", e);
-                    }
-
-                    chunkCacheIndex += 1;
-                }
-                Flashback.LOGGER.info("Loaded level_chunk_cache with {} entries", this.levelChunkCachedPackets.size());
+                loadLevelChunkCache(levelChunkCachePath, 0, "/level_chunk_cache");
             }
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private void loadLevelChunkCache(Path levelChunkCachePath, int chunkCacheIndex, String name) throws IOException {
+        int startIndex = chunkCacheIndex;
+
+        try (InputStream is = Files.newInputStream(levelChunkCachePath)) {
+            while (true) {
+                byte[] sizeBuffer = is.readNBytes(4);
+                if (sizeBuffer.length < 4) {
+                    break;
+                }
+
+                int size = (sizeBuffer[0] & 0xff) << 24 |
+                    (sizeBuffer[1] & 0xff) << 16 |
+                    (sizeBuffer[2] & 0xff) <<  8 |
+                    sizeBuffer[3] & 0xff;
+
+                byte[] chunk = is.readNBytes(size);
+                if (chunk.length < size) {
+                    Flashback.LOGGER.error("Ran out of bytes while reading level_chunk_cache, needed {}, had {}",
+                        size, chunk.length);
+                    break;
+                }
+
+                RegistryFriendlyByteBuf registryFriendlyByteBuf = new RegistryFriendlyByteBuf(Unpooled.wrappedBuffer(chunk), this.registryAccess());
+
+                try {
+                    Packet<?> packet = this.gamePacketCodec.decode(registryFriendlyByteBuf);
+                    if (packet instanceof ClientboundLevelChunkWithLightPacket levelChunkWithLightPacket) {
+                        this.levelChunkCachedPackets.put(chunkCacheIndex, levelChunkWithLightPacket);
+                    } else {
+                        throw new IllegalStateException("Level chunk cache contains wrong packet: " + packet);
+                    }
+                } catch (Exception e) {
+                    Flashback.LOGGER.error("Encountered error while reading level_chunk_cache", e);
+                }
+
+                chunkCacheIndex += 1;
+            }
+        }
+
+        Flashback.LOGGER.info("Loaded {} with {} entries", name, chunkCacheIndex - startIndex);
     }
 
     public FlashbackMeta getMetadata() {
@@ -583,6 +588,7 @@ public class ReplayServer extends IntegratedServer {
 
     public void handleAccuratePlayerPosition(RegistryFriendlyByteBuf friendlyByteBuf) {
         var packet = FlashbackAccurateEntityPosition.STREAM_CODEC.decode(friendlyByteBuf);
+
         for (ReplayPlayer replayViewer : this.replayViewers) {
             ServerPlayNetworking.send(replayViewer, packet);
         }
@@ -631,6 +637,22 @@ public class ReplayServer extends IntegratedServer {
 
     public void handleLevelChunkCached(int index) {
         ClientboundLevelChunkWithLightPacket packet = this.levelChunkCachedPackets.get(index);
+        if (packet == null) {
+            int cacheIndex = index / ReplayServer.CHUNK_CACHE_SIZE;
+            if (this.loadedChunkCacheFiles.add(cacheIndex)) {
+                String pathString = "/level_chunk_caches/" + cacheIndex;
+                Path levelChunkCachePath = this.playbackFileSystem.getPath(pathString);
+                if (Files.exists(levelChunkCachePath)) {
+                    try {
+                        loadLevelChunkCache(levelChunkCachePath, cacheIndex * ReplayServer.CHUNK_CACHE_SIZE, pathString);
+                    } catch (IOException e) {
+                        SneakyThrow.sneakyThrow(e);
+                    }
+                }
+                packet = this.levelChunkCachedPackets.get(index);
+            }
+        }
+
         if (packet != null) {
             this.configurationPacketHandler.flushPendingConfiguration();
             this.gamePacketHandler.flushPendingEntities();
@@ -756,8 +778,10 @@ public class ReplayServer extends IntegratedServer {
             this.replayPaused = true;
         }
 
+        boolean forceApplyKeyframes = this.forceApplyKeyframes.compareAndSet(true, false) && Flashback.EXPORT_JOB == null;
+
         if (Flashback.EXPORT_JOB != null || this.targetTick == this.currentTick || normalPlayback) {
-            this.runUpdates(booleanSupplier);
+            this.runUpdates(booleanSupplier, forceApplyKeyframes);
         } else {
             int realTargetTick = this.targetTick;
 
@@ -770,12 +794,12 @@ public class ReplayServer extends IntegratedServer {
 
             if (this.targetTick >= realTargetTick) {
                 this.targetTick = realTargetTick;
-                this.runUpdates(booleanSupplier);
+                this.runUpdates(booleanSupplier, forceApplyKeyframes);
             } else {
                 while (this.targetTick <= realTargetTick) {
                     this.fastForwarding = this.targetTick < realTargetTick;
 
-                    this.runUpdates(booleanSupplier);
+                    this.runUpdates(booleanSupplier, forceApplyKeyframes);
 
                     if (this.targetTick == realTargetTick) {
                         break;
@@ -785,6 +809,10 @@ public class ReplayServer extends IntegratedServer {
                 }
                 this.fastForwarding = false;
             }
+        }
+
+        if (forceApplyKeyframes) {
+            ((MinecraftExt)Minecraft.getInstance()).flashback$applyKeyframes();
         }
 
         this.tryFollowLocalPlayer();
@@ -903,15 +931,10 @@ public class ReplayServer extends IntegratedServer {
         }
     }
 
-    private void runUpdates(BooleanSupplier booleanSupplier) {
-        boolean forceApplyKeyframes = this.forceApplyKeyframes.compareAndSet(true, false) && Flashback.EXPORT_JOB == null;
+    private void runUpdates(BooleanSupplier booleanSupplier, boolean forceApplyKeyframes) {
         if (!this.replayPaused || forceApplyKeyframes) {
             this.desiredTickRate = 20.0f;
             this.getEditorState().applyKeyframes(new ReplayServerKeyframeHandler(this), this.targetTick);
-
-            if (forceApplyKeyframes) {
-                ((MinecraftExt)Minecraft.getInstance()).flashback$applyKeyframes();
-            }
         }
 
         float tickRate = this.desiredTickRate;
@@ -1183,6 +1206,9 @@ public class ReplayServer extends IntegratedServer {
                 Flashback.LOGGER.error("Failed to close playback zip", e);
             }
         }
+
+        this.levelChunkCachedPackets.clear();
+        this.playableChunksByStart.clear();
     }
 
     public void clearReplayTempFolder() {

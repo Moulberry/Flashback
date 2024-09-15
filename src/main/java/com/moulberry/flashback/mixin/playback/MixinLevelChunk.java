@@ -63,7 +63,12 @@ public abstract class MixinLevelChunk extends ChunkAccess implements LevelChunkE
     @Override
     public void flashback$setBlockStateWithoutUpdates(BlockPos blockPos, BlockState blockState) {
         int y = blockPos.getY();
-        LevelChunkSection levelChunkSection = this.getSection(this.getSectionIndex(y));
+        int sectionY = this.getSectionIndex(y);
+        if (sectionY < 0 || sectionY >= this.getSectionsCount()) {
+            return;
+        }
+
+        LevelChunkSection levelChunkSection = this.getSection(sectionY);
         boolean oldHasOnlyAir = levelChunkSection.hasOnlyAir();
         if (oldHasOnlyAir && blockState.isAir()) {
             return;

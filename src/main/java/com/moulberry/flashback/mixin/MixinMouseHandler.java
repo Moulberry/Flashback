@@ -22,6 +22,13 @@ public class MixinMouseHandler {
         }
     }
 
+    @Inject(method = {"onPress", "onScroll", "onMove"}, at = @At("HEAD"), cancellable = true)
+    public void onUseMouse(CallbackInfo ci) {
+        if (Flashback.isExporting()) {
+            ci.cancel();
+        }
+    }
+
     @Inject(method = "grabMouse", at=@At("HEAD"), cancellable = true)
     public void grabMouse(CallbackInfo ci) {
         if (ReplayUI.isActive() || Flashback.isExporting()) {

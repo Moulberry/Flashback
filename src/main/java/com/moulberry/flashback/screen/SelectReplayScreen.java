@@ -34,11 +34,11 @@ public class SelectReplayScreen extends Screen {
         this.selectButton = this.addRenderableWidget(Button.builder(Component.translatable("flashback.select_replay.open"), this::tryOpenReplay)
                 .bounds(this.width / 2 - 154, this.height - 52, 308, 20).build());
         this.editButton = this.addRenderableWidget(Button.builder(Component.translatable("selectWorld.edit"), this::tryEditReplay)
-                .bounds(this.width / 2 - 154, this.height - 28, 150, 20).build());
+                .bounds(this.width / 2 - 154, this.height - 28, 97, 20).build());
         this.deleteButton = this.addRenderableWidget(Button.builder(Component.translatable("selectWorld.delete"), this::tryDeleteReplay)
-                                                           .bounds(this.width / 2 + 4, this.height - 28, 72, 20).build());
+                                                           .bounds(this.width / 2 - 49, this.height - 28, 98, 20).build());
         this.addRenderableWidget(Button.builder(CommonComponents.GUI_BACK, button -> this.minecraft.setScreen(this.lastScreen))
-                                                           .bounds(this.width / 2 + 82, this.height - 28, 72, 20).build());
+                                                           .bounds(this.width / 2 + 57, this.height - 28, 97, 20).build());
 
         if (this.width/2 > 154 + 128) {
             this.addRenderableWidget(Button.builder(Component.literal("Flashback Settings"), btn -> Minecraft.getInstance().setScreen(new ConfigScreen(this)))

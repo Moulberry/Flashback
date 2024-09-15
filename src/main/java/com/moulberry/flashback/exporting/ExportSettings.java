@@ -17,7 +17,7 @@ public record ExportSettings(@Nullable String name, EditorState editorState,
                              int resolutionX, int resolutionY, int startTick, int endTick, double framerate,
                              boolean resetRng,
                              // Video
-                             VideoContainer container, VideoCodec codec, String encoder, int bitrate, boolean transparent, boolean ssaa,
+                             VideoContainer container, VideoCodec codec, String encoder, int bitrate, boolean transparent, boolean ssaa, boolean noGui,
                              // Audio
                              boolean recordAudio, boolean stereoAudio, AudioCodec audioCodec,
                              // Output

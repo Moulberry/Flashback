@@ -458,8 +458,9 @@ public class ReplaySelectionList extends ObjectSelectionList<ReplaySelectionList
         }
 
         public void editReplay() {
-            SystemToast.add(this.minecraft.getToasts(), new SystemToast.SystemToastId(3000),
-                    Component.literal("Sorry"), Component.literal("Editing replay data hasn't been implemented yet"));
+            Minecraft.getInstance().setScreen(new EditReplayScreen(Minecraft.getInstance().screen, this.summary));
+//            SystemToast.add(this.minecraft.getToasts(), new SystemToast.SystemToastId(3000),
+//                    Component.literal("Sorry"), Component.literal("Editing replay data hasn't been implemented yet"));
             // todo: implement editing replay data
 //            EditWorldScreen editWorldScreen;
 //            ReplayStorageSource.ReplayStorageAccess levelStorageAccess;

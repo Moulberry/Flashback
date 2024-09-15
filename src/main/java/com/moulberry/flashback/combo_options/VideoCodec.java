@@ -94,7 +94,7 @@ public enum VideoCodec implements ComboOption {
                                     break;
                                 } else {
                                     if (PixelFormatHelper.doesPixelFormatSupportTransparency(pixFmt)) {
-                                        System.out.println(name + " supports transparency because of " + PixelFormatHelper.pixelFormatToString(pixFmt));
+                                        // System.out.println(name + " supports transparency because of " + PixelFormatHelper.pixelFormatToString(pixFmt));
                                         this.supportsTransparency = true;
                                         break;
                                     }

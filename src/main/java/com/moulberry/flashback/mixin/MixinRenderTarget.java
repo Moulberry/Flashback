@@ -3,8 +3,15 @@ package com.moulberry.flashback.mixin;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.mojang.blaze3d.pipeline.RenderTarget;
+import com.mojang.blaze3d.platform.GlStateManager;
+import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.vertex.BufferBuilder;
+import com.mojang.blaze3d.vertex.BufferUploader;
+import com.mojang.blaze3d.vertex.DefaultVertexFormat;
+import com.mojang.blaze3d.vertex.VertexFormat;
 import com.moulberry.flashback.editor.ui.ReplayUI;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.ShaderInstance;
 import org.lwjgl.glfw.GLFW;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL30;
@@ -14,11 +21,16 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+import java.util.Objects;
+
 @Mixin(value = RenderTarget.class, priority = 800)
 public abstract class MixinRenderTarget {
 
     @Shadow
     public int frameBufferId;
+
+    @Shadow
+    public abstract int getColorTextureId();
 
     @Inject(method = "blitToScreen(IIZ)V", at = @At("HEAD"), cancellable = true)
     public void blitToScreenSodium(int width, int height, boolean noBlend, CallbackInfo ci) {

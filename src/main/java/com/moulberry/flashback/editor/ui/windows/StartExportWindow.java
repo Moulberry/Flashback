@@ -44,6 +44,7 @@ public class StartExportWindow {
     private static final float[] framerate = new float[]{60};
     private static boolean resetRng = false;
     private static boolean ssaa = false;
+    private static boolean noGui = false;
 
     private static VideoContainer[] supportedContainers = null;
     private static VideoContainer[] supportedContainersWithTransparency = null;
@@ -173,6 +174,13 @@ public class StartExportWindow {
             }
             ImGuiHelper.tooltip("Supersampling Anti-Aliasing: Remove jagged edges by rendering the game at double resolution and downscaling");
 
+            ImGui.sameLine();
+
+            if (ImGui.checkbox("No GUI", noGui)) {
+                noGui = !noGui;
+            }
+            ImGuiHelper.tooltip("Removes all UI from the screen, rendering only the world");
+
             ImGuiHelper.separatorWithText("Video Options");
 
             renderVideoOptions(editorState);
@@ -257,8 +265,12 @@ public class StartExportWindow {
     }
 
     private static void renderVideoOptions(EditorState editorState) {
-        if (editorState != null && !editorState.replayVisuals.renderSky && ImGui.checkbox("Transparent Sky", transparentBackground)) {
-            transparentBackground = !transparentBackground;
+        if (editorState != null && !editorState.replayVisuals.renderSky) {
+            if (ImGui.checkbox("Transparent Sky", transparentBackground)) {
+                transparentBackground = !transparentBackground;
+            }
+        } else {
+            transparentBackground = false;
         }
 
         VideoContainer[] containers;
@@ -402,7 +414,7 @@ public class StartExportWindow {
                 return new ExportSettings(name, editorState.copy(),
                     player.position(), player.getYRot(), player.getXRot(),
                     resolution[0], resolution[1], start, end,
-                    Math.max(1, framerate[0]), resetRng, container, useVideoCodec, encoder, numBitrate, transparent, ssaa,
+                    Math.max(1, framerate[0]), resetRng, container, useVideoCodec, encoder, numBitrate, transparent, ssaa, noGui,
                     shouldRecordAudio, stereoAudio, useAudioCodec,
                     path);
             }

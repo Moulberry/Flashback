@@ -11,8 +11,10 @@ import java.io.BufferedOutputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Iterator;
 import java.util.zip.Deflater;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
@@ -70,6 +72,19 @@ public class ReplayExporter {
             zipOut.putNextEntry(zipEntry);
             zipOut.write(GSON.toJson(meta.toJson()).getBytes(StandardCharsets.UTF_8));
             zipOut.closeEntry();
+
+            // Write chunked level chunk caches
+            Path levelChunkCaches = recordFolder.resolve("level_chunk_caches");
+            if (Files.exists(levelChunkCaches) && Files.isDirectory(levelChunkCaches)) {
+                try (DirectoryStream<Path> directoryStream = Files.newDirectoryStream(levelChunkCaches)) {
+                    for (Path path : directoryStream) {
+                        zipEntry = new ZipEntry("level_chunk_caches/" + path.getFileName().toString());
+                        zipOut.putNextEntry(zipEntry);
+                        Files.copy(path, zipOut);
+                        zipOut.closeEntry();
+                    }
+                }
+            }
 
             // Write level chunk cache
             Path levelChunkCachePath = recordFolder.resolve("level_chunk_cache");

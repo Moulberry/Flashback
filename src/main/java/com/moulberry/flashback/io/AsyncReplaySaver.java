@@ -10,6 +10,7 @@ import com.moulberry.flashback.action.ActionConfigurationPacket;
 import com.moulberry.flashback.action.ActionCreateLocalPlayer;
 import com.moulberry.flashback.action.ActionGamePacket;
 import com.moulberry.flashback.action.ActionLevelChunkCached;
+import com.moulberry.flashback.playback.ReplayServer;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
@@ -103,6 +104,7 @@ public class AsyncReplaySaver {
         List<Packet<? super ClientGamePacketListener>> packetCopy = new ArrayList<>(packets);
         this.submit(writer -> {
             RegistryFriendlyByteBuf chunkCacheOutput = null;
+            int lastChunkCacheIndex = -1;
 
             FriendlyByteBuf customPayloadTempBuffer = null;
 
@@ -130,6 +132,18 @@ public class AsyncReplaySaver {
                     }
 
                     if (add) {
+                        index = this.totalWrittenChunkPackets;
+                        this.totalWrittenChunkPackets += 1;
+
+                        // Write chunk cache file if necessary
+                        int cacheIndex = index / ReplayServer.CHUNK_CACHE_SIZE;
+                        if (lastChunkCacheIndex >= 0 && cacheIndex != lastChunkCacheIndex) {
+                            this.writeChunkCacheFile(chunkCacheOutput, lastChunkCacheIndex);
+                            chunkCacheOutput = null;
+                        }
+                        lastChunkCacheIndex = cacheIndex;
+
+                        // Create new chunk cache output buffer if necessary
                         if (chunkCacheOutput == null) {
                             chunkCacheOutput = new RegistryFriendlyByteBuf(Unpooled.buffer(), writer.registryAccess());
                         }
@@ -148,9 +162,7 @@ public class AsyncReplaySaver {
                         chunkCacheOutput.writeInt(size);
                         chunkCacheOutput.writerIndex(endWriterIndex);
 
-                        index = this.totalWrittenChunkPackets;
-                        this.totalWrittenChunkPackets += 1;
-
+                        // Add to list so that this chunk can be reused
                         cachedChunkPacket.index = index;
                         cached.add(cachedChunkPacket);
                     }
@@ -211,18 +223,27 @@ public class AsyncReplaySaver {
                 }
             }
 
-            if (chunkCacheOutput != null && chunkCacheOutput.writerIndex() > 0) {
-                try {
-                    byte[] bytes = new byte[chunkCacheOutput.writerIndex()];
-                    chunkCacheOutput.getBytes(0, bytes);
-
-                    Path levelChunkCachePath = this.recordFolder.resolve("level_chunk_cache");
-                    Files.write(levelChunkCachePath, bytes, StandardOpenOption.CREATE, StandardOpenOption.APPEND, StandardOpenOption.SYNC);
-                } catch (IOException e) {
-                    SneakyThrow.sneakyThrow(e);
-                }
+            if (lastChunkCacheIndex >= 0) {
+                writeChunkCacheFile(chunkCacheOutput, lastChunkCacheIndex);
             }
         });
+    }
+
+    private void writeChunkCacheFile(RegistryFriendlyByteBuf chunkCacheOutput, int index) {
+        if (chunkCacheOutput == null || chunkCacheOutput.writerIndex() == 0) {
+            return;
+        }
+
+        try {
+            byte[] bytes = new byte[chunkCacheOutput.writerIndex()];
+            chunkCacheOutput.getBytes(0, bytes);
+
+            Path levelChunkCachePath = this.recordFolder.resolve("level_chunk_caches").resolve(""+index);
+            Files.createDirectories(levelChunkCachePath.getParent());
+            Files.write(levelChunkCachePath, bytes, StandardOpenOption.CREATE, StandardOpenOption.APPEND, StandardOpenOption.SYNC);
+        } catch (IOException e) {
+            SneakyThrow.sneakyThrow(e);
+        }
     }
 
 
