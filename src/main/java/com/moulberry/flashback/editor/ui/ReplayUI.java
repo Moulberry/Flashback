@@ -94,6 +94,7 @@ public class ReplayUI {
 
     private static String infoOverlayText = null;
     private static long infoOverlayEndMillis = 0;
+    public static boolean recordCameraMovement = false;
 
     private static UUID selectedEntity = null;
     private static boolean openSelectedEntityPopup = false;
@@ -605,29 +606,40 @@ public class ReplayUI {
                 isFrameFocused = true;
             }
 
+            String showText = null;
+            int showTextBorderColour = -1;
+
             if (infoOverlayText != null) {
                 long currentMillis = System.currentTimeMillis();
                 if (currentMillis < infoOverlayEndMillis - 30000 || currentMillis > infoOverlayEndMillis) {
                     infoOverlayText = null;
                     infoOverlayEndMillis = 0;
                 } else {
-                    ImGui.setNextWindowPos(frameX + frameWidth*0.5f, frameY + frameHeight*0.75f, ImGuiCond.Always, 0.5f, 0.5f);
-                    ImGui.setNextWindowSizeConstraints(0, 0, 550, frameHeight*0.45f);
-
-                    ImGuiHelper.pushStyleVar(ImGuiStyleVar.WindowBorderSize, 2);
-                    ImGuiHelper.pushStyleColor(ImGuiCol.Border, 0xFF00FFFF);
-
-                    if (ImGui.begin("##InfoOverlay", ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoFocusOnAppearing |
-                            ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoCollapse |
-                            ImGuiWindowFlags.NoDocking | ImGuiWindowFlags.NoSavedSettings)) {
-
-                        ImGui.text(infoOverlayText);
-                    }
-                    ImGui.end();
-
-                    ImGuiHelper.popStyleColor();
-                    ImGuiHelper.popStyleVar();
+                    showText = infoOverlayText;
+                    showTextBorderColour = 0xFF00FFFF;
                 }
+            } else if (recordCameraMovement) {
+                showText = "Recording Movement as Keyframes...";
+                showTextBorderColour = 0xFF0000FF;
+            }
+
+            if (showText != null) {
+                ImGui.setNextWindowPos(frameX + frameWidth*0.5f, frameY + frameHeight*0.75f, ImGuiCond.Always, 0.5f, 0.5f);
+                ImGui.setNextWindowSizeConstraints(0, 0, 550, frameHeight*0.45f);
+
+                ImGuiHelper.pushStyleVar(ImGuiStyleVar.WindowBorderSize, 2);
+                ImGuiHelper.pushStyleColor(ImGuiCol.Border, showTextBorderColour);
+
+                if (ImGui.begin("##InfoOverlay", ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoFocusOnAppearing |
+                    ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoCollapse |
+                    ImGuiWindowFlags.NoDocking | ImGuiWindowFlags.NoSavedSettings)) {
+
+                    ImGui.text(showText);
+                }
+                ImGui.end();
+
+                ImGuiHelper.popStyleColor();
+                ImGuiHelper.popStyleVar();
             }
 
             if (sizing == Sizing.UNDERLAY) {
@@ -635,10 +647,6 @@ public class ReplayUI {
                 frameY = 0;
                 frameWidth = Minecraft.getInstance().getWindow().getScreenWidth();
                 frameHeight = Minecraft.getInstance().getWindow().getScreenHeight();
-            }
-
-            if (frameX != oldFrameX || frameY != oldFrameY || frameWidth != oldFrameWidth || frameHeight != oldFrameHeight) {
-                Minecraft.getInstance().resizeDisplay();
             }
 
             if (Minecraft.getInstance().screen == null && Minecraft.getInstance().getOverlay() == null) {
@@ -742,6 +750,10 @@ public class ReplayUI {
         var drawData = ImGui.getDrawData();
         if (drawData != null) {
             imguiGl3.renderDrawData(drawData);
+        }
+
+        if (frameX != oldFrameX || frameY != oldFrameY || frameWidth != oldFrameWidth || frameHeight != oldFrameHeight) {
+            Minecraft.getInstance().resizeDisplay();
         }
 
         transitionActiveState(true);

@@ -28,12 +28,12 @@ public class WorldRenderHook {
     public static void renderHook(PoseStack poseStack, float partialTick, boolean renderBlockOutline, Camera camera, GameRenderer gameRenderer,
             LightTexture lightTexture, Matrix4f projection) {
         ReplayServer replayServer = Flashback.getReplayServer();
-        if (replayServer == null) {
+        if (replayServer == null || Flashback.isExporting()) {
             return;
         }
 
         EditorState editorState = EditorStateManager.getCurrent();
-        if (editorState != null && !Flashback.isExporting() && editorState.replayVisuals.cameraPath) {
+        if (editorState != null && editorState.replayVisuals.cameraPath) {
             CameraPath.renderCameraPath(poseStack, camera, replayServer);
         }
 

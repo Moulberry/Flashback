@@ -29,6 +29,7 @@ import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.resources.server.ServerPackManager;
 import net.minecraft.core.*;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtOps;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.ConnectionProtocol;
@@ -73,6 +74,7 @@ import net.minecraft.world.level.saveddata.maps.MapId;
 import net.minecraft.world.level.saveddata.maps.MapItemSavedData;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.scores.*;
+import org.jetbrains.annotations.Nullable;
 
 import java.nio.file.Path;
 import java.util.*;
@@ -185,10 +187,10 @@ public class Recorder {
         return builder.toString();
     }
 
-    private long lastPositionNanos;
     private PositionAndAngle lastPlayerPositionAndAngle = null;
-    private Vec3 nextPlayerPosition = null;
-    private final TreeMap<Long, PositionAndAngle> partialPositions = new TreeMap<>();
+    private float lastPlayerPositionAndAnglePartialTick;
+    private final TreeMap<Float, PositionAndAngle> partialPositions = new TreeMap<>();
+    private int trackAccuratePositionCounter = 10;
 
     public void trackPartialPosition(Entity entity, float partialTick) {
         int localPlayerUpdatesPerSecond = Flashback.getConfig().localPlayerUpdatesPerSecond;
@@ -196,16 +198,12 @@ public class Recorder {
             return;
         }
 
-        long currentNanos = System.nanoTime();
-
         double x = Mth.lerp(partialTick, entity.xo, entity.getX());
         double y = Mth.lerp(partialTick, entity.yo, entity.getY());
         double z = Mth.lerp(partialTick, entity.zo, entity.getZ());
         float yaw = entity.getViewYRot(partialTick);
         float pitch = entity.getViewXRot(partialTick);
-
-        this.nextPlayerPosition = new Vec3(entity.getX(), entity.getY(), entity.getZ());
-        this.partialPositions.put(currentNanos, new PositionAndAngle(x, y, z, yaw, pitch));
+        this.partialPositions.put(partialTick, new PositionAndAngle(x, y, z, yaw, pitch));
     }
 
     public void endTick(boolean close) {
@@ -240,66 +238,7 @@ public class Recorder {
             this.writeLocalData();
 
             if (trackAccurateFirstPersonPosition) {
-                long nanos = System.nanoTime();
-
-                LocalPlayer player = Minecraft.getInstance().player;
-                if (player == null || this.nextPlayerPosition == null) {
-                    this.lastPlayerPositionAndAngle = null;
-                } else if (this.lastPlayerPositionAndAngle == null) {
-                    this.lastPlayerPositionAndAngle = new PositionAndAngle(this.nextPlayerPosition.x, this.nextPlayerPosition.y, this.nextPlayerPosition.z,
-                        player.getYRot(), player.getXRot());
-                } else {
-                    int divisions = localPlayerUpdatesPerSecond / 20;
-                    PositionAndAngle newPosition = new PositionAndAngle(this.nextPlayerPosition.x, this.nextPlayerPosition.y, this.nextPlayerPosition.z,
-                        player.getYRot(), player.getXRot());
-
-                    if (!this.lastPlayerPositionAndAngle.equals(newPosition)) {
-                        List<PositionAndAngle> interpolatedPositions = new ArrayList<>();
-
-                        for (int i = 0; i <= divisions; i++) {
-                            double amount = (double) i / divisions;
-                            double partialNanos = this.lastPositionNanos + (nanos - this.lastPositionNanos) * amount;
-                            long partialNanosRounded = (long) partialNanos;
-
-                            Long floorNanos = this.lastPositionNanos;
-                            PositionAndAngle floorPosition = this.lastPlayerPositionAndAngle;
-                            Long ceilNanos = nanos;
-                            PositionAndAngle ceilPosition = newPosition;
-
-                            Map.Entry<Long, PositionAndAngle> floorEntry = this.partialPositions.floorEntry(partialNanosRounded);
-                            Map.Entry<Long, PositionAndAngle> ceilEntry = this.partialPositions.ceilingEntry(partialNanosRounded + 1);
-
-                            if (floorEntry != null) {
-                                floorNanos = floorEntry.getKey();
-                                floorPosition = floorEntry.getValue();
-                            }
-                            if (ceilEntry != null) {
-                                ceilNanos = ceilEntry.getKey();
-                                ceilPosition = ceilEntry.getValue();
-                            }
-
-                            double lerpAmount = 0.5;
-                            if (!Objects.equals(ceilNanos, floorNanos)) {
-                                lerpAmount = (partialNanos - floorNanos) / (ceilNanos - floorNanos);
-                            }
-
-                            PositionAndAngle interpolatedPosition = floorPosition.lerp(ceilPosition, lerpAmount);
-                            interpolatedPositions.add(interpolatedPosition);
-                        }
-
-                        FlashbackAccurateEntityPosition accurateEntityPosition = new FlashbackAccurateEntityPosition(player.getId(), interpolatedPositions);
-                        this.asyncReplaySaver.submit(writer -> {
-                            writer.startAction(ActionAccuratePlayerPosition.INSTANCE);
-                            FlashbackAccurateEntityPosition.STREAM_CODEC.encode(writer.friendlyByteBuf(), accurateEntityPosition);
-                            writer.finishAction(ActionAccuratePlayerPosition.INSTANCE);
-                        });
-
-                        this.lastPlayerPositionAndAngle = newPosition;
-                    }
-                }
-
-                this.partialPositions.clear();
-                this.lastPositionNanos = nanos;
+                this.writeAccurateFirstPersonPosition(localPlayerUpdatesPerSecond);
             }
 
             this.asyncReplaySaver.submit(writer -> writer.startAndFinishAction(ActionNextTick.INSTANCE));
@@ -321,15 +260,8 @@ public class Recorder {
                 changedDimensions = true;
             }
         } else if (trackAccurateFirstPersonPosition) {
+            this.updateLastPlayerPositionAndAngle(Minecraft.getInstance().player);
             this.partialPositions.clear();
-            this.lastPositionNanos = System.nanoTime();
-
-            LocalPlayer player = Minecraft.getInstance().player;
-            if (player != null) {
-                this.lastPlayerPositionAndAngle = new PositionAndAngle(player.getX(), player.getY(), player.getZ(), player.getYRot(), player.getXRot());
-            } else {
-                this.lastPlayerPositionAndAngle = null;
-            }
         }
 
         this.finishedPausing |= this.wasPaused && !this.isPaused;
@@ -385,6 +317,96 @@ public class Recorder {
 
         if (!this.isPaused) {
             this.wasPaused = false;
+        }
+    }
+
+    private void writeAccurateFirstPersonPosition(int localPlayerUpdatesPerSecond) {
+        LocalPlayer player = Minecraft.getInstance().player;
+        if (player == null) {
+            this.lastPlayerPositionAndAngle = null;
+            this.partialPositions.clear();
+            return;
+        }
+
+        if (this.lastPlayerPositionAndAngle != null) {
+            int divisions = localPlayerUpdatesPerSecond / 20;
+            Minecraft.getInstance().mouseHandler.handleAccumulatedMovement();
+            float nextPartialTick = Minecraft.getInstance().timer.getGameTimeDeltaPartialTick(true);
+
+            double nextX = Mth.lerp(nextPartialTick, player.xo, player.getX());
+            double nextY = Mth.lerp(nextPartialTick, player.yo, player.getY());
+            double nextZ = Mth.lerp(nextPartialTick, player.zo, player.getZ());
+            float nextYaw = player.getViewYRot(nextPartialTick);
+            float nextPitch = player.getViewXRot(nextPartialTick);
+            PositionAndAngle nextPosition = new PositionAndAngle(nextX, nextY, nextZ, nextYaw, nextPitch);
+
+            if (!this.lastPlayerPositionAndAngle.equals(nextPosition)) {
+                this.trackAccuratePositionCounter = 10;
+            } else if (this.trackAccuratePositionCounter > 0) {
+                this.trackAccuratePositionCounter -= 1;
+            }
+
+            if (this.trackAccuratePositionCounter > 0) {
+                List<PositionAndAngle> interpolatedPositions = new ArrayList<>();
+
+                for (int i = 0; i <= divisions; i++) {
+                    float amount = (float) i / divisions;
+
+                    float floorPartial = -1.0f + this.lastPlayerPositionAndAnglePartialTick;
+                    PositionAndAngle floorPosition = this.lastPlayerPositionAndAngle;
+                    float ceilPartial = 1.0f + nextPartialTick;
+                    PositionAndAngle ceilPosition = nextPosition;
+
+                    Map.Entry<Float, PositionAndAngle> floorEntry = this.partialPositions.floorEntry(amount);
+                    Map.Entry<Float, PositionAndAngle> ceilEntry = this.partialPositions.ceilingEntry(Math.nextUp(amount));
+
+                    if (floorEntry != null) {
+                        floorPartial = floorEntry.getKey();
+                        floorPosition = floorEntry.getValue();
+                    }
+                    if (ceilEntry != null) {
+                        ceilPartial = ceilEntry.getKey();
+                        ceilPosition = ceilEntry.getValue();
+                    }
+
+                    double lerpAmount = 0.5;
+                    if (!Objects.equals(floorPartial, ceilPartial)) {
+                        lerpAmount = (amount - floorPartial) / (ceilPartial - floorPartial);
+                    }
+
+                    PositionAndAngle interpolatedPosition = floorPosition.lerp(ceilPosition, lerpAmount);
+                    interpolatedPositions.add(interpolatedPosition);
+                }
+
+                FlashbackAccurateEntityPosition accurateEntityPosition = new FlashbackAccurateEntityPosition(player.getId(), interpolatedPositions);
+                this.asyncReplaySaver.submit(writer -> {
+                    writer.startAction(ActionAccuratePlayerPosition.INSTANCE);
+                    FlashbackAccurateEntityPosition.STREAM_CODEC.encode(writer.friendlyByteBuf(), accurateEntityPosition);
+                    writer.finishAction(ActionAccuratePlayerPosition.INSTANCE);
+                });
+            }
+        }
+
+        this.updateLastPlayerPositionAndAngle(player);
+        this.partialPositions.clear();
+    }
+
+    private void updateLastPlayerPositionAndAngle(@Nullable LocalPlayer player) {
+        Map.Entry<Float, PositionAndAngle> floorEntry = this.partialPositions.floorEntry(1.0f);
+        if (floorEntry != null) {
+            this.lastPlayerPositionAndAngle = floorEntry.getValue();
+            this.lastPlayerPositionAndAnglePartialTick = floorEntry.getKey();
+        } else if (player != null) {
+            double x = player.xo;
+            double y = player.yo;
+            double z = player.zo;
+            float yaw = player.getViewYRot(0.0f);
+            float pitch = player.getViewXRot(0.0f);
+
+            this.lastPlayerPositionAndAngle = new PositionAndAngle(x, y, z, yaw, pitch);
+            this.lastPlayerPositionAndAnglePartialTick = 1.0f;
+        } else {
+            this.lastPlayerPositionAndAngle = null;
         }
     }
 
@@ -888,6 +910,7 @@ public class Recorder {
                 for (int i = 0; i < chunks.length(); i++) {
                     LevelChunk chunk = chunks.get(i);
                     if (chunk != null) {
+                        System.out.println("chunk " + chunk.getPos() + " is light correct: " + chunk.isLightCorrect());
                         var task = pool.submit(() -> new ClientboundLevelChunkWithLightPacket(chunk, level.getLightEngine(), new BitSet(), new BitSet()));
                         levelChunkPacketTasks.add(new PositionedTask(chunk.getPos(), task));
                     }
@@ -901,9 +924,16 @@ public class Recorder {
                     return dx*dx + dz*dz;
                 }));
 
+                // Ensure light is up-to-date
+                for (int i = 0; i < 1000; i++) {
+                    if (level.isLightUpdateQueueEmpty()) {
+                        break;
+                    }
+                    level.pollLightUpdates();
+                }
+
                 // We get the light data on this thread to avoid
                 // slowdown due to synchronization
-
                 for (PositionedTask positionedTask : levelChunkPacketTasks) {
                     positionedTask.lightData = new ClientboundLightUpdatePacketData(positionedTask.pos,
                             level.getLightEngine(), null, null);

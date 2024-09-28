@@ -38,8 +38,11 @@ import com.moulberry.flashback.record.Recorder;
 import com.moulberry.flashback.record.ReplayExporter;
 import com.moulberry.flashback.record.ReplayMarker;
 import com.moulberry.flashback.screen.ConfigScreen;
+import com.moulberry.flashback.screen.RecoverRecordingsScreen;
 import com.moulberry.flashback.screen.SaveReplayScreen;
 import com.moulberry.flashback.screen.UnsupportedLoaderScreen;
+import com.moulberry.flashback.state.EditorState;
+import com.moulberry.flashback.state.EditorStateManager;
 import com.moulberry.flashback.visuals.AccurateEntityPositionHandler;
 import com.moulberry.flashback.visuals.ShaderManager;
 import net.fabricmc.api.ClientModInitializer;
@@ -53,6 +56,7 @@ import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.resource.ResourceManagerHelper;
 import net.fabricmc.loader.api.FabricLoader;
+import net.minecraft.ChatFormatting;
 import net.minecraft.FileUtil;
 import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
@@ -104,6 +108,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -121,8 +126,10 @@ public class Flashback implements ModInitializer, ClientModInitializer {
 
     private static int delayedStartRecording = 0;
     private static boolean delayedOpenConfig = false;
+    private static volatile boolean isInReplay = false;
 
     private static final List<Path> pendingReplaySave = new ArrayList<>();
+    private static final List<Path> pendingReplayRecovery = new ArrayList<>();
 
     public static ResourceLocation createResourceLocation(String value) {
         return ResourceLocation.fromNamespaceAndPath("flashback", value);
@@ -176,8 +183,29 @@ public class Flashback implements ModInitializer, ClientModInitializer {
 
         config = FlashbackConfig.tryLoadFromFolder(configFolder);
 
-        // todo: try recover unfinished recordings
-        TempFolderProvider.tryDeleteStaleFolders();
+        TempFolderProvider.tryDeleteStaleFolders(TempFolderProvider.TempFolderType.SERVER);
+
+        Path recordingFolder = TempFolderProvider.getTypedTempFolder(TempFolderProvider.TempFolderType.RECORDING);
+        if (Files.exists(recordingFolder)) {
+            try (DirectoryStream<Path> directoryStream = Files.newDirectoryStream(recordingFolder)) {
+                Iterator<Path> iterator = directoryStream.iterator();
+                while (iterator.hasNext()) {
+                    Path folder = iterator.next();
+
+                    if (Files.exists(folder.resolve("metadata.json"))) {
+                        pendingReplayRecovery.add(folder);
+                    }
+                }
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+        if (pendingReplayRecovery.isEmpty()) {
+            TempFolderProvider.tryDeleteStaleFolders(TempFolderProvider.TempFolderType.RECORDING);
+        }
+
+        // Delete partial exports
         try {
             FileUtils.deleteDirectory(Path.of("replay_export_temp").toFile());
         } catch (Exception ignored) {}
@@ -320,7 +348,16 @@ public class Flashback implements ModInitializer, ClientModInitializer {
         String unsupportedLoader = findUnsupportedLoaders();
 
         ClientTickEvents.END_CLIENT_TICK.register(minecraft -> {
+            updateIsInReplay();
+
             AccurateEntityPositionHandler.tick();
+
+            if (Flashback.isInReplay() && !Flashback.isExporting()) {
+                EditorState editorState = EditorStateManager.getCurrent();
+                if (editorState != null) {
+                    editorState.recordCameraMovement();
+                }
+            }
         });
 
         ClientTickEvents.START_CLIENT_TICK.register(minecraft -> {
@@ -339,6 +376,30 @@ public class Flashback implements ModInitializer, ClientModInitializer {
 
                 Minecraft.getInstance().setScreen(new UnsupportedLoaderScreen(Minecraft.getInstance().screen,
                     Component.literal("Flashback: Unsupported"), Component.literal(warning)));
+            }
+
+            if (!pendingReplayRecovery.isEmpty() && canReplaceScreen(Minecraft.getInstance().screen)) {
+                Component title = Component.literal("Flashback: Recovery");
+                Component description = Component.empty()
+                     .append(Component.literal("Flashback has detected ").append(Component.literal("unfinished recordings\n").withStyle(ChatFormatting.YELLOW)))
+                     .append(Component.literal("This is usually because the game closed unexpectedly while recording\n\n"))
+                     .append(Component.literal("Unfortunately, up to 5 minutes of gameplay from the end of the recording may be lost\n\n").withStyle(ChatFormatting.RED)
+                     .append(Component.literal("Would you like to try to recover the recording?").withStyle(ChatFormatting.GREEN)));
+                Minecraft.getInstance().setScreen(new RecoverRecordingsScreen(Minecraft.getInstance().screen, title, description, recover -> {
+                    switch (recover) {
+                        case RECOVER -> {
+                            pendingReplaySave.addAll(pendingReplayRecovery);
+                            pendingReplayRecovery.clear();
+                        }
+                        case SKIP -> {
+                            pendingReplayRecovery.clear();
+                        }
+                        case DELETE -> {
+                            TempFolderProvider.tryDeleteStaleFolders(TempFolderProvider.TempFolderType.RECORDING);
+                            pendingReplayRecovery.clear();
+                        }
+                    }
+                }));
             }
 
             if (!pendingReplaySave.isEmpty()) {
@@ -373,8 +434,18 @@ public class Flashback implements ModInitializer, ClientModInitializer {
                 }
                 delayedOpenConfig = false;
             }
+
+            updateIsInReplay();
         });
 	}
+
+    public static List<String> getReplayIncompatibleMods() {
+        List<String> incompatible = new ArrayList<>();
+        if (FabricLoader.getInstance().isModLoaded("vmp")) {
+            incompatible.add("VeryManyPlayers (vmp)");
+        }
+        return incompatible;
+    }
 
     private static @Nullable String findUnsupportedLoaders() {
         if (FabricLoader.getInstance().isModLoaded("feather")) {
@@ -521,8 +592,12 @@ public class Flashback implements ModInitializer, ClientModInitializer {
         return EXPORT_JOB != null && EXPORT_JOB.isRunning();
     }
 
+    public static void updateIsInReplay() {
+        isInReplay = Minecraft.getInstance().getSingleplayerServer() instanceof ReplayServer;
+    }
+
     public static boolean isInReplay() {
-        return Minecraft.getInstance().getSingleplayerServer() instanceof ReplayServer;
+        return isInReplay;
     }
 
     private int startRecordingReplay(CommandContext<FabricClientCommandSource> command) {
@@ -637,7 +712,7 @@ public class Flashback implements ModInitializer, ClientModInitializer {
             LevelStorageSource source = new LevelStorageSource(replayTemp.resolve("saves"), replayTemp.resolve("backups"),
                 Minecraft.getInstance().directoryValidator(), Minecraft.getInstance().getFixerUpper());
             LevelStorageSource.LevelStorageAccess access = source.createAccess("replay");
-            PackRepository packRepository = ServerPacksSource.createVanillaTrustedRepository();
+            PackRepository packRepository = ServerPacksSource.createPackRepository(access);
 
             packRepository.reload();
 

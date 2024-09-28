@@ -9,8 +9,8 @@ public record PositionAndAngle(double x, double y, double z, float yaw, float pi
             this.x + (other.x - this.x) * amount,
             this.y + (other.y - this.y) * amount,
             this.z + (other.z - this.z) * amount,
-            (float) (this.yaw + Mth.wrapDegrees(other.yaw - this.yaw) * amount),
-            (float) (this.pitch + Mth.wrapDegrees(other.pitch - this.pitch) * amount)
+            (float) Mth.wrapDegrees(this.yaw + Mth.wrapDegrees(other.yaw - this.yaw) * amount),
+            (float) Mth.wrapDegrees(this.pitch + Mth.wrapDegrees(other.pitch - this.pitch) * amount)
         );
     }
 }

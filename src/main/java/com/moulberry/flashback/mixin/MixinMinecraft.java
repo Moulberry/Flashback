@@ -224,7 +224,7 @@ public abstract class MixinMinecraft implements MinecraftExt {
     private final DeltaTracker.Timer localPlayerTimer = new DeltaTracker.Timer(20.0f, 0, FloatUnaryOperator.identity());
 
     @Inject(method = "disconnect(Lnet/minecraft/client/gui/screens/Screen;Z)V", at = @At("HEAD"))
-    public void disconnect(Screen screen, boolean isTransferring, CallbackInfo ci) {
+    public void disconnectHead(Screen screen, boolean isTransferring, CallbackInfo ci) {
         try {
             if (Flashback.getConfig().automaticallyFinish && Flashback.RECORDER != null && !isTransferring) {
                 Flashback.finishRecordingReplay();
@@ -234,14 +234,9 @@ public abstract class MixinMinecraft implements MinecraftExt {
         }
     }
 
-    @Inject(method = "runTick", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/MouseHandler;handleAccumulatedMovement()V", shift = At.Shift.AFTER))
-    public void runTick_handleAccumulatedMovement(boolean runTick, CallbackInfo ci) {
-        if (Flashback.RECORDER != null && this.player != null) {
-            float partialTick = this.timer.deltaTickResidual;
-            Flashback.RECORDER.trackPartialPosition(this.player, partialTick);
-        }
-
-        AccurateEntityPositionHandler.apply(this.level, this.timer.deltaTickResidual);
+    @Inject(method = "disconnect(Lnet/minecraft/client/gui/screens/Screen;Z)V", at = @At("RETURN"))
+    public void disconnectReturn(Screen screen, boolean bl, CallbackInfo ci) {
+        Flashback.updateIsInReplay();
     }
 
     @Inject(method = "runTick", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/Minecraft;runAllTasks()V", shift = At.Shift.AFTER))
@@ -326,6 +321,7 @@ public abstract class MixinMinecraft implements MinecraftExt {
                 this.progressListener.set(storingChunkProgressListener);
                 return ProcessorChunkProgressListener.createStarted(storingChunkProgressListener, this.progressTasks::add);
             }, playbackUUID, path));
+            Flashback.updateIsInReplay();
             this.isLocalServer = true;
             this.updateReportEnvironment(ReportEnvironment.local());
 //            this.quickPlayLog.setWorldData(QuickPlayLog.Type.SINGLEPLAYER, levelStorageAccess.getLevelId(), worldStem.worldData().getLevelName());

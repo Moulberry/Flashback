@@ -63,6 +63,13 @@ public class VisualsWindow {
                 editorState.markDirty();
             }
 
+            if (Minecraft.getInstance().cameraEntity != null && Minecraft.getInstance().cameraEntity != Minecraft.getInstance().player) {
+                if (ImGui.checkbox("Hotbar", visuals.showHotbar)) {
+                    visuals.showHotbar = !visuals.showHotbar;
+                    editorState.markDirty();
+                }
+            }
+
             ImGuiHelper.separatorWithText("World");
 
             if (ImGui.checkbox("Render Blocks", visuals.renderBlocks)) {

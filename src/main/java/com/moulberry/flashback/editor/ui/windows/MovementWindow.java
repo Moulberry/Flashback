@@ -4,6 +4,7 @@ import com.mojang.authlib.GameProfile;
 import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.configuration.FlashbackConfig;
 import com.moulberry.flashback.editor.ui.ImGuiHelper;
+import com.moulberry.flashback.editor.ui.ReplayUI;
 import com.moulberry.flashback.editor.ui.WindowOpenState;
 import com.moulberry.flashback.state.EditorState;
 import com.moulberry.flashback.state.EditorStateManager;
@@ -86,6 +87,11 @@ public class MovementWindow {
                 config.flightLockPitch = !config.flightLockPitch;
                 config.saveToDefaultFolder();
             }
+
+            // todo: record movement: can we make this smoother?
+//            if (ImGui.checkbox("Record Movement as Keyframes", ReplayUI.recordCameraMovement)) {
+//                ReplayUI.recordCameraMovement = !ReplayUI.recordCameraMovement;
+//            }
 
         }
         ImGui.end();

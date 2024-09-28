@@ -2,16 +2,22 @@ package com.moulberry.flashback.state;
 
 import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.FlashbackGson;
+import com.moulberry.flashback.editor.ui.ReplayUI;
 import com.moulberry.flashback.keyframe.Keyframe;
 import com.moulberry.flashback.keyframe.KeyframeType;
 import com.moulberry.flashback.keyframe.handler.KeyframeHandler;
+import com.moulberry.flashback.keyframe.impl.CameraKeyframe;
 import com.moulberry.flashback.keyframe.types.CameraKeyframeType;
 import com.moulberry.flashback.keyframe.types.CameraOrbitKeyframeType;
+import com.moulberry.flashback.playback.ReplayServer;
 import com.moulberry.flashback.visuals.ReplayVisuals;
+import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
@@ -38,6 +44,83 @@ public class EditorState {
 
     public UUID audioSourceEntity = null;
     public Set<UUID> hideDuringExport = new HashSet<>();
+
+    public transient int recordingCameraMovementTrack = -1;
+    public transient int recordingCameraMovementMinTick = -1;
+    public transient int recordingCameraMovementMaxTick = -1;
+    public transient Int2ObjectMap<CameraKeyframe> recordingCameraKeyframes = new Int2ObjectOpenHashMap<>();
+
+    public void recordCameraMovement() {
+        if (recordingCameraMovementTrack < 0) {
+            return;
+        }
+
+        if (!ReplayUI.recordCameraMovement) {
+            finishRecordingCameraMovement();
+            return;
+        }
+
+        ReplayServer replayServer = Flashback.getReplayServer();
+        if (replayServer != null) {
+            if (replayServer.replayPaused) {
+                finishRecordingCameraMovement();
+                return;
+            }
+
+            Entity cameraEntity = Minecraft.getInstance().getCameraEntity();
+            if (cameraEntity == null) {
+                return;
+            }
+
+            int tick = replayServer.getReplayTick();
+            if (recordingCameraMovementMaxTick >= 0) {
+                int nextCapture = recordingCameraMovementMaxTick + 4;
+                if (tick >= nextCapture) {
+                    tick = nextCapture;
+                } else {
+                    return;
+                }
+            }
+
+            recordingCameraKeyframes.put(tick, new CameraKeyframe(Minecraft.getInstance().getCameraEntity()));
+
+            if (recordingCameraMovementMinTick < 0) {
+                recordingCameraMovementMinTick = tick;
+            }
+
+            recordingCameraMovementMinTick = Math.min(recordingCameraMovementMinTick, tick);
+            recordingCameraMovementMaxTick = Math.max(recordingCameraMovementMaxTick, tick);
+        }
+    }
+
+    public void finishRecordingCameraMovement() {
+        int trackIndex = recordingCameraMovementTrack;
+        if (trackIndex >= 0 && trackIndex < this.keyframeTracks.size()) {
+            List<EditorStateHistoryAction> undo = new ArrayList<>();
+            List<EditorStateHistoryAction> redo = new ArrayList<>();
+
+            KeyframeTrack track = this.keyframeTracks.get(trackIndex);
+
+            for (Int2ObjectMap.Entry<CameraKeyframe> entry : recordingCameraKeyframes.int2ObjectEntrySet()) {
+                int tick = entry.getIntKey();
+
+                Keyframe old = track.keyframesByTick.get(entry.getIntKey());
+                if (old != null) {
+                    undo.add(new EditorStateHistoryAction.SetKeyframe(track.keyframeType, trackIndex, tick, old.copy()));
+                } else {
+                    undo.add(new EditorStateHistoryAction.RemoveKeyframe(track.keyframeType, trackIndex, tick));
+                }
+                redo.add(new EditorStateHistoryAction.SetKeyframe(track.keyframeType, trackIndex, tick, entry.getValue()));
+            }
+
+            this.push(new EditorStateHistoryEntry(undo, redo, "Record movement as keyframes"));
+        }
+
+        recordingCameraMovementTrack = -1;
+        recordingCameraMovementMinTick = -1;
+        recordingCameraMovementMaxTick = -1;
+        recordingCameraKeyframes.clear();
+    }
 
     public void setKeyframe(int trackIndex, int tick, Keyframe keyframe) {
         if (trackIndex >= this.keyframeTracks.size()) {

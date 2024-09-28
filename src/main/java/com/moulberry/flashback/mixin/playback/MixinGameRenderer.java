@@ -10,6 +10,7 @@ import com.moulberry.flashback.state.EditorStateManager;
 import com.moulberry.flashback.editor.ui.ReplayUI;
 import com.moulberry.flashback.ext.ItemInHandRendererExt;
 import com.moulberry.flashback.ext.MinecraftExt;
+import com.moulberry.flashback.visuals.AccurateEntityPositionHandler;
 import com.moulberry.flashback.visuals.CameraRotation;
 import com.moulberry.flashback.visuals.ShaderManager;
 import net.minecraft.client.Camera;
@@ -55,19 +56,26 @@ public abstract class MixinGameRenderer {
 
     @Shadow
     @Final
-    private Minecraft minecraft;
+    Minecraft minecraft;
 
-    @Shadow
-    public abstract float getDepthFar();
+    @Inject(method = "render", at = @At("HEAD"))
+    public void renderHead(DeltaTracker deltaTracker, boolean bl, CallbackInfo ci) {
+        LocalPlayer player = Minecraft.getInstance().player;
 
-    @Shadow
-    public abstract void renderLevel(DeltaTracker deltaTracker);
+        if (Flashback.RECORDER != null && player != null) {
+            float partialTick = deltaTracker.getGameTimeDeltaPartialTick(true);
+            Flashback.RECORDER.trackPartialPosition(player, partialTick);
+        }
 
-    @Shadow
-    private @Nullable PostChain postEffect;
+        AccurateEntityPositionHandler.apply(Minecraft.getInstance().level, deltaTracker);
+    }
 
-    @Shadow
-    private boolean effectActive;
+    @Inject(method = "render", at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/systems/RenderSystem;clear(IZ)V", remap = false, ordinal = 0), cancellable = true)
+    public void render_noGui(DeltaTracker deltaTracker, boolean bl, CallbackInfo ci) {
+        if (Flashback.isExporting() && Flashback.EXPORT_JOB.getSettings().noGui()) {
+            ci.cancel();
+        }
+    }
 
     @WrapOperation(method = "renderItemInHand", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/multiplayer/MultiPlayerGameMode;getPlayerMode()Lnet/minecraft/world/level/GameType;"))
     public GameType getPlayerMode(MultiPlayerGameMode instance, Operation<GameType> original) {

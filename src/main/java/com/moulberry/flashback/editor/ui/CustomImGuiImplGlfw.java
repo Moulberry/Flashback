@@ -130,6 +130,9 @@ public class CustomImGuiImplGlfw {
     private int grabLinkedKey = -1;
     private boolean releaseGrabOnUp = false;
 
+    public double rawMouseX;
+    public double rawMouseY;
+
     public float contentScale = 1.0f;
 
     public enum MouseHandledBy {
@@ -390,6 +393,9 @@ public class CustomImGuiImplGlfw {
 
     public void cursorPosCallback(final long windowId, final double xpos, final double ypos) {
         if (AsyncFileDialogs.hasDialog()) return;
+
+        this.rawMouseX = xpos;
+        this.rawMouseY = ypos;
 
         if (!ReplayUI.isActive()) {
             if (this.prevUserCallbackCursorPos != null && windowId == this.mainWindowPtr) this.prevUserCallbackCursorPos.invoke(windowId, xpos, ypos);

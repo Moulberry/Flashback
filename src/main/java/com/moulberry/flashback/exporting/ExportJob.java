@@ -11,6 +11,7 @@ import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.SneakyThrow;
 import com.moulberry.flashback.Utils;
 import com.moulberry.flashback.combo_options.VideoContainer;
+import com.moulberry.flashback.editor.ui.ReplayUI;
 import com.moulberry.flashback.keyframe.KeyframeType;
 import com.moulberry.flashback.keyframe.handler.KeyframeHandler;
 import com.moulberry.flashback.keyframe.handler.MinecraftKeyframeHandler;
@@ -21,6 +22,8 @@ import com.moulberry.flashback.playback.ReplayServer;
 import com.moulberry.flashback.visuals.AccurateEntityPositionHandler;
 import it.unimi.dsi.fastutil.doubles.DoubleArrayList;
 import it.unimi.dsi.fastutil.doubles.DoubleList;
+import net.minecraft.ChatFormatting;
+import net.minecraft.Util;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
@@ -28,6 +31,8 @@ import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.FogRenderer;
 import net.minecraft.client.renderer.ShaderInstance;
+import net.minecraft.network.chat.Component;
+import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
 import org.bytedeco.ffmpeg.global.avutil;
@@ -70,6 +75,7 @@ public class ExportJob {
     private long renderTimeNanos = 0;
     private long encodeTimeNanos = 0;
     private long downloadTimeNanos = 0;
+    private boolean patreonLinkClicked = false;
 
     private double currentTickDouble = 0.0;
 
@@ -271,8 +277,6 @@ public class ExportJob {
 
             KeyframeHandler keyframeHandler = new MinecraftKeyframeHandler(Minecraft.getInstance());
             this.settings.editorState().applyKeyframes(keyframeHandler, (float)(this.settings.startTick() + currentTickDouble));
-
-            AccurateEntityPositionHandler.apply(Minecraft.getInstance().level, (float) partialTick);
 
             SaveableFramebuffer saveable = downloader.take();
             RenderTarget renderTarget = Minecraft.getInstance().mainRenderTarget;
@@ -531,6 +535,8 @@ public class ExportJob {
             if (currentFrame >= this.settings.framerate()) {
                 long estimatedRemaining = (currentTime - this.renderStartTime) * (totalFrames - currentFrame) / currentFrame;
                 lines.add("Estimated time remaining: " + formatTime(estimatedRemaining));
+            } else {
+                lines.add("Estimated time remaining: ~");
             }
 
             lines.add("");
@@ -582,6 +588,31 @@ public class ExportJob {
                             -1, true, matrix, bufferSource, Font.DisplayMode.NORMAL, 0, 0xF000F0);
                     y += font.lineHeight;
                 }
+            }
+
+            double mouseX = ReplayUI.imguiGlfw.rawMouseX / window.getWidth() * scaledWidth;
+            double mouseY = ReplayUI.imguiGlfw.rawMouseY / window.getHeight() * scaledHeight;
+
+            y += font.lineHeight / 2 + 1;
+
+            String patreon = "https://www.patreon.com/flashbackmod";
+            int patreonWidth = font.width(patreon);
+            if (mouseX > x - patreonWidth/2f && mouseX < x + patreonWidth/2f && mouseY > y && mouseY < y + font.lineHeight) {
+                font.drawInBatch(Component.literal(patreon).withStyle(ChatFormatting.UNDERLINE), x - patreonWidth/2f, y,
+                    -1, true, matrix, bufferSource, Font.DisplayMode.NORMAL, 0, 0xF000F0);
+
+                if (GLFW.glfwGetMouseButton(window.getWindow(), GLFW.GLFW_MOUSE_BUTTON_LEFT) != 0) {
+                    if (!this.patreonLinkClicked) {
+                        this.patreonLinkClicked = true;
+                        Util.getPlatform().openUri(patreon);
+                    }
+                } else {
+                    this.patreonLinkClicked = false;
+                }
+            } else {
+                font.drawInBatch(patreon, x - patreonWidth/2f, y,
+                    -1, true, matrix, bufferSource, Font.DisplayMode.NORMAL, 0, 0xF000F0);
+                this.patreonLinkClicked = false;
             }
 
             bufferSource.endBatch();

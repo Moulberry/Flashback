@@ -11,6 +11,7 @@ public class ReplayVisuals {
     public boolean showTitleText = false;
     public boolean showScoreboard = false;
     public boolean showActionBar = false;
+    public boolean showHotbar = true;
 
     public boolean renderBlocks = true;
     public boolean renderEntities = true;
