@@ -43,6 +43,8 @@ public class ReplayVisuals {
 
     public long overrideTimeOfDay = -1;
 
+    public boolean overrideNightVision = false;
+
     public boolean ruleOfThirdsGuide = false;
     public boolean centerGuide = false;
     public boolean cameraPath = true;

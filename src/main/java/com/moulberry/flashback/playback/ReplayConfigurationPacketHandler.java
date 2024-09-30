@@ -3,6 +3,7 @@ package com.moulberry.flashback.playback;
 import com.google.common.collect.ImmutableMap;
 import com.moulberry.flashback.exception.UnsupportedPacketException;
 import com.moulberry.flashback.registry.RegistryHelper;
+import net.fabricmc.fabric.api.event.registry.DynamicRegistries;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Registry;
 import net.minecraft.core.RegistryAccess;
@@ -77,14 +78,6 @@ public class ReplayConfigurationPacketHandler implements ClientConfigurationPack
 
         boolean sendTags = false;
 
-        if (this.pendingTags != null && !this.pendingTags.isEmpty()) {
-            this.pendingTags.forEach((resourceKey, networkPayload) -> {
-                networkPayload.applyToRegistry(this.replayServer.registryAccess().registryOrThrow(resourceKey));
-            });
-            sendTags = true;
-            this.pendingTags = null;
-        }
-
         List<ConfigurationTask> configurationTasks = new ArrayList<>();
         FeatureFlagSet currentFeatureFlags = this.replayServer.worldData.enabledFeatures();
         List<KnownPack> currentKnownPacks = this.replayServer.getResourceManager().listPacks().flatMap(packResources -> packResources.location().knownPackInfo().stream()).toList();
@@ -130,7 +123,7 @@ public class ReplayConfigurationPacketHandler implements ClientConfigurationPack
 
             if (!RegistryHelper.equals(this.replayServer.registryAccess(), synchronizedRegistries, RegistryDataLoader.SYNCHRONIZED_REGISTRIES)) {
                 Set<ResourceKey<?>> neededRegistries = new HashSet<>();
-                for (RegistryDataLoader.RegistryData<?> worldgenRegistry : RegistryDataLoader.WORLDGEN_REGISTRIES) {
+                for (RegistryDataLoader.RegistryData<?> worldgenRegistry : DynamicRegistries.getDynamicRegistries()) {
                     neededRegistries.add(worldgenRegistry.key());
                 }
 
@@ -162,12 +155,17 @@ public class ReplayConfigurationPacketHandler implements ClientConfigurationPack
             }
         }
 
-        if (synchronizeRegistries) {
-            configurationTasks.add(new SynchronizeRegistriesTask(currentKnownPacks, this.replayServer.registries));
-            sendTags = false;
+        if (this.pendingTags != null && !this.pendingTags.isEmpty()) {
+            this.pendingTags.forEach((resourceKey, networkPayload) -> {
+                networkPayload.applyToRegistry(this.replayServer.registryAccess().registryOrThrow(resourceKey));
+            });
+            sendTags = true;
+            this.pendingTags = null;
         }
 
-        if (sendTags) {
+        if (synchronizeRegistries) {
+            configurationTasks.add(new SynchronizeRegistriesTask(currentKnownPacks, this.replayServer.registries));
+        } else if (sendTags) {
             this.replayServer.getPlayerList().broadcastAll(new ClientboundUpdateTagsPacket(TagNetworkSerialization.serializeTagsToNetwork(this.replayServer.registries)));
         }
 
@@ -201,6 +199,7 @@ public class ReplayConfigurationPacketHandler implements ClientConfigurationPack
             false, 0, List.of(), false, null);
         serverLevel.noSave = true;
         this.replayServer.levels.put(Level.OVERWORLD, serverLevel);
+        this.replayServer.getPlayerList().addWorldborderListener(serverLevel);
     }
 
     private static Collection<String> knownPacksToIds(PackRepository packRepository, Collection<KnownPack> knownPacks) {

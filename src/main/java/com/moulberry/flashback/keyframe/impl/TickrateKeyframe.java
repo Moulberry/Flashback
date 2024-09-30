@@ -18,7 +18,7 @@ public class TickrateKeyframe extends Keyframe {
     private float tickrate;
 
     public TickrateKeyframe(float tickrate) {
-        this(tickrate, InterpolationType.DEFAULT);
+        this(tickrate, InterpolationType.getDefault());
     }
 
     public TickrateKeyframe(float tickrate, InterpolationType interpolationType) {

@@ -1,8 +1,9 @@
 package com.moulberry.flashback;
 
 import net.minecraft.util.Mth;
+import org.joml.Math;
 import org.joml.Quaterniond;
-import org.joml.Quaternionf;
+import org.joml.Vector3d;
 
 public class Interpolation {
 
@@ -16,11 +17,8 @@ public class Interpolation {
 
 
     public static float linearAngle(float from, float to, float amount) {
-        return from + Mth.wrapDegrees(to - from) * amount;
-    }
-
-    public static Quaterniond linear(Quaterniond from, Quaterniond to, float amount) {
-        return from.slerp(to, amount, new Quaterniond());
+        float delta = Mth.wrapDegrees(to - from);
+        return from + Math.max(-180, Math.min(180, delta * amount));
     }
 
 }

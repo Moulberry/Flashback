@@ -1,4 +1,4 @@
-package com.moulberry.flashback.mixin.compat;
+package com.moulberry.flashback.mixin.compat.fabric;
 
 import com.bawnorton.mixinsquared.TargetHandler;
 import com.moulberry.flashback.playback.ReplayServer;
@@ -21,7 +21,7 @@ public class MixinFabricMinecraftServer {
         mixin = "net.fabricmc.fabric.mixin.biome.modification.MinecraftServerMixin",
         name = "finalizeWorldGen"
     )
-    @Inject(method = "@MixinSquared:Handler", at = @At("HEAD"), cancellable = true)
+    @Inject(method = "@MixinSquared:Handler", at = @At("HEAD"), cancellable = true, require = 0)
     private void preventWorldGenChanges(CallbackInfo ci) {
         if ((Object) this instanceof ReplayServer) {
             ci.cancel();

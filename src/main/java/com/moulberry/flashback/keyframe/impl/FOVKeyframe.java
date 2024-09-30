@@ -19,7 +19,7 @@ public class FOVKeyframe extends Keyframe {
     public float fov;
 
     public FOVKeyframe(float fov) {
-        this(fov, InterpolationType.DEFAULT);
+        this(fov, InterpolationType.getDefault());
     }
 
     public FOVKeyframe(float fov, InterpolationType interpolationType) {

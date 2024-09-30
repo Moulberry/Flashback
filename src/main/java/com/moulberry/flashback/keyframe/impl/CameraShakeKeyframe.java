@@ -30,7 +30,7 @@ public class CameraShakeKeyframe extends Keyframe {
     private boolean splitParams;
 
     public CameraShakeKeyframe(float frequencyX, float amplitudeX, float frequencyY, float amplitudeY, boolean splitParams) {
-        this(frequencyX, amplitudeX, frequencyY, amplitudeY, splitParams, InterpolationType.DEFAULT);
+        this(frequencyX, amplitudeX, frequencyY, amplitudeY, splitParams, InterpolationType.getDefault());
     }
 
     public CameraShakeKeyframe(float frequencyX, float amplitudeX, float frequencyY, float amplitudeY, boolean splitParams, InterpolationType interpolationType) {

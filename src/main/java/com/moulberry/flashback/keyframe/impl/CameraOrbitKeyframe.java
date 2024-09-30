@@ -38,7 +38,7 @@ public class CameraOrbitKeyframe extends Keyframe {
     public float pitch;
 
     public CameraOrbitKeyframe(Vector3d center, float distance, float yaw, float pitch) {
-        this(center, distance, yaw, pitch, InterpolationType.DEFAULT);
+        this(center, distance, yaw, pitch, InterpolationType.getDefault());
     }
 
     public CameraOrbitKeyframe(Vector3d center, float distance, float yaw, float pitch, InterpolationType interpolationType) {

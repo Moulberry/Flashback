@@ -4,6 +4,7 @@ import com.mojang.serialization.Codec;
 import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.FlashbackGson;
 import com.moulberry.flashback.SneakyThrow;
+import com.moulberry.flashback.keyframe.interpolation.InterpolationType;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.OptionInstance;
@@ -73,6 +74,10 @@ public class FlashbackConfig {
     public boolean flightLockZ = false;
     public boolean flightLockYaw = false;
     public boolean flightLockPitch = false;
+
+    public List<String> recentReplays = new ArrayList<>();
+    public String defaultExportFilename = "%date%T%time%";
+    public InterpolationType defaultInterpolationType = InterpolationType.SMOOTH;
 
     @SuppressWarnings("unchecked")
     public OptionInstance<?>[] createOptionInstances() {
@@ -219,10 +224,17 @@ public class FlashbackConfig {
 
         if (Files.exists(primary)) {
             try {
-                Files.move(primary, backup, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
-            } catch (IOException e) {
-                Flashback.LOGGER.error("Failed to backup config", e);
-            }
+                // Ensure primary can be loaded before backing it up
+                // Don't want to back up a bad config now, do we?
+                load(primary);
+
+                // Try to back up the config
+                try {
+                    Files.move(primary, backup, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+                } catch (IOException e) {
+                    Flashback.LOGGER.error("Failed to backup config", e);
+                }
+            } catch (Exception ignored) {}
         }
 
         this.save(primary);

@@ -40,4 +40,7 @@ public class FakePlayer extends ServerPlayer {
     public void awardStat(Stat<?> stat, int i) {
     }
 
+    @Override
+    public void resetStat(Stat<?> stat) {
+    }
 }

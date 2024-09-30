@@ -8,7 +8,9 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.BufferUploader;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
+import com.mojang.blaze3d.vertex.MeshData;
 import com.mojang.blaze3d.vertex.VertexFormat;
+import com.moulberry.flashback.WindowSizeTracker;
 import com.moulberry.flashback.editor.ui.ReplayUI;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.ShaderInstance;
@@ -27,24 +29,42 @@ import java.util.Objects;
 public abstract class MixinRenderTarget {
 
     @Shadow
-    public int frameBufferId;
-
-    @Shadow
-    public abstract int getColorTextureId();
+    public int colorTextureId;
 
     @Inject(method = "blitToScreen(IIZ)V", at = @At("HEAD"), cancellable = true)
     public void blitToScreenSodium(int width, int height, boolean noBlend, CallbackInfo ci) {
         if ((Object)this == Minecraft.getInstance().getMainRenderTarget() && ReplayUI.isActive()) {
             var window = Minecraft.getInstance().getWindow();
-            int frameBottom = (ReplayUI.viewportSizeY - (ReplayUI.frameY + ReplayUI.frameHeight)) * window.framebufferHeight / ReplayUI.viewportSizeY;
-            int frameLeft = ReplayUI.frameX * window.framebufferWidth / ReplayUI.viewportSizeX;
-            int frameWidth = Math.max(1, ReplayUI.frameWidth) * window.framebufferWidth / ReplayUI.viewportSizeX;
-            int frameHeight = Math.max(1, ReplayUI.frameHeight) * window.framebufferHeight / ReplayUI.viewportSizeY;
+            float frameLeft = (float) ReplayUI.frameX / ReplayUI.viewportSizeX;
+            float frameTop = (float) ReplayUI.frameY / ReplayUI.viewportSizeY;
+            float frameWidth = (float) Math.max(1, ReplayUI.frameWidth) / ReplayUI.viewportSizeX;
+            float frameHeight = (float) Math.max(1, ReplayUI.frameHeight) / ReplayUI.viewportSizeY;
 
-            GL30.glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, this.frameBufferId);
-            GL30.glBlitFramebuffer(0, 0, width, height, frameLeft, frameBottom, frameLeft+frameWidth, frameBottom+frameHeight,
-                GL11.GL_COLOR_BUFFER_BIT, GL11.GL_LINEAR);
-            GL30.glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, 0);
+            int realWidth = WindowSizeTracker.getWidth(window);
+            int realHeight = WindowSizeTracker.getHeight(window);
+
+            RenderSystem.assertOnRenderThread();
+            GlStateManager._colorMask(true, true, true, false);
+            GlStateManager._disableDepthTest();
+            GlStateManager._depthMask(false);
+            GlStateManager._viewport((int)(realWidth * frameLeft), (int)(realHeight * (1 - (frameTop+frameHeight))),
+                Math.max(1, (int)(realWidth * frameWidth)), Math.max(1, (int)(realHeight * frameHeight)));
+            if (noBlend) {
+                GlStateManager._disableBlend();
+            }
+            Minecraft minecraft = Minecraft.getInstance();
+            ShaderInstance shaderInstance = Objects.requireNonNull(minecraft.gameRenderer.blitShader, "Blit shader not loaded");
+            shaderInstance.setSampler("DiffuseSampler", this.colorTextureId);
+            shaderInstance.apply();
+            BufferBuilder bufferBuilder = RenderSystem.renderThreadTesselator().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.BLIT_SCREEN);
+            bufferBuilder.addVertex(0.0f, 0.0f, 0.0f);
+            bufferBuilder.addVertex(1.0f, 0.0f, 0.0f);
+            bufferBuilder.addVertex(1.0f, 1.0f, 0.0f);
+            bufferBuilder.addVertex(0.0f, 1.0f, 0.0f);
+            BufferUploader.draw(bufferBuilder.buildOrThrow());
+            shaderInstance.clear();
+            GlStateManager._depthMask(true);
+            GlStateManager._colorMask(true, true, true, true);
             ci.cancel();
         }
     }

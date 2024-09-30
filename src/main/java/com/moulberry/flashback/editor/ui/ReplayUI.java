@@ -5,8 +5,10 @@ import com.mojang.blaze3d.platform.TextureUtil;
 import com.mojang.blaze3d.platform.Window;
 import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.editor.ui.windows.ExportQueueWindow;
+import com.moulberry.flashback.editor.ui.windows.ExportScreenshotWindow;
 import com.moulberry.flashback.editor.ui.windows.MovementWindow;
 import com.moulberry.flashback.editor.ui.windows.PlayerListWindow;
+import com.moulberry.flashback.editor.ui.windows.PreferencesWindow;
 import com.moulberry.flashback.editor.ui.windows.SelectedEntityPopup;
 import com.moulberry.flashback.state.EditorState;
 import com.moulberry.flashback.state.EditorStateManager;
@@ -65,7 +67,7 @@ public class ReplayUI {
     public static int viewportSizeY = 1;
     private static boolean activeLastFrame = false;
 
-    private static int focusMainWindowCounter = 0;
+    public static int focusMainWindowCounter = 0;
 
     public static boolean hasAnyPopupOpen = false;
 
@@ -535,9 +537,18 @@ public class ReplayUI {
             ImGui.getIO().removeConfigFlags(ImGuiConfigFlags.NavEnableKeyboard);
         }
 
-        char controlIcon = Minecraft.ON_OSX ? '\u2318' : '\u2303';
-
         MainMenuBar.render();
+
+        // The main menu bar can disconnect us, so make sure to check if the UI should still be active here
+        if (!isActiveInternal()) {
+            ImGui.render();
+            ImGuiHelper.endFrame();
+
+            transitionActiveState(false);
+            imguiGlfw.updateReleaseAllKeys(true);
+            focusMainWindowCounter = 5;
+            return;
+        }
 
         // Setup docking
         ImGui.setNextWindowBgAlpha(0);
@@ -671,15 +682,16 @@ public class ReplayUI {
 
             if (selectedEntity != null) {
                 Entity entity = Minecraft.getInstance().level.getEntities().get(selectedEntity);
-                if (entity == null) {
+                if (entity == null || editorState == null) {
                     selectedEntity = null;
-                } else if (entity instanceof Player && editorState != null && !editorState.replayVisuals.renderPlayers) {
+                } else if (entity instanceof Player && !editorState.replayVisuals.renderPlayers) {
                     selectedEntity = null;
-                } else if (!(entity instanceof Player) && editorState != null && !editorState.replayVisuals.renderEntities) {
+                } else if (!(entity instanceof Player) && !editorState.replayVisuals.renderEntities) {
                     selectedEntity = null;
                 } else {
                     if (openSelectedEntityPopup) {
                         ImGui.openPopup("###EntityPopup");
+                        SelectedEntityPopup.open(entity, editorState);
                     }
 
                     if (ImGuiHelper.beginPopup("###EntityPopup")) {
@@ -728,6 +740,8 @@ public class ReplayUI {
         VisualsWindow.render();
         TimelineWindow.render();
         StartExportWindow.render();
+        ExportScreenshotWindow.render();
+        PreferencesWindow.render();
         ExportQueueWindow.render();
         PlayerListWindow.render();
         MovementWindow.render();

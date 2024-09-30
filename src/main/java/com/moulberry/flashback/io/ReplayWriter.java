@@ -28,7 +28,7 @@ public class ReplayWriter {
     private static final int STATE_EMPTY = 0;
     private static final int STATE_WRITING_SNAPSHOT = 1;
     private static final int STATE_WRITING_DATA = 2;
-    private int state = STATE_EMPTY;
+    public int state = STATE_EMPTY;
 
     public ReplayWriter(RegistryAccess registryAccess) {
         this.dataBufferInner = Unpooled.buffer();

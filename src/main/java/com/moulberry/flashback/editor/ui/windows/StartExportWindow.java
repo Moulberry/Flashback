@@ -2,6 +2,7 @@ package com.moulberry.flashback.editor.ui.windows;
 
 import com.mojang.blaze3d.platform.Window;
 import com.moulberry.flashback.Flashback;
+import com.moulberry.flashback.Utils;
 import com.moulberry.flashback.combo_options.AspectRatio;
 import com.moulberry.flashback.combo_options.AudioCodec;
 import com.moulberry.flashback.combo_options.Sizing;
@@ -22,6 +23,7 @@ import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.FileUtil;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.nio.file.Files;
@@ -43,8 +45,8 @@ public class StartExportWindow {
     private static final int[] startEndTick = new int[]{0, 100};
     private static final float[] framerate = new float[]{60};
     private static boolean resetRng = false;
-    private static boolean ssaa = false;
-    private static boolean noGui = false;
+    public static boolean ssaa = false;
+    public static boolean noGui = false;
 
     private static VideoContainer[] supportedContainers = null;
     private static VideoContainer[] supportedContainersWithTransparency = null;
@@ -56,11 +58,11 @@ public class StartExportWindow {
     private static final ImString bitrate = ImGuiHelper.createResizableImString("20m");
 
     private static boolean recordAudio = false;
-    private static boolean transparentBackground = false;
+    public static boolean transparentBackground = false;
     private static AudioCodec audioCodec = AudioCodec.AAC;
     private static boolean stereoAudio = false;
 
-    private static Path defaultExportPath = null;
+    public static Path defaultExportPath = null;
     private static final ImString jobName = ImGuiHelper.createResizableImString("");
 
     private static String installedIncompatibleModsString = null;
@@ -229,6 +231,7 @@ public class StartExportWindow {
                 createExportSettings(null).thenAccept(settings -> {
                     if (settings != null) {
                         close = true;
+                        Utils.exportSequenceCount += 1;
                         Flashback.EXPORT_JOB = new ExportJob(settings);
                     }
                 });
@@ -247,6 +250,7 @@ public class StartExportWindow {
                     createExportSettings(ImGuiHelper.getString(jobName)).thenAccept(settings -> {
                         if (settings != null) {
                             close = true;
+                            Utils.exportSequenceCount += 1;
                             ExportJobQueue.queuedJobs.add(settings);
                         }
                     });
@@ -351,24 +355,7 @@ public class StartExportWindow {
             numBitrate = stringToBitrate(ImGuiHelper.getString(bitrate));
         }
 
-        if (defaultExportPath == null || !Files.exists(defaultExportPath)) {
-            defaultExportPath = FabricLoader.getInstance().getGameDir();
-        }
-
-        String defaultName = null;
-        if (name != null) {
-            try {
-                defaultName = FileUtil.findAvailableName(defaultExportPath, name, "." + container.extension());
-            } catch (Exception ignored) {}
-        }
-        if (defaultName == null) {
-            try {
-                defaultName = FileUtil.findAvailableName(defaultExportPath, "output", "." + container.extension());
-            } catch (Exception ignored) {}
-        }
-        if (defaultName == null) {
-            defaultName = "output." + container.extension();
-        }
+        String defaultName = getDefaultFilename(name, container.extension());
 
         Function<String, ExportSettings> callback = pathStr -> {
             if (pathStr != null) {
@@ -430,6 +417,30 @@ public class StartExportWindow {
                 container.extension(), container.extension()).thenApply(callback);
         }
 
+    }
+
+    public static @NotNull String getDefaultFilename(@Nullable String name, String extension) {
+        if (defaultExportPath == null || !Files.exists(defaultExportPath)) {
+            defaultExportPath = FabricLoader.getInstance().getGameDir();
+        }
+
+        String defaultName = null;
+        if (name != null) {
+            try {
+                defaultName = FileUtil.findAvailableName(defaultExportPath, name, "." + extension);
+            } catch (Exception ignored) {}
+        }
+        if (defaultName == null) {
+            String desiredName = Utils.resolveFilenameTemplate(Flashback.getConfig().defaultExportFilename);
+            try {
+                defaultName = FileUtil.findAvailableName(defaultExportPath, desiredName, "." + extension);
+            } catch (Exception ignored) {}
+        }
+        if (defaultName == null) {
+            String desiredName = Utils.resolveFilenameTemplate(Flashback.getConfig().defaultExportFilename);
+            defaultName = desiredName + "." + extension;
+        }
+        return defaultName;
     }
 
     private static int stringToBitrate(String string) {

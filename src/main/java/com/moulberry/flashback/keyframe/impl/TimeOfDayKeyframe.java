@@ -20,7 +20,7 @@ public class TimeOfDayKeyframe extends Keyframe {
     public int time;
 
     public TimeOfDayKeyframe(int time) {
-        this(time, InterpolationType.DEFAULT);
+        this(time, InterpolationType.getDefault());
     }
 
     public TimeOfDayKeyframe(int time, InterpolationType interpolationType) {
