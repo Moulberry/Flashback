@@ -81,7 +81,7 @@ dependencies {
 //    shadow(implementation("org.jcodec:jcodec-javase:0.2.5"))
 //    shadow(implementation("io.humble:humble-video-all:0.3.0"))
 
-    include(implementation(annotationProcessor("com.bawnorton.mixinsquared:mixinsquared-fabric:0.2.0-beta.6")))
+    include(implementation(annotationProcessor("com.github.bawnorton:mixinsquared-fabric:0.2.0-beta.6")))
 
 	shadow(implementation("org.bytedeco:javacv-platform:1.5.10") {
 		exclude group: "org.bytedeco", module: "artoolkitplus"
