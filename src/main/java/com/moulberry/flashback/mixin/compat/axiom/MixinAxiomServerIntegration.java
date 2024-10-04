@@ -1,22 +1,20 @@
-package com.moulberry.flashback.mixin.compat.replaymod;
+package com.moulberry.flashback.mixin.compat.axiom;
 
 import com.moulberry.flashback.Flashback;
 import com.moulberry.mixinconstraints.annotations.IfModLoaded;
-import com.replaymod.recording.ReplayModRecording;
-import net.minecraft.network.Connection;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Pseudo;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-@IfModLoaded("replaymod")
+@IfModLoaded("axiom")
 @Pseudo
-@Mixin(value = ReplayModRecording.class, remap = false)
-public class MixinReplayModRecording {
+@Mixin(targets = "com.moulberry.axiom.integration.ServerIntegration", remap = false)
+public class MixinAxiomServerIntegration {
 
-    @Inject(method = "initiateRecording", at = @At("HEAD"), require = 0, cancellable = true)
-    public void initiateRecording(Connection networkManager, CallbackInfo ci) {
+    @Inject(method = "changeGameMode", at = @At("HEAD"), cancellable = true, require = 0)
+    private static void changeGameMode(CallbackInfo ci) {
         if (Flashback.isInReplay()) {
             ci.cancel();
         }

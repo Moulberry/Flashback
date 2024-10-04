@@ -4,6 +4,7 @@ import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.record.Recorder;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.client.multiplayer.prediction.BlockStatePredictionHandler;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.network.ConnectionProtocol;
@@ -31,11 +32,17 @@ public class MixinClientLevel {
     @Final
     private Minecraft minecraft;
 
+    @Shadow
+    @Final
+    private BlockStatePredictionHandler blockStatePredictionHandler;
+
     @Inject(method = "setBlock", at = @At("HEAD"))
     public void setBlock(BlockPos blockPos, BlockState blockState, int i, int j, CallbackInfoReturnable<Boolean> cir) {
-        Recorder recorder = Flashback.RECORDER;
-        if (recorder != null && !recorder.isPaused()) {
-            recorder.writePacketAsync(new ClientboundBlockUpdatePacket(blockPos.immutable(), blockState), ConnectionProtocol.PLAY);
+        if (this.blockStatePredictionHandler.isPredicting()) {
+            Recorder recorder = Flashback.RECORDER;
+            if (recorder != null && !recorder.isPaused()) {
+                recorder.writePacketAsync(new ClientboundBlockUpdatePacket(blockPos.immutable(), blockState), ConnectionProtocol.PLAY);
+            }
         }
     }
 

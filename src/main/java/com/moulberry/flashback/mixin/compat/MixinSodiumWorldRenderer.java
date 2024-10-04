@@ -21,9 +21,8 @@ import java.util.SortedSet;
 @Mixin(targets = {"net.caffeinemc.mods.sodium.client.render.SodiumWorldRenderer", "me.jellysquid.mods.sodium.client.render.SodiumWorldRenderer"})
 public class MixinSodiumWorldRenderer {
 
-    @Inject(method = "renderBlockEntities(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/RenderBuffers;Lit/unimi/dsi/fastutil/longs/Long2ObjectMap;Lnet/minecraft/client/Camera;F)V",
-            at = @At("HEAD"), cancellable = true)
-    public void renderBlockEntities(PoseStack matrices, RenderBuffers bufferBuilders, Long2ObjectMap<SortedSet<BlockDestructionProgress>> blockBreakingProgressions, Camera camera, float tickDelta, CallbackInfo ci) {
+    @Inject(method = "renderBlockEntities", at = @At("HEAD"), cancellable = true, require = 0, remap = false)
+    public void renderBlockEntities(CallbackInfo ci) {
         EditorState editorState = EditorStateManager.getCurrent();
         if (editorState != null && !editorState.replayVisuals.renderBlocks) {
             ci.cancel();

@@ -12,7 +12,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Mixin(LivingEntityRenderer.class)
 public class MixinLivingEntityRenderer {
 
-    @Inject(method = "isBodyVisible", at = @At("HEAD"), cancellable = true)
+    @Inject(method = "isBodyVisible", at = @At("HEAD"), cancellable = true, require = 0)
     public void isBodyVisible(LivingEntity livingEntity, CallbackInfoReturnable<Boolean> cir) {
         EditorState editorState = EditorStateManager.getCurrent();
         if (editorState != null && editorState.hideDuringExport.contains(livingEntity.getUUID())) {

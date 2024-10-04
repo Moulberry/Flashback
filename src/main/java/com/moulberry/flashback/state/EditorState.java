@@ -1,5 +1,6 @@
 package com.moulberry.flashback.state;
 
+import com.mojang.authlib.GameProfile;
 import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.FlashbackGson;
 import com.moulberry.flashback.editor.ui.ReplayUI;
@@ -16,6 +17,7 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.client.multiplayer.PlayerInfo;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
@@ -44,6 +46,9 @@ public class EditorState {
 
     public UUID audioSourceEntity = null;
     public Set<UUID> hideDuringExport = new HashSet<>();
+    public Set<UUID> hideNametags = new HashSet<>();
+    public Map<UUID, GameProfile> skinOverride = new HashMap<>();
+    public Map<UUID, String> nameOverride = new HashMap<>();
 
     public transient int recordingCameraMovementTrack = -1;
     public transient int recordingCameraMovementMinTick = -1;

@@ -2,11 +2,13 @@ package com.moulberry.flashback.record;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.mojang.authlib.GameProfile;
 import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.datafixers.util.Pair;
 import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.PacketHelper;
 import com.moulberry.flashback.action.*;
+import com.moulberry.flashback.compat.DistantHorizonsSupport;
 import com.moulberry.flashback.io.AsyncReplaySaver;
 import com.moulberry.flashback.io.ReplayWriter;
 import com.moulberry.flashback.mixin.compat.bobby.FakeChunkManagerAccessor;
@@ -29,12 +31,12 @@ import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.resources.server.ServerPackManager;
 import net.minecraft.core.*;
-import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtOps;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.ConnectionProtocol;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.common.ClientboundResourcePackPopPacket;
@@ -58,7 +60,6 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.Leashable;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.flag.FeatureFlags;
 import net.minecraft.world.food.FoodData;
@@ -76,6 +77,7 @@ import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.scores.*;
 import org.jetbrains.annotations.Nullable;
 
+import java.io.File;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -150,10 +152,18 @@ public class Recorder {
                 this.metadata.bobbyWorldName = bobbyWorldName;
             } catch (Throwable t) {}
         }
+
+        if (Flashback.supportsDistantHorizons) {
+            this.metadata.distantHorizonPaths.putAll(DistantHorizonsSupport.getDimensionPaths());
+        }
     }
 
     public boolean readyToWrite() {
         return !this.closeForWriting && !this.needsInitialSnapshot && !this.wasPaused;
+    }
+
+    public void putDistantHorizonsPaths(Map<String, File> paths) {
+        this.metadata.distantHorizonPaths.putAll(paths);
     }
 
     public void addMarker(ReplayMarker marker) {
@@ -231,6 +241,7 @@ public class Recorder {
 
         int localPlayerUpdatesPerSecond = Flashback.getConfig().localPlayerUpdatesPerSecond;
         boolean trackAccurateFirstPersonPosition = localPlayerUpdatesPerSecond > 20;
+        boolean wroteNewTick = false;
 
         if (minecraft.level != null && (minecraft.getOverlay() == null || !minecraft.getOverlay().isPauseScreen()) &&
                 !minecraft.isPaused() && !this.isPaused && isLevelLoaded) {
@@ -241,6 +252,7 @@ public class Recorder {
                 this.writeAccurateFirstPersonPosition(localPlayerUpdatesPerSecond);
             }
 
+            wroteNewTick = true;
             this.asyncReplaySaver.submit(writer -> writer.startAndFinishAction(ActionNextTick.INSTANCE));
             this.writtenTicksInChunk += 1;
             this.writtenTicks += 1;
@@ -274,7 +286,7 @@ public class Recorder {
 
         if (writeChunk) {
             // Add an extra tick to avoid edge-cases with 0-length replay chunks
-            if (this.writtenTicksInChunk == 0) {
+            if (this.writtenTicksInChunk == 0 || !wroteNewTick) {
                 this.asyncReplaySaver.submit(writer -> writer.startAndFinishAction(ActionNextTick.INSTANCE));
                 this.writtenTicksInChunk += 1;
                 this.writtenTicks += 1;
@@ -631,6 +643,13 @@ public class Recorder {
 
                 gamePackets.add(((Packet<? super ClientGamePacketListener>) packet.packet));
 
+                if (packet.packet instanceof ClientboundLoginPacket) {
+                    this.asyncReplaySaver.writeGamePackets(this.gamePacketCodec, gamePackets);
+                    gamePackets.clear();
+
+                    this.writeCreateLocalPlayer();
+                }
+
                 if (this.isConfiguring) {
                     endedConfiguration = true;
                     this.isConfiguring = false;
@@ -662,6 +681,44 @@ public class Recorder {
         }
 
         return endedConfiguration;
+    }
+
+    private void writeCreateLocalPlayer() {
+        LocalPlayer localPlayer = Minecraft.getInstance().player;
+        if (localPlayer != null) {
+            UUID uuid = localPlayer.getUUID();
+            double x = localPlayer.getX();
+            double y = localPlayer.getY();
+            double z = localPlayer.getZ();
+            float xRot = localPlayer.getXRot();
+            float yRot = localPlayer.getYRot();
+            float yHeadRot = localPlayer.getYHeadRot();
+            Vec3 deltaMovement = localPlayer.getDeltaMovement();
+
+            GameProfile currentProfile = localPlayer.getGameProfile();
+            GameProfile newProfile = new GameProfile(currentProfile.getId(), currentProfile.getName());
+            newProfile.getProperties().putAll(Minecraft.getInstance().getGameProfile().getProperties());
+            newProfile.getProperties().putAll(currentProfile.getProperties());
+            int gameModeId = Minecraft.getInstance().gameMode.getPlayerMode().getId();
+
+            this.asyncReplaySaver.submit(writer -> {
+                writer.startAction(ActionCreateLocalPlayer.INSTANCE);
+
+                RegistryFriendlyByteBuf registryFriendlyByteBuf = writer.friendlyByteBuf();
+                registryFriendlyByteBuf.writeUUID(uuid);
+                registryFriendlyByteBuf.writeDouble(x);
+                registryFriendlyByteBuf.writeDouble(y);
+                registryFriendlyByteBuf.writeDouble(z);
+                registryFriendlyByteBuf.writeFloat(xRot);
+                registryFriendlyByteBuf.writeFloat(yRot);
+                registryFriendlyByteBuf.writeFloat(yHeadRot);
+                registryFriendlyByteBuf.writeVec3(deltaMovement);
+                ByteBufCodecs.GAME_PROFILE.encode(registryFriendlyByteBuf, newProfile);
+                registryFriendlyByteBuf.writeVarInt(gameModeId);
+
+                writer.finishAction(ActionCreateLocalPlayer.INSTANCE);
+            });
+        }
     }
 
     public void writeLevelEvent(int type, BlockPos blockPos, int data, boolean globalEvent) {
@@ -798,6 +855,11 @@ public class Recorder {
             localPlayer.isReducedDebugInfo(), localPlayer.shouldShowDeathScreen(), localPlayer.getDoLimitedCrafting(), commonPlayerSpawnInfo, false);
         gamePackets.add(loginPacket);
 
+        // Write local player
+        this.asyncReplaySaver.writeGamePackets(this.gamePacketCodec, gamePackets);
+        gamePackets.clear();
+        this.writeCreateLocalPlayer();
+
         // Create player info update packet
         var infoUpdatePacket = new ClientboundPlayerInfoUpdatePacket(EnumSet.of(ClientboundPlayerInfoUpdatePacket.Action.ADD_PLAYER,
             ClientboundPlayerInfoUpdatePacket.Action.UPDATE_LISTED, ClientboundPlayerInfoUpdatePacket.Action.UPDATE_DISPLAY_NAME), List.of());
@@ -910,7 +972,6 @@ public class Recorder {
                 for (int i = 0; i < chunks.length(); i++) {
                     LevelChunk chunk = chunks.get(i);
                     if (chunk != null) {
-                        System.out.println("chunk " + chunk.getPos() + " is light correct: " + chunk.isLightCorrect());
                         var task = pool.submit(() -> new ClientboundLevelChunkWithLightPacket(chunk, level.getLightEngine(), new BitSet(), new BitSet()));
                         levelChunkPacketTasks.add(new PositionedTask(chunk.getPos(), task));
                     }

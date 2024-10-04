@@ -364,9 +364,18 @@ public class ImGuiHelper {
                 focusLastIndex = 0;
             }
 
+
             if (ImGui.inputInt("", imInt, 0)) {
                 valueChanged = true;
                 value[i] = imInt.get();
+            }
+
+            if (ImGui.isItemHovered()) {
+                int scroll = (int) Math.signum(ImGui.getIO().getMouseWheel());
+                if (scroll != 0) {
+                    valueChanged = true;
+                    value[i] += 1;
+                }
             }
 
             if (!handledFocusNext && ImGui.isItemActive() && ImGui.isKeyPressed(GLFW.GLFW_KEY_TAB, false)) {
@@ -429,9 +438,17 @@ public class ImGuiHelper {
                 focusLastIndex = 0;
             }
 
+            int scroll = (int) Math.signum(ImGui.getIO().getMouseWheel());
             if (ImGui.inputFloat("", imFloat, 0)) {
                 valueChanged = true;
                 value[i] = imFloat.get();
+            }
+
+            if (ImGui.isItemHovered()) {
+                if (scroll != 0) {
+                    valueChanged = true;
+                    value[i] = Math.round(value[i] + scroll);
+                }
             }
 
             if (!handledFocusNext && ImGui.isItemActive() && ImGui.isKeyPressed(GLFW.GLFW_KEY_TAB, false)) {

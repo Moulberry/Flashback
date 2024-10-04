@@ -12,6 +12,8 @@ import org.lwjgl.system.MemoryUtil;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.FloatBuffer;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -38,6 +40,9 @@ public class PNGSequenceVideoWriter implements VideoWriter {
     }
 
     private Thread createEncodeThread() {
+        boolean outputIsDirectory = Files.isDirectory(this.settings.output());
+        boolean encodeMultiple = outputIsDirectory || this.settings.startTick() != this.settings.endTick();
+
         Thread encodeThread = new Thread(() -> {
             while (true) {
                 NativeImage src;
@@ -69,8 +74,20 @@ public class PNGSequenceVideoWriter implements VideoWriter {
                     }
 
                     this.sequenceNumber += 1;
-                    String filename = String.format("%04d.png", this.sequenceNumber);
-                    src.writeToFile(this.settings.output().resolve(filename));
+
+                    Path output = this.settings.output();
+                    if (encodeMultiple) {
+                        if (outputIsDirectory) {
+                            String filename = String.format("%04d.png", this.sequenceNumber);
+                            src.writeToFile(output.resolve(filename));
+                        } else {
+                            String filename = output.getFileName().toString();
+                            filename += String.format("-%04d.png", this.sequenceNumber);
+                            src.writeToFile(output.getParent().resolve(filename));
+                        }
+                    } else {
+                        src.writeToFile(this.settings.output());
+                    }
                 } catch (Throwable t) {
                     this.threadedError.set(t);
                     this.finishEncodeThread.set(true);

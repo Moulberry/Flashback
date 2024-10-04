@@ -27,15 +27,12 @@ import com.moulberry.flashback.record.FlashbackMeta;
 import com.moulberry.flashback.state.KeyframeTrack;
 import imgui.ImDrawList;
 import imgui.ImGui;
-import imgui.flag.ImGuiButtonFlags;
 import imgui.flag.ImGuiHoveredFlags;
 import imgui.flag.ImGuiMouseButton;
 import imgui.flag.ImGuiMouseCursor;
 import imgui.flag.ImGuiPopupFlags;
 import imgui.flag.ImGuiStyleVar;
 import imgui.flag.ImGuiWindowFlags;
-import imgui.type.ImFloat;
-import imgui.type.ImInt;
 import it.unimi.dsi.fastutil.ints.*;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
@@ -60,6 +57,9 @@ public class TimelineWindow {
     private static boolean enableKeyframeMovement = false;
     private static int grabbedKeyframeTick = 0;
     private static int grabbedKeyframeTrack = 0;
+    private static int draggingMouseButton = ImGuiMouseButton.Left;
+    private static float dragStartMouseX = 0;
+    private static float dragStartMouseY = 0;
 
     private static boolean trackDisabledButtonDrag = false;
     private static boolean trackDisabledButtonDragValue = false;
@@ -130,7 +130,11 @@ public class TimelineWindow {
         boolean hoveredBody = mouseX > x && mouseX < x + width && mouseY > y && mouseY < y + height;
 
         ImGuiHelper.pushStyleVar(ImGuiStyleVar.WindowPadding, 0, 0);
-        boolean timelineVisible = ImGui.begin("Timeline (" + timestamp + "/" + cursorTicks + ")###Timeline", hoveredBody ? ImGuiWindowFlags.NoMove : ImGuiWindowFlags.None);
+        int flags = ImGuiWindowFlags.NoScrollWithMouse | ImGuiWindowFlags.NoScrollbar;
+        if (hoveredBody) {
+            flags |= ImGuiWindowFlags.NoMove;
+        }
+        boolean timelineVisible = ImGui.begin("Timeline (" + timestamp + "/" + cursorTicks + ")###Timeline", flags);
         ImGuiHelper.popStyleVar();
 
         cursorTicks = replayServer.getReplayTick();
@@ -223,23 +227,7 @@ public class TimelineWindow {
                 boolean isShiftDown = ImGui.isKeyDown(GLFW.GLFW_KEY_LEFT_SHIFT) || ImGui.isKeyDown(GLFW.GLFW_KEY_RIGHT_SHIFT);
 
                 if (isShiftDown) {
-                    int closestTick = -1;
-                    for (KeyframeTrack track : editorState.keyframeTracks) {
-                        Integer floor = track.keyframesByTick.floorKey(cursorTicks);
-                        Integer ceil = track.keyframesByTick.ceilingKey(cursorTicks);
-
-                        float floorX = floor == null ? Float.NaN : x + replayTickToTimelineX(floor);
-                        float ceilX = ceil == null ? Float.NaN : x + replayTickToTimelineX(ceil);
-
-                        Integer closest = Utils.chooseClosest(mouseX, floorX, floor, ceilX, ceil, KEYFRAME_SIZE);
-                        if (closest != null) {
-                            if (closestTick == -1) {
-                                closestTick = closest;
-                            } else if (Math.abs(closest - cursorTicks) < Math.abs(closestTick - cursorTicks)) {
-                                closestTick = closest;
-                            }
-                        }
-                    }
+                    int closestTick = findClosestKeyframeForSnap(editorState, cursorTicks);
                     if (closestTick != -1) {
                         cursorTicks = closestTick;
                     }
@@ -272,7 +260,7 @@ public class TimelineWindow {
             drawList.addLine(x + middleX, y + timestampHeight, x + middleX, y + height, -1);
 
             // Middle divider (y)
-            drawList.addLine(0, y + middleY, width, y + middleY, -1);
+            drawList.addLine(x, y + middleY, x + width, y + middleY, -1);
 
             renderKeyframeElements(replayServer, editorState, x, y + middleY, cursorTicks, middleX);
 
@@ -433,58 +421,81 @@ public class TimelineWindow {
                 editingKeyframeTick = -1;
             }
 
-            if (mouseX > x + middleX && mouseX < x + width && mouseY > y && mouseY < y + height) {
-                int scroll = (int) Math.signum(ImGui.getIO().getMouseWheel());
-
-                double mousePercentage = (mouseX - (x + middleX)) / (width - middleX);
-
-                if (scroll > 0) {
-                    double zoomDelta = editorState.zoomMax - editorState.zoomMin;
-                    if (zoomDelta > 0.001) {
-                        editorState.zoomMin += zoomDelta * 0.05 * mousePercentage;
-                        editorState.zoomMax -= zoomDelta * 0.05 * (1 - mousePercentage);
-                        editorState.markDirty();
-                    }
-                } else if (scroll < 0) {
-                    double zoomDelta = editorState.zoomMax - editorState.zoomMin;
-
-                    editorState.zoomMin = Math.max(0, editorState.zoomMin - zoomDelta * 0.05/0.9 * mousePercentage);
-                    editorState.zoomMax = Math.min(1, editorState.zoomMax + zoomDelta * 0.05/0.9 * (1 - mousePercentage));
-                    editorState.markDirty();
-                }
-            }
-
             boolean shouldProcessInput = !ImGui.isPopupOpen("", ImGuiPopupFlags.AnyPopup) && !ImGui.getIO().getWantTextInput();
             if (shouldProcessInput) {
+                int scroll = (int) Math.signum(ImGui.getIO().getMouseWheel());
+                if (scroll != 0 && mouseX > x + middleX && mouseX < x + width && mouseY > y && mouseY < y + height) {
+                    double mousePercentage = (mouseX - (x + middleX)) / (width - middleX);
+
+                    if (scroll > 0) {
+                        double zoomDelta = editorState.zoomMax - editorState.zoomMin;
+                        if (zoomDelta > 0.001) {
+                            editorState.zoomMin += zoomDelta * 0.05 * mousePercentage;
+                            editorState.zoomMax -= zoomDelta * 0.05 * (1 - mousePercentage);
+                            editorState.markDirty();
+                        }
+                    } else if (scroll < 0) {
+                        double zoomDelta = editorState.zoomMax - editorState.zoomMin;
+
+                        editorState.zoomMin = Math.max(0, editorState.zoomMin - zoomDelta * 0.05/0.9 * mousePercentage);
+                        editorState.zoomMax = Math.min(1, editorState.zoomMax + zoomDelta * 0.05/0.9 * (1 - mousePercentage));
+                        editorState.markDirty();
+                    }
+                }
+
                 handleKeyPresses(replayServer, cursorTicks, editorState, totalTicks);
 
                 boolean leftClicked = ImGui.isMouseClicked(ImGuiMouseButton.Left);
                 boolean rightClicked = ImGui.isMouseClicked(ImGuiMouseButton.Right);
                 if (leftClicked || rightClicked) {
                     handleClick(editorState, replayServer, totalTicks);
-                } else if (ImGui.isMouseDragging(ImGuiMouseButton.Left)) {
+                    if (leftClicked) {
+                        draggingMouseButton = ImGuiMouseButton.Left;
+                    } else {
+                        draggingMouseButton = ImGuiMouseButton.Right;
+                    }
+                    dragStartMouseX = mouseX;
+                    dragStartMouseY = mouseY;
+                } else if (ImGui.isMouseDragging(draggingMouseButton)) {
                     if (grabbedExportBarResizeLeft) {
                         ImGui.setMouseCursor(ImGuiMouseCursor.ResizeEW);
 
+
                         int target = timelineXToReplayTick(mouseX - x);
+
+                        if (ImGui.isKeyDown(GLFW.GLFW_KEY_LEFT_SHIFT) || ImGui.isKeyDown(GLFW.GLFW_KEY_RIGHT_SHIFT)) {
+                            int closestTick = findClosestKeyframeForSnap(editorState, target);
+                            if (closestTick != -1) {
+                                target = closestTick;
+                            }
+                        }
+
                         editorState.setExportTicks(target, -1, totalTicks);
                     }
                     if (grabbedExportBarResizeRight) {
                         ImGui.setMouseCursor(ImGuiMouseCursor.ResizeEW);
 
                         int target = timelineXToReplayTick(mouseX - x);
+
+                        if (ImGui.isKeyDown(GLFW.GLFW_KEY_LEFT_SHIFT) || ImGui.isKeyDown(GLFW.GLFW_KEY_RIGHT_SHIFT)) {
+                            int closestTick = findClosestKeyframeForSnap(editorState, target);
+                            if (closestTick != -1) {
+                                target = closestTick;
+                            }
+                        }
+
                         editorState.setExportTicks(-1, target, totalTicks);
                     }
                     if (zoomBarWidth > 1f && grabbedZoomBar) {
-                        float dx = ImGui.getMouseDragDeltaX();
+                        float dx = mouseX - dragStartMouseX;
                         float factor = dx / zoomBarWidth;
 
                         if (grabbedZoomBarResizeLeft) {
                             ImGui.setMouseCursor(ImGuiMouseCursor.ResizeEW);
-                            editorState.zoomMin = Math.max(0, Math.min(editorState.zoomMax-0.01f, zoomMinBeforeDrag + factor));
+                            editorState.zoomMin = Math.max(0, Math.min(editorState.zoomMax - 0.01f, zoomMinBeforeDrag + factor));
                         } else if (grabbedZoomBarResizeRight) {
                             ImGui.setMouseCursor(ImGuiMouseCursor.ResizeEW);
-                            editorState.zoomMax = Math.max(editorState.zoomMin+0.01f, Math.min(1, zoomMaxBeforeDrag + factor));
+                            editorState.zoomMax = Math.max(editorState.zoomMin + 0.01f, Math.min(1, zoomMaxBeforeDrag + factor));
                         } else {
                             ImGui.setMouseCursor(ImGuiMouseCursor.Hand);
 
@@ -508,6 +519,13 @@ public class TimelineWindow {
 
                         replayServer.replayPaused = true;
                     }
+                } else if (zoomBarWidth > 1f && mouseY > y + middleY && mouseY < y + height && mouseX > x + middleX && mouseX < x + width && ImGui.isMouseDown(ImGuiMouseButton.Middle)) {
+                    grabbedZoomBar = true;
+                    draggingMouseButton = ImGuiMouseButton.Middle;
+                    zoomMinBeforeDrag = editorState.zoomMin;
+                    zoomMaxBeforeDrag = editorState.zoomMax;
+                    dragStartMouseX = mouseX;
+                    dragStartMouseY = mouseY;
                 } else if (!ImGui.isAnyMouseDown()) {
                     releaseGrabbed(editorState, replayServer, totalTicks);
                 }
@@ -516,6 +534,27 @@ public class TimelineWindow {
             }
         }
         ImGui.end();
+    }
+
+    private static int findClosestKeyframeForSnap(EditorState editorState, int tick) {
+        int closestTick = -1;
+        for (KeyframeTrack track : editorState.keyframeTracks) {
+            Integer floor = track.keyframesByTick.floorKey(tick);
+            Integer ceil = track.keyframesByTick.ceilingKey(tick);
+
+            float floorX = floor == null ? Float.NaN : x + replayTickToTimelineX(floor);
+            float ceilX = ceil == null ? Float.NaN : x + replayTickToTimelineX(ceil);
+
+            Integer closest = Utils.chooseClosest(mouseX, floorX, floor, ceilX, ceil, KEYFRAME_SIZE);
+            if (closest != null) {
+                if (closestTick == -1) {
+                    closestTick = closest;
+                } else if (Math.abs(closest - tick) < Math.abs(closestTick - tick)) {
+                    closestTick = closest;
+                }
+            }
+        }
+        return closestTick;
     }
 
     private static void handleKeyPresses(ReplayServer replayServer, int cursorTicks, EditorState editorState, int totalTicks) {
@@ -528,7 +567,7 @@ public class TimelineWindow {
 
         boolean pressedDelete = ImGui.isKeyPressed(GLFW.GLFW_KEY_DELETE, false) || ImGui.isKeyPressed(GLFW.GLFW_KEY_BACKSPACE, false);
 
-        if (ImGui.isKeyPressed(GLFW.GLFW_KEY_SPACE, false)) {
+        if (ImGui.isKeyPressed(GLFW.GLFW_KEY_P, false)) {
             togglePaused(replayServer, editorState);
         }
         if (ImGui.isKeyPressed(GLFW.GLFW_KEY_LEFT, false)) {
@@ -1656,7 +1695,7 @@ public class TimelineWindow {
     }
 
     private static void renderPlaybackHead(int cursorX, float x, int middleX, float width, int cursorTicks, int currentReplayTick, ImDrawList drawList, float y, int middleY, int timestampHeight, float height, int zoomBarHeight) {
-        if (cursorX > x + middleX -10 && cursorX < x + width +10) {
+        if (cursorX > middleX - 10 && cursorX < width +10) {
             int colour = -1;
             if (cursorTicks < currentReplayTick) {
                 colour = 0x80FFFFFF;

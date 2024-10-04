@@ -2,6 +2,8 @@ package com.moulberry.flashback;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.mojang.authlib.GameProfile;
+import com.mojang.authlib.properties.PropertyMap;
 import com.moulberry.flashback.keyframe.Keyframe;
 import com.moulberry.flashback.keyframe.KeyframeRegistry;
 import com.moulberry.flashback.keyframe.KeyframeType;
@@ -33,6 +35,7 @@ public class FlashbackGson {
             .registerTypeAdapter(Quaternionf.class, new QuaternionfTypeAdapater())
             .registerTypeAdapter(Vector3d.class, new Vector3dTypeAdapater())
             .registerTypeAdapter(Quaterniond.class, new QuaterniondTypeAdapater())
+            .registerTypeAdapter(PropertyMap.class, new PropertyMap.Serializer())
             .registerTypeHierarchyAdapter(KeyframeType.class, new KeyframeRegistry.TypeAdapter())
 
             .registerTypeAdapter(CameraKeyframe.class, new CameraKeyframe.TypeAdapter())

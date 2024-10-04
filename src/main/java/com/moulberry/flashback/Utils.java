@@ -1,9 +1,11 @@
 package com.moulberry.flashback;
 
+import com.moulberry.flashback.playback.ReplayServer;
 import it.unimi.dsi.fastutil.objects.Object2FloatFunction;
 import org.jetbrains.annotations.Nullable;
 
 import java.lang.reflect.Field;
+import java.time.LocalDateTime;
 import java.util.Random;
 
 public class Utils {
@@ -156,6 +158,26 @@ public class Utils {
         } else if (ticks > 0) {
             builder.append(ticks).append('t');
         }
+    }
+
+    public static int exportSequenceCount = 1;
+    public static String resolveFilenameTemplate(String template) {
+        LocalDateTime dateTime = LocalDateTime.now();
+        dateTime = dateTime.withNano(0);
+        String date = dateTime.toLocalDate().toString();
+        String time = dateTime.toLocalTime().toString();
+
+        String replay = "unknown";
+        ReplayServer replayServer = Flashback.getReplayServer();
+        if (replayServer != null) {
+            replay = replayServer.getMetadata().name;
+        }
+
+        return template
+            .replace("%date%", date)
+            .replace("%time%", time)
+            .replace("%replay%", replay)
+            .replace("%seq%", ""+exportSequenceCount);
     }
 
 }

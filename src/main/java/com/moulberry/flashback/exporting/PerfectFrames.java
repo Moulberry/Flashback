@@ -1,5 +1,6 @@
 package com.moulberry.flashback.exporting;
 
+import com.moulberry.flashback.Flashback;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.multiplayer.PlayerInfo;
@@ -54,14 +55,14 @@ public class PerfectFrames {
 
         if (level != null) {
             if (forceFrameReady) {
-                System.err.println("Waiting for skin loading took too long, ignoring...");
+                Flashback.LOGGER.error("Waiting for skin loading took too long, ignoring...");
                 for (AbstractClientPlayer player : level.players()) {
                     if (player == Minecraft.getInstance().player) {
                         continue;
                     }
                     PlayerInfo playerInfo = player.getPlayerInfo();
                     if (playerInfo != null && !skinManager.getOrLoad(playerInfo.getProfile()).isDone()) {
-                        System.err.println("Took too long to load skin for " + player.getUUID());
+                        Flashback.LOGGER.error("Took too long to load skin for {}", player.getUUID());
                         ignoreSkinLoading.add(player.getUUID());
                     }
                 }

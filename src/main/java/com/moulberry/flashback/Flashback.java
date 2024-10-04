@@ -9,8 +9,10 @@ import com.mojang.realmsclient.RealmsMainScreen;
 import com.mojang.serialization.Lifecycle;
 import com.moulberry.flashback.action.*;
 import com.moulberry.flashback.command.BetterColorArgument;
+import com.moulberry.flashback.compat.DistantHorizonsSupport;
 import com.moulberry.flashback.compat.simple_voice_chat.SimpleVoiceChatPlayback;
 import com.moulberry.flashback.configuration.FlashbackConfig;
+import com.moulberry.flashback.exporting.AsyncFileDialogs;
 import com.moulberry.flashback.exporting.ExportJob;
 import com.moulberry.flashback.ext.MinecraftExt;
 import com.moulberry.flashback.keyframe.KeyframeRegistry;
@@ -45,6 +47,7 @@ import com.moulberry.flashback.state.EditorState;
 import com.moulberry.flashback.state.EditorStateManager;
 import com.moulberry.flashback.visuals.AccurateEntityPositionHandler;
 import com.moulberry.flashback.visuals.ShaderManager;
+import com.seibel.distanthorizons.api.DhApi;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
@@ -54,7 +57,6 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
-import net.fabricmc.fabric.api.resource.ResourceManagerHelper;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.ChatFormatting;
 import net.minecraft.FileUtil;
@@ -75,7 +77,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.*;
-import net.minecraft.server.packs.PackType;
 import net.minecraft.server.packs.repository.PackRepository;
 import net.minecraft.server.packs.repository.ServerPacksSource;
 import net.minecraft.world.Difficulty;
@@ -127,6 +128,8 @@ public class Flashback implements ModInitializer, ClientModInitializer {
     private static int delayedStartRecording = 0;
     private static boolean delayedOpenConfig = false;
     private static volatile boolean isInReplay = false;
+
+    public static boolean supportsDistantHorizons = false;
 
     private static final List<Path> pendingReplaySave = new ArrayList<>();
     private static final List<Path> pendingReplayRecovery = new ArrayList<>();
@@ -305,7 +308,7 @@ public class Flashback implements ModInitializer, ClientModInitializer {
             }
         });
 
-        ResourceManagerHelper.get(PackType.CLIENT_RESOURCES).registerReloadListener(ShaderManager.INSTANCE);
+        ShaderManager.INSTANCE.register();
 
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) -> {
             var flashback = ClientCommandManager.literal("flashback");
@@ -356,6 +359,18 @@ public class Flashback implements ModInitializer, ClientModInitializer {
                 EditorState editorState = EditorStateManager.getCurrent();
                 if (editorState != null) {
                     editorState.recordCameraMovement();
+                }
+            }
+
+            // Fix for camera entity sometimes being incorrect when respawning
+            Entity camera = Minecraft.getInstance().cameraEntity;
+            LocalPlayer player = Minecraft.getInstance().player;
+            if (player != null && camera != null && camera != player) {
+                if (camera.isRemoved()) {
+                    Entity other = player.level().getEntity(camera.getId());
+                    if (other != null && !other.isRemoved()) {
+                        Minecraft.getInstance().setCameraEntity(other);
+                    }
                 }
             }
         });
@@ -437,12 +452,25 @@ public class Flashback implements ModInitializer, ClientModInitializer {
 
             updateIsInReplay();
         });
+
+        if (FabricLoader.getInstance().isModLoaded("distanthorizons")) {
+            if (DhApi.getApiMajorVersion() >= 4) {
+                Flashback.LOGGER.info("DistantHorizons detected. Enabling Flashback+DistantHorizons integration");
+                supportsDistantHorizons = true;
+                DistantHorizonsSupport.register();
+            } else {
+                Flashback.LOGGER.error("DistantHorizons is installed, but API version is too low ({}). Disabling integration.", DhApi.getApiMajorVersion());
+            }
+        }
 	}
 
     public static List<String> getReplayIncompatibleMods() {
         List<String> incompatible = new ArrayList<>();
         if (FabricLoader.getInstance().isModLoaded("vmp")) {
             incompatible.add("VeryManyPlayers (vmp)");
+        }
+        if (FabricLoader.getInstance().isModLoaded("c2me")) {
+            incompatible.add("Concurrent Chunk Management Engine (c2me)");
         }
         return incompatible;
     }
@@ -466,10 +494,6 @@ public class Flashback implements ModInitializer, ClientModInitializer {
             return;
         }
 
-        if (colour == null) {
-            colour = 0xFF5555;
-        }
-
         ReplayMarker.MarkerPosition position = null;
         if (savePosition == null || savePosition) {
             Entity camera = Minecraft.getInstance().getCameraEntity();
@@ -479,6 +503,21 @@ public class Flashback implements ModInitializer, ClientModInitializer {
             }
         }
 
+        String feedback;
+        if (colour != null) {
+            feedback = "Added #" + Integer.toHexString(colour) + " marker";
+        } else {
+            feedback = "Added marker";
+        }
+
+        if (position != null) {
+            feedback += String.format(" at %.2f, %.2f, %.2f", position.position().x, position.position().y, position.position().z);
+        }
+
+        if (colour == null) {
+            colour = 0xFF5555;
+        }
+
         if (description != null) {
             description = description.trim();
             if (description.isEmpty()) {
@@ -486,6 +525,7 @@ public class Flashback implements ModInitializer, ClientModInitializer {
             }
         }
 
+        command.getSource().sendFeedback(Component.literal(feedback));
         RECORDER.addMarker(new ReplayMarker(colour, position, description));
     }
 
@@ -703,7 +743,38 @@ public class Flashback implements ModInitializer, ClientModInitializer {
         return null;
     }
 
+    public static void openReplayFromFileBrowser() {
+        String defaultFolder = Flashback.getReplayFolder().toString();
+        AsyncFileDialogs.openFileDialog(defaultFolder, "Zip File", "zip").thenAccept(pathStr -> {
+            if (pathStr != null) {
+                Path path = Path.of(pathStr);
+                Minecraft.getInstance().submit(() -> {
+                    Flashback.openReplayWorld(path);
+                });
+            }
+        });
+    }
+
     public static void openReplayWorld(Path path) {
+        // Disconnect
+        Minecraft minecraft = Minecraft.getInstance();
+        if (minecraft.level != null) {
+            minecraft.level.disconnect();
+        }
+        minecraft.disconnect();
+        minecraft.setScreen(new TitleScreen());
+
+        // Add as recent
+        String pathStr = path.toString();
+        FlashbackConfig config = Flashback.getConfig();
+        config.recentReplays.remove(pathStr);
+        config.recentReplays.add(0, pathStr);
+        if (config.recentReplays.size() > 32) {
+            config.recentReplays.remove(config.recentReplays.size() - 1);
+        }
+        config.saveToDefaultFolder();
+
+        // Actually load
         try {
             UUID replayUuid = UUID.randomUUID();
             Path replayTemp = TempFolderProvider.createTemp(TempFolderProvider.TempFolderType.SERVER, replayUuid);

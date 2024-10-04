@@ -6,7 +6,9 @@ import com.google.gson.JsonObject;
 import com.moulberry.flashback.FlashbackGson;
 import org.jetbrains.annotations.Nullable;
 
+import java.io.File;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -26,6 +28,8 @@ public class FlashbackMeta {
 
     public int totalTicks = -1;
     public LinkedHashMap<String, FlashbackChunkMeta> chunks = new LinkedHashMap<>();
+
+    public Map<String, File> distantHorizonPaths = new HashMap<>();
 
     public JsonObject toJson() {
         JsonObject meta = new JsonObject();
@@ -55,6 +59,15 @@ public class FlashbackMeta {
                 jsonMarkers.add(""+entry.getKey(), FlashbackGson.COMPRESSED.toJsonTree(entry.getValue()));
             }
             meta.add("markers", jsonMarkers);
+        }
+
+        // Distant horizons
+        if (!this.distantHorizonPaths.isEmpty()) {
+            JsonObject distantHorizonPaths = new JsonObject();
+            for (Map.Entry<String, File> entry : this.distantHorizonPaths.entrySet()) {
+                distantHorizonPaths.addProperty(entry.getKey(), entry.getValue().getPath());
+            }
+            meta.add("distantHorizonPaths", distantHorizonPaths);
         }
 
         JsonObject chunksJson = new JsonObject();
@@ -107,6 +120,14 @@ public class FlashbackMeta {
                     int tick = Integer.parseInt(entry.getKey());
                     flashbackMeta.replayMarkers.put(tick, FlashbackGson.COMPRESSED.fromJson(entry.getValue(), ReplayMarker.class));
                 } catch (Exception ignored) {}
+            }
+        }
+
+        // Distant horizons
+        if (meta.has("distantHorizonPaths")) {
+            JsonObject distantHorizonPaths = meta.getAsJsonObject("distantHorizonPaths");
+            for (Map.Entry<String, JsonElement> entry : distantHorizonPaths.entrySet()) {
+                flashbackMeta.distantHorizonPaths.put(entry.getKey(), new File(entry.getValue().getAsString()));
             }
         }
 

@@ -12,6 +12,7 @@ import com.moulberry.flashback.ext.ItemInHandRendererExt;
 import com.moulberry.flashback.ext.MinecraftExt;
 import com.moulberry.flashback.visuals.AccurateEntityPositionHandler;
 import com.moulberry.flashback.visuals.CameraRotation;
+import com.moulberry.flashback.visuals.ReplayVisuals;
 import com.moulberry.flashback.visuals.ShaderManager;
 import net.minecraft.client.Camera;
 import net.minecraft.client.DeltaTracker;
@@ -26,6 +27,7 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.PostChain;
 import net.minecraft.client.renderer.ShaderInstance;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.GameType;
 import org.jetbrains.annotations.Nullable;
@@ -103,6 +105,14 @@ public abstract class MixinGameRenderer {
             f = ((MinecraftExt)this.minecraft).flashback$getLocalPlayerPartialTick(f);
         }
         original.call(instance, blockGetter, entity, bl, bl2, f);
+    }
+
+    @Inject(method = "getNightVisionScale", at = @At("HEAD"), cancellable = true)
+    private static void getNightVisionScale(LivingEntity livingEntity, float f, CallbackInfoReturnable<Float> cir) {
+        EditorState editorState = EditorStateManager.getCurrent();
+        if (editorState != null && editorState.replayVisuals.overrideNightVision) {
+            cir.setReturnValue(1.0f);
+        }
     }
 
     @WrapOperation(method = "renderLevel", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/Camera;rotation()Lorg/joml/Quaternionf;"))

@@ -12,7 +12,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(BossHealthOverlay.class)
 public class MixinBossHealthOverlay {
 
-    @Inject(method = "render", at = @At("HEAD"), cancellable = true)
+    @Inject(method = "render", at = @At("HEAD"), cancellable = true, require = 0)
     public void render(GuiGraphics guiGraphics, CallbackInfo ci) {
         EditorState editorState = EditorStateManager.getCurrent();
         if (editorState != null && !editorState.replayVisuals.showBossBar) {

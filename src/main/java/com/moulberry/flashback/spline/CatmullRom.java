@@ -1,9 +1,8 @@
 package com.moulberry.flashback.spline;
 
 import com.moulberry.flashback.Interpolation;
-import org.joml.Quaterniond;
+import net.minecraft.util.Mth;
 import org.joml.Vector3d;
-import org.joml.Vector3f;
 
 public class CatmullRom {
 
@@ -97,100 +96,6 @@ public class CatmullRom {
         }
     }
 
-    private static double rotationCentripetalTj(Quaterniond p1, Quaterniond p2) {
-        Quaterniond delta = p1.invert(new Quaterniond()).mul(p2);
-
-        double lengthSq = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
-        double length = Math.sqrt(lengthSq);
-
-        double angleBetween = Math.abs(2 * Math.atan2(length, delta.w));
-        angleBetween = Math.max(0, Math.min(Math.PI, angleBetween));
-        return Math.pow(angleBetween, 0.5f);
-    }
-
-    public static Quaterniond rotation(Quaterniond p0, Quaterniond p1, Quaterniond p2, Quaterniond p3, float time1, float time2, float time3, float amount) {
-        double tj1 = rotationCentripetalTj(p0, p1);
-        double tj2 = rotationCentripetalTj(p1, p2);
-        double tj3 = rotationCentripetalTj(p2, p3);
-        double averageTj = (tj1 + tj2 + tj3) / 3f;
-
-        if (averageTj == 0.0) {
-            return new Quaterniond(p1);
-        }
-
-        double averageTime = time3 / 3f;
-        double relation = averageTime / averageTj;
-
-        double deltaTime1 = 0.0f;
-        if (time1 > 0.0f) {
-            double factor1 = (tj1 * relation) / time1;
-            factor1 = Math.max(0.4f, Math.min(2.5f, factor1));
-            deltaTime1 = (tj1 * relation) / factor1;
-        }
-
-        double deltaTime2 = 0.0f;
-        if (time2 - time1 > 0.0f) {
-            double factor2 = (tj2 * relation) / (time2 - time1);
-            factor2 = Math.max(0.4f, Math.min(2.5f, factor2));
-            deltaTime2 = (tj2 * relation) / factor2;
-        }
-
-        double deltaTime3 = 0.0f;
-        if (time3 - time2 > 0.0f) {
-            double factor3 = (tj3 * relation) / (time3 - time2);
-            factor3 = Math.max(0.4f, Math.min(2.5f, factor3));
-            deltaTime3 = (tj3 * relation) / factor3;
-        }
-
-        double t0 = 0;
-        double t1 = t0 + deltaTime1;
-        double t2 = t1 + deltaTime2;
-        double t3 = t2 + deltaTime3;
-
-        double t = t1 + (t2 - t1) * amount;
-
-        Quaterniond a1;
-        if (t0 == t1) {
-            a1 = p0.nlerp(p1, 0.5f, new Quaterniond()).normalize();
-        } else {
-            a1 = p0.nlerp(p1, (t - t0)/(t1 - t0), new Quaterniond()).normalize();
-        }
-
-        Quaterniond a2;
-        if (t1 == t2) {
-            a2 = p1.nlerp(p2, 0.5f, new Quaterniond()).normalize();
-        } else {
-            a2 = p1.nlerp(p2, (t - t1)/(t2 - t1), new Quaterniond()).normalize();
-        }
-
-        Quaterniond a3;
-        if (t2 == t3) {
-            a3 = p2.nlerp(p3, 0.5f, new Quaterniond()).normalize();
-        } else {
-            a3 = p2.nlerp(p3, (t - t2)/(t3 - t2), new Quaterniond()).normalize();
-        }
-
-        Quaterniond b1;
-        if (t0 == t2) {
-            b1 = a1.nlerp(a2, 0.5f, new Quaterniond()).normalize();
-        } else {
-            b1 = a1.nlerp(a2, (t - t0)/(t2 - t0), new Quaterniond()).normalize();
-        }
-
-        Quaterniond b2;
-        if (t1 == t3) {
-            b2 = a2.nlerp(a3, 0.5f, new Quaterniond()).normalize();
-        } else {
-            b2 = a2.nlerp(a3, (t - t1)/(t3 - t1), new Quaterniond()).normalize();
-        }
-
-        if (t1 == t2) {
-            return b1.nlerp(b2, 0.5f, new Quaterniond()).normalize();
-        } else {
-            return b1.nlerp(b2, (t - t1)/(t2 - t1), new Quaterniond()).normalize();
-        }
-    }
-
     private static float valueCentripetalTj(float p1, float p2) {
         return (float) Math.sqrt(Math.abs(p1 - p2));
     }
@@ -275,6 +180,98 @@ public class CatmullRom {
             return Interpolation.linear(b1, b2, 0.5f);
         } else {
             return Interpolation.linear(b1, b2, (t - t1)/(t2 - t1));
+        }
+    }
+
+    private static float degreesCentripetalTj(float p1, float p2) {
+        return (float) Math.sqrt(Math.abs(Mth.wrapDegrees(p1 - p2)));
+    }
+
+    public static float degrees(float p0, float p1, float p2, float p3, float time1, float time2, float time3, float amount) {
+        p0 = Mth.wrapDegrees(p0);
+        p1 = Mth.wrapDegrees(p1);
+        p2 = Mth.wrapDegrees(p2);
+        p3 = Mth.wrapDegrees(p3);
+
+        float tj1 = degreesCentripetalTj(p0, p1);
+        float tj2 = degreesCentripetalTj(p1, p2);
+        float tj3 = degreesCentripetalTj(p2, p3);
+        float averageTj = (tj1 + tj2 + tj3) / 3f;
+
+        if (averageTj == 0.0) {
+            return p1;
+        }
+
+        float averageTime = time3 / 3f;
+        float relation = averageTime / averageTj;
+
+        float deltaTime1 = 0.0f;
+        if (time1 > 0.0f) {
+            float factor1 = (tj1 * relation) / time1;
+            factor1 = Math.max(0.4f, Math.min(2.5f, factor1));
+            deltaTime1 = (tj1 * relation) / factor1;
+        }
+
+        float deltaTime2 = 0.0f;
+        if (time2 - time1 > 0.0f) {
+            float factor2 = (tj2 * relation) / (time2 - time1);
+            factor2 = Math.max(0.4f, Math.min(2.5f, factor2));
+            deltaTime2 = (tj2 * relation) / factor2;
+        }
+
+        float deltaTime3 = 0.0f;
+        if (time3 - time2 > 0.0f) {
+            float factor3 = (tj3 * relation) / (time3 - time2);
+            factor3 = Math.max(0.4f, Math.min(2.5f, factor3));
+            deltaTime3 = (tj3 * relation) / factor3;
+        }
+
+        float t0 = 0;
+        float t1 = t0 + deltaTime1;
+        float t2 = t1 + deltaTime2;
+        float t3 = t2 + deltaTime3;
+
+        float t = t1 + (t2 - t1) * amount;
+
+        float a1;
+        if (t0 == t1) {
+            a1 = Interpolation.linearAngle(p0, p1, 0.5f);
+        } else {
+            a1 = Interpolation.linearAngle(p0, p1, (t - t0)/(t1 - t0));
+        }
+
+        float a2;
+        if (t1 == t2) {
+            a2 = Interpolation.linearAngle(p1, p2, 0.5f);
+        } else {
+            a2 = Interpolation.linearAngle(p1, p2, (t - t1)/(t2 - t1));
+        }
+
+        float a3;
+        if (t2 == t3) {
+            a3 = Interpolation.linearAngle(p2, p3, 0.5f);
+        } else {
+            a3 = Interpolation.linearAngle(p2, p3, (t - t2)/(t3 - t2));
+        }
+
+        float b1;
+        if (t0 == t2) {
+            b1 = Interpolation.linearAngle(a1, a2, 0.5f);
+        } else {
+            b1 = Interpolation.linearAngle(a1, a2, (t - t0)/(t2 - t0));
+        }
+
+        float b2;
+        if (t1 == t3) {
+            b2 = Interpolation.linearAngle(a2, a3, 0.5f);
+        } else {
+            b2 = Interpolation.linearAngle(a2, a3, (t - t1)/(t3 - t1));
+        }
+
+        if (t1 == t2) {
+            return Interpolation.linearAngle(b1, b2, 0.5f);
+        } else {
+            return Interpolation.linearAngle(b1, b2, (t - t1)/(t2 - t1));
         }
     }
 

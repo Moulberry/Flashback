@@ -3,6 +3,7 @@ package com.moulberry.flashback.exporting;
 import com.mojang.blaze3d.platform.NativeImage;
 import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.SneakyThrow;
+import com.moulberry.flashback.combo_options.AudioCodec;
 import org.bytedeco.ffmpeg.avutil.AVFrame;
 import org.bytedeco.ffmpeg.avutil.AVPixFmtDescriptor;
 import org.bytedeco.ffmpeg.global.avutil;
@@ -91,7 +92,7 @@ public class AsyncFFmpegVideoWriter implements AutoCloseable, VideoWriter {
 
             int audioChannels = 0;
             if (settings.recordAudio()) {
-                if (settings.stereoAudio()) {
+                if (settings.audioCodec() == AudioCodec.VORBIS || settings.stereoAudio()) {
                     audioChannels = 2;
                 } else {
                     audioChannels = 1;

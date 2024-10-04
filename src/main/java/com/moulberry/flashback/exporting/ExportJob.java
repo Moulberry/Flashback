@@ -27,11 +27,16 @@ import net.minecraft.Util;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
+import net.minecraft.client.gui.screens.CreditsAndAttributionScreen;
+import net.minecraft.client.gui.screens.WinScreen;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.FogRenderer;
 import net.minecraft.client.renderer.ShaderInstance;
+import net.minecraft.client.resources.sounds.SimpleSoundInstance;
+import net.minecraft.client.resources.sounds.SoundInstance;
 import net.minecraft.network.chat.Component;
+import net.minecraft.sounds.SoundEvents;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
@@ -129,6 +134,7 @@ public class ExportJob {
         }
         this.running = true;
         Minecraft.getInstance().mouseHandler.releaseMouse();
+        Minecraft.getInstance().getSoundManager().stop();
 
         UUID uuid = UUID.randomUUID();
 
@@ -160,8 +166,20 @@ public class ExportJob {
             this.running = false;
             this.shouldChangeFramebufferSize = false;
 
+            // Reset display size
             Minecraft.getInstance().options.guiScale().set(oldGuiScale);
             Minecraft.getInstance().resizeDisplay();
+
+            // Refreeze server & client
+            replayServer.replayPaused = true;
+            ClientLevel level = Minecraft.getInstance().level;
+            if (level != null) {
+                level.tickRateManager().setFrozen(true);
+            }
+
+            Minecraft.getInstance().getSoundManager().stop();
+            Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.NOTE_BLOCK_CHIME, 1.0f));
+            Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.NOTE_BLOCK_BELL, 1.0f));
 
             try {
                 Files.deleteIfExists(exportTempFile);
@@ -209,7 +227,6 @@ public class ExportJob {
             Minecraft.getInstance().options.guiScale().set(Minecraft.getInstance().options.guiScale().get() * 2);
         }
         Minecraft.getInstance().resizeDisplay();
-
 
         DoubleList ticks = calculateTicks(this.settings.editorState(), this.settings.startTick(), this.settings.endTick(), this.settings.framerate());
 

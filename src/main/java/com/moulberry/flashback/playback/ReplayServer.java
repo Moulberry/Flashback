@@ -34,6 +34,7 @@ import it.unimi.dsi.fastutil.ints.IntIterator;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
+import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.server.IntegratedServer;
@@ -349,6 +350,9 @@ public class ReplayServer extends IntegratedServer {
 
                 // Send tab list customization
                 serverPlayer.connection.send(new ClientboundTabListPacket(tabListHeader, tabListFooter));
+
+                // Send world border
+                serverPlayer.connection.send(new ClientboundInitializeBorderPacket(serverLevel.getWorldBorder()));
             }
 
             @Override
@@ -372,7 +376,8 @@ public class ReplayServer extends IntegratedServer {
             }
         });
 
-        this.loadLevel();
+        super.initServer();
+
         this.overworld().noSave = true;
 
         return true;
@@ -764,12 +769,17 @@ public class ReplayServer extends IntegratedServer {
             }
         }
 
+        // Pause replay if game is paused (by opening the ESC pause menu for example)
+        if (!this.replayPaused && this.isPaused()) {
+            this.replayPaused = true;
+        }
+
         // Update current tick
         boolean normalPlayback = false;
         if (this.jumpToTick >= 0) {
             this.targetTick = this.jumpToTick;
             this.jumpToTick = -1;
-        } else if (!this.isPaused() && !this.replayPaused && this.targetTick < this.totalTicks) {
+        } else if (!this.replayPaused && this.targetTick < this.totalTicks) {
             // Normal playback
             this.targetTick += 1;
             normalPlayback = true;
@@ -825,6 +835,7 @@ public class ReplayServer extends IntegratedServer {
                 if (camera == null || camera == replayViewer || camera.isRemoved()) {
                     Entity targetEntity = replayViewer.serverLevel().getEntity(replayViewer.spectatingUuid);
                     if (targetEntity != null && !targetEntity.isRemoved()) {
+                        replayViewer.setCamera(null);
                         replayViewer.setCamera(targetEntity);
                     }
                 }
@@ -1076,13 +1087,7 @@ public class ReplayServer extends IntegratedServer {
         if (shouldJump) {
             this.processedSnapshot = true;
 
-            // Clear bossbars and particles
-            for (ReplayPlayer replayViewer : this.replayViewers) {
-                for (UUID uuid : this.bossEvents.keySet()) {
-                    replayViewer.connection.send(ClientboundBossEventPacket.createRemovePacket(uuid));
-                }
-            }
-            this.bossEvents.clear();
+            this.clearDataForPlayingSnapshot();
 
             Map.Entry<Integer, PlayableChunk> entry = this.playableChunksByStart.floorEntry(this.targetTick);
             ReplayReader replayReader = entry.getValue().getOrLoadReplayReader(this.registryAccess());
@@ -1099,6 +1104,12 @@ public class ReplayServer extends IntegratedServer {
         this.currentReplayReader = entry.getValue().getOrLoadReplayReader(this.registryAccess());
         if (this.currentTick == entry.getKey()) {
             this.currentReplayReader.resetToStart();
+
+            if (!this.processedSnapshot && entry.getValue().chunkMeta.forcePlaySnapshot) {
+                this.processedSnapshot = true;
+                this.clearDataForPlayingSnapshot();
+                this.currentReplayReader.handleSnapshot(this);
+            }
         }
 
         while (this.currentTick < this.targetTick) {
@@ -1121,6 +1132,12 @@ public class ReplayServer extends IntegratedServer {
 
                 this.currentReplayReader = entry.getValue().getOrLoadReplayReader(this.registryAccess());
                 this.currentReplayReader.resetToStart();
+
+                if (entry.getValue().chunkMeta.forcePlaySnapshot) {
+                    this.processedSnapshot = true;
+                    this.clearDataForPlayingSnapshot();
+                    this.currentReplayReader.handleSnapshot(this);
+                }
             }
 
             if (entry.getKey() + entry.getValue().chunkMeta.duration < this.currentTick) {
@@ -1133,6 +1150,15 @@ public class ReplayServer extends IntegratedServer {
         }
 
         this.currentReplayReader = null;
+    }
+
+    private void clearDataForPlayingSnapshot() {
+        for (ReplayPlayer replayViewer : this.replayViewers) {
+            for (UUID uuid : this.bossEvents.keySet()) {
+                replayViewer.connection.send(ClientboundBossEventPacket.createRemovePacket(uuid));
+            }
+        }
+        this.bossEvents.clear();
     }
 
     private void tryFollowLocalPlayer() {
@@ -1219,10 +1245,10 @@ public class ReplayServer extends IntegratedServer {
             Files.walkFileTree(temp, new SimpleFileVisitor<>() {
                 @Override
                 public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-                    if (!Files.isDirectory(file)) {
-                        Files.deleteIfExists(file);
-                    }
-                    return FileVisitResult.CONTINUE;
+                if (!Files.isDirectory(file)) {
+                    Files.deleteIfExists(file);
+                }
+                return FileVisitResult.CONTINUE;
                 }
             });
         } catch (IOException e) {

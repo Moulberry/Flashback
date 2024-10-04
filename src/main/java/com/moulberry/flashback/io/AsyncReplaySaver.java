@@ -194,33 +194,6 @@ public class AsyncReplaySaver {
                     gamePacketCodec.encode(writer.friendlyByteBuf(), packet);
                     writer.finishAction(ActionGamePacket.INSTANCE);
                 }
-
-                if (packet instanceof ClientboundLoginPacket) {
-                    LocalPlayer localPlayer = Minecraft.getInstance().player;
-                    if (localPlayer != null) {
-                        writer.startAction(ActionCreateLocalPlayer.INSTANCE);
-                        RegistryFriendlyByteBuf registryFriendlyByteBuf = writer.friendlyByteBuf();
-                        registryFriendlyByteBuf.writeUUID(localPlayer.getUUID());
-                        registryFriendlyByteBuf.writeDouble(localPlayer.getX());
-                        registryFriendlyByteBuf.writeDouble(localPlayer.getY());
-                        registryFriendlyByteBuf.writeDouble(localPlayer.getZ());
-                        registryFriendlyByteBuf.writeFloat(localPlayer.getXRot());
-                        registryFriendlyByteBuf.writeFloat(localPlayer.getYRot());
-                        registryFriendlyByteBuf.writeFloat(localPlayer.getYHeadRot());
-                        registryFriendlyByteBuf.writeVec3(localPlayer.getDeltaMovement());
-
-                        GameProfile currentProfile = localPlayer.getGameProfile();
-                        GameProfile newProfile = new GameProfile(currentProfile.getId(), currentProfile.getName());
-                        newProfile.getProperties().putAll(Minecraft.getInstance().getGameProfile().getProperties());
-                        newProfile.getProperties().putAll(currentProfile.getProperties());
-
-                        ByteBufCodecs.GAME_PROFILE.encode(registryFriendlyByteBuf, newProfile);
-
-                        registryFriendlyByteBuf.writeVarInt(Minecraft.getInstance().gameMode.getPlayerMode().getId());
-
-                        writer.finishAction(ActionCreateLocalPlayer.INSTANCE);
-                    }
-                }
             }
 
             if (lastChunkCacheIndex >= 0) {
@@ -245,7 +218,6 @@ public class AsyncReplaySaver {
             SneakyThrow.sneakyThrow(e);
         }
     }
-
 
     public void writeConfigurationPackets(StreamCodec<ByteBuf, Packet<? super ClientConfigurationPacketListener>> configurationPacketCodec,
                                  List<Packet<? super ClientConfigurationPacketListener>> packets) {

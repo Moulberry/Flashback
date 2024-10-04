@@ -24,6 +24,7 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.Connection;
 import net.minecraft.network.DisconnectionDetails;
+import net.minecraft.network.PacketSendListener;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.codec.ByteBufCodecs;
@@ -149,11 +150,14 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
             }
 
             ((ServerLevelExt) level).flashback$setCanSpawnEntities(true);
-            level.addFreshEntity(pendingEntity);
+            try {
+                level.addFreshEntity(pendingEntity);
+                ChunkPos chunkPos = new ChunkPos(pendingEntity.blockPosition());
+                level.getChunkSource().addRegionTicket(ReplayServer.ENTITY_LOAD_TICKET, chunkPos, 3, chunkPos);
+            } catch (Exception e) {
+                Flashback.LOGGER.error("Unable to spawn entity", e);
+            }
             ((ServerLevelExt) level).flashback$setCanSpawnEntities(false);
-
-            ChunkPos chunkPos = new ChunkPos(pendingEntity.blockPosition());
-            level.getChunkSource().addRegionTicket(ReplayServer.ENTITY_LOAD_TICKET, chunkPos, 3, chunkPos);
         }
         this.pendingEntities.clear();
     }
@@ -198,7 +202,7 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
         gameProfile.getProperties().removeAll("IsReplayViewer");
 
         CommonListenerCookie commonListenerCookie = CommonListenerCookie.createInitial(gameProfile, false);
-        ServerPlayer serverPlayer = new FakePlayer(this.replayServer, this.level(), commonListenerCookie.gameProfile(), commonListenerCookie.clientInformation()){
+        ServerPlayer serverPlayer = new FakePlayer(this.replayServer, this.level(), commonListenerCookie.gameProfile(), commonListenerCookie.clientInformation()) {
             @Override
             public boolean isSpectator() {
                 return false;
@@ -230,11 +234,24 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
             }
         }
 
-        Connection connection = new Connection(PacketFlow.SERVERBOUND);
+        Connection connection = new Connection(PacketFlow.SERVERBOUND) {
+            @Override
+            public void send(Packet<?> packet, @Nullable PacketSendListener packetSendListener, boolean bl) {}
+        };
         EmbeddedChannel embeddedChannel = new EmbeddedChannel(connection);
         serverPlayer.recreateFromPacket(addEntityPacket);
-        this.replayServer.getPlayerList().placeNewPlayer(connection, serverPlayer, commonListenerCookie);
+        try {
+            this.replayServer.getPlayerList().placeNewPlayer(connection, serverPlayer, commonListenerCookie);
+        } catch (Exception e) {
+            Flashback.LOGGER.error("Failed to spawn player", e);
+            return null;
+        }
         serverPlayer.setGameMode(gameType);
+
+        if (serverPlayer.isRemoved()) {
+            Flashback.LOGGER.error("ServerPlayer {} was removed while spawning. Incompatible mod?", serverPlayer.getUUID());
+            return null;
+        }
 
         return serverPlayer;
     }
@@ -705,6 +722,7 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
                 false, commonPlayerSpawnInfo.seed(), List.of(), false, null);
             serverLevel.noSave = true;
             this.replayServer.levels.put(dimension, serverLevel);
+            this.replayServer.getPlayerList().addWorldborderListener(serverLevel);
 
             if (oldLevel != null) {
                 this.replayServer.closeLevel(oldLevel);
@@ -894,6 +912,9 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
                 0, Vec3.ZERO, oldServerPlayer.getYHeadRot());
 
             ServerPlayer newServerPlayer = this.spawnPlayer(addEntityPacket, oldServerPlayer.getGameProfile(), oldServerPlayer.gameMode.getGameModeForPlayer());
+            if (newServerPlayer == null) {
+                return;
+            }
 
             if (clientboundRespawnPacket.shouldKeep((byte)2)) {
                 newServerPlayer.setShiftKeyDown(oldServerPlayer.isShiftKeyDown());

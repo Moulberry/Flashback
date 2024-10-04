@@ -11,7 +11,7 @@ import java.util.List;
 public enum AudioCodec implements ComboOption {
 
     AAC("AAC", avcodec.AV_CODEC_ID_AAC),
-    FLAC("FLAC", avcodec.AV_CODEC_ID_FLAC),
+    // FLAC("FLAC", avcodec.AV_CODEC_ID_FLAC), // Removed because it doesn't support fltp sample format
     MP3("MP3", avcodec.AV_CODEC_ID_MP3),
     OPUS("Opus", avcodec.AV_CODEC_ID_OPUS),
     VORBIS("Vorbis", avcodec.AV_CODEC_ID_VORBIS);

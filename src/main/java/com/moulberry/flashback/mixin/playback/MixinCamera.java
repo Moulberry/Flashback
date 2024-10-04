@@ -7,14 +7,17 @@ import com.moulberry.flashback.visuals.AccurateEntityPositionHandler;
 import net.minecraft.client.Camera;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.level.BlockGetter;
 import org.joml.Vector2f;
 import org.joml.Vector3d;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(Camera.class)
-public class MixinCamera {
+public abstract class MixinCamera {
 
     @Shadow
     private float eyeHeightOld;
@@ -22,28 +25,22 @@ public class MixinCamera {
     @Shadow
     public float eyeHeight;
 
-    @WrapOperation(method = "setup", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/Camera;setRotation(FF)V", ordinal = 0))
-    public void setRotation(Camera instance, float yaw, float pitch, Operation<Void> original,
-            @Local(argsOnly = true) Entity entity, @Local(argsOnly = true) float partialTick) {
+    @Shadow
+    protected abstract void setRotation(float f, float g);
+
+    @Shadow
+    protected abstract void setPosition(double d, double e, double f);
+
+    @Inject(method = "setup", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/Camera;setPosition(DDD)V", ordinal = 0, shift = At.Shift.AFTER))
+    public void afterSetPosition(BlockGetter blockGetter, Entity entity, boolean bl, boolean bl2, float partialTick, CallbackInfo ci)  {
         Vector2f rotation = AccurateEntityPositionHandler.getAccurateRotation(entity, partialTick);
         if (rotation != null) {
-            pitch = rotation.x;
-            yaw = rotation.y;
+            this.setRotation(rotation.y, rotation.x);
         }
-        original.call(instance, yaw, pitch);
-    }
-
-
-    @WrapOperation(method = "setup", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/Camera;setPosition(DDD)V", ordinal = 0))
-    public void setPosition(Camera instance, double x, double y, double z, Operation<Void> original,
-        @Local(argsOnly = true) Entity entity, @Local(argsOnly = true) float partialTick) {
         Vector3d position = AccurateEntityPositionHandler.getAccuratePosition(entity, partialTick);
         if (position != null) {
-            x = position.x;
-            y = position.y + Mth.lerp(partialTick, this.eyeHeightOld, this.eyeHeight);
-            z = position.z;
+            this.setPosition(position.x, position.y + Mth.lerp(partialTick, this.eyeHeightOld, this.eyeHeight), position.z);
         }
-        original.call(instance, x, y, z);
     }
 
 }

@@ -1,6 +1,7 @@
 package com.moulberry.flashback.keyframe;
 
 import com.google.gson.*;
+import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.keyframe.handler.KeyframeHandler;
 import com.moulberry.flashback.keyframe.impl.CameraKeyframe;
 import com.moulberry.flashback.keyframe.impl.CameraOrbitKeyframe;
@@ -17,14 +18,14 @@ import java.util.function.Consumer;
 
 public abstract class Keyframe {
 
-    private InterpolationType interpolationType = InterpolationType.DEFAULT;
+    private InterpolationType interpolationType = InterpolationType.getDefault();
 
     public InterpolationType interpolationType() {
         return interpolationType;
     }
 
     public void interpolationType(InterpolationType interpolationType) {
-        this.interpolationType = Objects.requireNonNullElse(interpolationType, InterpolationType.DEFAULT);
+        this.interpolationType = Objects.requireNonNullElse(interpolationType, InterpolationType.getDefault());
     }
 
     public abstract KeyframeType<?> keyframeType();

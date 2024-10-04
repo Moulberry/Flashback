@@ -1,4 +1,4 @@
-package com.moulberry.flashback.mixin.compat;
+package com.moulberry.flashback.mixin.compat.axiom;
 
 import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.editor.ui.ReplayUI;

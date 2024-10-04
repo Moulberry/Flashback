@@ -64,12 +64,14 @@ dependencies {
 
 	include(implementation("com.moulberry:mixinconstraints:1.0.1"))
 
+    modCompileOnly(rootProject.files('deps/DistantHorizons-2.3.0-a-dev-1.21.1.jar'))
+
     modCompileOnly("maven.modrinth:sodium:RncWhTxD")
     modCompileOnly("maven.modrinth:iris:kuOV4Ece")
     modCompileOnly("maven.modrinth:bobby:2cuVyTav")
     modCompileOnly("maven.modrinth:simple-voice-chat:95BK1U8I")
     modCompileOnly("maven.modrinth:replaymod:NtlpUQgI")
-    modCompileOnly("maven.modrinth:distanthorizons:pEvLEY5E")
+    // modCompileOnly("maven.modrinth:distanthorizons:pEvLEY5E")
 	modImplementation("maven.modrinth:modmenu:xhN1IvHi")
 //	modCompileOnly("maven.modrinth:axiom:D3uDJmiB")
 

@@ -5,7 +5,10 @@ import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.configuration.FlashbackConfig;
 import com.moulberry.flashback.state.EditorState;
 import com.moulberry.flashback.state.EditorStateManager;
+import net.minecraft.client.multiplayer.PlayerInfo;
 import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.client.player.RemotePlayer;
+import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
@@ -50,6 +53,19 @@ public abstract class MixinPlayerEntity extends LivingEntity {
             if (doAirplaneFlight && player.getAbilities().flying && !player.isPassenger() && !player.isFallFlying()) {
                 EnhancedFlight.doFlight(player, config, movementInput, this.getFlyingSpeed(), super::travel);
                 ci.cancel();
+            }
+        }
+    }
+
+    @Inject(method = "getName", at = @At("HEAD"), cancellable = true)
+    public void getName(CallbackInfoReturnable<Component> cir) {
+        if ((Object)this instanceof RemotePlayer) {
+            EditorState editorState = EditorStateManager.getCurrent();
+            if (editorState != null) {
+                String nameOverride = editorState.nameOverride.get(this.uuid);
+                if (nameOverride != null) {
+                    cir.setReturnValue(Component.literal(nameOverride));
+                }
             }
         }
     }

@@ -11,15 +11,9 @@ import com.moulberry.flashback.keyframe.types.CameraKeyframeType;
 import com.moulberry.flashback.spline.CatmullRom;
 import com.moulberry.flashback.state.EditorState;
 import com.moulberry.flashback.state.EditorStateManager;
-import com.moulberry.flashback.visuals.CameraPath;
-import imgui.ImGui;
-import imgui.type.ImFloat;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
-import org.joml.Quaterniond;
-import org.joml.Quaterniond;
 import org.joml.Vector3d;
-import org.joml.Vector3f;
 
 import java.lang.reflect.Type;
 import java.util.function.Consumer;
@@ -45,7 +39,7 @@ public class CameraKeyframe extends Keyframe {
     }
 
     public CameraKeyframe(Vector3d position, float yaw, float pitch, float roll) {
-        this(position, yaw, pitch, roll, InterpolationType.DEFAULT);
+        this(position, yaw, pitch, roll, InterpolationType.getDefault());
     }
 
     public CameraKeyframe(Vector3d position, float yaw, float pitch, float roll, InterpolationType interpolationType) {
@@ -56,8 +50,16 @@ public class CameraKeyframe extends Keyframe {
         this.interpolationType(interpolationType);
     }
 
-    public Quaterniond getQuaternion() {
-        return new Quaterniond().rotationYXZ((float) -Math.toRadians(this.yaw), (float) Math.toRadians(this.pitch), 0.0);
+    public Vector3d getNormal() {
+        double yawRad = Math.toRadians(-this.yaw);
+        double cosYaw = Math.cos((float)yawRad);
+        double sinYaw = Math.sin((float)yawRad);
+
+        double pitchRad = Math.toRadians(this.pitch);
+        double cosPitch = Math.cos((float)pitchRad);
+        double sinPitch = Math.sin((float)pitchRad);
+
+        return new Vector3d(sinYaw * cosPitch, -sinPitch, cosYaw * cosPitch);
     }
 
     @Override
@@ -104,38 +106,11 @@ public class CameraKeyframe extends Keyframe {
         }
     }
 
-    private void apply(KeyframeHandler keyframeHandler, Vector3d position, Quaterniond quaternion, float roll) {
-        Vector3d euler = quaternion.getEulerAnglesYXZ(new Vector3d());
-        double yaw = Mth.wrapDegrees(Math.toDegrees(euler.y));
-        double pitch = Mth.wrapDegrees(Math.toDegrees(euler.x));
 
-        // Handle singularity
-        double test = quaternion.y * quaternion.z - quaternion.w * quaternion.x;
-        final double MIN_TEST = 0.49999;
-        final double MAX_TEST = 0.499999;
-        if (test > MIN_TEST) {
-            double fixedYaw = Mth.wrapDegrees(Math.toDegrees(2 * Math.atan2(quaternion.z, quaternion.w)));
-            if (test >= MAX_TEST) {
-                yaw = fixedYaw;
-            } else {
-                yaw = yaw + Mth.wrapDegrees(fixedYaw - yaw) * (test - MIN_TEST) / (MAX_TEST - MIN_TEST);
-            }
-        } else if (test < -MIN_TEST) {
-            double fixedYaw = Mth.wrapDegrees(Math.toDegrees(-2 * Math.atan2(quaternion.z, quaternion.w)));
-            if (test <= -MAX_TEST) {
-                yaw = fixedYaw;
-            } else {
-                yaw = yaw + Mth.wrapDegrees(fixedYaw - yaw) * (test - -MIN_TEST) / (-MAX_TEST - -MIN_TEST);
-            }
-        }
-
-        // Apply position
-        keyframeHandler.applyCameraPosition(position, -yaw, pitch, roll);
-    }
 
     @Override
     public void apply(KeyframeHandler keyframeHandler) {
-        apply(keyframeHandler, this.position, this.getQuaternion(), this.roll);
+        keyframeHandler.applyCameraPosition(this.position, this.yaw, this.pitch, this.roll);
     }
 
     @Override
@@ -148,11 +123,13 @@ public class CameraKeyframe extends Keyframe {
         double x = Interpolation.linear(this.position.x, other.position.x, amount);
         double y = Interpolation.linear(this.position.y, other.position.y, amount);
         double z = Interpolation.linear(this.position.z, other.position.z, amount);
-        float roll = Interpolation.linear(this.roll, other.roll, amount);
-        Quaterniond quaternion = Interpolation.linear(this.getQuaternion(), other.getQuaternion(), amount);
-
         Vector3d position = new Vector3d(x, y, z);
-        apply(keyframeHandler, position, quaternion, roll);
+
+        float yaw = Interpolation.linearAngle(this.yaw, other.yaw, amount);
+        float pitch = Interpolation.linearAngle(this.pitch, other.pitch, amount);
+        float roll = Interpolation.linearAngle(this.roll, other.roll, amount);
+
+        keyframeHandler.applyCameraPosition(position, yaw, pitch, roll);
     }
 
     @Override
@@ -171,11 +148,13 @@ public class CameraKeyframe extends Keyframe {
         double z = position.z;
 
         // Calculate rotation
-        Quaterniond rotation = CatmullRom.rotation(this.getQuaternion(),
-            ((CameraKeyframe)p1).getQuaternion(), ((CameraKeyframe)p2).getQuaternion(),
-            ((CameraKeyframe)p3).getQuaternion(), time1, time2, time3, amount);
-
-        float roll = CatmullRom.value(this.roll,
+        float yaw = CatmullRom.degrees(this.yaw,
+            ((CameraKeyframe)p1).yaw, ((CameraKeyframe)p2).yaw,
+            ((CameraKeyframe)p3).yaw, time1, time2, time3, amount);
+        float pitch = CatmullRom.degrees(this.pitch,
+            ((CameraKeyframe)p1).pitch, ((CameraKeyframe)p2).pitch,
+            ((CameraKeyframe)p3).pitch, time1, time2, time3, amount);
+        float roll = CatmullRom.degrees(this.roll,
             ((CameraKeyframe)p1).roll, ((CameraKeyframe)p2).roll,
             ((CameraKeyframe)p3).roll, time1, time2, time3, amount);
 
@@ -183,27 +162,31 @@ public class CameraKeyframe extends Keyframe {
             double linearX = Interpolation.linear(((CameraKeyframe)p1).position.x, ((CameraKeyframe)p2).position.x, lerpAmount);
             double linearY = Interpolation.linear(((CameraKeyframe)p1).position.y, ((CameraKeyframe)p2).position.y, lerpAmount);
             double linearZ = Interpolation.linear(((CameraKeyframe)p1).position.z, ((CameraKeyframe)p2).position.z, lerpAmount);
-            float linearRoll = Interpolation.linear(((CameraKeyframe)p1).roll, ((CameraKeyframe)p2).roll, lerpAmount);
-
-            Quaterniond linearQuaternion = Interpolation.linear(((CameraKeyframe)p1).getQuaternion(),
-                ((CameraKeyframe)p2).getQuaternion(), lerpAmount);
+            float linearYaw = Interpolation.linearAngle(((CameraKeyframe)p1).yaw, ((CameraKeyframe)p2).yaw, lerpAmount);
+            float linearPitch = Interpolation.linearAngle(((CameraKeyframe)p1).pitch, ((CameraKeyframe)p2).pitch, lerpAmount);
+            float linearRoll = Interpolation.linearAngle(((CameraKeyframe)p1).roll, ((CameraKeyframe)p2).roll, lerpAmount);
 
             if (lerpFromRight) {
                 x = Interpolation.linear(x, linearX, amount);
                 y = Interpolation.linear(y, linearY, amount);
                 z = Interpolation.linear(z, linearZ, amount);
-                roll = Interpolation.linear(roll, linearRoll, amount);
-                rotation = Interpolation.linear(rotation, linearQuaternion, amount);
+                yaw = Interpolation.linearAngle(yaw, linearYaw, amount);
+                pitch = Interpolation.linearAngle(pitch, linearPitch, amount);
+                roll = Interpolation.linearAngle(roll, linearRoll, amount);
             } else {
                 x = Interpolation.linear(linearX, x, amount);
                 y = Interpolation.linear(linearY, y, amount);
                 z = Interpolation.linear(linearZ, z, amount);
-                roll = Interpolation.linear(linearRoll, roll, amount);
-                rotation = Interpolation.linear(linearQuaternion, rotation, amount);
+                yaw = Interpolation.linearAngle(linearYaw, yaw, amount);
+                pitch = Interpolation.linearAngle(linearPitch, pitch, amount);
+                roll = Interpolation.linearAngle(linearRoll, roll, amount);
             }
         }
 
-        apply(keyframeHandler, new Vector3d(x, y, z), rotation, roll);
+        position.x = x;
+        position.y = y;
+        position.z = z;
+        keyframeHandler.applyCameraPosition(position, yaw, pitch, roll);
     }
 
     public static class TypeAdapter implements JsonSerializer<CameraKeyframe>, JsonDeserializer<CameraKeyframe> {

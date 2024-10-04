@@ -15,11 +15,17 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(EntityRenderer.class)
 public class MixinEntityRenderer {
 
-    @Inject(method = "renderNameTag", at = @At("HEAD"), cancellable = true)
+    @Inject(method = "renderNameTag", at = @At("HEAD"), cancellable = true, require = 0)
     public void renderNameTag(Entity entity, Component component, PoseStack poseStack, MultiBufferSource multiBufferSource, int i, float f, CallbackInfo ci) {
         EditorState editorState = EditorStateManager.getCurrent();
-        if (editorState != null && !editorState.replayVisuals.renderNametags) {
-            ci.cancel();
+        if (editorState != null) {
+            if (!editorState.replayVisuals.renderNametags) {
+                ci.cancel();
+            } else if (editorState.hideNametags.contains(entity.getUUID())) {
+                ci.cancel();
+            } else if (editorState.hideDuringExport.contains(entity.getUUID())) {
+                ci.cancel();
+            }
         }
     }
 

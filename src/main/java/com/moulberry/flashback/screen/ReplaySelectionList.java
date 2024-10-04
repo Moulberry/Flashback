@@ -19,6 +19,7 @@ import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.ObjectSelectionList;
+import net.minecraft.client.gui.components.WidgetSprites;
 import net.minecraft.client.gui.components.toasts.SystemToast;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.client.gui.navigation.CommonInputs;
@@ -62,6 +63,7 @@ public class ReplaySelectionList extends ObjectSelectionList<ReplaySelectionList
     private List<ReplaySummary> currentlyDisplayedReplays;
     private String filter;
     private final LoadingHeader loadingHeader;
+    private final LoadFromDeviceHeader loadFromDeviceHeader;
 
     private Map<UUID, Long> lastOpenTimes = null;
 
@@ -69,6 +71,7 @@ public class ReplaySelectionList extends ObjectSelectionList<ReplaySelectionList
         super(minecraft, i, j, k, l);
         this.screen = selectReplayScreen;
         this.loadingHeader = new LoadingHeader(minecraft);
+        this.loadFromDeviceHeader = new LoadFromDeviceHeader(minecraft);
         this.filter = string;
         this.pendingReplays = replaySelectionList != null ? replaySelectionList.pendingReplays : this.loadReplays();
         this.handleNewReplays(this.pollReplaysIgnoreErrors());
@@ -239,6 +242,7 @@ public class ReplaySelectionList extends ObjectSelectionList<ReplaySelectionList
 
     private void fillReplays(String string, List<ReplaySummary> list) {
         this.clearEntries();
+        this.addEntry(this.loadFromDeviceHeader);
         string = string.toLowerCase(Locale.ROOT);
         for (ReplaySummary ReplaySummary : list) {
             if (!this.filterAccepts(string, ReplaySummary)) continue;
@@ -253,6 +257,7 @@ public class ReplaySelectionList extends ObjectSelectionList<ReplaySelectionList
 
     private void fillLoadingReplays() {
         this.clearEntries();
+        this.addEntry(this.loadFromDeviceHeader);
         this.addEntry(this.loadingHeader);
         this.notifyListUpdated();
     }
@@ -270,6 +275,11 @@ public class ReplaySelectionList extends ObjectSelectionList<ReplaySelectionList
 
     @Override
     public void setSelected(@Nullable Entry entry) {
+        if (entry instanceof LoadFromDeviceHeader) {
+            Flashback.openReplayFromFileBrowser();
+            return;
+        }
+
         super.setSelected(entry);
 
         if (entry instanceof ReplayListEntry replayListEntry) {
@@ -326,6 +336,31 @@ public class ReplaySelectionList extends ObjectSelectionList<ReplaySelectionList
         }
     }
 
+    public static class LoadFromDeviceHeader extends Entry {
+        private static final Component LOAD_REPLAY_LABEL = Component.translatable("flashback.select_replay.load_replay_from_file");
+        private static final WidgetSprites SPRITES = new WidgetSprites(ResourceLocation.withDefaultNamespace("widget/button"), ResourceLocation.withDefaultNamespace("widget/button_disabled"),
+            ResourceLocation.withDefaultNamespace("widget/button_highlighted"));
+        private final Minecraft minecraft;
+
+        public LoadFromDeviceHeader(Minecraft minecraft) {
+            this.minecraft = minecraft;
+        }
+
+        @Override
+        public void render(GuiGraphics guiGraphics, int index, int y, int x, int width, int height, int mouseX, int mouseY, boolean hovered, float partialTick) {
+            guiGraphics.blitSprite(SPRITES.get(true, hovered), x + 4, y + 2, width - 8, height - 4);
+
+            int p = (this.minecraft.screen.width - this.minecraft.font.width(LOAD_REPLAY_LABEL)) / 2;
+            int q = y + (height - this.minecraft.font.lineHeight) / 2 + 1;
+            guiGraphics.drawString(this.minecraft.font, LOAD_REPLAY_LABEL, p, q, 0xFFFFFF, true);
+        }
+
+        @Override
+        public Component getNarration() {
+            return LOAD_REPLAY_LABEL;
+        }
+    }
+
     public final class ReplayListEntry extends Entry implements AutoCloseable {
         private static final int ICON_WIDTH = 32;
         private static final int ICON_HEIGHT = 32;
@@ -352,7 +387,7 @@ public class ReplaySelectionList extends ObjectSelectionList<ReplaySelectionList
         }
 
         @Override
-        public void render(GuiGraphics guiGraphics, int i, int j, int k, int l, int m, int n, int o, boolean bl, float f) {
+        public void render(GuiGraphics guiGraphics, int index, int y, int x, int width, int height, int mouseX, int mouseY, boolean hovered, float partialTick) {
             String title = this.summary.getReplayName();
             String fileAndTime = this.summary.getReplayId();
             long p = this.summary.getLastModified();
@@ -360,7 +395,7 @@ public class ReplaySelectionList extends ObjectSelectionList<ReplaySelectionList
                 fileAndTime = fileAndTime + " (" + DATE_FORMAT.format(Instant.ofEpochMilli(p)) + ")";
             }
             if (StringUtils.isEmpty(title)) {
-                title = I18n.get("flashback.select_replay.replay") + " " + (i + 1);
+                title = I18n.get("flashback.select_replay.replay") + " " + (index + 1);
             }
             Component info = this.summary.getInfo();
 
@@ -371,21 +406,21 @@ public class ReplaySelectionList extends ObjectSelectionList<ReplaySelectionList
                 titleColour = 0xFFAA55;
             }
 
-            guiGraphics.drawString(this.minecraft.font, title, k + ICON_WIDTH + 3, j + 1, titleColour, false);
-            guiGraphics.drawString(this.minecraft.font, fileAndTime, k + ICON_WIDTH + 3, j + this.minecraft.font.lineHeight + 3, 0xFF808080, false);
-            guiGraphics.drawString(this.minecraft.font, info, k + ICON_WIDTH + 3, j + this.minecraft.font.lineHeight + this.minecraft.font.lineHeight + 3, 0xFF808080, false);
+            guiGraphics.drawString(this.minecraft.font, title, x + ICON_WIDTH + 3, y + 1, titleColour, false);
+            guiGraphics.drawString(this.minecraft.font, fileAndTime, x + ICON_WIDTH + 3, y + this.minecraft.font.lineHeight + 3, 0xFF808080, false);
+            guiGraphics.drawString(this.minecraft.font, info, x + ICON_WIDTH + 3, y + this.minecraft.font.lineHeight + this.minecraft.font.lineHeight + 3, 0xFF808080, false);
 
             RenderSystem.enableBlend();
-            guiGraphics.blit(this.icon.textureLocation(), k, j, 0.0f, 0.0f, 32, 32, 32, 32);
+            guiGraphics.blit(this.icon.textureLocation(), x, y, 0.0f, 0.0f, 32, 32, 32, 32);
             RenderSystem.disableBlend();
 
-            if (this.minecraft.options.touchscreen().get() || bl) {
-                guiGraphics.fill(k, j, k + ICON_WIDTH, j + ICON_HEIGHT, -1601138544);
-                int q = n - k;
+            if (this.minecraft.options.touchscreen().get() || hovered) {
+                guiGraphics.fill(x, y, x + ICON_WIDTH, y + ICON_HEIGHT, -1601138544);
+                int q = mouseX - x;
                 boolean hoveredIcon = q < 32;
 
-                if (bl && this.summary.getHoverInfo() != null) {
-                    guiGraphics.renderTooltip(this.minecraft.font, this.minecraft.font.split(this.summary.getHoverInfo(), 240), n, o);
+                if (hovered && this.summary.getHoverInfo() != null) {
+                    guiGraphics.renderTooltip(this.minecraft.font, this.minecraft.font.split(this.summary.getHoverInfo(), 240), mouseX, mouseY);
                 }
 
                 ResourceLocation iconOverlay;
@@ -396,7 +431,7 @@ public class ReplaySelectionList extends ObjectSelectionList<ReplaySelectionList
                 } else {
                     iconOverlay = hoveredIcon ? JOIN_HIGHLIGHTED_SPRITE : JOIN_SPRITE;
                 }
-                guiGraphics.blitSprite(iconOverlay, k, j, ICON_WIDTH, ICON_HEIGHT);
+                guiGraphics.blitSprite(iconOverlay, x, y, ICON_WIDTH, ICON_HEIGHT);
             }
         }
 
@@ -459,41 +494,6 @@ public class ReplaySelectionList extends ObjectSelectionList<ReplaySelectionList
 
         public void editReplay() {
             Minecraft.getInstance().setScreen(new EditReplayScreen(Minecraft.getInstance().screen, this.summary));
-//            SystemToast.add(this.minecraft.getToasts(), new SystemToast.SystemToastId(3000),
-//                    Component.literal("Sorry"), Component.literal("Editing replay data hasn't been implemented yet"));
-            // todo: implement editing replay data
-//            EditWorldScreen editWorldScreen;
-//            ReplayStorageSource.ReplayStorageAccess levelStorageAccess;
-//            this.queueLoadScreen();
-//            String string = this.summary.getReplayId();
-//            try {
-//                levelStorageAccess = this.minecraft.getReplaySource().validateAndCreateAccess;
-//            } catch (IOException iOException) {
-//                SystemToast.onWorldAccessFailure(this.minecraft, string);
-//                LOGGER.error("Failed to access level {}", (Object)string, (Object)iOException);
-//                ReplaySelectionList.this.reloadWorldList();
-//                return;
-//            } catch (ContentValidationException contentValidationException) {
-//                LOGGER.warn("{}", (Object)contentValidationException.getMessage());
-//                this.minecraft.setScreen(NoticeWithLinkScreen.createWorldSymlinkWarningScreen(() -> this.minecraft.setScreen(this.screen)));
-//                return;
-//            }
-//            try {
-//                editWorldScreen = EditWorldScreen.create(this.minecraft, levelStorageAccess, bl -> {
-//                    levelStorageAccess.safeClose();
-//                    if (bl) {
-//                        ReplaySelectionList.this.reloadWorldList();
-//                    }
-//                    this.minecraft.setScreen(this.screen);
-//                });
-//            } catch (IOException | NbtException | ReportedNbtException exception) {
-//                levelStorageAccess.safeClose();
-//                SystemToast.onWorldAccessFailure(this.minecraft, string);
-//                LOGGER.error("Failed to load world data {}", (Object)string, (Object)exception);
-//                ReplaySelectionList.this.reloadWorldList();
-//                return;
-//            }
-//            this.minecraft.setScreen(editWorldScreen);
         }
 
         private void loadIcon() {

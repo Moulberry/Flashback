@@ -63,6 +63,10 @@ public class EditReplayScreen extends Screen {
 
         rowHelper.addChild(new BottomTextWidget(204, 10, Component.literal(""), this.font), 2);
 
+        rowHelper.addChild(Button.builder(Component.literal("Combine With Other Replay"), button -> {
+            this.minecraft.setScreen(new CombineReplayScreen(this, this.replayPath, null, null));
+        }).width(204).build(), 2);
+
         this.saveChangesButton = rowHelper.addChild(Button.builder(Component.literal("Save Changes"), button -> {
             this.applyChanges();
         }).width(98).build());

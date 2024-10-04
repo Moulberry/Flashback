@@ -201,6 +201,11 @@ public class VisualsWindow {
                 }
             }
 
+            // Night vision
+            if (ImGui.checkbox("Night Vision", visuals.overrideNightVision)) {
+                visuals.overrideNightVision = !visuals.overrideNightVision;
+            }
+
             // Camera shake
             if (ImGui.checkbox("Camera Shake", visuals.overrideCameraShake)) {
                 visuals.overrideCameraShake = !visuals.overrideCameraShake;
