@@ -48,7 +48,7 @@ import java.util.zip.ZipOutputStream;
 
 public class ReplayCombiner {
 
-    public static void combine(RegistryAccess registryAccess, Path first, Path second, Path output) throws Exception {
+    public static void combine(RegistryAccess registryAccess, String replayName, Path first, Path second, Path output) throws Exception {
         StreamCodec<ByteBuf, Packet<? super ClientGamePacketListener>> gamePacketCodec = GameProtocols.CLIENTBOUND_TEMPLATE.bind(RegistryFriendlyByteBuf.decorator(registryAccess)).codec();
 
         try (FileSystem firstFileSystem = FileSystems.newFileSystem(first);
@@ -81,6 +81,7 @@ public class ReplayCombiner {
             }
 
             firstMetadata.replayIdentifier = UUID.randomUUID();
+            firstMetadata.name = replayName;
             for (Map.Entry<Integer, ReplayMarker> entry : secondMetadata.replayMarkers.entrySet()) {
                 firstMetadata.replayMarkers.put(entry.getKey() + firstMetadata.totalTicks, entry.getValue());
             }
@@ -134,6 +135,7 @@ public class ReplayCombiner {
                     zipOut.write(bytes);
                     zipOut.closeEntry();
 
+                    lastCacheIndex = cacheIndex;
                     chunkCacheOutput = new RegistryFriendlyByteBuf(Unpooled.buffer(), registryAccess);
                 }
 

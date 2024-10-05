@@ -20,6 +20,7 @@ public class ReplayPlayer extends ServerPlayer {
     public boolean followLocalPlayerNextTick = false;
     public UUID spectatingUuid = null;
     public int spectatingUuidTickCount = 0;
+    public int forceRespectateTickCount = 0;
 
     public UUID lastFirstPersonDataUUID = null;
     public int lastFirstPersonSelectedSlot = -1;

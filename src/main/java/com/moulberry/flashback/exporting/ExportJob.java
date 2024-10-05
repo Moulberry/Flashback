@@ -6,9 +6,7 @@ import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.platform.Window;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.*;
-import com.moulberry.flashback.FixedDeltaTracker;
 import com.moulberry.flashback.Flashback;
-import com.moulberry.flashback.SneakyThrow;
 import com.moulberry.flashback.Utils;
 import com.moulberry.flashback.combo_options.VideoContainer;
 import com.moulberry.flashback.editor.ui.ReplayUI;
@@ -19,25 +17,21 @@ import com.moulberry.flashback.keyframe.types.SpeedKeyframeType;
 import com.moulberry.flashback.keyframe.types.TimelapseKeyframeType;
 import com.moulberry.flashback.state.EditorState;
 import com.moulberry.flashback.playback.ReplayServer;
-import com.moulberry.flashback.visuals.AccurateEntityPositionHandler;
 import it.unimi.dsi.fastutil.doubles.DoubleArrayList;
 import it.unimi.dsi.fastutil.doubles.DoubleList;
 import net.minecraft.ChatFormatting;
 import net.minecraft.Util;
 import net.minecraft.client.Camera;
+import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.screens.CreditsAndAttributionScreen;
-import net.minecraft.client.gui.screens.WinScreen;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.FogRenderer;
 import net.minecraft.client.renderer.ShaderInstance;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
-import net.minecraft.client.resources.sounds.SoundInstance;
 import net.minecraft.network.chat.Component;
 import net.minecraft.sounds.SoundEvents;
-import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
 import org.bytedeco.ffmpeg.global.avutil;
@@ -267,7 +261,7 @@ public class ExportJob {
                 RenderTarget renderTarget = Minecraft.getInstance().mainRenderTarget;
                 renderTarget.bindWrite(true);
                 RenderSystem.clear(16640, Minecraft.ON_OSX);
-                Minecraft.getInstance().gameRenderer.render(new FixedDeltaTracker(0.0f, 0.0f), true);
+                Minecraft.getInstance().gameRenderer.render(Minecraft.getInstance().timer, true);
                 renderTarget.unbindWrite();
 
                 this.shouldChangeFramebufferSize = false;
@@ -305,13 +299,17 @@ public class ExportJob {
             PerfectFrames.waitUntilFrameReady();
             FogRenderer.setupNoFog();
             RenderSystem.enableCull();
-            Minecraft.getInstance().timer.deltaTicks = deltaTicksFloat;
-            Minecraft.getInstance().timer.realtimeDeltaTicks = deltaTicksFloat;
-            Minecraft.getInstance().timer.deltaTickResidual = (float) partialTick;
-            Minecraft.getInstance().timer.pausedDeltaTickResidual = (float) partialTick;
+
+            DeltaTracker.Timer timer = Minecraft.getInstance().timer;
+            timer.updateFrozenState(false);
+            timer.updatePauseState(false);
+            timer.deltaTicks = deltaTicksFloat;
+            timer.realtimeDeltaTicks = deltaTicksFloat;
+            timer.deltaTickResidual = (float) partialTick;
+            timer.pausedDeltaTickResidual = (float) partialTick;
 
             start = System.nanoTime();
-            Minecraft.getInstance().gameRenderer.render(new FixedDeltaTracker(deltaTicksFloat, (float) partialTick), true);
+            Minecraft.getInstance().gameRenderer.render(timer, true);
             renderTimeNanos += System.nanoTime() - start;
 
             renderTarget.unbindWrite();

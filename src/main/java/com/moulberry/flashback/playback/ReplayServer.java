@@ -662,16 +662,21 @@ public class ReplayServer extends IntegratedServer {
             this.configurationPacketHandler.flushPendingConfiguration();
             this.gamePacketHandler.flushPendingEntities();
 
-            int x = packet.getX();
-            int z = packet.getZ();
-            LevelChunk chunk = this.gamePacketHandler.level().getChunk(x, z);
+            try {
+                int x = packet.getX();
+                int z = packet.getZ();
+                LevelChunk chunk = this.gamePacketHandler.level().getChunk(x, z);
 
-            if (!doesCachedChunkIdMatch(chunk, index)) {
-                packet.handle(this.gamePacketHandler);
+                if (!doesCachedChunkIdMatch(chunk, index)) {
+                    packet.handle(this.gamePacketHandler);
 
-                if (chunk instanceof LevelChunkExt ext) {
-                    ext.flashback$setCachedChunkId(index);
+                    if (chunk instanceof LevelChunkExt ext) {
+                        ext.flashback$setCachedChunkId(index);
+                    }
                 }
+            } catch (Exception ignored) {
+                // Some mods are apparently incapable of returning a chunk when requesting it which causes an error here
+                // Why a mod would be designed to do that? Only god knows
             }
         } else {
             Flashback.LOGGER.error("Missing cached level chunk: {}", index);
@@ -706,7 +711,7 @@ public class ReplayServer extends IntegratedServer {
         }
         List<Entity> entities = new ArrayList<>();
         for (Entity entity : serverLevel.getAllEntities()) {
-            if (entity instanceof ReplayPlayer) {
+            if (entity instanceof ServerPlayer) {
                 continue;
             }
             entities.add(entity);
@@ -754,6 +759,7 @@ public class ReplayServer extends IntegratedServer {
                 if (replayPlayer.isShiftKeyDown()) {
                     replayPlayer.spectatingUuid = null;
                     replayPlayer.spectatingUuidTickCount = 0;
+                    replayPlayer.forceRespectateTickCount = 0;
                 } else {
                     Entity cameraEntity = replayPlayer.getCamera();
                     if (cameraEntity != null && cameraEntity != replayPlayer) {
@@ -832,13 +838,20 @@ public class ReplayServer extends IntegratedServer {
             // Ensure replay viewers are still spectating
             if (replayViewer.spectatingUuid != null) {
                 Entity camera = replayViewer.getCamera();
-                if (camera == null || camera == replayViewer || camera.isRemoved()) {
+                if (replayViewer.forceRespectateTickCount > 0 || camera == null || camera == replayViewer || camera.isRemoved()) {
                     Entity targetEntity = replayViewer.serverLevel().getEntity(replayViewer.spectatingUuid);
                     if (targetEntity != null && !targetEntity.isRemoved()) {
                         replayViewer.setCamera(null);
                         replayViewer.setCamera(targetEntity);
+
+                        if (replayViewer.forceRespectateTickCount == 0) {
+                            replayViewer.forceRespectateTickCount = 5;
+                        }
                     }
                 }
+            }
+            if (replayViewer.forceRespectateTickCount > 0) {
+                replayViewer.forceRespectateTickCount -= 1;
             }
 
             Entity camera = replayViewer.getCamera();

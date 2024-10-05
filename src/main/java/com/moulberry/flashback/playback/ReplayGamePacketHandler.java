@@ -49,6 +49,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.ExperienceOrb;
 import net.minecraft.world.entity.Leashable;
+import net.minecraft.world.entity.LightningBolt;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
@@ -124,7 +125,15 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
 
     public void flushPendingEntities() {
         ServerLevel level = this.level();
+        boolean canSpawnLightningBolt = switch (this.replayServer.getEditorState().replayVisuals.overrideWeatherMode) {
+            case NONE, THUNDERING -> true;
+            case CLEAR, OVERCAST, RAINING, SNOWING -> false;
+        };
         for (Entity pendingEntity : this.pendingEntities.values()) {
+            if (pendingEntity instanceof LightningBolt && !canSpawnLightningBolt) {
+                continue;
+            }
+
             Entity existingEntity = level.getEntity(pendingEntity.getId());
             if (existingEntity != null) {
                 if (existingEntity instanceof ServerPlayer existingPlayer) {
@@ -288,6 +297,8 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
         if (existingEntity instanceof ExperienceOrb) {
             existingEntity.restoreFrom(entity);
             return;
+        } else if (existingEntity instanceof ServerPlayer serverPlayer) {
+            serverPlayer.connection.disconnect(Component.empty());
         } else if (existingEntity != null) {
             existingEntity.discard();
         }
@@ -691,6 +702,9 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
         Entity existing = this.localPlayerId == -1 ? null : this.getEntityOrPending(this.localPlayerId);
         if (existing == null) {
             this.spawnPlayer(addEntityPacket, gameProfile, gameType);
+        } else {
+            existing.moveTo(x, y, z, yRot, xRot);
+            existing.setDeltaMovement(velocity);
         }
     }
 
@@ -734,30 +748,27 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
         ((ServerLevelExt) newLevel).flashback$setSeedHash(commonPlayerSpawnInfo.seed());
         this.replayServer.followLocalPlayerNextTickIfWrongDimension = true;
 
-        if (newLevel == oldLevel) {
-            // Change to new dimension
-            this.currentDimension = commonPlayerSpawnInfo.dimension();
-            this.replayServer.spawnLevel = this.currentDimension;
-            return;
-        }
-
-        // Move local player and replay viewer
-        if (localPlayer != null) {
-            localPlayer.teleportTo(newLevel, 0.0, 0.0, 0.0, Set.of(), 0.0f, 0.0f);
-        }
-        for (ReplayPlayer replayViewer : this.replayServer.getReplayViewers()) {
-            replayViewer.teleportTo(newLevel, replayViewer.getX(), replayViewer.getY(), replayViewer.getZ(), Set.of(),
-                replayViewer.getYRot(), replayViewer.getXRot());
-            replayViewer.followLocalPlayerNextTick = true;
+        if (newLevel != oldLevel) {
+            // Move local player and replay viewer
+            if (localPlayer != null) {
+                localPlayer.teleportTo(newLevel, 0.0, 0.0, 0.0, Set.of(), 0.0f, 0.0f);
+            }
+            for (ReplayPlayer replayViewer : this.replayServer.getReplayViewers()) {
+                replayViewer.teleportTo(newLevel, replayViewer.getX(), replayViewer.getY(), replayViewer.getZ(), Set.of(),
+                    replayViewer.getYRot(), replayViewer.getXRot());
+                replayViewer.followLocalPlayerNextTick = true;
+            }
         }
 
         // Delete current dimension
-        if (this.currentDimension == Level.OVERWORLD) {
-            this.replayServer.clearLevel(this.level());
-        } else if (this.currentDimension != null) {
-            ServerLevel level = this.replayServer.levels.remove(this.currentDimension);
-            if (level != null) {
-                this.replayServer.closeLevel(level);
+        if (this.currentDimension != null && this.currentDimension != dimension) {
+            if (this.currentDimension == Level.OVERWORLD) {
+                this.replayServer.clearLevel(this.level());
+            } else if (this.currentDimension != null) {
+                ServerLevel level = this.replayServer.levels.remove(this.currentDimension);
+                if (level != null) {
+                    this.replayServer.closeLevel(level);
+                }
             }
         }
 
@@ -1138,7 +1149,11 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
 
         Entity taken = this.level().getEntity(clientboundTakeItemEntityPacket.getItemId());
         if (taken != null) {
-            taken.discard();
+            if (taken instanceof ServerPlayer serverPlayer) {
+                serverPlayer.connection.disconnect(Component.empty());
+            } else {
+                taken.discard();
+            }
         }
     }
 

@@ -1,5 +1,6 @@
 package com.moulberry.flashback.spline;
 
+import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.Interpolation;
 import net.minecraft.util.Mth;
 import org.joml.Vector3d;
@@ -188,10 +189,13 @@ public class CatmullRom {
     }
 
     public static float degrees(float p0, float p1, float p2, float p3, float time1, float time2, float time3, float amount) {
+        float delta1 = Mth.wrapDegrees(p1 - p0);
+        float delta2 = Mth.wrapDegrees(p2 - p1);
+        float delta3 = Mth.wrapDegrees(p3 - p2);
         p0 = Mth.wrapDegrees(p0);
-        p1 = Mth.wrapDegrees(p1);
-        p2 = Mth.wrapDegrees(p2);
-        p3 = Mth.wrapDegrees(p3);
+        p1 = p0 + delta1;
+        p2 = p1 + delta2;
+        p3 = p2 + delta3;
 
         float tj1 = degreesCentripetalTj(p0, p1);
         float tj2 = degreesCentripetalTj(p1, p2);
@@ -205,24 +209,27 @@ public class CatmullRom {
         float averageTime = time3 / 3f;
         float relation = averageTime / averageTj;
 
+        final float minFactor = 0.4f;
+        final float maxFactor = 2.5f;
+
         float deltaTime1 = 0.0f;
         if (time1 > 0.0f) {
             float factor1 = (tj1 * relation) / time1;
-            factor1 = Math.max(0.4f, Math.min(2.5f, factor1));
+            factor1 = Math.max(minFactor, Math.min(maxFactor, factor1));
             deltaTime1 = (tj1 * relation) / factor1;
         }
 
         float deltaTime2 = 0.0f;
         if (time2 - time1 > 0.0f) {
             float factor2 = (tj2 * relation) / (time2 - time1);
-            factor2 = Math.max(0.4f, Math.min(2.5f, factor2));
+            factor2 = Math.max(minFactor, Math.min(maxFactor, factor2));
             deltaTime2 = (tj2 * relation) / factor2;
         }
 
         float deltaTime3 = 0.0f;
         if (time3 - time2 > 0.0f) {
             float factor3 = (tj3 * relation) / (time3 - time2);
-            factor3 = Math.max(0.4f, Math.min(2.5f, factor3));
+            factor3 = Math.max(minFactor, Math.min(maxFactor, factor3));
             deltaTime3 = (tj3 * relation) / factor3;
         }
 
@@ -235,44 +242,40 @@ public class CatmullRom {
 
         float a1;
         if (t0 == t1) {
-            a1 = Interpolation.linearAngle(p0, p1, 0.5f);
+            a1 = Interpolation.linear(p0, p1, 0.5f);
         } else {
-            a1 = Interpolation.linearAngle(p0, p1, (t - t0)/(t1 - t0));
+            a1 = Interpolation.linear(p0, p1, (t - t0)/(t1 - t0));
         }
 
         float a2;
         if (t1 == t2) {
-            a2 = Interpolation.linearAngle(p1, p2, 0.5f);
+            a2 = Interpolation.linear(p1, p2, 0.5f);
         } else {
-            a2 = Interpolation.linearAngle(p1, p2, (t - t1)/(t2 - t1));
+            a2 = Interpolation.linear(p1, p2, (t - t1)/(t2 - t1));
         }
 
         float a3;
         if (t2 == t3) {
-            a3 = Interpolation.linearAngle(p2, p3, 0.5f);
+            a3 = Interpolation.linear(p2, p3, 0.5f);
         } else {
-            a3 = Interpolation.linearAngle(p2, p3, (t - t2)/(t3 - t2));
+            a3 = Interpolation.linear(p2, p3, (t - t2)/(t3 - t2));
         }
 
         float b1;
         if (t0 == t2) {
-            b1 = Interpolation.linearAngle(a1, a2, 0.5f);
+            b1 = Interpolation.linear(a1, a2, 0.5f);
         } else {
-            b1 = Interpolation.linearAngle(a1, a2, (t - t0)/(t2 - t0));
+            b1 = Interpolation.linear(a1, a2, (t - t0)/(t2 - t0));
         }
 
         float b2;
         if (t1 == t3) {
-            b2 = Interpolation.linearAngle(a2, a3, 0.5f);
+            b2 = Interpolation.linear(a2, a3, 0.5f);
         } else {
-            b2 = Interpolation.linearAngle(a2, a3, (t - t1)/(t3 - t1));
+            b2 = Interpolation.linear(a2, a3, (t - t1)/(t3 - t1));
         }
 
-        if (t1 == t2) {
-            return Interpolation.linearAngle(b1, b2, 0.5f);
-        } else {
-            return Interpolation.linearAngle(b1, b2, (t - t1)/(t2 - t1));
-        }
+        return Interpolation.linear(b1, b2, amount);
     }
 
 }

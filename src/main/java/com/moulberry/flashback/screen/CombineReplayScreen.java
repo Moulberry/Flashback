@@ -168,7 +168,7 @@ public class CombineReplayScreen extends Screen {
                         complete.specialWorldProperty(), complete.lifecycle()), complete.dimensionsRegistryAccess());
                 }, WorldStem::new, Util.backgroundExecutor(), executor)).get();
 
-                ReplayCombiner.combine(worldStem.registries().compositeAccess(), this.firstReplay, this.secondReplay, this.output);
+                ReplayCombiner.combine(worldStem.registries().compositeAccess(), this.newReplayName, this.firstReplay, this.secondReplay, this.output);
                 Minecraft.getInstance().setScreen(new TitleScreen());
 
                 worldStem.close();

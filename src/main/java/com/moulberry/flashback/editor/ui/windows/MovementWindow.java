@@ -28,6 +28,7 @@ import java.util.Locale;
 public class MovementWindow {
 
     private static WindowOpenState wasOpen = WindowOpenState.UNKNOWN;
+    private static boolean wasDocked = false;
 
     public static void render() {
         if (!Flashback.getConfig().openedWindows.contains("movement")) {
@@ -43,7 +44,13 @@ public class MovementWindow {
         FlashbackConfig config = Flashback.getConfig();
 
         ImGui.setNextWindowSizeConstraints(250, 50, 5000, 5000);
-        if (ImGui.begin("Movement###Movement", ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoFocusOnAppearing)) {
+        int flags = ImGuiWindowFlags.NoFocusOnAppearing;
+        if (!wasDocked) {
+            flags |= ImGuiWindowFlags.AlwaysAutoResize;
+        }
+        if (ImGui.begin("Movement###Movement", flags)) {
+            wasDocked = ImGui.isWindowDocked();
+
             int[] direction = new int[]{config.flightCameraDirection ? 1 : 0};
 
             ImGuiHelper.combo("Direction", direction, new String[]{

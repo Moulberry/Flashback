@@ -106,8 +106,6 @@ public class CameraKeyframe extends Keyframe {
         }
     }
 
-
-
     @Override
     public void apply(KeyframeHandler keyframeHandler) {
         keyframeHandler.applyCameraPosition(this.position, this.yaw, this.pitch, this.roll);

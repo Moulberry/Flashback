@@ -31,15 +31,17 @@ import net.minecraft.client.renderer.blockentity.BlockEntityRenderDispatcher;
 import net.minecraft.client.renderer.chunk.RenderRegionCache;
 import net.minecraft.client.renderer.chunk.SectionRenderDispatcher;
 import net.minecraft.client.renderer.culling.Frustum;
-import net.minecraft.util.Mth;
+import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Matrix4f;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -150,6 +152,40 @@ public abstract class MixinLevelRenderer {
             return editorState == null || editorState.replayVisuals.renderPlayers;
         } else {
             return editorState == null || editorState.replayVisuals.renderEntities;
+        }
+    }
+
+    @Unique
+    private Biome.Precipitation forcePrecipitation = null;
+
+    @Inject(method = "renderSnowAndRain", at = @At("HEAD"))
+    public void renderSnowAndRain(LightTexture lightTexture, float f, double d, double e, double g, CallbackInfo ci) {
+        this.forcePrecipitation = null;
+
+        EditorState editorState = EditorStateManager.getCurrent();
+        if (editorState != null) {
+            switch (editorState.replayVisuals.overrideWeatherMode) {
+                case CLEAR, OVERCAST -> forcePrecipitation = Biome.Precipitation.NONE;
+                case RAINING, THUNDERING -> forcePrecipitation = Biome.Precipitation.RAIN;
+                case SNOWING -> forcePrecipitation = Biome.Precipitation.SNOW;
+            }
+        }
+    }
+
+    @WrapOperation(method = "renderSnowAndRain", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/biome/Biome;hasPrecipitation()Z"))
+    public boolean renderSnowAndRain_hasPrecipitation(Biome instance, Operation<Boolean> original) {
+        if (this.forcePrecipitation != null) {
+            return this.forcePrecipitation != Biome.Precipitation.NONE;
+        }
+        return original.call(instance);
+    }
+
+    @WrapOperation(method = "renderSnowAndRain", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/biome/Biome;getPrecipitationAt(Lnet/minecraft/core/BlockPos;)Lnet/minecraft/world/level/biome/Biome$Precipitation;"))
+    public Biome.Precipitation renderSnowAndRain_getPrecipitationAt(Biome instance, BlockPos blockPos, Operation<Biome.Precipitation> original) {
+        if (this.forcePrecipitation != null) {
+            return this.forcePrecipitation;
+        } else {
+            return original.call(instance, blockPos);
         }
     }
 
