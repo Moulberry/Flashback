@@ -292,6 +292,8 @@ public class VisualsWindow {
                 }
             }
 
+            visuals.overrideWeatherMode = ImGuiHelper.enumCombo("Weather", visuals.overrideWeatherMode);
+
             ImGuiHelper.separatorWithText("Other");
 
             if (ImGui.checkbox("Rule of Thirds Guide", visuals.ruleOfThirdsGuide)) {

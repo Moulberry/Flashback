@@ -2,6 +2,7 @@ package com.moulberry.flashback.visuals;
 
 import com.moulberry.flashback.combo_options.AspectRatio;
 import com.moulberry.flashback.combo_options.Sizing;
+import com.moulberry.flashback.combo_options.WeatherOverride;
 import net.minecraft.client.Minecraft;
 
 public class ReplayVisuals {
@@ -40,6 +41,8 @@ public class ReplayVisuals {
 
     public boolean overrideRoll = false;
     public float overrideRollAmount = 0.0f;
+
+    public WeatherOverride overrideWeatherMode = WeatherOverride.NONE;
 
     public long overrideTimeOfDay = -1;
 

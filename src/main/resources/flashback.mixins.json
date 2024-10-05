@@ -48,8 +48,8 @@
   },
   "mixins": [
     "MixinThreadedLevelLightEngine",
-    "compat.axiom.MixinAxiomEditorUI",
     "compat.MixinSodiumWorldRenderer",
+    "compat.axiom.MixinAxiomEditorUI",
     "compat.axiom.MixinAxiomServerIntegration",
     "compat.bobby.FakeChunkManagerAccessor",
     "compat.bobby.MixinBobby",
@@ -83,6 +83,7 @@
     "replay_server.MixinServerEntity",
     "replay_server.MixinServerGamePacketListenerImpl",
     "replay_server.MixinServerLevel",
-    "replay_server.MixinServerLoginPacketListenerImpl"
+    "replay_server.MixinServerLoginPacketListenerImpl",
+    "visuals.MixinLevel"
   ]
 }

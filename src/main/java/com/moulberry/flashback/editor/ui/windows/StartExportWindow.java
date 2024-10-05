@@ -67,7 +67,6 @@ public class StartExportWindow {
 
     private static String installedIncompatibleModsString = null;
     private static final List<String> potentialIncompatibleMods = List.of(
-        "essential", // causes a crash due to casting the DeltaTracker without an instanceof
         "g4mespeed", // causes rendering issues due to overriding partial tick time
         "feather" // causes miscellaneous crashes and issues that are impossible to debug
     );

@@ -7,7 +7,7 @@ import org.joml.Vector3d;
 
 public class Interpolation {
 
-    public static double linear(double from, double to, float amount) {
+    public static double linear(double from, double to, double amount) {
         return from + (to - from) * amount;
     }
 
@@ -15,9 +15,13 @@ public class Interpolation {
         return from + (to - from) * amount;
     }
 
-
     public static float linearAngle(float from, float to, float amount) {
         float delta = Mth.wrapDegrees(to - from);
+        return from + Math.max(-180, Math.min(180, delta * amount));
+    }
+
+    public static double linearAngle(double from, double to, double amount) {
+        double delta = Mth.wrapDegrees(to - from);
         return from + Math.max(-180, Math.min(180, delta * amount));
     }
 
