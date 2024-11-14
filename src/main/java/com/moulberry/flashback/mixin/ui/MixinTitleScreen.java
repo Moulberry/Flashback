@@ -28,6 +28,7 @@ import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -125,7 +126,7 @@ public class MixinTitleScreen extends Screen {
     }
 
     @Inject(method = "createNormalMenuOptions", at = @At("HEAD"))
-    public void createNormalMenuOptions(int y, int buttonHeight, CallbackInfo ci) {
+    public void createNormalMenuOptions(int i, int j, CallbackInfoReturnable<Integer> cir) {
         this.normalMenuWidgets.clear();
     }
 

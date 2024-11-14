@@ -1,8 +1,8 @@
 {
-    "vertex": "flashback:blit_screen_round_alpha",
-    "fragment": "flashback:blit_screen_round_alpha",
+    "vertex": "flashback:core/blit_screen_round_alpha",
+    "fragment": "flashback:core/blit_screen_round_alpha",
     "samplers": [
-        { "name": "DiffuseSampler" }
+        { "name": "InSampler" }
     ],
     "uniforms": [
     ]

@@ -1,11 +1,13 @@
 package com.moulberry.flashback.mixin.playback;
 
 import com.google.common.base.MoreObjects;
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.math.Axis;
 import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.ext.ItemInHandRendererExt;
 import com.moulberry.flashback.ext.RemotePlayerExt;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.ItemInHandRenderer;
@@ -112,32 +114,7 @@ public abstract class MixinItemInHandRenderer implements ItemInHandRendererExt {
         bufferSource.endBatch();
     }
 
-    @ModifyArg(method = "renderPlayerArm", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/entity/EntityRenderDispatcher;getRenderer(Lnet/minecraft/world/entity/Entity;)Lnet/minecraft/client/renderer/entity/EntityRenderer;"))
-    public Entity renderPlayerArm_getRenderer(Entity entity) {
-        AbstractClientPlayer spectatingPlayer = Flashback.getSpectatingPlayer();
-        if (spectatingPlayer != null) {
-            return spectatingPlayer;
-        }
-        return entity;
-    }
-
-    @ModifyArg(method = "renderPlayerArm", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/entity/player/PlayerRenderer;renderLeftHand(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;ILnet/minecraft/client/player/AbstractClientPlayer;)V"))
-    public AbstractClientPlayer renderPlayerArm_renderLeftHand(AbstractClientPlayer entity) {
-        AbstractClientPlayer spectatingPlayer = Flashback.getSpectatingPlayer();
-        if (spectatingPlayer != null) {
-            return spectatingPlayer;
-        }
-        return entity;
-    }
-
-    @ModifyArg(method = "renderPlayerArm", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/entity/player/PlayerRenderer;renderRightHand(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;ILnet/minecraft/client/player/AbstractClientPlayer;)V"))
-    public AbstractClientPlayer renderPlayerArm_renderRightHand(AbstractClientPlayer entity) {
-        AbstractClientPlayer spectatingPlayer = Flashback.getSpectatingPlayer();
-        if (spectatingPlayer != null) {
-            return spectatingPlayer;
-        }
-        return entity;
-    }
+    // todo: render player arm
 
     @Unique
     private UUID lastSpectatingPlayer = null;

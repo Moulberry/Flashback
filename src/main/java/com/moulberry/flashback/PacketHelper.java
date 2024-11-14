@@ -43,9 +43,9 @@ public class PacketHelper {
                 serverEntity.entity = entity;
                 serverEntity.positionCodec.setBase(entity.trackingPosition());
                 serverEntity.lastSentMovement = entity.getDeltaMovement();
-                serverEntity.lastSentYRot = Mth.floor((entity.getYRot() * 256.0f / 360.0f));
-                serverEntity.lastSentXRot = Mth.floor((entity.getXRot() * 256.0f / 360.0f));
-                serverEntity.lastSentYHeadRot = Mth.floor((entity.getYHeadRot() * 256.0f / 360.0f));
+                serverEntity.lastSentYRot = (byte) Mth.floor((entity.getYRot() * 256.0f / 360.0f));
+                serverEntity.lastSentXRot = (byte) Mth.floor((entity.getXRot() * 256.0f / 360.0f));
+                serverEntity.lastSentYHeadRot = (byte) Mth.floor((entity.getYHeadRot() * 256.0f / 360.0f));
                 serverEntity.wasOnGround = entity.onGround();
                 serverEntity.trackedDataValues = entity.getEntityData().getNonDefaultValues();
             } catch (Exception e) {}

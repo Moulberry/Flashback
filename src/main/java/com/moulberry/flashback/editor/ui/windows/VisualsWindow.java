@@ -138,11 +138,6 @@ public class VisualsWindow {
 
             if (ImGui.checkbox("Override Fog Colour", visuals.overrideFogColour)) {
                 visuals.overrideFogColour = !visuals.overrideFogColour;
-                if (visuals.overrideFogColour) {
-                    visuals.fogColour[0] = FogRenderer.fogRed;
-                    visuals.fogColour[1] = FogRenderer.fogGreen;
-                    visuals.fogColour[2] = FogRenderer.fogBlue;
-                }
                 editorState.markDirty();
             }
             if (visuals.overrideFogColour) {

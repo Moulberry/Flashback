@@ -4,7 +4,6 @@ import imgui.ImGui;
 import imgui.ImGuiStyle;
 import imgui.flag.ImGuiCol;
 import net.minecraft.client.Minecraft;
-import net.minecraft.util.FastColor;
 import org.lwjgl.glfw.GLFW;
 
 public class ReplayUIDefaults {
@@ -94,7 +93,7 @@ public class ReplayUIDefaults {
         green = Math.min(0xFF, green * percentage/100);
         red = Math.min(0xFF, red * percentage/100);
 
-        return FastColor.ABGR32.color(alpha, blue, green, red);
+        return alpha << 24 | blue << 16 | green << 8 | red;
     }
 
     private static int darken(int abgr) {
@@ -107,7 +106,7 @@ public class ReplayUIDefaults {
         green = Math.min(0xFF, green * 4/5);
         red = Math.min(0xFF, red * 4/5);
 
-        return FastColor.ABGR32.color(alpha, blue, green, red);
+        return alpha << 24 | blue << 16 | green << 8 | red;
     }
 
 }

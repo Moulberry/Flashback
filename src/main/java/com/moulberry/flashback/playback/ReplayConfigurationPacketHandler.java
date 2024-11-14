@@ -4,10 +4,7 @@ import com.google.common.collect.ImmutableMap;
 import com.moulberry.flashback.exception.UnsupportedPacketException;
 import com.moulberry.flashback.registry.RegistryHelper;
 import net.fabricmc.fabric.api.event.registry.DynamicRegistries;
-import net.minecraft.core.Holder;
-import net.minecraft.core.Registry;
-import net.minecraft.core.RegistryAccess;
-import net.minecraft.core.RegistrySynchronization;
+import net.minecraft.core.*;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.DisconnectionDetails;
 import net.minecraft.network.chat.Component;
@@ -31,7 +28,10 @@ import net.minecraft.server.network.config.SynchronizeRegistriesTask;
 import net.minecraft.server.packs.PackLocationInfo;
 import net.minecraft.server.packs.repository.KnownPack;
 import net.minecraft.server.packs.repository.PackRepository;
+import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.server.packs.resources.ResourceProvider;
+import net.minecraft.tags.TagKey;
+import net.minecraft.tags.TagLoader;
 import net.minecraft.tags.TagNetworkSerialization;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.flag.FeatureFlagSet;
@@ -59,7 +59,7 @@ import java.util.function.Consumer;
 public class ReplayConfigurationPacketHandler implements ClientConfigurationPacketListener {
 
     private final ReplayServer replayServer;
-    private Map<ResourceKey<? extends Registry<?>>, List<RegistrySynchronization.PackedRegistryEntry>> pendingRegistryMap = null;
+    private Map<ResourceKey<? extends Registry<?>>, RegistryDataLoader.NetworkedRegistryData> pendingRegistryMap = null;
     private Map<ResourceKey<? extends Registry<?>>, TagNetworkSerialization.NetworkPayload> pendingTags = null;
     private FeatureFlagSet pendingFeatureFlags = null;
     private List<KnownPack> pendingKnownPacks = null;
@@ -111,14 +111,34 @@ public class ReplayConfigurationPacketHandler implements ClientConfigurationPack
             this.pendingKnownPacks = null;
         }
 
+        List<Registry.PendingTags<?>> pendingTags = new ArrayList<>();
+
+        if (this.pendingTags != null && !this.pendingTags.isEmpty()) {
+            this.pendingTags.forEach((resourceKey, networkPayload) -> {
+                var registry = this.replayServer.registryAccess().lookupOrThrow(resourceKey);
+                var loadResult = networkPayload.resolve(registry);
+                if (this.pendingRegistryMap != null) {
+                    var entry = this.pendingRegistryMap.get(resourceKey);
+                    if (entry != null) {
+                        this.pendingRegistryMap.put(resourceKey, new RegistryDataLoader.NetworkedRegistryData(entry.elements(), networkPayload));
+                    }
+                }
+                pendingTags.add(registry.prepareTagReload(loadResult));
+            });
+            pendingTags.forEach(Registry.PendingTags::apply);
+            sendTags = true;
+            this.pendingTags = null;
+        }
+
         if (this.pendingRegistryMap != null && !this.pendingRegistryMap.isEmpty()) {
-            Map<ResourceKey<? extends Registry<?>>, List<RegistrySynchronization.PackedRegistryEntry>> entries = this.pendingRegistryMap;
+            Map<ResourceKey<? extends Registry<?>>, RegistryDataLoader.NetworkedRegistryData> entries = this.pendingRegistryMap;
             this.pendingRegistryMap = null;
 
-            ResourceProvider resourceProvider = this.replayServer.getResourceManager();
-            RegistryAccess accessForLoading = this.replayServer.registries().getAccessForLoading(RegistryLayer.WORLDGEN);
+            ResourceManager resourceManager = this.replayServer.getResourceManager();
 
-            RegistryAccess.Frozen synchronizedRegistries = RegistryDataLoader.load(entries, resourceProvider, accessForLoading,
+            List<HolderLookup.RegistryLookup<?>> updatedLookups = TagLoader.buildUpdatedLookups(this.replayServer.registryAccess(), pendingTags);
+
+            RegistryAccess.Frozen synchronizedRegistries = RegistryDataLoader.load(entries, resourceManager, updatedLookups,
                 RegistryDataLoader.SYNCHRONIZED_REGISTRIES);
 
             if (!RegistryHelper.equals(this.replayServer.registryAccess(), synchronizedRegistries, RegistryDataLoader.SYNCHRONIZED_REGISTRIES)) {
@@ -155,14 +175,6 @@ public class ReplayConfigurationPacketHandler implements ClientConfigurationPack
             }
         }
 
-        if (this.pendingTags != null && !this.pendingTags.isEmpty()) {
-            this.pendingTags.forEach((resourceKey, networkPayload) -> {
-                networkPayload.applyToRegistry(this.replayServer.registryAccess().registryOrThrow(resourceKey));
-            });
-            sendTags = true;
-            this.pendingTags = null;
-        }
-
         if (synchronizeRegistries) {
             configurationTasks.add(new SynchronizeRegistriesTask(currentKnownPacks, this.replayServer.registries));
         } else if (sendTags) {
@@ -191,8 +203,8 @@ public class ReplayConfigurationPacketHandler implements ClientConfigurationPack
 
         // Recreate overworld
         ServerLevelData serverLevelData = this.replayServer.worldData.overworldData();
-        Holder.Reference<Biome> plains = this.replayServer.registryAccess().registryOrThrow(Registries.BIOME).getHolderOrThrow(Biomes.PLAINS);
-        LevelStem levelStem = new LevelStem(this.replayServer.registryAccess().registryOrThrow(Registries.DIMENSION_TYPE).getHolderOrThrow(BuiltinDimensionTypes.OVERWORLD), new EmptyLevelSource(plains));
+        Holder.Reference<Biome> plains = this.replayServer.registryAccess().lookupOrThrow(Registries.BIOME).getOrThrow(Biomes.PLAINS);
+        LevelStem levelStem = new LevelStem(this.replayServer.registryAccess().lookupOrThrow(Registries.DIMENSION_TYPE).getOrThrow(BuiltinDimensionTypes.OVERWORLD), new EmptyLevelSource(plains));
         var progressListener = this.replayServer.progressListenerFactory.create(this.replayServer.worldData.getGameRules().getInt(GameRules.RULE_SPAWN_CHUNK_RADIUS));
         ServerLevel serverLevel = new ServerLevel(this.replayServer, this.replayServer.executor, this.replayServer.storageSource,
             serverLevelData, Level.OVERWORLD, levelStem, progressListener,
@@ -230,7 +242,8 @@ public class ReplayConfigurationPacketHandler implements ClientConfigurationPack
         if (this.pendingRegistryMap == null) {
             this.pendingRegistryMap = new HashMap<>();
         }
-        this.pendingRegistryMap.put(clientboundRegistryDataPacket.registry(), clientboundRegistryDataPacket.entries());
+        this.pendingRegistryMap.put(clientboundRegistryDataPacket.registry(),
+                new RegistryDataLoader.NetworkedRegistryData(clientboundRegistryDataPacket.entries(), TagNetworkSerialization.NetworkPayload.EMPTY));
     }
 
     @Override

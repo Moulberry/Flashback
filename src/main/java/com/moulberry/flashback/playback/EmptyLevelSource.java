@@ -37,6 +37,10 @@ public class EmptyLevelSource extends ChunkGenerator {
     }
 
     @Override
+    public void applyCarvers(WorldGenRegion worldGenRegion, long l, RandomState randomState, BiomeManager biomeManager, StructureManager structureManager, ChunkAccess chunkAccess) {
+    }
+
+    @Override
     public void buildSurface(WorldGenRegion worldGenRegion, StructureManager structureManager, RandomState randomState, ChunkAccess chunkAccess) {
     }
 
@@ -61,10 +65,6 @@ public class EmptyLevelSource extends ChunkGenerator {
 
     @Override
     public void addDebugScreenInfo(List<String> list, RandomState randomState, BlockPos blockPos) {
-    }
-
-    @Override
-    public void applyCarvers(WorldGenRegion worldGenRegion, long l, RandomState randomState, BiomeManager biomeManager, StructureManager structureManager, ChunkAccess chunkAccess, GenerationStep.Carving carving) {
     }
 
     @Override

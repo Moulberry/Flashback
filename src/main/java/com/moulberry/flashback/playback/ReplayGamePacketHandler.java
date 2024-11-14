@@ -15,11 +15,9 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
+import net.fabricmc.fabric.impl.screenhandler.Networking;
 import net.minecraft.client.multiplayer.PlayerInfo;
-import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
-import net.minecraft.core.Holder;
-import net.minecraft.core.SectionPos;
+import net.minecraft.core.*;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.Connection;
@@ -45,13 +43,7 @@ import net.minecraft.server.network.CommonListenerCookie;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffectInstance;
-import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.ExperienceOrb;
-import net.minecraft.world.entity.Leashable;
-import net.minecraft.world.entity.LightningBolt;
-import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.AttributeMap;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
@@ -81,15 +73,7 @@ import net.minecraft.world.level.storage.ServerLevelData;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.ArrayList;
-import java.util.BitSet;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 
 public class ReplayGamePacketHandler implements ClientGamePacketListener {
 
@@ -277,7 +261,7 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
             this.spawnPlayer(packet, playerInfo.getProfile(), playerInfo.getGameMode());
             return null;
         } else {
-            return entityType.create(this.level());
+            return entityType.create(this.level(), EntitySpawnReason.LOAD);
         }
     }
 
@@ -332,8 +316,18 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
     }
 
     @Override
-    public void handleAddOrRemoveRecipes(ClientboundRecipePacket clientboundRecipePacket) {
-        throw new UnsupportedPacketException(clientboundRecipePacket);
+    public void handleRecipeBookAdd(ClientboundRecipeBookAddPacket clientboundRecipeBookAddPacket) {
+        throw new UnsupportedPacketException(clientboundRecipeBookAddPacket);
+    }
+
+    @Override
+    public void handleRecipeBookRemove(ClientboundRecipeBookRemovePacket clientboundRecipeBookRemovePacket) {
+        throw new UnsupportedPacketException(clientboundRecipeBookRemovePacket);
+    }
+
+    @Override
+    public void handleRecipeBookSettings(ClientboundRecipeBookSettingsPacket clientboundRecipeBookSettingsPacket) {
+        throw new UnsupportedPacketException(clientboundRecipeBookSettingsPacket);
     }
 
     @Override
@@ -388,6 +382,17 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
     }
 
     @Override
+    public void handleRotatePlayer(ClientboundPlayerRotationPacket clientboundPlayerRotationPacket) {
+        Entity entity = this.level().getEntity(this.localPlayerId);
+        if (!(entity instanceof Player player)) {
+            return;
+        }
+
+        player.setYRot(clientboundPlayerRotationPacket.yRot());
+        player.setXRot(clientboundPlayerRotationPacket.xRot());
+    }
+
+    @Override
     public void handleDisguisedChat(ClientboundDisguisedChatPacket clientboundDisguisedChatPacket) {
         forward(clientboundDisguisedChatPacket);
     }
@@ -421,6 +426,11 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
             level.setMapData(clientboundMapItemDataPacket.mapId(), mapItemSavedData);
         }
         clientboundMapItemDataPacket.applyToMap(mapItemSavedData);
+    }
+
+    @Override
+    public void handleMinecartAlongTrack(ClientboundMoveMinecartPacket clientboundMoveMinecartPacket) {
+        throw new UnsupportedPacketException(clientboundMoveMinecartPacket);
     }
 
     @Override
@@ -484,6 +494,18 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
     }
 
     @Override
+    public void handleEntityPositionSync(ClientboundEntityPositionSyncPacket clientboundEntityPositionSyncPacket) {
+        Entity entity = this.getEntityOrPending(clientboundEntityPositionSyncPacket.id());
+        if (entity == null) {
+            return;
+        }
+
+        Vec3 position = clientboundEntityPositionSyncPacket.values().position();
+        entity.setPos(position);
+        entity.setOnGround(clientboundEntityPositionSyncPacket.onGround());
+    }
+
+    @Override
     public void handleSetEntityPassengersPacket(ClientboundSetPassengersPacket clientboundSetPassengersPacket) {
         Entity vehicle = this.level().getEntity(clientboundSetPassengersPacket.getVehicle());
         if (vehicle == null) {
@@ -502,9 +524,8 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
 
     @Override
     public void handleExplosion(ClientboundExplodePacket e) {
-        ClientboundExplodePacket withoutKnockback = new ClientboundExplodePacket(e.getX(), e.getY(), e.getZ(),
-            e.getPower(), e.getToBlow(), null, e.getBlockInteraction(), e.getSmallExplosionParticles(), e.getLargeExplosionParticles(),
-            e.getExplosionSound());
+        ClientboundExplodePacket withoutKnockback = new ClientboundExplodePacket(e.center(),
+                Optional.empty(), e.explosionParticle(), e.explosionSound());
         forward(withoutKnockback);
     }
 
@@ -571,7 +592,7 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
             }
         }
 
-        chunk.setUnsaved(true);
+        chunk.markUnsaved();
     }
 
     private void applyLightData(LevelLightEngine levelLightEngine, int x, int z, ClientboundLightUpdatePacketData clientboundLightUpdatePacketData) {
@@ -728,7 +749,7 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
             if (dimension != Level.OVERWORLD) {
                 serverLevelData = new DerivedLevelData(this.replayServer.worldData, serverLevelData);
             }
-            Holder.Reference<Biome> plains = this.replayServer.registryAccess().registryOrThrow(Registries.BIOME).getHolder(Biomes.PLAINS).get();
+            Holder.Reference<Biome> plains = this.replayServer.registryAccess().lookupOrThrow(Registries.BIOME).get(Biomes.PLAINS).get();
             LevelStem levelStem = new LevelStem(commonPlayerSpawnInfo.dimensionType(), new EmptyLevelSource(plains));
             var progressListener = this.replayServer.progressListenerFactory.create(this.replayServer.worldData.getGameRules().getInt(GameRules.RULE_SPAWN_CHUNK_RADIUS));
             ServerLevel serverLevel = new ServerLevel(this.replayServer, this.replayServer.executor, this.replayServer.storageSource,
@@ -751,11 +772,11 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
         if (newLevel != oldLevel) {
             // Move local player and replay viewer
             if (localPlayer != null) {
-                localPlayer.teleportTo(newLevel, 0.0, 0.0, 0.0, Set.of(), 0.0f, 0.0f);
+                localPlayer.teleportTo(newLevel, 0.0, 0.0, 0.0, Set.of(), 0.0f, 0.0f, true);
             }
             for (ReplayPlayer replayViewer : this.replayServer.getReplayViewers()) {
                 replayViewer.teleportTo(newLevel, replayViewer.getX(), replayViewer.getY(), replayViewer.getZ(), Set.of(),
-                    replayViewer.getYRot(), replayViewer.getXRot());
+                    replayViewer.getYRot(), replayViewer.getXRot(), true);
                 replayViewer.followLocalPlayerNextTick = true;
             }
         }
@@ -956,8 +977,8 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
     }
 
     @Override
-    public void handleSetCarriedItem(ClientboundSetCarriedItemPacket clientboundSetCarriedItemPacket) {
-        if (!Inventory.isHotbarSlot(clientboundSetCarriedItemPacket.getSlot())) {
+    public void handleSetHeldSlot(ClientboundSetHeldSlotPacket clientboundSetHeldSlotPacket) {
+        if (!Inventory.isHotbarSlot(clientboundSetHeldSlotPacket.getSlot())) {
             return;
         }
 
@@ -968,11 +989,11 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
 
         Inventory inventory = player.getInventory();
 
-        if (inventory.selected == clientboundSetCarriedItemPacket.getSlot()) {
+        if (inventory.selected == clientboundSetHeldSlotPacket.getSlot()) {
             return;
         }
 
-        inventory.selected = clientboundSetCarriedItemPacket.getSlot();
+        inventory.selected = clientboundSetHeldSlotPacket.getSlot();
 
         for (ReplayPlayer replayViewer : this.replayServer.getReplayViewers()) {
             if (Objects.equals(replayViewer.lastFirstPersonDataUUID, player.getUUID())) {
@@ -1076,6 +1097,23 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
     }
 
     @Override
+    public void handleSetPlayerInventory(ClientboundSetPlayerInventoryPacket clientboundSetPlayerInventoryPacket) {
+        Entity entity = this.level().getEntity(this.localPlayerId);
+        if (entity instanceof Player player) {
+            int slot = clientboundSetPlayerInventoryPacket.slot();
+            ItemStack itemStack = clientboundSetPlayerInventoryPacket.contents();
+            player.getInventory().setItem(slot, itemStack);
+
+            for (ReplayPlayer replayViewer : this.replayServer.getReplayViewers()) {
+                if (Objects.equals(replayViewer.lastFirstPersonDataUUID, player.getUUID())) {
+                    replayViewer.lastFirstPersonHotbarItems[slot] = itemStack.copy();
+                    ServerPlayNetworking.send(replayViewer, new FlashbackRemoteSetSlot(player.getId(), slot, itemStack.copy()));
+                }
+            }
+        }
+    }
+
+    @Override
     public void handleSetScore(ClientboundSetScorePacket clientboundSetScorePacket) {
         forward(clientboundSetScorePacket);
     }
@@ -1094,7 +1132,7 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
     public void handleSetTime(ClientboundSetTimePacket clientboundSetTimePacket) {
         boolean updateTime = true;
 
-        long dayTime = clientboundSetTimePacket.getDayTime();
+        long dayTime = clientboundSetTimePacket.dayTime();
         if (dayTime < 0) {
             dayTime = -dayTime;
             updateTime = false;
@@ -1108,7 +1146,7 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
             level.setDayTime(dayTime);
 
             if (level.getLevelData() instanceof ServerLevelData serverLevelData) {
-                serverLevelData.setGameTime(clientboundSetTimePacket.getGameTime());
+                serverLevelData.setGameTime(clientboundSetTimePacket.gameTime());
             }
         }
 
@@ -1159,18 +1197,20 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
 
     @Override
     public void handleTeleportEntity(ClientboundTeleportEntityPacket clientboundTeleportEntityPacket) {
-        Entity entity = this.getEntityOrPending(clientboundTeleportEntityPacket.getId());
+        Entity entity = this.getEntityOrPending(clientboundTeleportEntityPacket.id());
         if (entity == null) {
             return;
         }
 
-        double x = clientboundTeleportEntityPacket.getX();
-        double y = clientboundTeleportEntityPacket.getY();
-        double z = clientboundTeleportEntityPacket.getZ();
-        float yaw = (float)(clientboundTeleportEntityPacket.getyRot() * 360) / 256.0F;
-        float pitch = (float)(clientboundTeleportEntityPacket.getxRot() * 360) / 256.0F;
-        entity.moveTo(x, y, z, yaw, pitch);
-        entity.setOnGround(clientboundTeleportEntityPacket.isOnGround());
+        PositionMoveRotation change = clientboundTeleportEntityPacket.change();
+        Set<Relative> relatives = clientboundTeleportEntityPacket.relatives();
+
+        PositionMoveRotation lerpTarget = PositionMoveRotation.ofEntityUsingLerpTarget(entity);
+        PositionMoveRotation absolute = PositionMoveRotation.calculateAbsolute(lerpTarget, change, relatives);
+
+        entity.moveTo(absolute.position().x(), absolute.position().y(), absolute.position().z(), absolute.yRot(), absolute.xRot());
+        entity.setDeltaMovement(absolute.deltaMovement());
+        entity.setOnGround(clientboundTeleportEntityPacket.onGround());
         entity.setYHeadRot(entity.getYRot());
     }
 
@@ -1243,6 +1283,11 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
     @Override
     public void handleSetCamera(ClientboundSetCameraPacket clientboundSetCameraPacket) {
         throw new UnsupportedPacketException(clientboundSetCameraPacket);
+    }
+
+    @Override
+    public void handleSetCursorItem(ClientboundSetCursorItemPacket clientboundSetCursorItemPacket) {
+        throw new UnsupportedPacketException(clientboundSetCursorItemPacket);
     }
 
     @Override
@@ -1391,7 +1436,7 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
         var lightData = clientboundLightUpdatePacket.getLightData();
         this.applyLightData(levelLightEngine, x, z, lightData);
 
-        chunk.setUnsaved(true);
+        chunk.markUnsaved();
     }
 
     @Override
@@ -1515,6 +1560,10 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
 
     @Override
     public void handleCustomPayload(ClientboundCustomPayloadPacket clientboundCustomPayloadPacket) {
+        if (clientboundCustomPayloadPacket.type().id().getNamespace().startsWith("fabric-screen-handler-api")) {
+            return;
+        }
+
         forward(clientboundCustomPayloadPacket);
     }
 
@@ -1540,9 +1589,13 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
 
     @Override
     public void handleUpdateTags(ClientboundUpdateTagsPacket clientboundUpdateTagsPacket) {
+        List<Registry.PendingTags<?>> list = new ArrayList<>(clientboundUpdateTagsPacket.getTags().size());
         clientboundUpdateTagsPacket.getTags().forEach((resourceKey, networkPayload) -> {
-            networkPayload.applyToRegistry(this.replayServer.registryAccess().registryOrThrow(resourceKey));
+            var registry = this.replayServer.registryAccess().lookupOrThrow(resourceKey);
+            list.add(registry.prepareTagReload(networkPayload.resolve(registry)));
         });
+        list.forEach(Registry.PendingTags::apply);
+
         forward(clientboundUpdateTagsPacket);
     }
 

@@ -36,7 +36,9 @@ public class IgnoredPacketSet {
 
         // Game
         ClientboundAwardStatsPacket.class,
-        ClientboundRecipePacket.class,
+        ClientboundRecipeBookAddPacket.class,
+        ClientboundRecipeBookRemovePacket.class,
+        ClientboundRecipeBookSettingsPacket.class,
         ClientboundOpenSignEditorPacket.class,
         ClientboundRotateHeadPacket.class,
         ClientboundMoveEntityPacket.Pos.class,
@@ -45,6 +47,7 @@ public class IgnoredPacketSet {
         ClientboundPlayerPositionPacket.class,
         ClientboundPlayerChatPacket.class,
         ClientboundDeleteChatPacket.class,
+        ClientboundMoveMinecartPacket.class,
         ClientboundContainerClosePacket.class,
         ClientboundContainerSetContentPacket.class,
         ClientboundHorseScreenOpenPacket.class,
@@ -52,7 +55,7 @@ public class IgnoredPacketSet {
         ClientboundContainerSetSlotPacket.class,
         ClientboundForgetLevelChunkPacket.class,
         ClientboundPlayerAbilitiesPacket.class,
-        ClientboundSetCarriedItemPacket.class,
+        ClientboundSetCursorItemPacket.class,
         ClientboundSetExperiencePacket.class,
         ClientboundSetHealthPacket.class,
         ClientboundTickingStatePacket.class,

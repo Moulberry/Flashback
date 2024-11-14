@@ -83,6 +83,7 @@ import net.minecraft.world.Difficulty;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.flag.FeatureFlagSet;
 import net.minecraft.world.flag.FeatureFlags;
 import net.minecraft.world.level.*;
 import net.minecraft.world.level.biome.Biome;
@@ -657,13 +658,13 @@ public class Flashback implements ModInitializer, ClientModInitializer {
 
     public static void startRecordingReplay() {
         if (RECORDER != null) {
-            SystemToast.add(Minecraft.getInstance().getToasts(), FlashbackSystemToasts.RECORDING_TOAST,
+            SystemToast.add(Minecraft.getInstance().getToastManager(), FlashbackSystemToasts.RECORDING_TOAST,
                     Component.literal("Already Recording"), Component.literal("Cannot start new recording when already recording"));
             return;
         }
         RECORDER = new Recorder(Minecraft.getInstance().player.registryAccess());
         if (Flashback.getConfig().showRecordingToasts) {
-            SystemToast.add(Minecraft.getInstance().getToasts(), FlashbackSystemToasts.RECORDING_TOAST,
+            SystemToast.add(Minecraft.getInstance().getToastManager(), FlashbackSystemToasts.RECORDING_TOAST,
                     Component.literal("Flashback"), Component.literal("Started recording"));
         }
     }
@@ -672,7 +673,7 @@ public class Flashback implements ModInitializer, ClientModInitializer {
         RECORDER.setPaused(pause);
 
         if (Flashback.getConfig().showRecordingToasts) {
-            SystemToast.add(Minecraft.getInstance().getToasts(), FlashbackSystemToasts.RECORDING_TOAST,
+            SystemToast.add(Minecraft.getInstance().getToastManager(), FlashbackSystemToasts.RECORDING_TOAST,
                     Component.literal("Flashback"), Component.literal(pause ? "Paused recording" : "Unpaused recording"));
         }
     }
@@ -689,14 +690,14 @@ public class Flashback implements ModInitializer, ClientModInitializer {
         }
 
         if (Flashback.getConfig().showRecordingToasts) {
-            SystemToast.add(Minecraft.getInstance().getToasts(), FlashbackSystemToasts.RECORDING_TOAST,
+            SystemToast.add(Minecraft.getInstance().getToastManager(), FlashbackSystemToasts.RECORDING_TOAST,
                     Component.literal("Flashback"), Component.literal("Cancelled recording"));
         }
     }
 
     public static void finishRecordingReplay() {
         if (RECORDER == null) {
-            SystemToast.add(Minecraft.getInstance().getToasts(), FlashbackSystemToasts.RECORDING_TOAST,
+            SystemToast.add(Minecraft.getInstance().getToastManager(), FlashbackSystemToasts.RECORDING_TOAST,
                     Component.literal("Not Recording"), Component.literal("Cannot finish recording when not recording"));
             return;
         }
@@ -725,7 +726,7 @@ public class Flashback implements ModInitializer, ClientModInitializer {
         }
 
         if (Flashback.getConfig().showRecordingToasts) {
-            SystemToast.add(Minecraft.getInstance().getToasts(), FlashbackSystemToasts.RECORDING_TOAST,
+            SystemToast.add(Minecraft.getInstance().getToastManager(), FlashbackSystemToasts.RECORDING_TOAST,
                     Component.literal("Flashback"), Component.literal("Finished recording"));
         }
     }
@@ -787,7 +788,7 @@ public class Flashback implements ModInitializer, ClientModInitializer {
 
             packRepository.reload();
 
-            GameRules gameRules = new GameRules();
+            GameRules gameRules = new GameRules(FeatureFlagSet.of());
             gameRules.getRule(GameRules.RULE_DOMOBSPAWNING).set(false, null);
             gameRules.getRule(GameRules.RULE_DOENTITYDROPS).set(false, null);
             gameRules.getRule(GameRules.RULE_ANNOUNCE_ADVANCEMENTS).set(false, null);
@@ -808,8 +809,8 @@ public class Flashback implements ModInitializer, ClientModInitializer {
             WorldStem worldStem = Util.blockUntilDone(executor -> WorldLoader.load(initConfig, dataLoadContext -> {
                 Registry<LevelStem> registry = new MappedRegistry<>(Registries.LEVEL_STEM, Lifecycle.stable()).freeze();
 
-                Holder.Reference<Biome> plains = dataLoadContext.datapackWorldgen().registryOrThrow(Registries.BIOME).getHolder(Biomes.PLAINS).get();
-                Holder.Reference<DimensionType> overworld = dataLoadContext.datapackWorldgen().registryOrThrow(Registries.DIMENSION_TYPE).getHolder(BuiltinDimensionTypes.OVERWORLD).get();
+                Holder.Reference<Biome> plains = dataLoadContext.datapackWorldgen().lookupOrThrow(Registries.BIOME).get(Biomes.PLAINS).get();
+                Holder.Reference<DimensionType> overworld = dataLoadContext.datapackWorldgen().lookupOrThrow(Registries.DIMENSION_TYPE).get(BuiltinDimensionTypes.OVERWORLD).get();
 
                 WorldDimensions worldDimensions = new WorldDimensions(Map.of(LevelStem.OVERWORLD, new LevelStem(overworld, new EmptyLevelSource(plains))));
                 WorldDimensions.Complete complete = worldDimensions.bake(registry);

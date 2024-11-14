@@ -8,15 +8,12 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.BufferUploader;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
-import com.mojang.blaze3d.vertex.MeshData;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import com.moulberry.flashback.WindowSizeTracker;
 import com.moulberry.flashback.editor.ui.ReplayUI;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.ShaderInstance;
-import org.lwjgl.glfw.GLFW;
-import org.lwjgl.opengl.GL11;
-import org.lwjgl.opengl.GL30;
+import net.minecraft.client.renderer.CompiledShaderProgram;
+import net.minecraft.client.renderer.CoreShaders;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
@@ -31,8 +28,8 @@ public abstract class MixinRenderTarget {
     @Shadow
     public int colorTextureId;
 
-    @Inject(method = "blitToScreen(IIZ)V", at = @At("HEAD"), cancellable = true)
-    public void blitToScreenSodium(int width, int height, boolean noBlend, CallbackInfo ci) {
+    @Inject(method = "blitToScreen(II)V", at = @At("HEAD"), cancellable = true)
+    public void blitToScreen(int width, int height, CallbackInfo ci) {
         if ((Object)this == Minecraft.getInstance().getMainRenderTarget() && ReplayUI.isActive()) {
             var window = Minecraft.getInstance().getWindow();
             float frameLeft = (float) ReplayUI.frameX / ReplayUI.viewportSizeX;
@@ -49,12 +46,11 @@ public abstract class MixinRenderTarget {
             GlStateManager._depthMask(false);
             GlStateManager._viewport((int)(realWidth * frameLeft), (int)(realHeight * (1 - (frameTop+frameHeight))),
                 Math.max(1, (int)(realWidth * frameWidth)), Math.max(1, (int)(realHeight * frameHeight)));
-            if (noBlend) {
-                GlStateManager._disableBlend();
-            }
-            Minecraft minecraft = Minecraft.getInstance();
-            ShaderInstance shaderInstance = Objects.requireNonNull(minecraft.gameRenderer.blitShader, "Blit shader not loaded");
-            shaderInstance.setSampler("DiffuseSampler", this.colorTextureId);
+            GlStateManager._disableBlend();
+            CompiledShaderProgram shaderInstance = Objects.requireNonNull(
+                RenderSystem.setShader(CoreShaders.BLIT_SCREEN), "Blit shader not loaded"
+            );
+            shaderInstance.bindSampler("InSampler", this.colorTextureId);
             shaderInstance.apply();
             BufferBuilder bufferBuilder = RenderSystem.renderThreadTesselator().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.BLIT_SCREEN);
             bufferBuilder.addVertex(0.0f, 0.0f, 0.0f);

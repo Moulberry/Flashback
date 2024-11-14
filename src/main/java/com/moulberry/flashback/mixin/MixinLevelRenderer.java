@@ -1,10 +1,13 @@
 package com.moulberry.flashback.mixin;
 
-import com.llamalad7.mixinextras.injector.v2.WrapWithCondition;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
+import com.mojang.blaze3d.framegraph.FrameGraphBuilder;
+import com.mojang.blaze3d.framegraph.FramePass;
 import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.platform.GlStateManager;
+import com.mojang.blaze3d.resource.GraphicsResourceAllocator;
+import com.mojang.blaze3d.resource.ResourceHandle;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.BufferUploader;
@@ -23,21 +26,18 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import net.minecraft.client.Camera;
 import net.minecraft.client.CloudStatus;
 import net.minecraft.client.DeltaTracker;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.Options;
-import net.minecraft.client.particle.ParticleEngine;
 import net.minecraft.client.renderer.*;
-import net.minecraft.client.renderer.blockentity.BlockEntityRenderDispatcher;
 import net.minecraft.client.renderer.chunk.RenderRegionCache;
 import net.minecraft.client.renderer.chunk.SectionRenderDispatcher;
 import net.minecraft.client.renderer.culling.Frustum;
-import net.minecraft.core.BlockPos;
+import net.minecraft.util.profiling.ProfilerFiller;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.biome.Biome;
-import net.minecraft.world.level.block.entity.BlockEntity;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Matrix4f;
+import org.joml.Vector4f;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -60,6 +60,8 @@ public abstract class MixinLevelRenderer {
     @Shadow
     private int ticks;
 
+    @Shadow @Final private LevelTargetBundle targets;
+
     @Inject(method = "tick", at = @At("HEAD"), cancellable = true)
     public void tick(CallbackInfo ci) {
         ReplayServer replayServer = Flashback.getReplayServer();
@@ -70,7 +72,8 @@ public abstract class MixinLevelRenderer {
     }
 
     @Inject(method = "renderLevel", at = @At("HEAD"))
-    public void renderLevel(DeltaTracker deltaTracker, boolean bl, Camera camera, GameRenderer gameRenderer, LightTexture lightTexture, Matrix4f matrix4f, Matrix4f projection, CallbackInfo ci) {
+    public void renderLevel(GraphicsResourceAllocator graphicsResourceAllocator, DeltaTracker deltaTracker, boolean bl, Camera camera, GameRenderer gameRenderer,
+                            LightTexture lightTexture, Matrix4f matrix4f, Matrix4f projection, CallbackInfo ci) {
         ReplayUI.lastProjectionMatrix = projection;
         ReplayUI.lastViewQuaternion = camera.rotation();
     }
@@ -85,109 +88,89 @@ public abstract class MixinLevelRenderer {
         }
     }
 
-    @Inject(method = "renderLevel", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/LevelRenderer;renderSectionLayer(Lnet/minecraft/client/renderer/RenderType;DDDLorg/joml/Matrix4f;Lorg/joml/Matrix4f;)V", ordinal = 2, shift = At.Shift.AFTER), require = 0)
-    public void renderLevel_renderCutoutLayer(DeltaTracker deltaTracker, boolean bl, Camera camera, GameRenderer gameRenderer, LightTexture lightTexture, Matrix4f matrix4f, Matrix4f matrix4f2, CallbackInfo ci) {
+    @Inject(method = "addMainPass", at = @At("HEAD"))
+    public void addMainPass(FrameGraphBuilder frameGraphBuilder, Frustum frustum, Camera camera, Matrix4f matrix4f, Matrix4f matrix4f2, FogParameters fogParameters, boolean bl, boolean bl2, DeltaTracker deltaTracker, ProfilerFiller profilerFiller, CallbackInfo ci) {
         if (Flashback.isExporting() && Flashback.EXPORT_JOB.getSettings().transparent()) {
-            RenderTarget main = Minecraft.getInstance().mainRenderTarget;
+            FramePass framePass = frameGraphBuilder.addPass("flashback_round_alpha");
+            this.targets.main = framePass.readsAndWrites(this.targets.main);
 
-            RenderSystem.assertOnRenderThread();
-            GlStateManager._disableDepthTest();
-            GlStateManager._depthMask(false);
-            GlStateManager._viewport(0, 0, main.viewWidth, main.viewHeight);
-            GlStateManager._disableBlend();
-            ShaderInstance shaderInstance = Objects.requireNonNull(ShaderManager.blitScreenRoundAlpha, "Blit shader not loaded");
-            shaderInstance.setSampler("DiffuseSampler", main.colorTextureId);
-            shaderInstance.apply();
-            BufferBuilder bufferBuilder = RenderSystem.renderThreadTesselator().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.BLIT_SCREEN);
-            bufferBuilder.addVertex(0.0f, 0.0f, 0.0f);
-            bufferBuilder.addVertex(1.0f, 0.0f, 0.0f);
-            bufferBuilder.addVertex(1.0f, 1.0f, 0.0f);
-            bufferBuilder.addVertex(0.0f, 1.0f, 0.0f);
-            BufferUploader.draw(bufferBuilder.buildOrThrow());
-            shaderInstance.clear();
-            GlStateManager._enableBlend();
-            GlStateManager._depthMask(true);
-            GlStateManager._enableDepthTest();
+            ResourceHandle<RenderTarget> resourceHandle = this.targets.main;
+            framePass.executes(() -> {
+                RenderTarget main = resourceHandle.get();
+
+                RenderSystem.assertOnRenderThread();
+                GlStateManager._disableDepthTest();
+                GlStateManager._depthMask(false);
+                GlStateManager._viewport(0, 0, main.viewWidth, main.viewHeight);
+                GlStateManager._disableBlend();
+                CompiledShaderProgram shaderInstance = Objects.requireNonNull(
+                        RenderSystem.setShader(ShaderManager.blitScreenRoundAlpha), "Blit shader not loaded"
+                );
+                shaderInstance.bindSampler("InSampler", main.colorTextureId);
+                shaderInstance.apply();
+                BufferBuilder bufferBuilder = RenderSystem.renderThreadTesselator().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.BLIT_SCREEN);
+                bufferBuilder.addVertex(0.0f, 0.0f, 0.0f);
+                bufferBuilder.addVertex(1.0f, 0.0f, 0.0f);
+                bufferBuilder.addVertex(1.0f, 1.0f, 0.0f);
+                bufferBuilder.addVertex(0.0f, 1.0f, 0.0f);
+                BufferUploader.draw(bufferBuilder.buildOrThrow());
+                shaderInstance.clear();
+                GlStateManager._enableBlend();
+                GlStateManager._depthMask(true);
+                GlStateManager._enableDepthTest();
+            });
         }
+
     }
 
-    @Inject(method = "renderLevel", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/FogRenderer;levelFogColor()V", shift = At.Shift.AFTER), require = 0)
-    public void renderLevel_levelFogColor(DeltaTracker deltaTracker, boolean bl, Camera camera, GameRenderer gameRenderer, LightTexture lightTexture, Matrix4f matrix4f, Matrix4f matrix4f2, CallbackInfo ci) {
+    @WrapOperation(method = "renderLevel", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/FogRenderer;setupFog(Lnet/minecraft/client/Camera;Lnet/minecraft/client/renderer/FogRenderer$FogMode;Lorg/joml/Vector4f;FZF)Lnet/minecraft/client/renderer/FogParameters;"))
+    public FogParameters setupFog(Camera camera, FogRenderer.FogMode fogMode, Vector4f colour, float distance, boolean foggy, float partialTick, Operation<FogParameters> original) {
         EditorState editorState = EditorStateManager.getCurrent();
         if (editorState != null) {
             ReplayVisuals visuals = editorState.replayVisuals;
             if (visuals.overrideFogColour) {
                 float[] fogColour = visuals.fogColour;
-                FogRenderer.fogRed = fogColour[0];
-                FogRenderer.fogGreen = fogColour[1];
-                FogRenderer.fogBlue = fogColour[2];
-                RenderSystem.setShaderFogColor(fogColour[0], fogColour[1], fogColour[2]);
-
-                if (visuals.renderSky) {
-                    RenderSystem.clearColor(fogColour[0], fogColour[1], fogColour[2], 1.0F);
-                }
+                colour = new Vector4f(fogColour[0], fogColour[1], fogColour[2], 1.0F);
             }
-            if (!visuals.renderSky) {
+            if (fogMode == FogRenderer.FogMode.FOG_SKY && !visuals.renderSky) {
                 if (Flashback.isExporting() && Flashback.EXPORT_JOB.getSettings().transparent()) {
-                    RenderSystem.clearColor(0.0f, 0.0f, 0.0f, 0.0F);
+                    Vector4f originalColour = colour;
+                    colour = new Vector4f(colour);
+                    originalColour.set(0, 0, 0, 0);
                 } else {
                     float[] skyColour = visuals.skyColour;
-                    RenderSystem.clearColor(skyColour[0], skyColour[1], skyColour[2], 1.0F);
+                    colour.set(skyColour[0], skyColour[1], skyColour[2], 1.0F);
                 }
             }
+        }
+        return original.call(camera, fogMode, colour, distance, foggy, partialTick);
+    }
 
+    @Inject(method = "renderBlockEntities", at = @At("HEAD"), cancellable = true)
+    public void renderBlockEntities(PoseStack poseStack, MultiBufferSource.BufferSource bufferSource, MultiBufferSource.BufferSource bufferSource2, Camera camera, float f, CallbackInfo ci) {
+        EditorState editorState = EditorStateManager.getCurrent();
+        if (editorState != null && !editorState.replayVisuals.renderBlocks) {
+            ci.cancel();
         }
     }
 
-    @WrapWithCondition(method = "renderLevel", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/blockentity/BlockEntityRenderDispatcher;render(Lnet/minecraft/world/level/block/entity/BlockEntity;FLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;)V"), require = 0)
-    public boolean renderLevel_renderBlockEntity(BlockEntityRenderDispatcher instance, BlockEntity blockEntity, float f, PoseStack poseStack, MultiBufferSource multiBufferSource) {
-        EditorState editorState = EditorStateManager.getCurrent();
-        return editorState == null || editorState.replayVisuals.renderBlocks;
-    }
 
-    @WrapWithCondition(method = "renderLevel", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/LevelRenderer;renderEntity(Lnet/minecraft/world/entity/Entity;DDDFLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;)V"), require = 0)
-    public boolean renderLevel_renderEntity(LevelRenderer instance, Entity entity, double d, double e, double f, float g, PoseStack poseStack, MultiBufferSource multiBufferSource) {
+    @Inject(method = "renderEntity", at = @At("HEAD"), cancellable = true)
+    public void renderEntity(Entity entity, double d, double e, double f, float g, PoseStack poseStack, MultiBufferSource multiBufferSource, CallbackInfo ci) {
         EditorState editorState = EditorStateManager.getCurrent();
         if (entity instanceof Player) {
-            return editorState == null || editorState.replayVisuals.renderPlayers;
+            if (editorState != null && !editorState.replayVisuals.renderPlayers) {
+                ci.cancel();
+            }
         } else {
-            return editorState == null || editorState.replayVisuals.renderEntities;
+            if (editorState != null && !editorState.replayVisuals.renderEntities) {
+                ci.cancel();
+            }
         }
     }
 
     @Unique
     private Biome.Precipitation forcePrecipitation = null;
-
-    @Inject(method = "renderSnowAndRain", at = @At("HEAD"))
-    public void renderSnowAndRain(LightTexture lightTexture, float f, double d, double e, double g, CallbackInfo ci) {
-        this.forcePrecipitation = null;
-
-        EditorState editorState = EditorStateManager.getCurrent();
-        if (editorState != null) {
-            switch (editorState.replayVisuals.overrideWeatherMode) {
-                case CLEAR, OVERCAST -> forcePrecipitation = Biome.Precipitation.NONE;
-                case RAINING, THUNDERING -> forcePrecipitation = Biome.Precipitation.RAIN;
-                case SNOWING -> forcePrecipitation = Biome.Precipitation.SNOW;
-            }
-        }
-    }
-
-    @WrapOperation(method = "renderSnowAndRain", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/biome/Biome;hasPrecipitation()Z"))
-    public boolean renderSnowAndRain_hasPrecipitation(Biome instance, Operation<Boolean> original) {
-        if (this.forcePrecipitation != null) {
-            return this.forcePrecipitation != Biome.Precipitation.NONE;
-        }
-        return original.call(instance);
-    }
-
-    @WrapOperation(method = "renderSnowAndRain", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/biome/Biome;getPrecipitationAt(Lnet/minecraft/core/BlockPos;)Lnet/minecraft/world/level/biome/Biome$Precipitation;"))
-    public Biome.Precipitation renderSnowAndRain_getPrecipitationAt(Biome instance, BlockPos blockPos, Operation<Biome.Precipitation> original) {
-        if (this.forcePrecipitation != null) {
-            return this.forcePrecipitation;
-        } else {
-            return original.call(instance, blockPos);
-        }
-    }
 
     @WrapOperation(method = "renderLevel", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/Options;getCloudsType()Lnet/minecraft/client/CloudStatus;"), require = 0)
     public CloudStatus renderLevel_getCloudsType(Options instance, Operation<CloudStatus> original) {
@@ -199,16 +182,20 @@ public abstract class MixinLevelRenderer {
         }
     }
 
-    @WrapWithCondition(method = "renderLevel", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/particle/ParticleEngine;render(Lnet/minecraft/client/renderer/LightTexture;Lnet/minecraft/client/Camera;F)V"), require = 0)
-    public boolean renderLevel_renderParticles(ParticleEngine instance, LightTexture lightTexture, Camera camera, float f) {
+    @Inject(method = "addParticlesPass", at = @At("HEAD"), cancellable = true)
+    public void addParticlesPass(FrameGraphBuilder frameGraphBuilder, Camera camera, LightTexture lightTexture, float f, FogParameters fogParameters, CallbackInfo ci) {
         EditorState editorState = EditorStateManager.getCurrent();
-        return editorState == null || editorState.replayVisuals.renderParticles;
+        if (editorState != null && !editorState.replayVisuals.renderParticles) {
+            ci.cancel();
+        }
     }
 
-    @WrapWithCondition(method = "renderLevel", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/LevelRenderer;renderSky(Lorg/joml/Matrix4f;Lorg/joml/Matrix4f;FLnet/minecraft/client/Camera;ZLjava/lang/Runnable;)V"), require = 0)
-    public boolean renderLevel_renderSky(LevelRenderer instance, Matrix4f matrix4f, Matrix4f matrix4f2, float f, Camera camera, boolean bl, Runnable runnable) {
+    @Inject(method = "addSkyPass", at = @At("HEAD"), cancellable = true)
+    public void addSkyPass(FrameGraphBuilder frameGraphBuilder, Camera camera, float f, FogParameters fogParameters, CallbackInfo ci) {
         EditorState editorState = EditorStateManager.getCurrent();
-        return editorState == null || editorState.replayVisuals.renderSky;
+        if (editorState != null && !editorState.replayVisuals.renderSky) {
+            ci.cancel();
+        }
     }
 
     @WrapOperation(method = "renderLevel", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/LevelRenderer;setupRender(Lnet/minecraft/client/Camera;Lnet/minecraft/client/renderer/culling/Frustum;ZZ)V"), require = 0)

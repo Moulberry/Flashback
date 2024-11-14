@@ -3,6 +3,7 @@ package com.moulberry.flashback.screen;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.renderer.RenderType;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 
@@ -25,7 +26,7 @@ public class FlashbackButton extends Button {
         int x = this.getX() + paddingX;
         int y = this.getY() + paddingY;
 
-        guiGraphics.blit(ICON_PIXELATED, x, y, 0f, 0f, size, size, size, size);
+        guiGraphics.blit(RenderType::guiTextured, ICON_PIXELATED, x, y, 0f, 0f, size, size, size, size);
 
     }
 

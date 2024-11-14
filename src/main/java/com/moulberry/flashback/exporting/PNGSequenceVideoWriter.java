@@ -68,7 +68,7 @@ public class PNGSequenceVideoWriter implements VideoWriter {
                         int alpha = 255 << src.format().alphaOffset();
                         for (int y = 0; y < src.getHeight(); y++) {
                             for (int x = 0; x < src.getWidth(); x++) {
-                                src.setPixelRGBA(x, y, src.getPixelRGBA(x, y) | alpha);
+                                src.setPixel(x, y, src.getPixel(x, y) | alpha);
                             }
                         }
                     }
