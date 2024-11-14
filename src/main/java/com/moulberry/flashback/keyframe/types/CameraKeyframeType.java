@@ -15,6 +15,11 @@ public class CameraKeyframeType implements KeyframeType<CameraKeyframe> {
     }
 
     @Override
+    public @Nullable String icon() {
+        return "\ue04b";
+    }
+
+    @Override
     public String name() {
         return "Camera";
     }

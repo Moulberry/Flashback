@@ -16,6 +16,11 @@ public class TimelapseKeyframeType implements KeyframeType<TimelapseKeyframe> {
     }
 
     @Override
+    public @Nullable String icon() {
+        return "\ue422";
+    }
+
+    @Override
     public String name() {
         return "Timelapse";
     }

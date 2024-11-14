@@ -21,6 +21,11 @@ public class FOVKeyframeType implements KeyframeType<FOVKeyframe> {
     }
 
     @Override
+    public @Nullable String icon() {
+        return "\ue3af";
+    }
+
+    @Override
     public String name() {
         return "FOV";
     }

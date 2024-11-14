@@ -27,12 +27,18 @@ import com.moulberry.flashback.record.FlashbackMeta;
 import com.moulberry.flashback.state.KeyframeTrack;
 import imgui.ImDrawList;
 import imgui.ImGui;
+import imgui.flag.ImGuiButtonFlags;
+import imgui.flag.ImGuiComboFlags;
+import imgui.flag.ImGuiCond;
+import imgui.flag.ImGuiDragDropFlags;
 import imgui.flag.ImGuiHoveredFlags;
+import imgui.flag.ImGuiInputTextFlags;
 import imgui.flag.ImGuiMouseButton;
 import imgui.flag.ImGuiMouseCursor;
 import imgui.flag.ImGuiPopupFlags;
 import imgui.flag.ImGuiStyleVar;
 import imgui.flag.ImGuiWindowFlags;
+import imgui.type.ImString;
 import it.unimi.dsi.fastutil.ints.*;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
@@ -58,6 +64,7 @@ public class TimelineWindow {
     private static int grabbedKeyframeTick = 0;
     private static int grabbedKeyframeTrack = 0;
     private static int draggingMouseButton = ImGuiMouseButton.Left;
+    private static int repositioningKeyframeTrack = 0;
     private static float dragStartMouseX = 0;
     private static float dragStartMouseY = 0;
 
@@ -83,6 +90,9 @@ public class TimelineWindow {
 
     private static int pendingStepBackwardsTicks = 0;
     private static int cursorTicks;
+
+    private static long lastRenderNanos = 0;
+    private static long renderDeltaNanos = 0;
 
     private static boolean hoveredControls;
     private static boolean hoveredSkipBackwards;
@@ -173,6 +183,10 @@ public class TimelineWindow {
                     }
                 }
             }
+
+            long currentTime = System.nanoTime();
+            renderDeltaNanos = Math.max(0, Math.min(1_000_000_000, currentTime - lastRenderNanos));
+            lastRenderNanos = currentTime;
 
             mouseX = ImGui.getMousePosX();
             mouseY = ImGui.getMousePosY();
@@ -457,6 +471,38 @@ public class TimelineWindow {
                     dragStartMouseX = mouseX;
                     dragStartMouseY = mouseY;
                 } else if (ImGui.isMouseDragging(draggingMouseButton)) {
+                    if (repositioningKeyframeTrack >= 0 && repositioningKeyframeTrack < editorState.keyframeTracks.size()) {
+                        float lineHeight = ImGui.getTextLineHeightWithSpacing() + ImGui.getStyle().getItemSpacingY();
+
+                        float mouseDeltaY = mouseY - dragStartMouseY;
+                        if (mouseDeltaY > lineHeight/2) {
+                            if (repositioningKeyframeTrack < editorState.keyframeTracks.size()-1) {
+                                selectedKeyframesList.clear();
+                                editingKeyframeTrack = -1;
+                                editingKeyframeTick = -1;
+
+                                dragStartMouseY += lineHeight;
+
+                                var track = editorState.keyframeTracks.remove(repositioningKeyframeTrack);
+                                editorState.keyframeTracks.get(repositioningKeyframeTrack).animatedOffsetInUi += lineHeight;
+                                repositioningKeyframeTrack += 1;
+                                editorState.keyframeTracks.add(repositioningKeyframeTrack, track);
+                            }
+                        } else if (mouseDeltaY < -lineHeight/2) {
+                            if (repositioningKeyframeTrack > 0) {
+                                selectedKeyframesList.clear();
+                                editingKeyframeTrack = -1;
+                                editingKeyframeTick = -1;
+
+                                dragStartMouseY -= lineHeight;
+
+                                var track = editorState.keyframeTracks.remove(repositioningKeyframeTrack);
+                                repositioningKeyframeTrack -= 1;
+                                editorState.keyframeTracks.get(repositioningKeyframeTrack).animatedOffsetInUi -= lineHeight;
+                                editorState.keyframeTracks.add(repositioningKeyframeTrack, track);
+                            }
+                        }
+                    }
                     if (grabbedExportBarResizeLeft) {
                         ImGui.setMouseCursor(ImGuiMouseCursor.ResizeEW);
 
@@ -1078,8 +1124,10 @@ public class TimelineWindow {
         grabbedZoomBarResizeRight = false;
         grabbedExportBarResizeLeft = false;
         grabbedExportBarResizeRight = false;
+
         if (!ImGui.isAnyMouseDown()) {
             trackDisabledButtonDrag = false;
+            repositioningKeyframeTrack = -1;
         }
 
         if (dragSelectOrigin != null) {
@@ -1511,6 +1559,8 @@ public class TimelineWindow {
 
         boolean hasOpenPopup = false;
 
+        double animationMultiplier = Math.pow(0.9D, renderDeltaNanos / 10_000_000D);
+
         for (int trackIndex = 0; trackIndex < editorState.keyframeTracks.size(); trackIndex++) {
             KeyframeTrack keyframeTrack = editorState.keyframeTracks.get(trackIndex);
             KeyframeType<?> keyframeType = keyframeTrack.keyframeType;
@@ -1533,12 +1583,68 @@ public class TimelineWindow {
                 }
             }
 
-            ImGui.setCursorPosX(8);
+            String icon = keyframeType.icon();
+            String name = keyframeTrack.customName;
+            if (name == null) {
+                name = keyframeType.name();
+            }
+            String nameWithIcon = name;
+            if (icon != null) {
+                nameWithIcon = icon + " " + name;
+            }
 
-            if (keyframeTrack.enabled) {
-                ImGui.text(keyframeType.name());
+            keyframeTrack.animatedOffsetInUi *= animationMultiplier;
+            if (Math.abs(keyframeTrack.animatedOffsetInUi) < 1) {
+                keyframeTrack.animatedOffsetInUi = 0;
+            }
+
+            float trackOffset = repositioningKeyframeTrack == trackIndex ? mouseY - dragStartMouseY : (int) keyframeTrack.animatedOffsetInUi;
+            ImGui.setCursorPosX(repositioningKeyframeTrack == trackIndex ? 3 : 2);
+            ImGui.setCursorPosY(ImGui.getCursorPosY() + trackOffset);
+
+            ImGui.pushStyleVar(ImGuiStyleVar.ItemSpacing, 0, 0);
+            if (repositioningKeyframeTrack == trackIndex) {
+                ImGui.text("\ue945");
             } else {
-                ImGui.textDisabled(keyframeType.name());
+                ImGui.textDisabled("\ue945");
+                if (ImGui.isItemClicked(ImGuiMouseButton.Left)) {
+                    repositioningKeyframeTrack = trackIndex;
+                }
+            }
+            ImGui.sameLine();
+            ImGui.popStyleVar();
+
+            if (keyframeTrack.nameEditField != null) {
+                ImGui.pushStyleVar(ImGuiStyleVar.ItemSpacing, 0, 0);
+                ImGui.pushStyleVar(ImGuiStyleVar.FramePadding, 0, 0);
+                if (icon != null) {
+                    ImGui.text(icon + " ");
+                    ImGui.sameLine();
+                }
+                ImGui.setNextItemWidth(120);
+                if (keyframeTrack.forceFocusTrack) {
+                    keyframeTrack.forceFocusTrack = false;
+                    ImGui.setKeyboardFocusHere();
+                }
+                boolean returnValue = ImGui.inputText("##TrackName", keyframeTrack.nameEditField, ImGuiInputTextFlags.EnterReturnsTrue | ImGuiInputTextFlags.AutoSelectAll);
+                if (returnValue || ImGui.isItemDeactivated()) {
+                    keyframeTrack.customName = ImGuiHelper.getString(keyframeTrack.nameEditField).trim();
+                    if (keyframeTrack.customName.isEmpty() || keyframeTrack.customName.equals(keyframeType.name())) {
+                        keyframeTrack.customName = null;
+                    }
+                    keyframeTrack.nameEditField = null;
+                }
+                ImGui.popStyleVar(2);
+            } else {
+                if (keyframeTrack.enabled) {
+                    ImGui.text(nameWithIcon);
+                } else {
+                    ImGui.textDisabled(nameWithIcon);
+                }
+                if (ImGui.isItemClicked(ImGuiMouseButton.Left) && ImGui.isMouseDoubleClicked(ImGuiMouseButton.Left)) {
+                    keyframeTrack.nameEditField = ImGuiHelper.createResizableImString(name);
+                    keyframeTrack.forceFocusTrack = true;
+                }
             }
 
             ImGui.sameLine();
@@ -1546,11 +1652,41 @@ public class TimelineWindow {
             float buttonX = x + middleX - (buttonSize + spacingX) * 3;
             float buttonY = ImGui.getCursorScreenPosY();
             ImGui.setCursorPosX(buttonX - x);
-            if (ImGui.button("##Add", buttonSize, buttonSize)) {
+            if (ImGui.invisibleButton("##TrackOptions", buttonSize, buttonSize) || ImGui.isItemClicked(ImGuiMouseButton.Right)) {
+                ImGui.openPopup("##TrackPopup");
+            }
+            drawList.addText(buttonX - 2, buttonY, -1, "\ue5d2");
+            ImGuiHelper.tooltip("Open track options");
+
+            ImGui.sameLine();
+
+            buttonX += buttonSize + spacingX;
+            ImGui.setCursorPosX(buttonX - x);
+            ImGui.invisibleButton("##ToggleEnabled", buttonSize, buttonSize);
+            if (ImGui.isItemHovered(trackDisabledButtonDrag ? ImGuiHoveredFlags.AllowWhenBlockedByActiveItem : 0)) {
+                if (trackDisabledButtonDrag) {
+                    keyframeTrack.enabled = trackDisabledButtonDragValue;
+                } else if (ImGui.isMouseClicked(ImGuiMouseButton.Left, false)) {
+                    keyframeTrack.enabled = !keyframeTrack.enabled;
+                    trackDisabledButtonDragValue = keyframeTrack.enabled;
+                    trackDisabledButtonDrag = true;
+                }
+            }
+            if (keyframeTrack.enabled) {
+                drawList.addText(buttonX - 2, buttonY, -1, "\ue8f4");
+                ImGuiHelper.tooltip("Disable keyframe track");
+            } else {
+                drawList.addText(buttonX - 2, buttonY, -1, "\ue8f5");
+                ImGuiHelper.tooltip("Enable keyframe track");
+            }
+            ImGui.sameLine();
+
+            buttonX += buttonSize + spacingX;
+            ImGui.setCursorPosX(buttonX - x);
+            if (ImGui.invisibleButton("##Add", buttonSize, buttonSize)) {
                 createNewKeyframe(editorState, trackIndex, cursorTicks, keyframeType, keyframeTrack);
             }
-            drawList.addRectFilled(buttonX + 2, buttonY + buttonSize/2 - 1, buttonX + buttonSize - 2, buttonY + buttonSize/2 + 1, -1);
-            drawList.addRectFilled(buttonX + buttonSize/2 - 1, buttonY + 2, buttonX + buttonSize/2 + 1, buttonY + buttonSize - 2, -1);
+            drawList.addText(buttonX - 2, buttonY, -1, "\ue148");
             ImGuiHelper.tooltip("Add keyframe");
 
             if (ImGui.beginPopup("##CreateKeyframe")) {
@@ -1566,38 +1702,18 @@ public class TimelineWindow {
                 }
                 ImGui.endPopup();
             }
-
-            ImGui.sameLine();
-
-            buttonX += buttonSize + spacingX;
-            ImGui.setCursorPosX(buttonX - x);
-            if (ImGui.button("##Clear", buttonSize, buttonSize)) {
-                keyframeTrackToClear = trackIndex;
-            }
-            drawList.addRectFilled(buttonX + 2, buttonY + buttonSize/2 - 1, buttonX + buttonSize - 2, buttonY + buttonSize/2 + 1, -1);
-            ImGuiHelper.tooltip("Remove all keyframes");
-
-            ImGui.sameLine();
-
-            buttonX += buttonSize + spacingX;
-            ImGui.setCursorPosX(buttonX - x);
-            ImGui.button("##ToggleEnabled", buttonSize, buttonSize);
-            if (ImGui.isItemHovered(trackDisabledButtonDrag ? ImGuiHoveredFlags.AllowWhenBlockedByActiveItem : 0)) {
-                if (trackDisabledButtonDrag) {
-                    keyframeTrack.enabled = trackDisabledButtonDragValue;
-                } else if (ImGui.isMouseClicked(ImGuiMouseButton.Left, false)) {
-                    keyframeTrack.enabled = !keyframeTrack.enabled;
-                    trackDisabledButtonDragValue = keyframeTrack.enabled;
-                    trackDisabledButtonDrag = true;
+            if (ImGui.beginPopup("##TrackPopup")) {
+                if (ImGui.menuItem("\ue3c9 Rename")) {
+                    keyframeTrack.nameEditField = ImGuiHelper.createResizableImString(name);
+                    keyframeTrack.forceFocusTrack = true;
                 }
+                if (ImGui.menuItem("\ue872 Delete track")) {
+                    keyframeTrackToClear = trackIndex;
+                }
+                ImGui.endPopup();
             }
-            if (keyframeTrack.enabled) {
-                drawList.addCircleFilled(buttonX + buttonSize/2, buttonY + buttonSize/2, buttonSize/3, -1);
-                ImGuiHelper.tooltip("Disable keyframe track");
-            } else {
-                drawList.addCircle(buttonX + buttonSize/2, buttonY + buttonSize/2, buttonSize/3, -1, 16, 2);
-                ImGuiHelper.tooltip("Enable keyframe track");
-            }
+
+            ImGui.setCursorPosY(ImGui.getCursorPosY() - trackOffset);
 
             ImGui.separator();
 
@@ -1631,6 +1747,16 @@ public class TimelineWindow {
         if (ImGui.smallButton("Add Element")) {
             ImGui.openPopup("##AddKeyframeElement");
         }
+
+        ImGui.sameLine();
+
+        ImGui.setNextItemWidth(middleX - ImGui.getCursorPosX() - spacingX);
+        ImGui.pushStyleVar(ImGuiStyleVar.FramePadding, 4, 0);
+        ImGuiHelper.combo("##SceneSwitcher", new int[]{0}, new String[]{
+            "Scene 1", "\ue148 New Scene"
+        });
+        ImGui.popStyleVar();
+
         if (ImGui.beginPopup("##AddKeyframeElement")) {
             for (KeyframeType<?> type : KeyframeRegistry.getTypes()) {
                 if (ImGui.selectable(type.name())) {
