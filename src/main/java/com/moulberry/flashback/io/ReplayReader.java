@@ -93,8 +93,8 @@ public class ReplayReader {
             RegistryFriendlyByteBuf registryFriendlyByteBuf = new RegistryFriendlyByteBuf(slice, this.registryAccess);
             action.handle(replayServer, registryFriendlyByteBuf);
 
-            if (slice.readerIndex() < size) {
-                throw new RuntimeException("Action " + this.lastActionName + " failed to fully read. Had " + size + " bytes available, only read " + slice.readerIndex());
+            if (slice.readerIndex() < slice.writerIndex()) {
+                throw new RuntimeException("Action " + this.lastActionName + " failed to fully read. Had " + slice.writerIndex() + " bytes available, only read " + slice.readerIndex());
             }
         }
 
@@ -127,8 +127,8 @@ public class ReplayReader {
         RegistryFriendlyByteBuf registryFriendlyByteBuf = new RegistryFriendlyByteBuf(slice, this.registryAccess);
         action.handle(replayServer, registryFriendlyByteBuf);
 
-        if (slice.readerIndex() < size) {
-            throw new RuntimeException("Action " + this.lastActionName + " failed to fully read. Had " + size + " bytes available, only read " + slice.readerIndex());
+        if (slice.readerIndex() < slice.writerIndex()) {
+            throw new RuntimeException("Action " + this.lastActionName + " failed to fully read. Had " + slice.writerIndex() + " bytes available, only read " + slice.readerIndex());
         }
 
         return true;

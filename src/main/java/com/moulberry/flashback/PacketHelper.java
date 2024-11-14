@@ -3,6 +3,7 @@ package com.moulberry.flashback;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundAddEntityPacket;
+import net.minecraft.network.protocol.game.ClientboundTeleportEntityPacket;
 import net.minecraft.network.protocol.game.VecDeltaCodec;
 import net.minecraft.server.level.ServerEntity;
 import net.minecraft.util.Mth;
@@ -23,6 +24,22 @@ public class PacketHelper {
 
     public static boolean shouldIgnoreEntity(Entity entity) {
         return entity == null || entity.isRemoved() || entity instanceof EnderDragonPart || entity.getType().clientTrackingRange() <= 0;
+    }
+
+    public static ClientboundTeleportEntityPacket createTeleportForUnknown(int id, double x, double y, double z, byte yRot, byte xRot, boolean onGround) {
+        try {
+            ClientboundTeleportEntityPacket packet = (ClientboundTeleportEntityPacket) UnsafeWrapper.UNSAFE.allocateInstance(ClientboundTeleportEntityPacket.class);
+            packet.id = id;
+            packet.x = x;
+            packet.y = y;
+            packet.z = z;
+            packet.yRot = yRot;
+            packet.xRot = xRot;
+            packet.onGround = onGround;
+            return packet;
+        } catch (Exception e) {
+            throw SneakyThrow.sneakyThrow(e);
+        }
     }
 
     public static Packet<ClientGamePacketListener> createAddEntity(Entity entity) {

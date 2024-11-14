@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.mojang.authlib.GameProfile;
 import com.moulberry.flashback.Flashback;
+import com.moulberry.flashback.PacketHelper;
 import com.moulberry.flashback.SneakyThrow;
 import com.moulberry.flashback.ext.LevelChunkExt;
 import com.moulberry.flashback.TempFolderProvider;
@@ -643,6 +644,10 @@ public class ReplayServer extends IntegratedServer {
                         }
 
                         positionUpdateSet.add(id);
+                    } else {
+                        byte yRot = (byte) Mth.floor(yaw * 256.0F / 360.0F);
+                        byte xRot = (byte) Mth.floor(pitch * 256.0F / 360.0F);
+                        this.getPlayerList().broadcastAll(PacketHelper.createTeleportForUnknown(id, x, y, z, yRot, xRot, onGround));
                     }
                 }
             }
