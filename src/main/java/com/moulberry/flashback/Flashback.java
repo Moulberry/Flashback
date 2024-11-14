@@ -24,6 +24,7 @@ import com.moulberry.flashback.keyframe.types.SpeedKeyframeType;
 import com.moulberry.flashback.keyframe.types.TimeOfDayKeyframeType;
 import com.moulberry.flashback.keyframe.types.TimelapseKeyframeType;
 import com.moulberry.flashback.packet.FlashbackAccurateEntityPosition;
+import com.moulberry.flashback.packet.FlashbackClearEntities;
 import com.moulberry.flashback.packet.FlashbackClearParticles;
 import com.moulberry.flashback.packet.FinishedServerTick;
 import com.moulberry.flashback.packet.FlashbackForceClientTick;
@@ -166,6 +167,7 @@ public class Flashback implements ModInitializer, ClientModInitializer {
 
         PayloadTypeRegistry.playS2C().register(FlashbackForceClientTick.TYPE, StreamCodec.unit(FlashbackForceClientTick.INSTANCE));
         PayloadTypeRegistry.playS2C().register(FlashbackClearParticles.TYPE, StreamCodec.unit(FlashbackClearParticles.INSTANCE));
+        PayloadTypeRegistry.playS2C().register(FlashbackClearEntities.TYPE, StreamCodec.unit(FlashbackClearEntities.INSTANCE));
         PayloadTypeRegistry.playS2C().register(FlashbackInstantlyLerp.TYPE, StreamCodec.unit(FlashbackInstantlyLerp.INSTANCE));
         PayloadTypeRegistry.playS2C().register(FlashbackRemoteSelectHotbarSlot.TYPE, FlashbackRemoteSelectHotbarSlot.STREAM_CODEC);
         PayloadTypeRegistry.playS2C().register(FlashbackRemoteExperience.TYPE, FlashbackRemoteExperience.STREAM_CODEC);
@@ -241,6 +243,16 @@ public class Flashback implements ModInitializer, ClientModInitializer {
         ClientPlayNetworking.registerGlobalReceiver(FlashbackClearParticles.TYPE, (payload, context) -> {
             if (Flashback.isInReplay()) {
                 Minecraft.getInstance().particleEngine.clearParticles();
+            }
+        });
+
+        ClientPlayNetworking.registerGlobalReceiver(FlashbackClearEntities.TYPE, (payload, context) -> {
+            if (Flashback.isInReplay()) {
+                for (Entity entity : Minecraft.getInstance().level.entitiesForRendering()) {
+                    if (entity != null && !(entity instanceof Player)) {
+                        entity.discard();
+                    }
+                }
             }
         });
 

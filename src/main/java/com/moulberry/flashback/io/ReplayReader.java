@@ -14,9 +14,6 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
 
-import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
-
 public class ReplayReader {
 
     private final FriendlyByteBuf friendlyByteBuf;

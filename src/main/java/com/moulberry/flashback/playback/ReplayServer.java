@@ -10,6 +10,7 @@ import com.moulberry.flashback.ext.LevelChunkExt;
 import com.moulberry.flashback.TempFolderProvider;
 import com.moulberry.flashback.keyframe.handler.ReplayServerKeyframeHandler;
 import com.moulberry.flashback.packet.FlashbackAccurateEntityPosition;
+import com.moulberry.flashback.packet.FlashbackClearEntities;
 import com.moulberry.flashback.packet.FlashbackClearParticles;
 import com.moulberry.flashback.packet.FlashbackForceClientTick;
 import com.moulberry.flashback.packet.FlashbackInstantlyLerp;
@@ -736,6 +737,12 @@ public class ReplayServer extends IntegratedServer {
             }
         }
         serverLevel.setDayTime(0);
+
+        for (ServerPlayer player : serverLevel.players()) {
+            if (player instanceof ReplayPlayer replayPlayer) {
+                ServerPlayNetworking.send(replayPlayer, FlashbackClearEntities.INSTANCE);
+            }
+        }
     }
 
     @Override
