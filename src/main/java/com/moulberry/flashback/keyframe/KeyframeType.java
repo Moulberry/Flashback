@@ -1,13 +1,12 @@
 package com.moulberry.flashback.keyframe;
 
-import com.moulberry.flashback.keyframe.handler.KeyframeHandler;
-import com.moulberry.flashback.state.KeyframeTrack;
 import org.jetbrains.annotations.Nullable;
-
-import java.util.function.Consumer;
 
 public interface KeyframeType<T extends Keyframe> {
 
+    default @Nullable String icon() {
+        return null;
+    }
     String name();
     String id();
     @Nullable T createDirect();

@@ -23,6 +23,11 @@ public class CameraOrbitKeyframeType implements KeyframeType<CameraOrbitKeyframe
     }
 
     @Override
+    public @Nullable String icon() {
+        return "\ue577";
+    }
+
+    @Override
     public String name() {
         return "Camera Orbit";
     }

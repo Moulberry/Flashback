@@ -21,6 +21,11 @@ public class TimeOfDayKeyframeType implements KeyframeType<TimeOfDayKeyframe> {
     }
 
     @Override
+    public @Nullable String icon() {
+        return "\ue518";
+    }
+
+    @Override
     public String name() {
         return "Time of day";
     }

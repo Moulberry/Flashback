@@ -17,6 +17,12 @@ public class CameraShakeKeyframeType implements KeyframeType<CameraShakeKeyframe
     private CameraShakeKeyframeType() {
     }
 
+
+    @Override
+    public @Nullable String icon() {
+        return "\uefeb";
+    }
+
     @Override
     public String name() {
         return "Camera Shake";
