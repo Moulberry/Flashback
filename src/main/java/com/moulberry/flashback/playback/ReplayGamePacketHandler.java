@@ -948,7 +948,12 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
     @Override
     public void handleRotateMob(ClientboundRotateHeadPacket clientboundRotateHeadPacket) {
         Entity entity = this.getEntityOrPending(clientboundRotateHeadPacket.entityId);
-        if (entity == null || entity.getId() == this.localPlayerId) {
+        if (entity == null) {
+            forward(clientboundRotateHeadPacket);
+            return;
+        }
+
+        if (entity.getId() == this.localPlayerId) {
             return;
         }
 
@@ -991,6 +996,7 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
     public void handleSetEntityData(ClientboundSetEntityDataPacket clientboundSetEntityDataPacket) {
         Entity entity = this.getEntityOrPending(clientboundSetEntityDataPacket.id());
         if (entity == null) {
+            forward(clientboundSetEntityDataPacket);
             return;
         }
 
@@ -1007,6 +1013,7 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
     public void handleSetEntityMotion(ClientboundSetEntityMotionPacket clientboundSetEntityMotionPacket) {
         Entity entity = this.getEntityOrPending(clientboundSetEntityMotionPacket.getId());
         if (entity == null) {
+            forward(clientboundSetEntityMotionPacket);
             return;
         }
 
@@ -1020,6 +1027,10 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
     @Override
     public void handleSetEquipment(ClientboundSetEquipmentPacket clientboundSetEquipmentPacket) {
         Entity entity = this.getEntityOrPending(clientboundSetEquipmentPacket.getEntity());
+        if (entity == null) {
+            forward(clientboundSetEquipmentPacket);
+            return;
+        }
         if (entity instanceof LivingEntity livingEntity) {
             clientboundSetEquipmentPacket.getSlots().forEach((pair) -> {
                 livingEntity.setItemSlot(pair.getFirst(), pair.getSecond());
@@ -1161,6 +1172,7 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
     public void handleTeleportEntity(ClientboundTeleportEntityPacket clientboundTeleportEntityPacket) {
         Entity entity = this.getEntityOrPending(clientboundTeleportEntityPacket.getId());
         if (entity == null) {
+            forward(clientboundTeleportEntityPacket);
             return;
         }
 
@@ -1187,6 +1199,10 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
     @Override
     public void handleUpdateAttributes(ClientboundUpdateAttributesPacket clientboundUpdateAttributesPacket) {
         Entity entity = this.getEntityOrPending(clientboundUpdateAttributesPacket.getEntityId());
+        if (entity == null) {
+            forward(clientboundUpdateAttributesPacket);
+            return;
+        }
         if (entity instanceof LivingEntity livingEntity) {
             AttributeMap attributeMap = livingEntity.getAttributes();
             for (ClientboundUpdateAttributesPacket.AttributeSnapshot snapshot : clientboundUpdateAttributesPacket.getValues()) {
@@ -1207,6 +1223,10 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
     @Override
     public void handleUpdateMobEffect(ClientboundUpdateMobEffectPacket clientboundUpdateMobEffectPacket) {
         Entity entity = this.getEntityOrPending(clientboundUpdateMobEffectPacket.getEntityId());
+        if (entity == null) {
+            forward(clientboundUpdateMobEffectPacket);
+            return;
+        }
         if (entity instanceof LivingEntity livingEntity) {
             Holder<MobEffect> holder = clientboundUpdateMobEffectPacket.getEffect();
             MobEffectInstance mobEffectInstance = new MobEffectInstance(holder, clientboundUpdateMobEffectPacket.getEffectDurationTicks(), clientboundUpdateMobEffectPacket.getEffectAmplifier(),
