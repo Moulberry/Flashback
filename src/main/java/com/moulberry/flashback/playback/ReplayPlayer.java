@@ -40,7 +40,7 @@ public class ReplayPlayer extends ServerPlayer {
         return new CommonPlayerSpawnInfo(serverLevel.dimensionTypeRegistration(), serverLevel.dimension(),
             ((ServerLevelExt)serverLevel).flashback$getSeedHash(), this.gameMode.getGameModeForPlayer(),
             this.gameMode.getPreviousGameModeForPlayer(),
-            serverLevel.isDebug(), serverLevel.isFlat(), this.getLastDeathLocation(), this.getPortalCooldown());
+            serverLevel.isDebug(), serverLevel.isFlat(), this.getLastDeathLocation(), this.getPortalCooldown(), serverLevel.getSeaLevel());
     }
 
     @Override
@@ -53,6 +53,10 @@ public class ReplayPlayer extends ServerPlayer {
     }
 
     @Override
+    public void resetStat(Stat<?> stat) {
+    }
+
+    @Override
     public void indicateDamage(double d, double e) {
     }
 
@@ -61,12 +65,18 @@ public class ReplayPlayer extends ServerPlayer {
     }
 
     @Override
-    public boolean hurt(DamageSource damageSource, float f) {
+    public boolean hurtClient(DamageSource damageSource) {
         return false;
     }
 
     @Override
-    public boolean isInvulnerableTo(DamageSource damageSource) {
+    public boolean hurtServer(ServerLevel serverLevel, DamageSource damageSource, float f) {
+        return false;
+    }
+
+    @Override
+    public boolean isInvulnerableTo(ServerLevel serverLevel, DamageSource damageSource) {
         return true;
     }
+
 }

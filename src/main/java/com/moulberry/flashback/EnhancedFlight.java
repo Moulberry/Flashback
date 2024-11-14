@@ -40,8 +40,8 @@ public class EnhancedFlight {
         }
 
         float movementY = 0;
-        if (player.input.shiftKeyDown) movementY -= 1;
-        if (player.input.jumping) movementY += 1;
+        if (player.input.keyPresses.shift()) movementY -= 1;
+        if (player.input.keyPresses.sprint()) movementY += 1;
         if (movementY != 0) {
             player.move(MoverType.SELF, new Vec3(0, flyingSpeed * movementY * 0.98, 0));
 

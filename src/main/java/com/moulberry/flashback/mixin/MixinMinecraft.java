@@ -101,9 +101,6 @@ public abstract class MixinMinecraft implements MinecraftExt {
     public abstract void setScreen(@Nullable Screen screen);
 
     @Shadow
-    private ProfilerFiller profiler;
-
-    @Shadow
     private @Nullable Overlay overlay;
 
     @Shadow
@@ -131,16 +128,8 @@ public abstract class MixinMinecraft implements MinecraftExt {
     public LocalPlayer player;
 
     @Shadow
-    @Final
-    public ParticleEngine particleEngine;
-
-    @Shadow
     @Nullable
     public Entity cameraEntity;
-
-    @Shadow
-    @Final
-    public DeltaTracker.Timer timer;
 
     @Inject(method="<init>", at=@At("RETURN"))
     public void init(GameConfig gameConfig, CallbackInfo ci) {
@@ -337,7 +326,6 @@ public abstract class MixinMinecraft implements MinecraftExt {
         }
         LevelLoadingScreen levelLoadingScreen = new LevelLoadingScreen(this.progressListener.get());
         this.setScreen(levelLoadingScreen);
-        this.profiler.push("waitForServer");
         while (!this.singleplayerServer.isReady() || this.overlay != null) {
             levelLoadingScreen.tick();
             this.runTick(false);
@@ -348,7 +336,6 @@ public abstract class MixinMinecraft implements MinecraftExt {
             }
             this.handleDelayedCrash();
         }
-        this.profiler.pop();
         Duration duration = Duration.between(instant, Instant.now());
         SocketAddress socketAddress = this.singleplayerServer.getConnection().startMemoryChannel();
         Connection connection = Connection.connectToLocalServer(socketAddress);

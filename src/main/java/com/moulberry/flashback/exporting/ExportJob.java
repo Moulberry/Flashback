@@ -1,5 +1,6 @@
 package com.moulberry.flashback.exporting;
 
+import com.mojang.blaze3d.ProjectionType;
 import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.pipeline.TextureTarget;
 import com.mojang.blaze3d.platform.GlStateManager;
@@ -27,8 +28,9 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.player.LocalPlayer;
-import net.minecraft.client.renderer.FogRenderer;
-import net.minecraft.client.renderer.ShaderInstance;
+import net.minecraft.client.renderer.CompiledShaderProgram;
+import net.minecraft.client.renderer.CoreShaders;
+import net.minecraft.client.renderer.FogParameters;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.network.chat.Component;
 import net.minecraft.sounds.SoundEvents;
@@ -144,7 +146,7 @@ public class ExportJob {
             Files.createDirectories(exportTempFolder);
 
             RenderTarget mainTarget = Minecraft.getInstance().mainRenderTarget;
-            infoRenderTarget = new TextureTarget(mainTarget.width, mainTarget.height, false, Minecraft.ON_OSX);
+            infoRenderTarget = new TextureTarget(mainTarget.width, mainTarget.height, false);
 
             try (VideoWriter encoder = createVideoWriter(this.settings, tempFileName);
                  SaveableFramebufferQueue downloader = new SaveableFramebufferQueue(this.settings.resolutionX(), this.settings.resolutionY())) {
@@ -260,13 +262,13 @@ public class ExportJob {
                 Window window = Minecraft.getInstance().getWindow();
                 RenderTarget renderTarget = Minecraft.getInstance().mainRenderTarget;
                 renderTarget.bindWrite(true);
-                RenderSystem.clear(16640, Minecraft.ON_OSX);
-                Minecraft.getInstance().gameRenderer.render(Minecraft.getInstance().timer, true);
+                RenderSystem.clear(16640);
+                Minecraft.getInstance().gameRenderer.render(Minecraft.getInstance().deltaTracker, true);
                 renderTarget.unbindWrite();
 
                 this.shouldChangeFramebufferSize = false;
-                renderTarget.blitToScreen(window.getWidth(), window.getHeight(), false);
-                window.updateDisplay();
+                renderTarget.blitToScreen(window.getWidth(), window.getHeight());
+                window.updateDisplay(null);
                 this.shouldChangeFramebufferSize = true;
 
                 LockSupport.parkNanos("waiting for pause overlay to disappear", 50_000_000L);
@@ -293,14 +295,14 @@ public class ExportJob {
             RenderTarget renderTarget = Minecraft.getInstance().mainRenderTarget;
 
             renderTarget.bindWrite(true);
-            RenderSystem.clear(16640, Minecraft.ON_OSX);
+            RenderSystem.clear(16640);
 
             // Perform rendering
             PerfectFrames.waitUntilFrameReady();
-            FogRenderer.setupNoFog();
+            RenderSystem.setShaderFog(FogParameters.NO_FOG);
             RenderSystem.enableCull();
 
-            DeltaTracker.Timer timer = Minecraft.getInstance().timer;
+            DeltaTracker.Timer timer = Minecraft.getInstance().deltaTracker;
             timer.updateFrozenState(false);
             timer.updatePauseState(false);
             timer.deltaTicks = deltaTicksFloat;
@@ -331,14 +333,13 @@ public class ExportJob {
                 SOFTLoopback.alcRenderSamplesSOFT(device, audioBuffer, renderSamples);
             }
 
-            this.shouldChangeFramebufferSize = false;
-            cancel = finishFrame(renderTarget, infoRenderTarget, tickIndex, ticks.size());
-            this.shouldChangeFramebufferSize = true;
-
-            submitDownloadedFrames(videoWriter, downloader, false);
-
             saveable.audioBuffer = audioBuffer;
             downloader.startDownload(renderTarget, saveable, this.settings.ssaa());
+            submitDownloadedFrames(videoWriter, downloader, false);
+
+            this.shouldChangeFramebufferSize = false;
+            cancel = finishFrame(renderTarget, tickIndex, ticks.size());
+            this.shouldChangeFramebufferSize = true;
 
             if (cancel) {
                 ExportJobQueue.drainingQueue = false;
@@ -483,52 +484,26 @@ public class ExportJob {
         }
     }
 
-    private boolean finishFrame(RenderTarget framebuffer, RenderTarget infoRenderTarget, int currentFrame, int totalFrames) {
+    private boolean finishFrame(RenderTarget framebuffer, int currentFrame, int totalFrames) {
         boolean cancel = false;
 
         long currentTime = System.currentTimeMillis();
         if (currentTime - this.lastRenderMillis > 1000/60 || currentFrame == totalFrames) {
             Window window = Minecraft.getInstance().getWindow();
 
-            {
-                GlStateManager._colorMask(true, true, true, false);
-                GlStateManager._disableDepthTest();
-                GlStateManager._depthMask(false);
-                GlStateManager._viewport(0, 0, window.getWidth(), window.getHeight());
-                GlStateManager._disableBlend();
-
-                Minecraft minecraft = Minecraft.getInstance();
-                ShaderInstance shaderInstance = Objects.requireNonNull(minecraft.gameRenderer.blitShader, "Blit shader not loaded");
-                shaderInstance.setSampler("DiffuseSampler", framebuffer.colorTextureId);
-                shaderInstance.apply();
-                BufferBuilder bufferBuilder = RenderSystem.renderThreadTesselator().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.BLIT_SCREEN);
-                bufferBuilder.addVertex(0.0F, 0.0F, 0.0F);
-                bufferBuilder.addVertex(1.0F, 0.0F, 0.0F);
-                bufferBuilder.addVertex(1.0F, 1.0F, 0.0F);
-                bufferBuilder.addVertex(0.0F, 1.0F, 0.0F);
-                BufferUploader.draw(bufferBuilder.buildOrThrow());
-                shaderInstance.clear();
-                GlStateManager._depthMask(true);
-                GlStateManager._colorMask(true, true, true, true);
-            }
-
             this.lastRenderMillis = currentTime;
 
             Font font = Minecraft.getInstance().font;
             var bufferSource = Minecraft.getInstance().renderBuffers().bufferSource();
             bufferSource.endBatch();
-            infoRenderTarget.bindWrite(true);
-
-            RenderSystem.clearColor(0.0f, 0.0f, 0.0f, 0.0f);
-
-            RenderSystem.clear(16640, Minecraft.ON_OSX);
+            framebuffer.bindWrite(true);
 
             float guiScale = 4f;
-            int scaledWidth = (int) Math.ceil(infoRenderTarget.width / guiScale);
-            int scaledHeight = (int) Math.ceil(infoRenderTarget.height / guiScale);
+            int scaledWidth = (int) Math.ceil(framebuffer.width / guiScale);
+            int scaledHeight = (int) Math.ceil(framebuffer.height / guiScale);
 
             Matrix4f matrix4f = new Matrix4f().setOrtho(0.0f, scaledWidth, scaledHeight, 0.0f, 1000.0f, 21000.0f);
-            RenderSystem.setProjectionMatrix(matrix4f, VertexSorting.ORTHOGRAPHIC_Z);
+            RenderSystem.setProjectionMatrix(matrix4f, ProjectionType.ORTHOGRAPHIC);
 
             Matrix4f matrix = new Matrix4f();
             matrix.translate(0.0f, 0.0f, -11000.0f);
@@ -633,12 +608,9 @@ public class ExportJob {
             bufferSource.endBatch();
             RenderSystem.enableDepthTest();
 
-            infoRenderTarget.unbindWrite();
-
-            RenderSystem.defaultBlendFunc();
-            RenderSystem.enableBlend();
-            infoRenderTarget.blitToScreen(window.getWidth(), window.getHeight(), false);
-            Minecraft.getInstance().getWindow().updateDisplay();
+            framebuffer.unbindWrite();
+            framebuffer.blitToScreen(window.getWidth(), window.getHeight());
+            Minecraft.getInstance().getWindow().updateDisplay(null);
         }
 
         return cancel;

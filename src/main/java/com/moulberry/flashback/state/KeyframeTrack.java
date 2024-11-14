@@ -7,6 +7,7 @@ import com.moulberry.flashback.keyframe.handler.KeyframeHandler;
 import com.moulberry.flashback.keyframe.handler.MinecraftKeyframeHandler;
 import com.moulberry.flashback.keyframe.handler.ReplayServerKeyframeHandler;
 import com.moulberry.flashback.keyframe.impl.TimelapseKeyframe;
+import com.moulberry.flashback.keyframe.interpolation.InterpolationType;
 import com.moulberry.flashback.keyframe.interpolation.SidedInterpolationType;
 import com.moulberry.flashback.keyframe.types.TimelapseKeyframeType;
 
@@ -82,12 +83,12 @@ public class KeyframeTrack {
 
         if (isUsingSmooth) {
             Map.Entry<Integer, Keyframe> beforeEntry = keyframeTimes.floorEntry(lowerEntry.getKey() - 1);
-            if (beforeEntry == null) {
+            if (beforeEntry == null || beforeEntry.getValue().interpolationType() == InterpolationType.HOLD) { // don't include the right-side of the hold keyframe
                 beforeEntry = lowerEntry;
             }
 
             Map.Entry<Integer, Keyframe> afterAfterEntry = keyframeTimes.ceilingEntry(ceilEntry.getKey() + 1);
-            if (afterAfterEntry == null) {
+            if (afterAfterEntry == null || ceilEntry.getValue().interpolationType() == InterpolationType.HOLD) { // ceil is to the left of afterAfter
                 afterAfterEntry = ceilEntry;
             }
 

@@ -10,7 +10,7 @@ buildscript {
 }
 
 plugins {
-	id 'fabric-loom' version '1.6-SNAPSHOT'
+	id 'fabric-loom' version '1.8-SNAPSHOT'
     id 'com.github.johnrengelman.shadow' version "7.1.2"
 	id 'maven-publish'
 }
@@ -72,16 +72,8 @@ dependencies {
     modCompileOnly("maven.modrinth:simple-voice-chat:95BK1U8I")
     modCompileOnly("maven.modrinth:replaymod:NtlpUQgI")
     // modCompileOnly("maven.modrinth:distanthorizons:pEvLEY5E")
-	modImplementation("maven.modrinth:modmenu:xhN1IvHi")
-//	modCompileOnly("maven.modrinth:axiom:D3uDJmiB")
-
-	// modRuntimeOnly("maven.modrinth:sodium:mc1.20.6-0.5.11")
-
-//    shadow(implementation("org.jcodec:jcodec:0.2.5"))
-//    shadow(implementation("org.jcodec:jcodec-javase:0.2.5"))
-//    shadow(implementation("io.humble:humble-video-all:0.3.0"))
-
-    include(implementation(annotationProcessor("com.bawnorton.mixinsquared:mixinsquared-fabric:0.2.0-beta.6")))
+	modCompileOnly("maven.modrinth:modmenu:xhN1IvHi")
+	// modCompileOnly("maven.modrinth:axiom:D3uDJmiB")
 
 	shadow(implementation("org.bytedeco:javacv-platform:1.5.10") {
 		exclude group: "org.bytedeco", module: "artoolkitplus"

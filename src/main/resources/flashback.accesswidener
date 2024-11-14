@@ -37,6 +37,8 @@ accessible field net/minecraft/network/protocol/game/ClientboundLevelChunkWithLi
 mutable field net/minecraft/network/protocol/game/ClientboundLevelChunkWithLightPacket lightData Lnet/minecraft/network/protocol/game/ClientboundLightUpdatePacketData;
 
 accessible field net/minecraft/client/multiplayer/ClientLevel$ClientLevelData isFlat Z
+accessible field net/minecraft/client/multiplayer/ClientLevel tickDayTime Z
+accessible field net/minecraft/client/multiplayer/ClientLevel lightUpdateQueue Ljava/util/Deque;
 
 # Entity
 accessible field net/minecraft/network/syncher/SynchedEntityData itemsById [Lnet/minecraft/network/syncher/SynchedEntityData$DataItem;
@@ -111,9 +113,9 @@ mutable field net/minecraft/server/level/ServerEntity broadcast Ljava/util/funct
 accessible field net/minecraft/server/level/ServerEntity entity Lnet/minecraft/world/entity/Entity;
 mutable field net/minecraft/server/level/ServerEntity entity Lnet/minecraft/world/entity/Entity;
 accessible field net/minecraft/server/level/ServerEntity lastSentMovement Lnet/minecraft/world/phys/Vec3;
-accessible field net/minecraft/server/level/ServerEntity lastSentYRot I
-accessible field net/minecraft/server/level/ServerEntity lastSentXRot I
-accessible field net/minecraft/server/level/ServerEntity lastSentYHeadRot I
+accessible field net/minecraft/server/level/ServerEntity lastSentYRot B
+accessible field net/minecraft/server/level/ServerEntity lastSentXRot B
+accessible field net/minecraft/server/level/ServerEntity lastSentYHeadRot B
 accessible field net/minecraft/server/level/ServerEntity wasOnGround Z
 accessible field net/minecraft/server/level/ServerEntity trackedDataValues Ljava/util/List;
 accessible field net/minecraft/server/level/ServerEntity updateInterval I
@@ -130,13 +132,11 @@ accessible field com/mojang/blaze3d/platform/Window height I
 # Visuals
 accessible field net/minecraft/client/Camera eyeHeight F
 accessible method net/minecraft/client/multiplayer/ClientLevel getEntities ()Lnet/minecraft/world/level/entity/LevelEntityGetter;
-accessible field net/minecraft/client/renderer/FogRenderer fogRed F
-accessible field net/minecraft/client/renderer/FogRenderer fogGreen F
-accessible field net/minecraft/client/renderer/FogRenderer fogBlue F
+accessible field net/minecraft/client/renderer/FogRenderer targetBiomeFog I
 
 # Exporting
 accessible field net/minecraft/client/Minecraft clientTickCount J
-accessible field net/minecraft/client/Minecraft timer Lnet/minecraft/client/DeltaTracker$Timer;
+accessible field net/minecraft/client/Minecraft deltaTracker Lnet/minecraft/client/DeltaTracker$Timer;
 accessible field net/minecraft/client/DeltaTracker$Timer deltaTicks F
 accessible field net/minecraft/client/DeltaTracker$Timer realtimeDeltaTicks F
 accessible field net/minecraft/client/DeltaTracker$Timer deltaTickResidual F

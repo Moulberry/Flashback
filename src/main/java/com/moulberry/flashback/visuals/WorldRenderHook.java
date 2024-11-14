@@ -17,6 +17,7 @@ import com.moulberry.flashback.state.EditorStateManager;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
+import net.minecraft.client.renderer.CoreShaders;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.network.chat.Component;
@@ -88,7 +89,7 @@ public class WorldRenderHook {
             if (meshData != null) {
                 RenderSystem.enableBlend();
                 RenderSystem.defaultBlendFunc();
-                RenderSystem.setShader(GameRenderer::getPositionTexColorShader);
+                RenderSystem.setShader(CoreShaders.POSITION_TEX_COLOR);
                 RenderSystem.setShaderTexture(0, ResourceLocation.parse("flashback:world_marker_circle.png"));
                 BufferUploader.drawWithShader(meshData);
             }

@@ -24,6 +24,7 @@ import net.minecraft.client.gui.components.toasts.SystemToast;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.client.gui.navigation.CommonInputs;
 import net.minecraft.client.gui.screens.*;
+import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.resources.language.I18n;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.network.chat.CommonComponents;
@@ -348,7 +349,7 @@ public class ReplaySelectionList extends ObjectSelectionList<ReplaySelectionList
 
         @Override
         public void render(GuiGraphics guiGraphics, int index, int y, int x, int width, int height, int mouseX, int mouseY, boolean hovered, float partialTick) {
-            guiGraphics.blitSprite(SPRITES.get(true, hovered), x + 4, y + 2, width - 8, height - 4);
+            guiGraphics.blitSprite(RenderType::guiTextured, SPRITES.get(true, hovered), x + 4, y + 2, width - 8, height - 4);
 
             int p = (this.minecraft.screen.width - this.minecraft.font.width(LOAD_REPLAY_LABEL)) / 2;
             int q = y + (height - this.minecraft.font.lineHeight) / 2 + 1;
@@ -411,7 +412,7 @@ public class ReplaySelectionList extends ObjectSelectionList<ReplaySelectionList
             guiGraphics.drawString(this.minecraft.font, info, x + ICON_WIDTH + 3, y + this.minecraft.font.lineHeight + this.minecraft.font.lineHeight + 3, 0xFF808080, false);
 
             RenderSystem.enableBlend();
-            guiGraphics.blit(this.icon.textureLocation(), x, y, 0.0f, 0.0f, 32, 32, 32, 32);
+            guiGraphics.blit(RenderType::guiTextured, this.icon.textureLocation(), x, y, 0.0f, 0.0f, 32, 32, 32, 32);
             RenderSystem.disableBlend();
 
             if (this.minecraft.options.touchscreen().get() || hovered) {
@@ -431,7 +432,7 @@ public class ReplaySelectionList extends ObjectSelectionList<ReplaySelectionList
                 } else {
                     iconOverlay = hoveredIcon ? JOIN_HIGHLIGHTED_SPRITE : JOIN_SPRITE;
                 }
-                guiGraphics.blitSprite(iconOverlay, x, y, ICON_WIDTH, ICON_HEIGHT);
+                guiGraphics.blitSprite(RenderType::guiTextured, iconOverlay, x, y, ICON_WIDTH, ICON_HEIGHT);
             }
         }
 

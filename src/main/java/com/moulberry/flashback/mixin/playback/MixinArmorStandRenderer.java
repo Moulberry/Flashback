@@ -4,6 +4,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 import com.moulberry.flashback.Flashback;
 import net.minecraft.client.renderer.entity.ArmorStandRenderer;
+import net.minecraft.client.renderer.entity.state.ArmorStandRenderState;
 import net.minecraft.world.entity.decoration.ArmorStand;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -18,8 +19,8 @@ public class MixinArmorStandRenderer {
      * If the game time isn't updated, it'll just keep on playing it (even if it wasn't hit)
      */
 
-    @Inject(method = "setupRotations(Lnet/minecraft/world/entity/decoration/ArmorStand;Lcom/mojang/blaze3d/vertex/PoseStack;FFFF)V", at = @At("HEAD"), cancellable = true)
-    public void setupRotations(ArmorStand armorStand, PoseStack poseStack, float f, float g, float h, float i, CallbackInfo ci) {
+    @Inject(method = "setupRotations(Lnet/minecraft/client/renderer/entity/state/ArmorStandRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;FF)V", at = @At("HEAD"), cancellable = true)
+    public void setupRotations(ArmorStandRenderState armorStandRenderState, PoseStack poseStack, float f, float g, CallbackInfo ci) {
         if (Flashback.isInReplay()) {
             poseStack.mulPose(Axis.YP.rotationDegrees(180.0F - g));
             ci.cancel();

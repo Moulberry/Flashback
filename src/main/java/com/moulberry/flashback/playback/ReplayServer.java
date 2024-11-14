@@ -35,6 +35,7 @@ import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.fabricmc.loader.api.FabricLoader;
+import net.minecraft.FileUtil;
 import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.server.IntegratedServer;
@@ -60,9 +61,13 @@ import net.minecraft.server.level.progress.ChunkProgressListenerFactory;
 import net.minecraft.server.network.ConfigurationTask;
 import net.minecraft.server.packs.repository.PackRepository;
 import net.minecraft.server.players.PlayerList;
+import net.minecraft.stats.ServerStatsCounter;
 import net.minecraft.util.Mth;
 import net.minecraft.world.BossEvent;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.ExperienceOrb;
+import net.minecraft.world.entity.PositionMoveRotation;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.flag.FeatureFlagSet;
@@ -72,10 +77,12 @@ import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.WorldDataConfiguration;
 import net.minecraft.world.level.chunk.LevelChunk;
+import net.minecraft.world.level.storage.LevelResource;
 import net.minecraft.world.level.storage.LevelStorageSource;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.FileSystem;
@@ -85,16 +92,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.TreeMap;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BooleanSupplier;
@@ -374,6 +372,13 @@ public class ReplayServer extends IntegratedServer {
                     }
                 }
             }
+
+            @Override
+            public ServerStatsCounter getPlayerStats(Player player) {
+                File statsDir = this.getServer().getWorldPath(LevelResource.PLAYER_STATS_DIR).toFile();
+                File statsFile = new File(statsDir, player.getUUID() + ".json");
+                return new ServerStatsCounter(this.getServer(), statsFile);
+            }
         });
 
         super.initServer();
@@ -633,6 +638,10 @@ public class ReplayServer extends IntegratedServer {
                             entity.setOnGround(onGround);
                         }
 
+                        if (entity instanceof ItemEntity || entity instanceof ExperienceOrb) {
+                            continue;
+                        }
+
                         positionUpdateSet.add(id);
                     }
                 }
@@ -667,7 +676,7 @@ public class ReplayServer extends IntegratedServer {
                 int z = packet.getZ();
                 LevelChunk chunk = this.gamePacketHandler.level().getChunk(x, z);
 
-                if (!doesCachedChunkIdMatch(chunk, index)) {
+                if (Flashback.EXPORT_JOB != null || !doesCachedChunkIdMatch(chunk, index)) {
                     packet.handle(this.gamePacketHandler);
 
                     if (chunk instanceof LevelChunkExt ext) {
@@ -1009,16 +1018,17 @@ public class ReplayServer extends IntegratedServer {
 
                         Vec3 trackingPosition = serverEntity.entity.trackingPosition();
 
-                        int quantizedYRot = Mth.floor(serverEntity.entity.getYRot() * 256.0F / 360.0F);
-                        int quantizedXRot = Mth.floor(serverEntity.entity.getXRot() * 256.0F / 360.0F);
+                        byte quantizedYRot = (byte) Mth.floor(serverEntity.entity.getYRot() * 256.0F / 360.0F);
+                        byte quantizedXRot = (byte) Mth.floor(serverEntity.entity.getXRot() * 256.0F / 360.0F);
 
                         if (!serverEntity.positionCodec.getBase().equals(trackingPosition)) {
-                            trackedEntity.broadcast(new ClientboundTeleportEntityPacket(serverEntity.entity));
+                            trackedEntity.broadcast(new ClientboundTeleportEntityPacket(serverEntity.entity.getId(),
+                                    PositionMoveRotation.of(serverEntity.entity), Set.of(), serverEntity.wasOnGround));
                             serverEntity.positionCodec.setBase(trackingPosition);
                             serverEntity.lastSentYRot = quantizedYRot;
                             serverEntity.lastSentXRot = quantizedXRot;
                         } else if (quantizedYRot != serverEntity.lastSentYRot || quantizedXRot != serverEntity.lastSentXRot) {
-                            trackedEntity.broadcast(new ClientboundMoveEntityPacket.Rot(entityId, (byte) quantizedYRot, (byte) quantizedXRot, serverEntity.wasOnGround));
+                            trackedEntity.broadcast(new ClientboundMoveEntityPacket.Rot(entityId, quantizedYRot, quantizedXRot, serverEntity.wasOnGround));
                             serverEntity.lastSentYRot = quantizedYRot;
                             serverEntity.lastSentXRot = quantizedXRot;
                         }
@@ -1196,8 +1206,8 @@ public class ReplayServer extends IntegratedServer {
             }
             if (shouldFollow) {
                 replayViewer.followLocalPlayerNextTick = false;
-                replayViewer.teleportTo(currentLevel, follow.getX(), follow.getY(), follow.getZ(),
-                    follow.getYRot(), follow.getXRot());
+                replayViewer.teleportTo(currentLevel, follow.getX(), follow.getY(), follow.getZ(), Set.of(),
+                    follow.getYRot(), follow.getXRot(), false);
             }
         }
 

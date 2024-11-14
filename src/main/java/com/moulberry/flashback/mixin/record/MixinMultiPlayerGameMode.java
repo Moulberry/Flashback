@@ -31,7 +31,7 @@ public class MixinMultiPlayerGameMode {
                 return;
             }
 
-            Optional<Holder.Reference<SoundEvent>> builtinSoundEvent = BuiltInRegistries.SOUND_EVENT.getHolder(soundInstance.getLocation());
+            Optional<Holder.Reference<SoundEvent>> builtinSoundEvent = BuiltInRegistries.SOUND_EVENT.get(soundInstance.getLocation());
             Holder<SoundEvent> holder;
             if (builtinSoundEvent.isEmpty()) {
                 holder = Holder.direct(SoundEvent.createVariableRangeEvent(soundInstance.getLocation()));

@@ -43,6 +43,8 @@ public abstract class MixinLevelChunk extends ChunkAccess implements LevelChunkE
     @Shadow
     public abstract @Nullable BlockEntity getBlockEntity(BlockPos blockPos, LevelChunk.EntityCreationType entityCreationType);
 
+    @Shadow public abstract void markUnsaved();
+
     public MixinLevelChunk(ChunkPos chunkPos, UpgradeData upgradeData, LevelHeightAccessor levelHeightAccessor, Registry<Biome> registry, long l, @Nullable LevelChunkSection[] levelChunkSections, @Nullable BlendingData blendingData) {
         super(chunkPos, upgradeData, levelHeightAccessor, registry, l, levelChunkSections, blendingData);
     }
@@ -98,7 +100,7 @@ public abstract class MixinLevelChunk extends ChunkAccess implements LevelChunkE
         }
 
         // Update light
-        if (LightEngine.hasDifferentLightProperties(this, blockPos, oldBlockState, blockState)) {
+        if (LightEngine.hasDifferentLightProperties(oldBlockState, blockState)) {
             if (this.skyLightSources != null) {
                 this.skyLightSources.update(this, localX, y, localZ);
             }
@@ -126,7 +128,7 @@ public abstract class MixinLevelChunk extends ChunkAccess implements LevelChunkE
             }
         }
 
-        this.unsaved = true;
+        this.markUnsaved();
     }
 
 }

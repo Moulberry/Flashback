@@ -3,7 +3,6 @@
   "package": "com.moulberry.flashback.mixin",
   "compatibilityLevel": "JAVA_21",
   "client": [
-    "MixinAbstractClientPlayer",
     "MixinDebugScreenOverlay",
     "MixinLevelRenderer",
     "MixinMinecraft",
@@ -28,6 +27,7 @@
     "record.MixinMultiPlayerGameMode",
     "ui.MixinPauseScreen",
     "ui.MixinTitleScreen",
+    "visuals.MixinAbstractClientPlayer",
     "visuals.MixinBossHealthOverlay",
     "visuals.MixinClientLevel",
     "visuals.MixinClientLevelData",
@@ -35,13 +35,15 @@
     "visuals.MixinEntityRenderer",
     "visuals.MixinFogRenderer",
     "visuals.MixinGui",
+    "visuals.MixinLevel",
     "visuals.MixinLevelRenderer",
     "visuals.MixinLightTexture",
-    "visuals.MixinLivingEntityRenderer",
     "visuals.MixinLoadingOverlay",
     "visuals.MixinMouseHandler",
     "visuals.MixinOptions",
-    "visuals.MixinRenderStateShard"
+    "visuals.MixinPlayer",
+    "visuals.MixinRenderStateShard",
+    "visuals.MixinWeatherEffectRenderer"
   ],
   "injectors": {
     "defaultRequire": 1
@@ -54,7 +56,7 @@
     "compat.bobby.FakeChunkManagerAccessor",
     "compat.bobby.MixinBobby",
     "compat.bobby.MixinBobbyFakeChunkManager",
-    "compat.fabric.MixinFabricMinecraftServer",
+    "compat.fabric.MixinFabricBiomeModificationImpl",
     "compat.fabric.MixinFabricServerPlayNetworking",
     "compat.iris.MixinIrisSystemTimeUniforms",
     "compat.replaymod.MixinReplayModRecording",
@@ -62,7 +64,6 @@
     "compat.voice_chat.MixinVoiceChatClientVoicechat",
     "compat.voice_chat.MixinVoiceChatRenderEvents",
     "compat.voice_chat.MixinVoiceChatSoundManager",
-    "playback.MixinAbstractMinecart",
     "playback.MixinAttributeInstance",
     "playback.MixinBoat",
     "playback.MixinChunkHolder",
@@ -83,7 +84,6 @@
     "replay_server.MixinServerEntity",
     "replay_server.MixinServerGamePacketListenerImpl",
     "replay_server.MixinServerLevel",
-    "replay_server.MixinServerLoginPacketListenerImpl",
-    "visuals.MixinLevel"
+    "replay_server.MixinServerLoginPacketListenerImpl"
   ]
 }

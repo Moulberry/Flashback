@@ -4,24 +4,20 @@ import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.pipeline.TextureTarget;
 import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.platform.NativeImage;
-import com.mojang.blaze3d.platform.TextureUtil;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.BufferUploader;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import com.moulberry.flashback.visuals.ShaderManager;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.ShaderInstance;
+import net.minecraft.client.renderer.CompiledShaderProgram;
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.opengl.GL11;
-import org.lwjgl.opengl.GL30C;
-import org.lwjgl.opengl.GL32C;
 
-import java.io.IOException;
 import java.nio.FloatBuffer;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 public class SaveableFramebufferQueue implements AutoCloseable {
 
@@ -38,7 +34,7 @@ public class SaveableFramebufferQueue implements AutoCloseable {
     public SaveableFramebufferQueue(int width, int height) {
         this.width = width;
         this.height = height;
-        this.flipBuffer = new TextureTarget(width, height, false, false);
+        this.flipBuffer = new TextureTarget(width, height, false);
 
         for (int i = 0; i < CAPACITY; i++) {
             this.available.add(new SaveableFramebuffer());
@@ -66,16 +62,18 @@ public class SaveableFramebufferQueue implements AutoCloseable {
         RenderSystem.disableCull();
 
         this.flipBuffer.bindWrite(true);
-        ShaderInstance flipShader = ShaderManager.blitScreenFlip;
-        flipShader.setSampler("DiffuseSampler", src.colorTextureId);
-        flipShader.apply();
+        CompiledShaderProgram shaderInstance = Objects.requireNonNull(
+                RenderSystem.setShader(ShaderManager.blitScreenFlip), "Blit shader not loaded"
+        );
+        shaderInstance.bindSampler("InSampler", src.colorTextureId);
+        shaderInstance.apply();
         BufferBuilder bufferBuilder = RenderSystem.renderThreadTesselator().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.BLIT_SCREEN);
         bufferBuilder.addVertex(0.0F, 1.0F, 0.0F);
         bufferBuilder.addVertex(1.0F, 1.0F, 0.0F);
         bufferBuilder.addVertex(1.0F, 0.0F, 0.0F);
         bufferBuilder.addVertex(0.0F, 0.0F, 0.0F);
         BufferUploader.draw(bufferBuilder.buildOrThrow());
-        flipShader.clear();
+        shaderInstance.clear();
 
         GlStateManager._depthMask(true);
         GlStateManager._colorMask(true, true, true, true);

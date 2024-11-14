@@ -39,6 +39,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.common.ClientboundCustomPayloadPacket;
 import net.minecraft.network.protocol.common.ClientboundResourcePackPopPacket;
 import net.minecraft.network.protocol.common.ClientboundResourcePackPushPacket;
 import net.minecraft.network.protocol.common.ClientboundUpdateTagsPacket;
@@ -78,6 +79,7 @@ import net.minecraft.world.scores.*;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
+import java.lang.ref.WeakReference;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -113,6 +115,7 @@ public class Recorder {
     private final WeakHashMap<Entity, Position> lastPositions = new WeakHashMap<>();
 
     // Local player data
+    private WeakReference<LocalPlayer> lastLocalPlayer = null;
     private final List<Object> lastPlayerEntityMeta = new ArrayList<>();
     private final Map<EquipmentSlot, ItemStack> lastPlayerEquipment = new EnumMap<>(EquipmentSlot.class);
     private final ItemStack[] lastHotbarItems = new ItemStack[9];
@@ -343,7 +346,7 @@ public class Recorder {
         if (this.lastPlayerPositionAndAngle != null) {
             int divisions = localPlayerUpdatesPerSecond / 20;
             Minecraft.getInstance().mouseHandler.handleAccumulatedMovement();
-            float nextPartialTick = Minecraft.getInstance().timer.getGameTimeDeltaPartialTick(true);
+            float nextPartialTick = Minecraft.getInstance().deltaTracker.getGameTimeDeltaPartialTick(true);
 
             double nextX = Mth.lerp(nextPartialTick, player.xo, player.getX());
             double nextY = Mth.lerp(nextPartialTick, player.yo, player.getY());
@@ -437,18 +440,12 @@ public class Recorder {
     private void writeLocalData() {
         LocalPlayer player = Minecraft.getInstance().player;
         if (player == null) {
-            this.lastPlayerEntityMeta.clear();
-            this.lastPlayerEquipment.clear();
-            this.lastDestroyPos = null;
-            this.lastDestroyProgress = -1;
-            this.lastSelectedSlot = -1;
-            this.lastExperienceProgress = -1;
-            this.lastTotalExperience = -1;
-            this.lastExperienceLevel = -1;
-            this.lastFoodLevel = -1;
-            this.lastSaturationLevel = -1;
-            Arrays.fill(this.lastHotbarItems, null);
             return;
+        }
+        // Reset local player data if player object changes
+        if (this.lastLocalPlayer == null || this.lastLocalPlayer.get() != player) {
+            this.resetLastLocalData();
+            this.lastLocalPlayer = new WeakReference<>(player);
         }
 
         List<Packet<? super ClientGamePacketListener>> gamePackets = new ArrayList<>();
@@ -471,7 +468,7 @@ public class Recorder {
 
             int selectedSlot = player.getInventory().selected;
             if (selectedSlot != this.lastSelectedSlot) {
-                gamePackets.add(new ClientboundSetCarriedItemPacket(selectedSlot));
+                gamePackets.add(new ClientboundSetHeldSlotPacket(selectedSlot));
                 this.lastSelectedSlot = selectedSlot;
             }
         }
@@ -519,13 +516,10 @@ public class Recorder {
             for (int i = 0; i < this.lastHotbarItems.length; i++) {
                 ItemStack hotbarItem = player.getInventory().getItem(i);
 
-                if (this.lastHotbarItems[i] == null) {
-                    this.lastHotbarItems[i] = hotbarItem.copy();
-                } else if (!ItemStack.matches(this.lastHotbarItems[i], hotbarItem)) {
+                if (this.lastHotbarItems[i] == null || !ItemStack.matches(this.lastHotbarItems[i], hotbarItem)) {
                     ItemStack copied = hotbarItem.copy();
                     this.lastHotbarItems[i] = copied;
-                    gamePackets.add(new ClientboundContainerSetSlotPacket(-2, 0, i, copied));
-
+                    gamePackets.add(new ClientboundContainerSetSlotPacket(0, 0, i, copied));
                 }
             }
         }
@@ -561,6 +555,20 @@ public class Recorder {
         this.wasSwinging = player.swinging;
 
         this.asyncReplaySaver.writeGamePackets(this.gamePacketCodec, gamePackets);
+    }
+
+    private void resetLastLocalData() {
+        this.lastPlayerEntityMeta.clear();
+        this.lastPlayerEquipment.clear();
+        this.lastDestroyPos = null;
+        this.lastDestroyProgress = -1;
+        this.lastSelectedSlot = -1;
+        this.lastExperienceProgress = -1;
+        this.lastTotalExperience = -1;
+        this.lastExperienceLevel = -1;
+        this.lastFoodLevel = -1;
+        this.lastSaturationLevel = -1;
+        Arrays.fill(this.lastHotbarItems, null);
     }
 
     private void writeEntityPositions() {
@@ -768,6 +776,13 @@ public class Recorder {
             }
         }
 
+        // Don't save fabric-screen-handler-api packets
+        if (packet instanceof ClientboundCustomPayloadPacket customPayloadPacket) {
+            if (customPayloadPacket.type().id().getNamespace().startsWith("fabric-screen-handler-api")) {
+                return;
+            }
+        }
+
         if (IgnoredPacketSet.isIgnored(packet)) {
             return;
         }
@@ -817,7 +832,7 @@ public class Recorder {
         RegistryLayer.createRegistryAccess().compositeAccess().registries().forEach(entry -> {
             if (entry.value().size() > 0) {
                 var tags = TagNetworkSerialization.serializeToNetwork(entry.value());
-                if (tags.size() > 0) {
+                if (!tags.isEmpty()) {
                     serializedTags.put(entry.key(), tags);
                 }
             }
@@ -826,9 +841,9 @@ public class Recorder {
             if (serializedTags.containsKey(entry.key())) {
                 return;
             }
-            if (RegistrySynchronization.NETWORKABLE_REGISTRIES.contains(entry.key()) && entry.value().size() > 0) {
+            if (RegistrySynchronization.isNetworkable(entry.key()) && entry.value().size() > 0) {
                 var tags = TagNetworkSerialization.serializeToNetwork(entry.value());
-                if (tags.size() > 0) {
+                if (!tags.isEmpty()) {
                     serializedTags.put(entry.key(), tags);
                 }
             }
@@ -849,7 +864,8 @@ public class Recorder {
         // Login packet
         long hashedSeed = level.getBiomeManager().biomeZoomSeed;
         CommonPlayerSpawnInfo commonPlayerSpawnInfo = new CommonPlayerSpawnInfo(level.dimensionTypeRegistration(), level.dimension(), hashedSeed,
-            gameMode.getPlayerMode(), gameMode.getPreviousPlayerMode(), level.isDebug(), level.getLevelData().isFlat, Optional.empty(), 0);
+            gameMode.getPlayerMode(), gameMode.getPreviousPlayerMode(), level.isDebug(), level.getLevelData().isFlat, Optional.empty(), 0,
+                level.getSeaLevel());
         var loginPacket = new ClientboundLoginPacket(localPlayer.getId(), level.getLevelData().isHardcore(), connection.levels(),
             1, Minecraft.getInstance().options.getEffectiveRenderDistance(), level.getServerSimulationDistance(),
             localPlayer.isReducedDebugInfo(), localPlayer.shouldShowDeathScreen(), localPlayer.getDoLimitedCrafting(), commonPlayerSpawnInfo, false);
@@ -870,17 +886,17 @@ public class Recorder {
                 PlayerInfo info = connection.getPlayerInfo(player.getUUID());
                 if (info != null) {
                     infoUpdatePacket.entries.add(new ClientboundPlayerInfoUpdatePacket.Entry(player.getUUID(),
-                        player.getGameProfile(), true, info.getLatency(), info.getGameMode(), info.getTabListDisplayName(), null));
+                        player.getGameProfile(), true, info.getLatency(), info.getGameMode(), info.getTabListDisplayName(), info.getTabListOrder(), null));
                 } else {
                     infoUpdatePacket.entries.add(new ClientboundPlayerInfoUpdatePacket.Entry(player.getUUID(),
-                        player.getGameProfile(), true, 0, GameType.DEFAULT_MODE, player.getDisplayName(), null));
+                        player.getGameProfile(), true, 0, GameType.DEFAULT_MODE, player.getDisplayName(), info.getTabListOrder(), null));
                 }
             }
         }
         for (PlayerInfo info : connection.getListedOnlinePlayers()) {
             if (addedEntries.add(info.getProfile().getId())) {
                 infoUpdatePacket.entries.add(new ClientboundPlayerInfoUpdatePacket.Entry(info.getProfile().getId(),
-                    info.getProfile(), true, info.getLatency(), info.getGameMode(), info.getTabListDisplayName(), null));
+                    info.getProfile(), true, info.getLatency(), info.getGameMode(), info.getTabListDisplayName(), info.getTabListOrder(), null));
             }
         }
         gamePackets.add(infoUpdatePacket);
@@ -925,7 +941,7 @@ public class Recorder {
         // Level info
         WorldBorder worldBorder = level.getWorldBorder();
         gamePackets.add(new ClientboundInitializeBorderPacket(worldBorder));
-        gamePackets.add(new ClientboundSetTimePacket(level.getGameTime(), level.getDayTime(), level.getGameRules().getBoolean(GameRules.RULE_DAYLIGHT)));
+        gamePackets.add(new ClientboundSetTimePacket(level.getGameTime(), level.getDayTime(), level.tickDayTime));
         gamePackets.add(new ClientboundSetDefaultSpawnPositionPacket(level.getSharedSpawnPos(), level.getSharedSpawnAngle()));
         if (level.isRaining()) {
             gamePackets.add(new ClientboundGameEventPacket(ClientboundGameEventPacket.START_RAINING, 0.0f));
@@ -986,11 +1002,13 @@ public class Recorder {
                 }));
 
                 // Ensure light is up-to-date
-                for (int i = 0; i < 1000; i++) {
-                    if (level.isLightUpdateQueueEmpty()) {
+                while (true) {
+                    Runnable runnable = level.lightUpdateQueue.poll();
+                    if (runnable == null) {
                         break;
+                    } else {
+                        runnable.run();
                     }
-                    level.pollLightUpdates();
                 }
 
                 // We get the light data on this thread to avoid
@@ -1009,16 +1027,24 @@ public class Recorder {
         }
 
         if (Flashback.getConfig().recordHotbar) {
+            this.lastExperienceProgress = localPlayer.experienceProgress;
+            this.lastTotalExperience = localPlayer.totalExperience;
+            this.lastExperienceLevel = localPlayer.experienceLevel;
             gamePackets.add(new ClientboundSetExperiencePacket(localPlayer.experienceProgress, localPlayer.totalExperience, localPlayer.experienceLevel));
 
             FoodData foodData = localPlayer.getFoodData();
+            this.lastFoodLevel = foodData.getFoodLevel();
+            this.lastSaturationLevel = foodData.getSaturationLevel();
             gamePackets.add(new ClientboundSetHealthPacket(localPlayer.getHealth(), foodData.getFoodLevel(), foodData.getSaturationLevel()));
 
-            gamePackets.add(new ClientboundSetCarriedItemPacket(localPlayer.getInventory().selected));
+            int selectedSlot = localPlayer.getInventory().selected;
+            this.lastSelectedSlot = selectedSlot;
+            gamePackets.add(new ClientboundSetHeldSlotPacket(selectedSlot));
 
             for (int i = 0; i < 9; i++) {
                 ItemStack hotbarItem = localPlayer.getInventory().getItem(i);
-                gamePackets.add(new ClientboundContainerSetSlotPacket(-2, 0, i, hotbarItem.copy()));
+                this.lastHotbarItems[i] = hotbarItem.copy();
+                gamePackets.add(new ClientboundContainerSetSlotPacket(0, 0, i, hotbarItem.copy()));
             }
         }
 

@@ -24,13 +24,10 @@ import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.ItemInHandRenderer;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.PostChain;
-import net.minecraft.client.renderer.ShaderInstance;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.GameType;
-import org.jetbrains.annotations.Nullable;
 import org.joml.Quaternionf;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
@@ -72,7 +69,7 @@ public abstract class MixinGameRenderer {
         AccurateEntityPositionHandler.apply(Minecraft.getInstance().level, deltaTracker);
     }
 
-    @Inject(method = "render", at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/systems/RenderSystem;clear(IZ)V", remap = false, ordinal = 0), cancellable = true)
+    @Inject(method = "render", at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/systems/RenderSystem;clear(I)V", remap = false, ordinal = 0), cancellable = true)
     public void render_noGui(DeltaTracker deltaTracker, boolean bl, CallbackInfo ci) {
         if (Flashback.isExporting() && Flashback.EXPORT_JOB.getSettings().noGui()) {
             ci.cancel();
@@ -128,18 +125,18 @@ public abstract class MixinGameRenderer {
     }
 
     @Inject(method = "getFov", at = @At("HEAD"), cancellable = true)
-    public void getFov(Camera camera, float f, boolean bl, CallbackInfoReturnable<Double> cir) {
+    public void getFov(Camera camera, float f, boolean bl, CallbackInfoReturnable<Float> cir) {
         if (Flashback.isInReplay()) {
             if (!bl) {
-                cir.setReturnValue(70.0);
+                cir.setReturnValue(70.0f);
                 return;
             }
             EditorState editorState = EditorStateManager.getCurrent();
             if (editorState != null && editorState.replayVisuals.overrideFov) {
-                cir.setReturnValue((double) editorState.replayVisuals.overrideFovAmount);
+                cir.setReturnValue(editorState.replayVisuals.overrideFovAmount);
             } else {
                 int fov = this.minecraft.options.fov().get().intValue();
-                cir.setReturnValue((double) fov);
+                cir.setReturnValue((float) fov);
             }
         }
     }

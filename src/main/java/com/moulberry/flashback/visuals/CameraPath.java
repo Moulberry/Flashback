@@ -1,5 +1,6 @@
 package com.moulberry.flashback.visuals;
 
+import com.mojang.blaze3d.buffers.BufferUsage;
 import com.mojang.blaze3d.platform.Window;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.BufferBuilder;
@@ -24,6 +25,9 @@ import com.moulberry.flashback.state.EditorStateManager;
 import com.moulberry.flashback.state.KeyframeTrack;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.CompiledShaderProgram;
+import net.minecraft.client.renderer.CoreShaders;
+import net.minecraft.client.renderer.FogParameters;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Matrix4f;
@@ -71,7 +75,7 @@ public class CameraPath {
                 MeshData meshData = bufferBuilder.build();
                 if (meshData != null) {
                     CameraPath.basePosition = basePosition;
-                    cameraPathVertexBuffer = new VertexBuffer(VertexBuffer.Usage.STATIC);
+                    cameraPathVertexBuffer = new VertexBuffer(BufferUsage.STATIC_WRITE);
                     cameraPathVertexBuffer.bind();
                     cameraPathVertexBuffer.upload(meshData);
                     VertexBuffer.unbind();
@@ -90,9 +94,9 @@ public class CameraPath {
         RenderSystem.enableBlend();
         RenderSystem.defaultBlendFunc();
         RenderSystem.lineWidth(2f);
-        RenderSystem.setShader(GameRenderer::getRendertypeLinesShader);
-        float oldFogStart = RenderSystem.getShaderFogStart();
-        RenderSystem.setShaderFogStart(Float.MAX_VALUE);
+        CompiledShaderProgram shaderInstance = RenderSystem.setShader(CoreShaders.RENDERTYPE_LINES);
+        var oldFog = RenderSystem.getShaderFog();
+        RenderSystem.setShaderFog(FogParameters.NO_FOG);
         RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
 
         poseStack.pushPose();
@@ -100,7 +104,7 @@ public class CameraPath {
             basePosition.y-camera.getPosition().y + camera.eyeHeight, basePosition.z-camera.getPosition().z);
 
         cameraPathVertexBuffer.bind();
-        cameraPathVertexBuffer.drawWithShader(poseStack.last().pose(), RenderSystem.getProjectionMatrix(), GameRenderer.getRendertypeLinesShader());
+        cameraPathVertexBuffer.drawWithShader(poseStack.last().pose(), RenderSystem.getProjectionMatrix(), shaderInstance);
         VertexBuffer.unbind();
 
         if (replayServer.replayPaused) {
@@ -124,7 +128,7 @@ public class CameraPath {
 
         poseStack.popPose();
 
-        RenderSystem.setShaderFogStart(oldFogStart);
+        RenderSystem.setShaderFog(oldFog);
         RenderSystem.enableCull();
     }
 
