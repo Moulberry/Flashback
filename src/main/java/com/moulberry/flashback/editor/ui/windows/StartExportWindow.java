@@ -9,6 +9,7 @@ import com.moulberry.flashback.combo_options.Sizing;
 import com.moulberry.flashback.combo_options.VideoCodec;
 import com.moulberry.flashback.combo_options.VideoContainer;
 import com.moulberry.flashback.exporting.ExportJobQueue;
+import com.moulberry.flashback.state.EditorScene;
 import com.moulberry.flashback.state.EditorState;
 import com.moulberry.flashback.state.EditorStateManager;
 import com.moulberry.flashback.editor.ui.ImGuiHelper;
@@ -158,7 +159,8 @@ public class StartExportWindow {
             if (ImGuiHelper.inputInt("Start/end tick", startEndTick)) {
                 ReplayServer replayServer = Flashback.getReplayServer();
                 if (editorState != null && replayServer != null) {
-                    editorState.setExportTicks(startEndTick[0], startEndTick[1], replayServer.getTotalReplayTicks());
+                    editorState.currentScene().setExportTicks(startEndTick[0], startEndTick[1], replayServer.getTotalReplayTicks());
+                    editorState.markDirty();
                 }
             }
             ImGuiHelper.inputFloat("Framerate", framerate);
@@ -487,14 +489,15 @@ public class StartExportWindow {
         open = true;
 
         EditorState editorState = EditorStateManager.getCurrent();
+        EditorScene editorScene = editorState == null ? null : editorState.currentScene();
 
-        if (editorState != null && editorState.exportStartTicks >= 0) {
-            startEndTick[0] = editorState.exportStartTicks;
+        if (editorScene != null && editorScene.exportStartTicks >= 0) {
+            startEndTick[0] = editorScene.exportStartTicks;
         } else {
             startEndTick[0] = 0;
         }
-        if (editorState != null && editorState.exportEndTicks >= 0) {
-            startEndTick[1] = editorState.exportEndTicks;
+        if (editorScene != null && editorScene.exportEndTicks >= 0) {
+            startEndTick[1] = editorScene.exportEndTicks;
         } else {
             ReplayServer replayServer = Flashback.getReplayServer();
             if (replayServer == null) {

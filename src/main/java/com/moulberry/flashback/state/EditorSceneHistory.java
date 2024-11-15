@@ -4,12 +4,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 
-public class EditorStateHistory {
+public class EditorSceneHistory {
 
-    private final List<EditorStateHistoryEntry> entries = new ArrayList<>();
+    private final List<EditorSceneHistoryEntry> entries = new ArrayList<>();
     private int position = 0;
 
-    public void push(EditorState editorState, EditorStateHistoryEntry entry) {
+    public void push(EditorScene editorScene, EditorSceneHistoryEntry entry) {
         while (this.entries.size() > this.position) {
             this.entries.removeLast();
         }
@@ -18,35 +18,35 @@ public class EditorStateHistory {
             this.position -= 1;
         }
 
-        for (EditorStateHistoryAction redo : entry.redo()) {
-            redo.apply(editorState);
+        for (EditorSceneHistoryAction redo : entry.redo()) {
+            redo.apply(editorScene);
         }
 
         this.entries.add(entry);
         this.position += 1;
     }
 
-    public void undo(EditorState editorState, Consumer<String> descriptionConsumer) {
+    public void undo(EditorScene editorScene, Consumer<String> descriptionConsumer) {
         if (this.position == 0) {
             return;
         }
 
         this.position -= 1;
-        EditorStateHistoryEntry entry = this.entries.get(this.position);
-        for (EditorStateHistoryAction undo : entry.undo()) {
-            undo.apply(editorState);
+        EditorSceneHistoryEntry entry = this.entries.get(this.position);
+        for (EditorSceneHistoryAction undo : entry.undo()) {
+            undo.apply(editorScene);
         }
         descriptionConsumer.accept("Undo '" + entry.description() + "'");
     }
 
-    public void redo(EditorState editorState, Consumer<String> descriptionConsumer) {
+    public void redo(EditorScene editorScene, Consumer<String> descriptionConsumer) {
         if (this.position >= this.entries.size()) {
             return;
         }
 
-        EditorStateHistoryEntry entry = this.entries.get(this.position);
-        for (EditorStateHistoryAction redo : entry.redo()) {
-            redo.apply(editorState);
+        EditorSceneHistoryEntry entry = this.entries.get(this.position);
+        for (EditorSceneHistoryAction redo : entry.redo()) {
+            redo.apply(editorScene);
         }
         descriptionConsumer.accept("Redo '" + entry.description() + "'");
 

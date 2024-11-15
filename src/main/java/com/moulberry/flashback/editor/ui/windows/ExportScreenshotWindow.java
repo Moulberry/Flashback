@@ -8,6 +8,7 @@ import com.moulberry.flashback.editor.ui.ImGuiHelper;
 import com.moulberry.flashback.exporting.AsyncFileDialogs;
 import com.moulberry.flashback.exporting.ExportJob;
 import com.moulberry.flashback.exporting.ExportSettings;
+import com.moulberry.flashback.state.EditorScene;
 import com.moulberry.flashback.state.EditorState;
 import com.moulberry.flashback.state.EditorStateManager;
 import imgui.ImGui;
@@ -79,7 +80,9 @@ public class ExportScreenshotWindow {
                         boolean noGui = StartExportWindow.noGui;
 
                         EditorState copiedEditorState = editorState.copy();
-                        copiedEditorState.keyframeTracks.clear();
+                        for (EditorScene scene : copiedEditorState.scenes) {
+                            scene.keyframeTracks.clear();
+                        }
 
                         ExportSettings settings = new ExportSettings(null, copiedEditorState,
                             player.position(), player.getYRot(), player.getXRot(),
