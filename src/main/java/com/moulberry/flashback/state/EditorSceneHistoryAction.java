@@ -12,15 +12,15 @@ import com.moulberry.flashback.keyframe.KeyframeType;
 
 import java.lang.reflect.Type;
 
-public interface EditorStateHistoryAction {
+public interface EditorSceneHistoryAction {
 
-    void apply(EditorState editorState);
+    void apply(EditorScene editorScene);
 
-    record SetKeyframe(KeyframeType<?> type, int trackIndex, int tick, Keyframe keyframe) implements EditorStateHistoryAction {
+    record SetKeyframe(KeyframeType<?> type, int trackIndex, int tick, Keyframe keyframe) implements EditorSceneHistoryAction {
         @Override
-        public void apply(EditorState editorState) {
-            if (this.trackIndex < editorState.keyframeTracks.size()) {
-                KeyframeTrack track = editorState.keyframeTracks.get(this.trackIndex);
+        public void apply(EditorScene editorScene) {
+            if (this.trackIndex < editorScene.keyframeTracks.size()) {
+                KeyframeTrack track = editorScene.keyframeTracks.get(this.trackIndex);
                 if (track.keyframeType == this.type) {
                     track.keyframesByTick.put(this.tick, this.keyframe.copy());
                 }
@@ -51,11 +51,11 @@ public interface EditorStateHistoryAction {
         }
     }
 
-    record RemoveKeyframe(KeyframeType<?> type, int trackIndex, int tick) implements EditorStateHistoryAction {
+    record RemoveKeyframe(KeyframeType<?> type, int trackIndex, int tick) implements EditorSceneHistoryAction {
         @Override
-        public void apply(EditorState editorState) {
-            if (this.trackIndex < editorState.keyframeTracks.size()) {
-                KeyframeTrack track = editorState.keyframeTracks.get(this.trackIndex);
+        public void apply(EditorScene editorScene) {
+            if (this.trackIndex < editorScene.keyframeTracks.size()) {
+                KeyframeTrack track = editorScene.keyframeTracks.get(this.trackIndex);
                 if (track.keyframeType == this.type) {
                     track.keyframesByTick.remove(this.tick);
                 }
@@ -84,11 +84,11 @@ public interface EditorStateHistoryAction {
         }
     }
 
-    record AddTrack(KeyframeType<?> type, int trackIndex) implements EditorStateHistoryAction {
+    record AddTrack(KeyframeType<?> type, int trackIndex) implements EditorSceneHistoryAction {
         @Override
-        public void apply(EditorState editorState) {
-            if (this.trackIndex <= editorState.keyframeTracks.size()) {
-                editorState.keyframeTracks.add(this.trackIndex, new KeyframeTrack(this.type));
+        public void apply(EditorScene editorScene) {
+            if (this.trackIndex <= editorScene.keyframeTracks.size()) {
+                editorScene.keyframeTracks.add(this.trackIndex, new KeyframeTrack(this.type));
             }
         }
 
@@ -112,13 +112,13 @@ public interface EditorStateHistoryAction {
         }
     }
 
-    record RemoveTrack(KeyframeType<?> type, int trackIndex) implements EditorStateHistoryAction {
+    record RemoveTrack(KeyframeType<?> type, int trackIndex) implements EditorSceneHistoryAction {
         @Override
-        public void apply(EditorState editorState) {
-            if (this.trackIndex < editorState.keyframeTracks.size()) {
-                KeyframeTrack keyframeTrack = editorState.keyframeTracks.get(this.trackIndex);
+        public void apply(EditorScene editorScene) {
+            if (this.trackIndex < editorScene.keyframeTracks.size()) {
+                KeyframeTrack keyframeTrack = editorScene.keyframeTracks.get(this.trackIndex);
                 if (keyframeTrack.keyframeType == type) {
-                    editorState.keyframeTracks.remove(this.trackIndex);
+                    editorScene.keyframeTracks.remove(this.trackIndex);
                 }
             }
         }
@@ -143,9 +143,9 @@ public interface EditorStateHistoryAction {
         }
     }
 
-    class TypeAdapter implements JsonSerializer<EditorStateHistoryAction>, JsonDeserializer<EditorStateHistoryAction> {
+    class TypeAdapter implements JsonSerializer<EditorSceneHistoryAction>, JsonDeserializer<EditorSceneHistoryAction> {
         @Override
-        public EditorStateHistoryAction deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) throws JsonParseException {
+        public EditorSceneHistoryAction deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) throws JsonParseException {
             JsonObject jsonObject = json.getAsJsonObject();
             String type = jsonObject.get("action_type").getAsString();
             return switch (type) {
@@ -158,7 +158,7 @@ public interface EditorStateHistoryAction {
         }
 
         @Override
-        public JsonElement serialize(EditorStateHistoryAction src, Type typeOfSrc, JsonSerializationContext context) {
+        public JsonElement serialize(EditorSceneHistoryAction src, Type typeOfSrc, JsonSerializationContext context) {
             JsonObject jsonObject;
             switch (src) {
                 case SetKeyframe setKeyframe -> {

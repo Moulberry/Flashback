@@ -6,21 +6,19 @@ import com.moulberry.flashback.keyframe.KeyframeType;
 import com.moulberry.flashback.keyframe.impl.CameraShakeKeyframe;
 import com.moulberry.flashback.keyframe.impl.FOVKeyframe;
 import com.moulberry.flashback.keyframe.impl.TimeOfDayKeyframe;
-import com.moulberry.flashback.keyframe.types.FOVKeyframeType;
 import com.moulberry.flashback.playback.ReplayServer;
 import com.moulberry.flashback.record.FlashbackMeta;
+import com.moulberry.flashback.state.EditorScene;
 import com.moulberry.flashback.state.EditorState;
-import com.moulberry.flashback.state.EditorStateHistoryAction;
-import com.moulberry.flashback.state.EditorStateHistoryEntry;
+import com.moulberry.flashback.state.EditorSceneHistoryAction;
+import com.moulberry.flashback.state.EditorSceneHistoryEntry;
 import com.moulberry.flashback.state.EditorStateManager;
 import com.moulberry.flashback.state.KeyframeTrack;
 import com.moulberry.flashback.visuals.ReplayVisuals;
 import com.moulberry.flashback.combo_options.Sizing;
 import com.moulberry.flashback.editor.ui.ImGuiHelper;
 import imgui.ImGui;
-import imgui.flag.ImGuiColorEditFlags;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.FogRenderer;
 
 import java.util.List;
 
@@ -324,34 +322,36 @@ public class VisualsWindow {
 
     private static void addKeyframe(EditorState editorState, ReplayServer replayServer, Keyframe keyframe) {
         KeyframeType<?> keyframeType = keyframe.keyframeType();
+        EditorScene scene = editorState.currentScene();
 
         // Try add to existing enabled keyframe track
-        for (int i = 0; i < editorState.keyframeTracks.size(); i++) {
-            KeyframeTrack keyframeTrack = editorState.keyframeTracks.get(i);
+        for (int i = 0; i < scene.keyframeTracks.size(); i++) {
+            KeyframeTrack keyframeTrack = scene.keyframeTracks.get(i);
             if (keyframeTrack.enabled && keyframeTrack.keyframeType == keyframeType) {
-                editorState.setKeyframe(i, replayServer.getReplayTick(), keyframe);
+                scene.setKeyframe(i, replayServer.getReplayTick(), keyframe);
                 return;
             }
         }
 
         // Try add to any keyframe track
-        for (int i = 0; i < editorState.keyframeTracks.size(); i++) {
-            KeyframeTrack keyframeTrack = editorState.keyframeTracks.get(i);
+        for (int i = 0; i < scene.keyframeTracks.size(); i++) {
+            KeyframeTrack keyframeTrack = scene.keyframeTracks.get(i);
             if (keyframeTrack.keyframeType == keyframeType) {
-                editorState.setKeyframe(i, replayServer.getReplayTick(), keyframe);
+                scene.setKeyframe(i, replayServer.getReplayTick(), keyframe);
                 return;
             }
         }
 
         String description = "Added " + keyframeType.name() + " keyframe";
-        int newKeyframeTrackIndex = editorState.keyframeTracks.size();
-        editorState.push(new EditorStateHistoryEntry(
-            List.of(new EditorStateHistoryAction.RemoveTrack(keyframeType, newKeyframeTrackIndex)),
+        int newKeyframeTrackIndex = scene.keyframeTracks.size();
+        scene.push(new EditorSceneHistoryEntry(
+            List.of(new EditorSceneHistoryAction.RemoveTrack(keyframeType, newKeyframeTrackIndex)),
             List.of(
-                new EditorStateHistoryAction.AddTrack(keyframeType, newKeyframeTrackIndex),
-                new EditorStateHistoryAction.SetKeyframe(keyframeType, newKeyframeTrackIndex, replayServer.getReplayTick(), keyframe)
+                new EditorSceneHistoryAction.AddTrack(keyframeType, newKeyframeTrackIndex),
+                new EditorSceneHistoryAction.SetKeyframe(keyframeType, newKeyframeTrackIndex, replayServer.getReplayTick(), keyframe)
             ),
             description
         ));
+        editorState.markDirty();
     }
 }
