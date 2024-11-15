@@ -20,6 +20,7 @@ public class KeyframeTrack {
     public TreeMap<Integer, Keyframe> keyframesByTick = new TreeMap<>();
     public boolean enabled = true;
     public String customName = null;
+    public int customColour = 0;
 
     public transient ImString nameEditField = null;
     public transient boolean forceFocusTrack = false;

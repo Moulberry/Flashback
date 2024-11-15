@@ -27,7 +27,9 @@ import com.moulberry.flashback.record.FlashbackMeta;
 import com.moulberry.flashback.state.KeyframeTrack;
 import imgui.ImDrawList;
 import imgui.ImGui;
+import imgui.ImVec4;
 import imgui.flag.ImGuiButtonFlags;
+import imgui.flag.ImGuiCol;
 import imgui.flag.ImGuiComboFlags;
 import imgui.flag.ImGuiCond;
 import imgui.flag.ImGuiDragDropFlags;
@@ -1637,7 +1639,11 @@ public class TimelineWindow {
                 ImGui.popStyleVar(2);
             } else {
                 if (keyframeTrack.enabled) {
-                    ImGui.text(nameWithIcon);
+                    if (keyframeTrack.customColour != 0) {
+                        ImGui.textColored(keyframeTrack.customColour, nameWithIcon);
+                    } else {
+                        ImGui.text(nameWithIcon);
+                    }
                 } else {
                     ImGui.textDisabled(nameWithIcon);
                 }
@@ -1705,6 +1711,9 @@ public class TimelineWindow {
                 }
                 ImGui.endPopup();
             }
+
+            boolean openTrackColourPopup = false;
+
             if (ImGui.beginPopup("##TrackPopup")) {
                 if (ImGui.menuItem("\ue3c9 Rename")) {
                     keyframeTrack.nameEditField = ImGuiHelper.createResizableImString(name);
@@ -1712,6 +1721,31 @@ public class TimelineWindow {
                 }
                 if (ImGui.menuItem("\ue872 Delete track")) {
                     keyframeTrackToClear = trackIndex;
+                }
+                if (ImGui.menuItem("\ue40a Set Colour")) {
+                    openTrackColourPopup = true;
+                }
+                ImGui.endPopup();
+            }
+
+            if (openTrackColourPopup) {
+                ImGui.openPopup("##SetTrackColour");
+            }
+            if (ImGui.beginPopup("##SetTrackColour")) {
+                if (ImGui.button("Reset to Default")) {
+                    keyframeTrack.customColour = 0;
+                    ImGui.closeCurrentPopup();
+                } else {
+                    int colour = keyframeTrack.customColour;
+                    if (colour == 0) {
+                        colour = ImGui.getColorU32(ImGuiCol.Text);
+                    }
+                    ImVec4 imVec4 = new ImVec4();
+                    ImGui.colorConvertU32ToFloat4(colour, imVec4);
+                    float[] colourArray = new float[]{imVec4.x, imVec4.y, imVec4.z};
+                    if (ImGui.colorPicker3("Track Colour", colourArray)) {
+                        keyframeTrack.customColour = ImGui.colorConvertFloat4ToU32(colourArray[0], colourArray[1], colourArray[2], 1.0f);
+                    }
                 }
                 ImGui.endPopup();
             }
