@@ -54,39 +54,39 @@ public class MovementWindow {
             boolean flightCameraDirection = direction[0] == 1;
             if (config.flightCameraDirection != flightCameraDirection) {
                 config.flightCameraDirection = flightCameraDirection;
-                config.saveToDefaultFolder();
+                config.delayedSaveToDefaultFolder();
             }
 
             float[] momentum = new float[]{config.flightMomentum};
             ImGui.sliderFloat("Momentum", momentum, 0.0f, 1.0f);
             if (config.flightMomentum != momentum[0]) {
                 config.flightMomentum = momentum[0];
-                config.saveToDefaultFolder();
+                config.delayedSaveToDefaultFolder();
             }
 
             if (ImGui.checkbox("Lock X", config.flightLockX)) {
                 config.flightLockX = !config.flightLockX;
-                config.saveToDefaultFolder();
+                config.delayedSaveToDefaultFolder();
             }
             ImGui.sameLine();
             if (ImGui.checkbox("Lock Y", config.flightLockY)) {
                 config.flightLockY = !config.flightLockY;
-                config.saveToDefaultFolder();
+                config.delayedSaveToDefaultFolder();
             }
             ImGui.sameLine();
             if (ImGui.checkbox("Lock Z", config.flightLockZ)) {
                 config.flightLockZ = !config.flightLockZ;
-                config.saveToDefaultFolder();
+                config.delayedSaveToDefaultFolder();
             }
 
             if (ImGui.checkbox("Lock Yaw", config.flightLockYaw)) {
                 config.flightLockYaw = !config.flightLockYaw;
-                config.saveToDefaultFolder();
+                config.delayedSaveToDefaultFolder();
             }
             ImGui.sameLine();
             if (ImGui.checkbox("Lock Pitch", config.flightLockPitch)) {
                 config.flightLockPitch = !config.flightLockPitch;
-                config.saveToDefaultFolder();
+                config.delayedSaveToDefaultFolder();
             }
         }
         ImGui.end();

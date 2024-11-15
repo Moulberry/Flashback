@@ -27,9 +27,12 @@ import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.client.multiplayer.MultiPlayerGameMode;
 import net.minecraft.client.multiplayer.PlayerInfo;
+import net.minecraft.client.multiplayer.ServerData;
 import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.client.resources.language.I18n;
 import net.minecraft.client.resources.server.ServerPackManager;
+import net.minecraft.client.server.IntegratedServer;
 import net.minecraft.core.*;
 import net.minecraft.nbt.NbtOps;
 import net.minecraft.nbt.Tag;
@@ -156,6 +159,24 @@ public class Recorder {
         if (Flashback.supportsDistantHorizons) {
             this.metadata.distantHorizonPaths.putAll(DistantHorizonsSupport.getDimensionPaths());
         }
+
+        String worldName = null;
+        ServerData serverData = Minecraft.getInstance().getCurrentServer();
+        if (serverData != null) {
+            worldName = serverData.name;
+            if (worldName.equalsIgnoreCase(I18n.get("selectServer.defaultName"))) {
+                worldName = null;
+            }
+        } else {
+            IntegratedServer integratedServer = Minecraft.getInstance().getSingleplayerServer();
+            if (integratedServer != null) {
+                worldName = integratedServer.worldData.getLevelName();
+                if (worldName.equalsIgnoreCase(I18n.get("selectWorld.newWorld"))) {
+                    worldName = null;
+                }
+            }
+        }
+        this.metadata.worldName = worldName;
     }
 
     public boolean readyToWrite() {

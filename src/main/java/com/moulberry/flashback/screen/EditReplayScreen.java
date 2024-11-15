@@ -36,7 +36,7 @@ public class EditReplayScreen extends Screen {
 
     private Path replayPath;
 
-    protected EditReplayScreen(@Nullable Screen lastScreen, ReplaySummary summary) {
+    public EditReplayScreen(@Nullable Screen lastScreen, ReplaySummary summary) {
         super(Component.literal("Edit Replay"));
         this.lastScreen = lastScreen;
         this.metadata = summary.getReplayMetadata();

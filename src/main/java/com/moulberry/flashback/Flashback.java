@@ -378,6 +378,8 @@ public class Flashback implements ModInitializer, ClientModInitializer {
                     }
                 }
             }
+
+            Flashback.getConfig().tickDelayedSave();
         });
 
         ClientTickEvents.START_CLIENT_TICK.register(minecraft -> {
@@ -536,7 +538,7 @@ public class Flashback implements ModInitializer, ClientModInitializer {
 
     private void deleteUnusedReplayStates() {
         Path flashbackDir = Flashback.getDataDirectory();
-        Path replayDir = flashbackDir.resolve("replays");
+        Path replayDir = Flashback.getReplayFolder();
         Path replayStatesDir = flashbackDir.resolve("editor_states");
 
         if (!Files.exists(replayDir) || !Files.isDirectory(replayDir)) {
@@ -777,7 +779,7 @@ public class Flashback implements ModInitializer, ClientModInitializer {
         if (config.recentReplays.size() > 32) {
             config.recentReplays.remove(config.recentReplays.size() - 1);
         }
-        config.saveToDefaultFolder();
+        config.delayedSaveToDefaultFolder();
 
         // Actually load
         try {

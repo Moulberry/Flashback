@@ -2,9 +2,8 @@ package com.moulberry.flashback.editor.ui.windows;
 
 import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.configuration.FlashbackConfig;
-import com.moulberry.flashback.exporting.AsyncFileDialogs;
 import com.moulberry.flashback.exporting.ExportJobQueue;
-import com.moulberry.flashback.screen.SelectReplayScreen;
+import com.moulberry.flashback.screen.select_replay.SelectReplayScreen;
 import imgui.ImGui;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.TitleScreen;
@@ -73,7 +72,7 @@ public class MainMenuBar {
                     minecraft.level.disconnect();
                 }
                 minecraft.disconnect();
-                minecraft.setScreen(new SelectReplayScreen(new TitleScreen()));
+                minecraft.setScreen(new SelectReplayScreen(new TitleScreen(), Flashback.getReplayFolder()));
             }
             ImGui.endMenu();
         }
@@ -105,7 +104,7 @@ public class MainMenuBar {
         } else {
             openedWindows.add(windowName);
         }
-        Flashback.getConfig().saveToDefaultFolder();
+        Flashback.getConfig().delayedSaveToDefaultFolder();
     }
 
 }
