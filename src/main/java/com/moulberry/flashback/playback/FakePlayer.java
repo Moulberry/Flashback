@@ -20,6 +20,16 @@ public class FakePlayer extends ServerPlayer {
     }
 
     @Override
+    public void remove(RemovalReason removalReason) {
+        if (removalReason == RemovalReason.DISCARDED && !this.hasDisconnected()) {
+            this.disconnect();
+            this.server.getPlayerList().remove(this);
+        } else {
+            super.remove(removalReason);
+        }
+    }
+
+    @Override
     public void sendChatMessage(OutgoingChatMessage outgoingChatMessage, boolean bl, ChatType.Bound bound) {
     }
 
