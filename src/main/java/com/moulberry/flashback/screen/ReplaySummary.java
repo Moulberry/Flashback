@@ -19,17 +19,19 @@ public class ReplaySummary implements Comparable<ReplaySummary> {
     private final FlashbackMeta metadata;
     private final String replayId;
     private final long lastModified;
+    private final long filesize;
     private final byte[] iconBytes;
     private Component info = null;
     private Component hoverInfo = null;
     private boolean canOpen = true;
     private boolean hasWarning = false;
 
-    public ReplaySummary(Path path, FlashbackMeta metadata, String replayId, long lastModified, @Nullable byte[] iconBytes) {
+    public ReplaySummary(Path path, FlashbackMeta metadata, String replayId, long lastModified, long filesize, @Nullable byte[] iconBytes) {
         this.path = path;
         this.metadata = metadata;
         this.replayId = replayId;
         this.lastModified = lastModified;
+        this.filesize = filesize;
         this.iconBytes = iconBytes;
 
         if (metadata.protocolVersion != 0 && metadata.protocolVersion != SharedConstants.getProtocolVersion()) {
@@ -71,8 +73,16 @@ public class ReplaySummary implements Comparable<ReplaySummary> {
         return this.metadata.name.isEmpty() ? this.replayId : this.metadata.name;
     }
 
+    public @Nullable String getWorldName() {
+        return this.metadata.worldName;
+    }
+
     public long getLastModified() {
         return this.lastModified;
+    }
+
+    public long getFilesize() {
+        return filesize;
     }
 
     public Component getInfo() {

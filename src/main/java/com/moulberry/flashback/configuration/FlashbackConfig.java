@@ -5,6 +5,7 @@ import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.FlashbackGson;
 import com.moulberry.flashback.SneakyThrow;
 import com.moulberry.flashback.keyframe.interpolation.InterpolationType;
+import com.moulberry.flashback.screen.select_replay.ReplaySorting;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.OptionInstance;
@@ -78,6 +79,11 @@ public class FlashbackConfig {
     public List<String> recentReplays = new ArrayList<>();
     public String defaultExportFilename = "%date%T%time%";
     public InterpolationType defaultInterpolationType = InterpolationType.SMOOTH;
+
+    public ReplaySorting replaySorting = ReplaySorting.CREATED_DATE;
+    public boolean sortDescending = true;
+
+    private transient int saveDelay = 0;
 
     @SuppressWarnings("unchecked")
     public OptionInstance<?>[] createOptionInstances() {
@@ -213,12 +219,28 @@ public class FlashbackConfig {
         return new FlashbackConfig();
     }
 
+    public void delayedSaveToDefaultFolder() {
+        if (this.saveDelay <= 0) {
+            this.saveDelay = 200;
+        }
+    }
+
+    public void tickDelayedSave() {
+        if (this.saveDelay > 0) {
+            this.saveDelay -= 1;
+            if (this.saveDelay == 0) {
+                this.saveToDefaultFolder();
+            }
+        }
+    }
+
     public void saveToDefaultFolder() {
         Path configFolder = FabricLoader.getInstance().getConfigDir().resolve("flashback");
         this.saveToFolder(configFolder);
+        this.saveDelay = 0;
     }
 
-    public void saveToFolder(Path configFolder) {
+    public synchronized void saveToFolder(Path configFolder) {
         Path primary = configFolder.resolve("flashback.json");
         Path backup = configFolder.resolve(".flashback.json.backup");
 
