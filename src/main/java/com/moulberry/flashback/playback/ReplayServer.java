@@ -371,8 +371,8 @@ public class ReplayServer extends IntegratedServer {
                     super.removeAll();
                 } else {
                     List<ServerPlayer> players = this.getPlayers();
-                    for (int i = 0; i < players.size(); ++i) {
-                        players.get(i).connection.disconnect(shutdownReason);
+                    for (ServerPlayer player : players) {
+                        player.connection.disconnect(shutdownReason);
                     }
                 }
             }
@@ -713,7 +713,7 @@ public class ReplayServer extends IntegratedServer {
                 replayPlayer.lastFirstPersonDataUUID = null;
                 continue;
             }
-            player.connection.disconnect(Component.empty());
+            player.discard();
         }
         List<Entity> entities = new ArrayList<>();
         for (Entity entity : serverLevel.getAllEntities()) {

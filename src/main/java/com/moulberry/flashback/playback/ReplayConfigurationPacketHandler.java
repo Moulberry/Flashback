@@ -180,7 +180,7 @@ public class ReplayConfigurationPacketHandler implements ClientConfigurationPack
 
         // Remove all players
         for (ServerPlayer player : new ArrayList<>(this.replayServer.getPlayerList().getPlayers())) {
-            player.connection.disconnect(Component.empty());
+            player.discard();
         }
 
         // Remove all levels

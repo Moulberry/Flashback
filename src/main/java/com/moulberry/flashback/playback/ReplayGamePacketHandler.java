@@ -139,7 +139,7 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
             Entity existingEntity = level.getEntity(pendingEntity.getId());
             if (existingEntity != null) {
                 if (existingEntity instanceof ServerPlayer existingPlayer) {
-                    existingPlayer.connection.disconnect(Component.empty());
+                    existingPlayer.discard();
                 } else if (existingEntity.getType().equals(pendingEntity.getType())) {
                     existingEntity.restoreFrom(pendingEntity);
                     existingEntity.setPos(pendingEntity.getX(), pendingEntity.getY(), pendingEntity.getZ());
@@ -227,16 +227,12 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
 
         ServerPlayer existingPlayer = this.replayServer.getPlayerList().getPlayer(serverPlayer.getUUID());
         if (existingPlayer != null) {
-            existingPlayer.connection.disconnect(Component.empty());
+            existingPlayer.discard();
         }
 
         Entity existingEntity = this.level().getEntity(serverPlayer.getId());
         if (existingEntity != null) {
-            if (existingEntity instanceof ServerPlayer existingPlayer2) {
-                existingPlayer2.connection.disconnect(Component.empty());
-            } else {
-                existingEntity.discard();
-            }
+            existingEntity.discard();
         }
 
         for (ReplayPlayer replayViewer : this.replayServer.getReplayViewers()) {
@@ -299,8 +295,6 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
         if (existingEntity instanceof ExperienceOrb) {
             existingEntity.restoreFrom(entity);
             return;
-        } else if (existingEntity instanceof ServerPlayer serverPlayer) {
-            serverPlayer.connection.disconnect(Component.empty());
         } else if (existingEntity != null) {
             existingEntity.discard();
         }
@@ -667,7 +661,7 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
         if (level != null && level.getEntity(this.localPlayerId) instanceof ServerPlayer serverPlayer) {
             localPlayer = serverPlayer;
             if (this.localPlayerId != clientboundLoginPacket.playerId()) {
-                localPlayer.connection.disconnect(Component.empty());
+                localPlayer.discard();
                 recreatePlayer = true;
             }
         }
@@ -903,8 +897,6 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
             Entity entity = this.level().getEntity(i);
             if (entity == null) {
                 forwardRemoveUnknown.add(i);
-            } else if (entity instanceof ServerPlayer serverPlayer) {
-                serverPlayer.connection.disconnect(Component.empty());
             } else {
                 entity.discard();
             }
@@ -1178,11 +1170,7 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
 
         Entity taken = this.level().getEntity(clientboundTakeItemEntityPacket.getItemId());
         if (taken != null) {
-            if (taken instanceof ServerPlayer serverPlayer) {
-                serverPlayer.connection.disconnect(Component.empty());
-            } else {
-                taken.discard();
-            }
+            taken.discard();
         }
     }
 
