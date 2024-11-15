@@ -977,18 +977,6 @@ public class TimelineWindow {
             if (screen != null && screen.isPauseScreen()) {
                 Minecraft.getInstance().setScreen(null);
             }
-
-            if (ReplayUI.recordCameraMovement) {
-                editorState.recordingCameraMovementTrack = -1;
-
-                for (int i = 0; i < editorState.keyframeTracks.size(); i++) {
-                    KeyframeTrack keyframeTrack = editorState.keyframeTracks.get(i);
-                    if (keyframeTrack.enabled && keyframeTrack.keyframeType == CameraKeyframeType.INSTANCE) {
-                        editorState.recordingCameraMovementTrack = i;
-                        break;
-                    }
-                }
-            }
         }
     }
 
@@ -1382,13 +1370,6 @@ public class TimelineWindow {
                     selectedKeyframesForTrack = selectedKeyframes;
                     break;
                 }
-            }
-
-            if (editorState.recordingCameraMovementTrack == trackIndex && editorState.recordingCameraMovementMinTick >= 0 && editorState.recordingCameraMovementMaxTick >= 0) {
-                float fromX = x + replayTickToTimelineX(editorState.recordingCameraMovementMinTick);
-                float toX = x + replayTickToTimelineX(editorState.recordingCameraMovementMaxTick);
-                float topY = y + 2 + trackIndex * lineHeight;
-                drawList.addRectFilled(fromX, topY, toX, topY + lineHeight, 0xFF4040FF);
             }
 
             for (int tick = minTicks - 10; tick <= minTicks + availableTicks + 10; tick++) {

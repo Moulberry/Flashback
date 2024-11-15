@@ -97,7 +97,6 @@ public class ReplayUI {
 
     private static String infoOverlayText = null;
     private static long infoOverlayEndMillis = 0;
-    public static boolean recordCameraMovement = false;
 
     private static UUID selectedEntity = null;
     private static boolean openSelectedEntityPopup = false;
@@ -656,9 +655,6 @@ public class ReplayUI {
                     showText = infoOverlayText;
                     showTextBorderColour = 0xFF00FFFF;
                 }
-            } else if (recordCameraMovement) {
-                showText = "Recording Movement as Keyframes...";
-                showTextBorderColour = 0xFF0000FF;
             }
 
             if (showText != null) {

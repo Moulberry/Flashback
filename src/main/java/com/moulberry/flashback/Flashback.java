@@ -367,13 +367,6 @@ public class Flashback implements ModInitializer, ClientModInitializer {
 
             AccurateEntityPositionHandler.tick();
 
-            if (Flashback.isInReplay() && !Flashback.isExporting()) {
-                EditorState editorState = EditorStateManager.getCurrent();
-                if (editorState != null) {
-                    editorState.recordCameraMovement();
-                }
-            }
-
             // Fix for camera entity sometimes being incorrect when respawning
             Entity camera = Minecraft.getInstance().cameraEntity;
             LocalPlayer player = Minecraft.getInstance().player;
