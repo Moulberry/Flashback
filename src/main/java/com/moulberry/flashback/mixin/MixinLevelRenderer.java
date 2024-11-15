@@ -211,33 +211,33 @@ public abstract class MixinLevelRenderer {
         return editorState == null || editorState.replayVisuals.renderSky;
     }
 
-    @WrapOperation(method = "renderLevel", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/LevelRenderer;setupRender(Lnet/minecraft/client/Camera;Lnet/minecraft/client/renderer/culling/Frustum;ZZ)V"), require = 0)
-    public void setupRender(LevelRenderer instance, Camera camera, Frustum frustum, boolean capturedFrustum, boolean isSpectator, Operation<Void> original) {
-        if (PerfectFrames.isEnabled()) {
-            boolean doCompile = true;
-            while (doCompile) {
-                doCompile = false;
-
-                int before = this.visibleSections.size();
-                original.call(instance, camera, frustum, capturedFrustum, isSpectator);
-                if (this.visibleSections.size() != before) {
-                    doCompile = true;
-                }
-
-                RenderRegionCache renderRegionCache = new RenderRegionCache();
-                for (SectionRenderDispatcher.RenderSection renderSection : this.visibleSections) {
-                    if (renderSection.isDirty()) {
-                        this.sectionRenderDispatcher.rebuildSectionSync(renderSection, renderRegionCache);
-                        renderSection.setNotDirty();
-                        doCompile = true;
-                    }
-                }
-
-                this.sectionRenderDispatcher.uploadAllPendingUploads();
-            }
-        } else {
-            original.call(instance, camera, frustum, capturedFrustum, isSpectator);
-        }
-    }
+//    @WrapOperation(method = "renderLevel", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/LevelRenderer;setupRender(Lnet/minecraft/client/Camera;Lnet/minecraft/client/renderer/culling/Frustum;ZZ)V"), require = 0)
+//    public void setupRender(LevelRenderer instance, Camera camera, Frustum frustum, boolean capturedFrustum, boolean isSpectator, Operation<Void> original) {
+//        if (PerfectFrames.isEnabled()) {
+//            boolean doCompile = true;
+//            while (doCompile) {
+//                doCompile = false;
+//
+//                int before = this.visibleSections.size();
+//                original.call(instance, camera, frustum, capturedFrustum, isSpectator);
+//                if (this.visibleSections.size() != before) {
+//                    doCompile = true;
+//                }
+//
+//                RenderRegionCache renderRegionCache = new RenderRegionCache();
+//                for (SectionRenderDispatcher.RenderSection renderSection : this.visibleSections) {
+//                    if (renderSection.isDirty()) {
+//                        this.sectionRenderDispatcher.rebuildSectionSync(renderSection, renderRegionCache);
+//                        renderSection.setNotDirty();
+//                        doCompile = true;
+//                    }
+//                }
+//
+//                this.sectionRenderDispatcher.uploadAllPendingUploads();
+//            }
+//        } else {
+//            original.call(instance, camera, frustum, capturedFrustum, isSpectator);
+//        }
+//    }
 
 }
