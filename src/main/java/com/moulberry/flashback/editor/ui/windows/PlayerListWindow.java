@@ -10,6 +10,7 @@ import imgui.ImGui;
 import imgui.ImGuiViewport;
 import imgui.flag.ImGuiCond;
 import imgui.flag.ImGuiWindowFlags;
+import imgui.type.ImBoolean;
 import imgui.type.ImString;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
@@ -24,8 +25,6 @@ import java.util.List;
 import java.util.Locale;
 
 public class PlayerListWindow {
-
-    private static WindowOpenState wasOpen = WindowOpenState.UNKNOWN;
 
     private static String lastSearch = null;
     private static long lastUpdate = 0;
@@ -90,20 +89,14 @@ public class PlayerListWindow {
         }
     }
 
-    public static void render() {
-        // todo: refactor this if we want to add a lot more windows
-        if (!Flashback.getConfig().openedWindows.contains("player_list")) {
-            wasOpen = WindowOpenState.CLOSED;
-            return;
-        }
-        if (wasOpen == WindowOpenState.CLOSED) {
+    public static void render(ImBoolean open, boolean newlyOpened) {
+        if (newlyOpened) {
             ImGuiViewport viewport = ImGui.getMainViewport();
             ImGui.setNextWindowPos(viewport.getCenterX(), viewport.getCenterY(), ImGuiCond.Appearing, 0.5f, 0.5f);
         }
-        wasOpen = WindowOpenState.OPEN;
 
         ImGui.setNextWindowSizeConstraints(250, 50, 5000, 5000);
-        if (ImGui.begin("Player List###PlayerList", ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoFocusOnAppearing)) {
+        if (ImGui.begin("Player List###PlayerList", open, ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoFocusOnAppearing)) {
             ImGui.setNextItemWidth(ImGui.getContentRegionAvailX() - ImGuiHelper.calcTextWidth("Search") - 32);
             if (ImGui.inputText("Search", search)) {
                 lastSearch = null;
