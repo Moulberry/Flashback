@@ -803,10 +803,10 @@ public class ReplayServer extends IntegratedServer {
             this.replayPaused = true;
         }
 
-        boolean forceApplyKeyframes = this.forceApplyKeyframes.compareAndSet(true, false) && Flashback.EXPORT_JOB == null;
+        boolean forceApplyKeyframes = this.forceApplyKeyframes.compareAndSet(true, false);
 
         if (Flashback.EXPORT_JOB != null || this.targetTick == this.currentTick || normalPlayback) {
-            this.runUpdates(booleanSupplier, forceApplyKeyframes);
+            this.runUpdates(booleanSupplier, true);
         } else {
             int realTargetTick = this.targetTick;
 
