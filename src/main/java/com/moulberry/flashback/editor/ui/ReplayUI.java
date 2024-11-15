@@ -10,6 +10,7 @@ import com.moulberry.flashback.editor.ui.windows.MovementWindow;
 import com.moulberry.flashback.editor.ui.windows.PlayerListWindow;
 import com.moulberry.flashback.editor.ui.windows.PreferencesWindow;
 import com.moulberry.flashback.editor.ui.windows.SelectedEntityPopup;
+import com.moulberry.flashback.editor.ui.windows.WindowType;
 import com.moulberry.flashback.state.EditorState;
 import com.moulberry.flashback.state.EditorStateManager;
 import com.moulberry.flashback.combo_options.Sizing;
@@ -768,8 +769,8 @@ public class ReplayUI {
         ExportScreenshotWindow.render();
         PreferencesWindow.render();
         ExportQueueWindow.render();
-        PlayerListWindow.render();
-        MovementWindow.render();
+
+        WindowType.renderAll();
 
         popupOpenLastFrame = ImGui.isPopupOpen("", ImGuiPopupFlags.AnyPopup);
 
