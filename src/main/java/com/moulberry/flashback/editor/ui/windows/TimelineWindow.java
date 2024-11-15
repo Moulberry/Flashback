@@ -1645,6 +1645,9 @@ public class TimelineWindow {
                     keyframeTrack.nameEditField = ImGuiHelper.createResizableImString(name);
                     keyframeTrack.forceFocusTrack = true;
                 }
+                if (ImGui.isItemClicked(ImGuiMouseButton.Right)) {
+                    ImGui.openPopup("##TrackPopup");
+                }
             }
 
             ImGui.sameLine();
