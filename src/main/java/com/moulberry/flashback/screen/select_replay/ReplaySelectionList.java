@@ -120,7 +120,7 @@ public class ReplaySelectionList extends ObjectSelectionList<ReplaySelectionEntr
         Path replayDir = this.screen.path;
 
         if (!Files.exists(replayDir) || !Files.isDirectory(replayDir)) {
-            return CompletableFuture.completedFuture(List.of());
+            return CompletableFuture.completedFuture(new ArrayList<>());
         }
 
         ArrayList<CompletableFuture<PendingSelectionEntry>> futures = new ArrayList<>();
