@@ -11,6 +11,8 @@ import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.Utils;
 import com.moulberry.flashback.combo_options.VideoContainer;
 import com.moulberry.flashback.editor.ui.ReplayUI;
+import com.moulberry.flashback.exporting.taskbar.ITaskbar;
+import com.moulberry.flashback.exporting.taskbar.TaskbarHost;
 import com.moulberry.flashback.keyframe.KeyframeType;
 import com.moulberry.flashback.keyframe.handler.KeyframeHandler;
 import com.moulberry.flashback.keyframe.handler.MinecraftKeyframeHandler;
@@ -81,6 +83,8 @@ public class ExportJob {
     private double currentTickDouble = 0.0;
 
     private double audioSamples = 0.0;
+
+    private ITaskbar taskbar;
 
     private final AtomicBoolean finishedServerTick = new AtomicBoolean(false);
 
@@ -232,6 +236,8 @@ public class ExportJob {
 
         double lastTickDouble = 0;
 
+        this.taskbar = TaskbarHost.createTaskbar();
+
         for (int tickIndex = 0; tickIndex < ticks.size(); tickIndex++) {
             this.currentTickDouble = ticks.getDouble(tickIndex);
             float deltaTicksFloat = (float)(currentTickDouble - lastTickDouble);
@@ -349,6 +355,9 @@ public class ExportJob {
 
         submitDownloadedFrames(videoWriter, downloader, true);
         videoWriter.finish();
+
+        this.taskbar.close();
+        this.taskbar = null;
     }
 
     private void updateRandoms(Random random, Random mathRandom) {
@@ -489,6 +498,8 @@ public class ExportJob {
 
         long currentTime = System.currentTimeMillis();
         if (currentTime - this.lastRenderMillis > 1000/60 || currentFrame == totalFrames) {
+            this.taskbar.setProgress(currentFrame, totalFrames);
+
             Window window = Minecraft.getInstance().getWindow();
 
             this.lastRenderMillis = currentTime;
