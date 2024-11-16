@@ -1,5 +1,7 @@
 package com.moulberry.flashback.exporting.taskbar;
 
+import com.moulberry.flashback.Flashback;
+import com.replaymod.lib.com.googlecode.mp4parser.util.Logger;
 import com.sun.jna.Pointer;
 import com.sun.jna.platform.win32.*;
 import com.sun.jna.ptr.PointerByReference;
@@ -11,7 +13,12 @@ import static com.moulberry.flashback.editor.ui.CustomImGuiImplGlfw.IS_WINDOWS;
 public class TaskbarHost {
     public static ITaskbar createTaskbar() {
         if (IS_WINDOWS) {
-            return createWindowsInterface();
+            try {
+                return createWindowsInterface();
+            } catch (Exception e) {
+                Flashback.LOGGER.error("Unable to create windows taskbar interface", e);
+                return new NoopTaskbar();
+            }
         } else {
             return new NoopTaskbar();
         }
