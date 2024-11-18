@@ -397,11 +397,12 @@ public class ExportJob {
         // Clear particles
         minecraft.particleEngine.clearParticles();
 
-        // Reset all walk animations
+        // Reset all walk animations & tick counts
         for (Entity entity : minecraft.level.entitiesForRendering()) {
             if (entity instanceof LivingEntity livingEntity) {
                 livingEntity.walkAnimation.stop();
             }
+            entity.tickCount = 0;
         }
 
         // Advance until tick is at start
