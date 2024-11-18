@@ -11,12 +11,15 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.ExperienceOrb;
 import net.minecraft.world.entity.Marker;
 import net.minecraft.world.entity.Pose;
+import net.minecraft.world.entity.PositionMoveRotation;
+import net.minecraft.world.entity.Relative;
 import net.minecraft.world.entity.boss.EnderDragonPart;
 import net.minecraft.world.entity.decoration.ItemFrame;
 import net.minecraft.world.entity.decoration.Painting;
 import net.minecraft.world.entity.item.FallingBlockEntity;
 import net.minecraft.world.entity.monster.warden.Warden;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.phys.Vec3;
 
 import java.util.ArrayList;
 
@@ -27,19 +30,12 @@ public class PacketHelper {
     }
 
     public static ClientboundTeleportEntityPacket createTeleportForUnknown(int id, double x, double y, double z, byte yRot, byte xRot, boolean onGround) {
-        try {
-            ClientboundTeleportEntityPacket packet = (ClientboundTeleportEntityPacket) UnsafeWrapper.UNSAFE.allocateInstance(ClientboundTeleportEntityPacket.class);
-            packet.id = id;
-            packet.x = x;
-            packet.y = y;
-            packet.z = z;
-            packet.yRot = yRot;
-            packet.xRot = xRot;
-            packet.onGround = onGround;
-            return packet;
-        } catch (Exception e) {
-            throw SneakyThrow.sneakyThrow(e);
-        }
+        return new ClientboundTeleportEntityPacket(
+            id,
+            new PositionMoveRotation(new Vec3(x, y, z), Vec3.ZERO, yRot, xRot),
+            Relative.DELTA,
+            onGround
+        );
     }
 
     public static Packet<ClientGamePacketListener> createAddEntity(Entity entity) {

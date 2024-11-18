@@ -161,18 +161,3 @@ accessible field com/mojang/blaze3d/audio/Library currentDevice J
 accessible field com/mojang/blaze3d/audio/Library context J
 accessible field net/minecraft/client/sounds/SoundEngine executor Lnet/minecraft/client/sounds/SoundEngineExecutor;
 accessible field net/minecraft/client/sounds/SoundEngineExecutor thread Ljava/lang/Thread;
-
-accessible field net/minecraft/network/protocol/game/ClientboundTeleportEntityPacket id I
-mutable field net/minecraft/network/protocol/game/ClientboundTeleportEntityPacket id I
-accessible field net/minecraft/network/protocol/game/ClientboundTeleportEntityPacket x D
-mutable field net/minecraft/network/protocol/game/ClientboundTeleportEntityPacket x D
-accessible field net/minecraft/network/protocol/game/ClientboundTeleportEntityPacket y D
-mutable field net/minecraft/network/protocol/game/ClientboundTeleportEntityPacket y D
-accessible field net/minecraft/network/protocol/game/ClientboundTeleportEntityPacket z D
-mutable field net/minecraft/network/protocol/game/ClientboundTeleportEntityPacket z D
-accessible field net/minecraft/network/protocol/game/ClientboundTeleportEntityPacket yRot B
-mutable field net/minecraft/network/protocol/game/ClientboundTeleportEntityPacket yRot B
-accessible field net/minecraft/network/protocol/game/ClientboundTeleportEntityPacket xRot B
-mutable field net/minecraft/network/protocol/game/ClientboundTeleportEntityPacket xRot B
-accessible field net/minecraft/network/protocol/game/ClientboundTeleportEntityPacket onGround Z
-mutable field net/minecraft/network/protocol/game/ClientboundTeleportEntityPacket onGround Z
