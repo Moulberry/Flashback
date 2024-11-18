@@ -904,13 +904,13 @@ public class Recorder {
         Set<UUID> addedEntries = new HashSet<>();
         for (AbstractClientPlayer player : level.players()) {
             if (addedEntries.add(player.getUUID())) {
-                PlayerInfo info = connection.getPlayerInfo(player.getUUID());
+                PlayerInfo info = player.getPlayerInfo();
                 if (info != null) {
                     infoUpdatePacket.entries.add(new ClientboundPlayerInfoUpdatePacket.Entry(player.getUUID(),
                         player.getGameProfile(), true, info.getLatency(), info.getGameMode(), info.getTabListDisplayName(), info.getTabListOrder(), null));
                 } else {
                     infoUpdatePacket.entries.add(new ClientboundPlayerInfoUpdatePacket.Entry(player.getUUID(),
-                        player.getGameProfile(), true, 0, GameType.DEFAULT_MODE, player.getDisplayName(), info.getTabListOrder(), null));
+                        player.getGameProfile(), true, 0, GameType.DEFAULT_MODE, player.getDisplayName(), 0, null));
                 }
             }
         }
