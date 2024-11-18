@@ -1009,6 +1009,10 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
 
         SynchedEntityData entityData = entity.getEntityData();
         for (SynchedEntityData.DataValue<?> dataValue : clientboundSetEntityDataPacket.packedItems()) {
+            if (dataValue.id() >= entityData.itemsById.length) {
+                continue;
+            }
+
             SynchedEntityData.DataItem<?> dataItem = entityData.itemsById[dataValue.id()];
             entityData.set((EntityDataAccessor) dataItem.getAccessor(), dataValue.value(), true);
         }
