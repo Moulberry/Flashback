@@ -33,6 +33,7 @@ import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.network.chat.Component;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.Vec3;
 import org.bytedeco.ffmpeg.global.avutil;
 import org.joml.Matrix4f;
@@ -394,6 +395,13 @@ public class ExportJob {
 
         // Clear particles
         minecraft.particleEngine.clearParticles();
+
+        // Reset all walk animations
+        for (Entity entity : minecraft.level.entitiesForRendering()) {
+            if (entity instanceof LivingEntity livingEntity) {
+                livingEntity.walkAnimation.stop();
+            }
+        }
 
         // Advance until tick is at start
         while (currentTick < this.settings.startTick()) {
