@@ -19,6 +19,7 @@ import com.moulberry.flashback.combo_options.Sizing;
 import com.moulberry.flashback.editor.ui.ImGuiHelper;
 import imgui.ImGui;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.FogRenderer;
 
 import java.util.List;
 

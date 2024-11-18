@@ -37,9 +37,9 @@ public class SortDirectionButton extends Button {
         int y = this.getY() + paddingY;
 
         if (this.sortDescending) {
-            guiGraphics.blit(RenderType::guiTextured, DOWN_ARROW, x, y, 0f, 0f, size, size, size, size);
+            guiGraphics.blit(DOWN_ARROW, x, y, 0f, 0f, size, size, size, size);
         } else {
-            guiGraphics.blit(RenderType::guiTextured, UP_ARROW, x, y, 0f, 0f, size, size, size, size);
+            guiGraphics.blit(UP_ARROW, x, y, 0f, 0f, size, size, size, size);
         }
     }
 

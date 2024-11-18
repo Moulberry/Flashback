@@ -67,7 +67,7 @@ public abstract class ReplaySelectionEntry extends ObjectSelectionList.Entry<Rep
 
         @Override
         public void render(GuiGraphics guiGraphics, int index, int y, int x, int width, int height, int mouseX, int mouseY, boolean hovered, float partialTick) {
-            guiGraphics.blitSprite(RenderType::guiTextured, SPRITES.get(true, hovered), x + 4, y + 2, width - 8, height - 4);
+            guiGraphics.blitSprite(SPRITES.get(true, hovered), x + 4, y + 2, width - 8, height - 4);
 
             int p = (this.minecraft.screen.width - this.minecraft.font.width(LOAD_REPLAY_LABEL)) / 2;
             int q = y + (height - this.minecraft.font.lineHeight) / 2 + 1;
@@ -148,7 +148,7 @@ public abstract class ReplaySelectionEntry extends ObjectSelectionList.Entry<Rep
             guiGraphics.drawString(this.minecraft.font, "Replays: " + this.replayCount, x + ICON_WIDTH + 3, textY + 3, 0xFF808080, false);
 
             RenderSystem.enableBlend();
-            guiGraphics.blitSprite(RenderType::guiTextured, FOLDER_SPRITE, x, y, ICON_WIDTH, ICON_HEIGHT);
+            guiGraphics.blitSprite(FOLDER_SPRITE, x, y, ICON_WIDTH, ICON_HEIGHT);
             RenderSystem.disableBlend();
 
             if (this.minecraft.options.touchscreen().get() || hovered) {
@@ -157,7 +157,7 @@ public abstract class ReplaySelectionEntry extends ObjectSelectionList.Entry<Rep
                 boolean hoveredIcon = q < 32;
 
                 ResourceLocation iconOverlay = hoveredIcon ? JOIN_HIGHLIGHTED_SPRITE : JOIN_SPRITE;
-                guiGraphics.blitSprite(RenderType::guiTextured, iconOverlay, x, y, ICON_WIDTH, ICON_HEIGHT);
+                guiGraphics.blitSprite(iconOverlay, x, y, ICON_WIDTH, ICON_HEIGHT);
             }
         }
 
@@ -230,7 +230,7 @@ public abstract class ReplaySelectionEntry extends ObjectSelectionList.Entry<Rep
             guiGraphics.drawString(this.minecraft.font, info, x + ICON_WIDTH + 3, y + this.minecraft.font.lineHeight + this.minecraft.font.lineHeight + 3, 0xFF808080, false);
 
             RenderSystem.enableBlend();
-            guiGraphics.blit(RenderType::guiTextured, this.icon.textureLocation(), x, y, 0.0f, 0.0f, 32, 32, 32, 32);
+            guiGraphics.blit(this.icon.textureLocation(), x, y, 0.0f, 0.0f, 32, 32, 32, 32);
             RenderSystem.disableBlend();
 
             if (this.minecraft.options.touchscreen().get() || hovered) {
@@ -250,7 +250,7 @@ public abstract class ReplaySelectionEntry extends ObjectSelectionList.Entry<Rep
                 } else {
                     iconOverlay = hoveredIcon ? JOIN_HIGHLIGHTED_SPRITE : JOIN_SPRITE;
                 }
-                guiGraphics.blitSprite(RenderType::guiTextured, iconOverlay, x, y, ICON_WIDTH, ICON_HEIGHT);
+                guiGraphics.blitSprite(iconOverlay, x, y, ICON_WIDTH, ICON_HEIGHT);
             }
         }
 
