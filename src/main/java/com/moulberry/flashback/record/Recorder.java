@@ -888,7 +888,7 @@ public class Recorder {
         Set<UUID> addedEntries = new HashSet<>();
         for (AbstractClientPlayer player : level.players()) {
             if (addedEntries.add(player.getUUID())) {
-                PlayerInfo info = connection.getPlayerInfo(player.getUUID());
+                PlayerInfo info = player.getPlayerInfo();
                 if (info != null) {
                     infoUpdatePacket.entries.add(new ClientboundPlayerInfoUpdatePacket.Entry(player.getUUID(),
                         player.getGameProfile(), true, info.getLatency(), info.getGameMode(), info.getTabListDisplayName(), null));
