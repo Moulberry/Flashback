@@ -708,6 +708,9 @@ public class ReplayServer extends IntegratedServer {
     public static final TicketType<ChunkPos> ENTITY_LOAD_TICKET = TicketType.create("replay_entity_load", Comparator.comparingLong(ChunkPos::toLong), 5);
 
     public void closeLevel(ServerLevel serverLevel) {
+        if (serverLevel == null) {
+            return;
+        }
         this.clearLevel(serverLevel);
         try {
             serverLevel.close();
@@ -717,6 +720,9 @@ public class ReplayServer extends IntegratedServer {
     }
 
     public void clearLevel(ServerLevel serverLevel) {
+        if (serverLevel == null) {
+            return;
+        }
         for (ServerPlayer player : new ArrayList<>(serverLevel.players())) {
             if (player instanceof ReplayPlayer replayPlayer) {
                 replayPlayer.lastFirstPersonDataUUID = null;
