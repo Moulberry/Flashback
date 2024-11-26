@@ -7,14 +7,15 @@ import com.sun.jna.platform.win32.WinDef;
 import com.sun.jna.platform.win32.WinNT;
 
 public class WindowsTaskbar extends COMInvoker implements ITaskbar {
+
     private final WinDef.HWND hwnd;
     WindowsTaskbar(Pointer ptr, WinDef.HWND hwnd) {
         this.setPointer(ptr);
         this.hwnd = hwnd;
         try {
-            this.invokeNative(3);//HrInit
+            this.invokeNative(3); // HrInit
         } finally {
-            this.invokeNative(2);//Release
+            this.invokeNative(2); // Release
         }
     }
 
@@ -28,13 +29,28 @@ public class WindowsTaskbar extends COMInvoker implements ITaskbar {
     }
 
     @Override
-    public void setProgress(long count, long outOf) {
-        this.invokeNative(9, this.hwnd, count, outOf);//SetProgressValue
+    public void close() {
+        this.reset();
+        this.invokeNative(2); // Release
     }
 
     @Override
-    public void close() {
-        this.invokeNative(10, this.hwnd, 0);//SetProgressState TBPF_NOPROGRESS
-        this.invokeNative(2);//Release
+    public void reset() {
+        this.invokeNative(10, this.hwnd, 0); // SetProgressState TBPF_NOPROGRESS (0x00000000)
+    }
+
+    @Override
+    public void setProgress(long count, long outOf) {
+        this.invokeNative(9, this.hwnd, count, outOf); // SetProgressValue
+    }
+
+    @Override
+    public void setPaused() {
+        this.invokeNative(10, this.hwnd, 8); // SetProgressState TBPF_PAUSED (0x00000008)
+    }
+
+    @Override
+    public void setNormal() {
+        this.invokeNative(10, this.hwnd, 2); // SetProgressState TBPF_NORMAL (0x00000002)
     }
 }

@@ -6,6 +6,8 @@ import com.mojang.authlib.yggdrasil.YggdrasilAuthenticationService;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.FreezeSlowdownFormula;
+import com.moulberry.flashback.editor.ui.windows.ExportDoneWindow;
+import com.moulberry.flashback.editor.ui.windows.WindowType;
 import com.moulberry.flashback.exporting.ExportJob;
 import com.moulberry.flashback.exporting.ExportJobQueue;
 import com.moulberry.flashback.keyframe.handler.MinecraftKeyframeHandler;
@@ -312,6 +314,7 @@ public abstract class MixinMinecraft implements MinecraftExt {
             } finally {
                 PerfectFrames.disable();
                 Flashback.EXPORT_JOB = null;
+                ExportDoneWindow.exportDoneWindowOpen = true;
             }
         }
 
