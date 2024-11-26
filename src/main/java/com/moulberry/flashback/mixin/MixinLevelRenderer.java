@@ -130,7 +130,11 @@ public abstract class MixinLevelRenderer {
             ReplayVisuals visuals = editorState.replayVisuals;
             if (visuals.overrideFogColour) {
                 float[] fogColour = visuals.fogColour;
-                colour = new Vector4f(fogColour[0], fogColour[1], fogColour[2], 1.0F);
+                if (fogMode == FogRenderer.FogMode.FOG_SKY) {
+                    colour.set(fogColour[0], fogColour[1], fogColour[2], 1.0F);
+                } else {
+                    colour = new Vector4f(fogColour[0], fogColour[1], fogColour[2], 1.0F);
+                }
             }
             if (fogMode == FogRenderer.FogMode.FOG_SKY && !visuals.renderSky) {
                 if (Flashback.isExporting() && Flashback.EXPORT_JOB.getSettings().transparent()) {
