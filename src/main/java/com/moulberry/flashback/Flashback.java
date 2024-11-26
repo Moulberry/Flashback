@@ -14,6 +14,7 @@ import com.moulberry.flashback.compat.simple_voice_chat.SimpleVoiceChatPlayback;
 import com.moulberry.flashback.configuration.FlashbackConfig;
 import com.moulberry.flashback.exporting.AsyncFileDialogs;
 import com.moulberry.flashback.exporting.ExportJob;
+import com.moulberry.flashback.exporting.taskbar.TaskbarManager;
 import com.moulberry.flashback.ext.MinecraftExt;
 import com.moulberry.flashback.keyframe.KeyframeRegistry;
 import com.moulberry.flashback.keyframe.types.CameraKeyframeType;
@@ -847,6 +848,8 @@ public class Flashback implements ModInitializer, ClientModInitializer {
             }, WorldStem::new, Util.backgroundExecutor(), executor)).get();
 
             ((MinecraftExt)Minecraft.getInstance()).flashback$startReplayServer(access, packRepository, worldStem, replayUuid, path);
+
+            TaskbarManager.launchTaskbarManager();
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

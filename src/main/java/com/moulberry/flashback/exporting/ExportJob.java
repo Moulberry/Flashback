@@ -14,6 +14,7 @@ import com.moulberry.flashback.combo_options.VideoContainer;
 import com.moulberry.flashback.editor.ui.ReplayUI;
 import com.moulberry.flashback.exporting.taskbar.ITaskbar;
 import com.moulberry.flashback.exporting.taskbar.TaskbarHost;
+import com.moulberry.flashback.exporting.taskbar.TaskbarManager;
 import com.moulberry.flashback.keyframe.KeyframeType;
 import com.moulberry.flashback.keyframe.handler.KeyframeHandler;
 import com.moulberry.flashback.keyframe.handler.MinecraftKeyframeHandler;
@@ -78,11 +79,12 @@ public class ExportJob {
     private long downloadTimeNanos = 0;
     private boolean patreonLinkClicked = false;
 
+    public int progressCount = 0;
+    public int progressOutOf = 0;
+
     private double currentTickDouble = 0.0;
 
     private double audioSamples = 0.0;
-
-    private ITaskbar taskbar;
 
     private final AtomicBoolean finishedServerTick = new AtomicBoolean(false);
 
@@ -133,6 +135,8 @@ public class ExportJob {
         this.running = true;
         Minecraft.getInstance().mouseHandler.releaseMouse();
         Minecraft.getInstance().getSoundManager().stop();
+
+        TaskbarManager.launchTaskbarManager();
 
         UUID uuid = UUID.randomUUID();
 
@@ -233,8 +237,6 @@ public class ExportJob {
         this.renderStartTime = System.currentTimeMillis();
 
         double lastClientTickDouble = 0;
-
-        this.taskbar = TaskbarHost.createTaskbar();
 
         for (int tickIndex = 0; tickIndex < ticks.size(); tickIndex++) {
             TickInfo tickInfo = ticks.get(tickIndex);
@@ -355,9 +357,6 @@ public class ExportJob {
 
         submitDownloadedFrames(videoWriter, downloader, true);
         videoWriter.finish();
-
-        this.taskbar.close();
-        this.taskbar = null;
     }
 
     private void updateRandoms(Random random, Random mathRandom) {
@@ -507,7 +506,8 @@ public class ExportJob {
 
         long currentTime = System.currentTimeMillis();
         if (currentTime - this.lastRenderMillis > 1000/60 || currentFrame == totalFrames) {
-            this.taskbar.setProgress(currentFrame, totalFrames);
+            this.progressCount = currentFrame;
+            this.progressOutOf = totalFrames;
 
             Window window = Minecraft.getInstance().getWindow();
 

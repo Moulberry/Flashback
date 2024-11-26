@@ -4,6 +4,7 @@ import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.platform.TextureUtil;
 import com.mojang.blaze3d.platform.Window;
 import com.moulberry.flashback.Flashback;
+import com.moulberry.flashback.editor.ui.windows.ExportDoneWindow;
 import com.moulberry.flashback.editor.ui.windows.ExportQueueWindow;
 import com.moulberry.flashback.editor.ui.windows.ExportScreenshotWindow;
 import com.moulberry.flashback.editor.ui.windows.MovementWindow;
@@ -769,6 +770,8 @@ public class ReplayUI {
         ExportQueueWindow.render();
 
         WindowType.renderAll();
+
+        ExportDoneWindow.render();
 
         popupOpenLastFrame = ImGui.isPopupOpen("", ImGuiPopupFlags.AnyPopup);
 
