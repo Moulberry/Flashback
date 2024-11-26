@@ -51,7 +51,7 @@ import static org.lwjgl.system.MemoryUtil.NULL;
 
 public class CustomImGuiImplGlfw {
     private static final String OS = System.getProperty("os.name", "generic").toLowerCase();
-    protected static final boolean IS_WINDOWS = OS.contains("win");
+    public static final boolean IS_WINDOWS = OS.contains("win");
     protected static final boolean IS_APPLE = OS.contains("mac") || OS.contains("darwin");
 
     // ImGui Structs
