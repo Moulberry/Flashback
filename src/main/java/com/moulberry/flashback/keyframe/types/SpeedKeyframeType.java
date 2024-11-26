@@ -21,6 +21,11 @@ public class SpeedKeyframeType implements KeyframeType<TickrateKeyframe> {
     }
 
     @Override
+    public @Nullable String icon() {
+        return "\ue9e4";
+    }
+
+    @Override
     public String name() {
         return "Speed";
     }

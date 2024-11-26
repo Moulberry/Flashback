@@ -27,9 +27,12 @@ import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.client.multiplayer.MultiPlayerGameMode;
 import net.minecraft.client.multiplayer.PlayerInfo;
+import net.minecraft.client.multiplayer.ServerData;
 import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.client.resources.language.I18n;
 import net.minecraft.client.resources.server.ServerPackManager;
+import net.minecraft.client.server.IntegratedServer;
 import net.minecraft.core.*;
 import net.minecraft.nbt.NbtOps;
 import net.minecraft.nbt.Tag;
@@ -159,6 +162,24 @@ public class Recorder {
         if (Flashback.supportsDistantHorizons) {
             this.metadata.distantHorizonPaths.putAll(DistantHorizonsSupport.getDimensionPaths());
         }
+
+        String worldName = null;
+        ServerData serverData = Minecraft.getInstance().getCurrentServer();
+        if (serverData != null) {
+            worldName = serverData.name;
+            if (worldName.equalsIgnoreCase(I18n.get("selectServer.defaultName"))) {
+                worldName = null;
+            }
+        } else {
+            IntegratedServer integratedServer = Minecraft.getInstance().getSingleplayerServer();
+            if (integratedServer != null) {
+                worldName = integratedServer.worldData.getLevelName();
+                if (worldName.equalsIgnoreCase(I18n.get("selectWorld.newWorld"))) {
+                    worldName = null;
+                }
+            }
+        }
+        this.metadata.worldName = worldName;
     }
 
     public boolean readyToWrite() {
@@ -883,13 +904,13 @@ public class Recorder {
         Set<UUID> addedEntries = new HashSet<>();
         for (AbstractClientPlayer player : level.players()) {
             if (addedEntries.add(player.getUUID())) {
-                PlayerInfo info = connection.getPlayerInfo(player.getUUID());
+                PlayerInfo info = player.getPlayerInfo();
                 if (info != null) {
                     infoUpdatePacket.entries.add(new ClientboundPlayerInfoUpdatePacket.Entry(player.getUUID(),
                         player.getGameProfile(), true, info.getLatency(), info.getGameMode(), info.getTabListDisplayName(), info.getTabListOrder(), null));
                 } else {
                     infoUpdatePacket.entries.add(new ClientboundPlayerInfoUpdatePacket.Entry(player.getUUID(),
-                        player.getGameProfile(), true, 0, GameType.DEFAULT_MODE, player.getDisplayName(), info.getTabListOrder(), null));
+                        player.getGameProfile(), true, 0, GameType.DEFAULT_MODE, player.getDisplayName(), 0, null));
                 }
             }
         }

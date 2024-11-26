@@ -14,6 +14,8 @@ import com.moulberry.flashback.packet.FlashbackRemoteSetSlot;
 import io.netty.channel.embedded.EmbeddedChannel;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
+import it.unimi.dsi.fastutil.ints.IntList;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.fabricmc.fabric.impl.screenhandler.Networking;
 import net.minecraft.client.multiplayer.PlayerInfo;
@@ -95,11 +97,11 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
 
     private void forward(Entity entity, Packet<?> packet) {
         if (entity == null) {
-            return;
+            this.forward(packet);
+        } else {
+            ServerChunkCache serverChunkCache = this.level().getChunkSource();
+            serverChunkCache.broadcast(entity, packet);
         }
-
-        ServerChunkCache serverChunkCache = this.level().getChunkSource();
-        serverChunkCache.broadcast(entity, packet);
     }
 
     private void setBlockState(ServerLevel level, BlockPos blockPos, BlockState blockState) {
@@ -121,7 +123,7 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
             Entity existingEntity = level.getEntity(pendingEntity.getId());
             if (existingEntity != null) {
                 if (existingEntity instanceof ServerPlayer existingPlayer) {
-                    existingPlayer.connection.disconnect(Component.empty());
+                    existingPlayer.discard();
                 } else if (existingEntity.getType().equals(pendingEntity.getType())) {
                     existingEntity.restoreFrom(pendingEntity);
                     existingEntity.setPos(pendingEntity.getX(), pendingEntity.getY(), pendingEntity.getZ());
@@ -209,16 +211,12 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
 
         ServerPlayer existingPlayer = this.replayServer.getPlayerList().getPlayer(serverPlayer.getUUID());
         if (existingPlayer != null) {
-            existingPlayer.connection.disconnect(Component.empty());
+            existingPlayer.discard();
         }
 
         Entity existingEntity = this.level().getEntity(serverPlayer.getId());
         if (existingEntity != null) {
-            if (existingEntity instanceof ServerPlayer existingPlayer2) {
-                existingPlayer2.connection.disconnect(Component.empty());
-            } else {
-                existingEntity.discard();
-            }
+            existingEntity.discard();
         }
 
         for (ReplayPlayer replayViewer : this.replayServer.getReplayViewers()) {
@@ -281,8 +279,6 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
         if (existingEntity instanceof ExperienceOrb) {
             existingEntity.restoreFrom(entity);
             return;
-        } else if (existingEntity instanceof ServerPlayer serverPlayer) {
-            serverPlayer.connection.disconnect(Component.empty());
         } else if (existingEntity != null) {
             existingEntity.discard();
         }
@@ -483,11 +479,20 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
     @Override
     public void handleEntityLinkPacket(ClientboundSetEntityLinkPacket clientboundSetEntityLinkPacket) {
         Entity source = this.level().getEntity(clientboundSetEntityLinkPacket.getSourceId());
+        if (source == null) {
+            forward(clientboundSetEntityLinkPacket);
+            return;
+        }
+
         if (source instanceof Leashable leashable) {
             if (clientboundSetEntityLinkPacket.getDestId() == 0) {
                 leashable.setLeashedTo(null, true);
             } else {
                 Entity dest = this.level().getEntity(clientboundSetEntityLinkPacket.getDestId());
+                if (dest == null) {
+                    forward(clientboundSetEntityLinkPacket);
+                    return;
+                }
                 leashable.setLeashedTo(dest, true);
             }
         }
@@ -677,7 +682,7 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
         if (level != null && level.getEntity(this.localPlayerId) instanceof ServerPlayer serverPlayer) {
             localPlayer = serverPlayer;
             if (this.localPlayerId != clientboundLoginPacket.playerId()) {
-                localPlayer.connection.disconnect(Component.empty());
+                localPlayer.discard();
                 recreatePlayer = true;
             }
         }
@@ -908,22 +913,26 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
 
     @Override
     public void handleRemoveEntities(ClientboundRemoveEntitiesPacket clientboundRemoveEntitiesPacket) {
+        IntList forwardRemoveUnknown = new IntArrayList();
         clientboundRemoveEntitiesPacket.getEntityIds().forEach(i -> {
             Entity entity = this.level().getEntity(i);
-            if (entity != null) {
-                if (entity instanceof ServerPlayer serverPlayer) {
-                    serverPlayer.connection.disconnect(Component.empty());
-                } else {
-                    entity.discard();
-                }
+            if (entity == null) {
+                forwardRemoveUnknown.add(i);
+            } else {
+                entity.discard();
             }
         });
+        if (!forwardRemoveUnknown.isEmpty()) {
+            forward(new ClientboundRemoveEntitiesPacket(forwardRemoveUnknown));
+        }
     }
 
     @Override
     public void handleRemoveMobEffect(ClientboundRemoveMobEffectPacket clientboundRemoveMobEffectPacket) {
-        Entity entity = clientboundRemoveMobEffectPacket.getEntity(this.level());
-        if (entity instanceof LivingEntity livingEntity) {
+        Entity entity = this.getEntityOrPending(clientboundRemoveMobEffectPacket.entityId());
+        if (entity == null) {
+            forward(clientboundRemoveMobEffectPacket);
+        } else if (entity instanceof LivingEntity livingEntity) {
             livingEntity.removeEffect(clientboundRemoveMobEffectPacket.effect());
         }
     }
@@ -969,7 +978,12 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
     @Override
     public void handleRotateMob(ClientboundRotateHeadPacket clientboundRotateHeadPacket) {
         Entity entity = this.getEntityOrPending(clientboundRotateHeadPacket.entityId);
-        if (entity == null || entity.getId() == this.localPlayerId) {
+        if (entity == null) {
+            forward(clientboundRotateHeadPacket);
+            return;
+        }
+
+        if (entity.getId() == this.localPlayerId) {
             return;
         }
 
@@ -1012,6 +1026,7 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
     public void handleSetEntityData(ClientboundSetEntityDataPacket clientboundSetEntityDataPacket) {
         Entity entity = this.getEntityOrPending(clientboundSetEntityDataPacket.id());
         if (entity == null) {
+            forward(clientboundSetEntityDataPacket);
             return;
         }
 
@@ -1019,6 +1034,10 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
 
         SynchedEntityData entityData = entity.getEntityData();
         for (SynchedEntityData.DataValue<?> dataValue : clientboundSetEntityDataPacket.packedItems()) {
+            if (dataValue.id() >= entityData.itemsById.length) {
+                continue;
+            }
+
             SynchedEntityData.DataItem<?> dataItem = entityData.itemsById[dataValue.id()];
             entityData.set((EntityDataAccessor) dataItem.getAccessor(), dataValue.value(), true);
         }
@@ -1028,6 +1047,7 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
     public void handleSetEntityMotion(ClientboundSetEntityMotionPacket clientboundSetEntityMotionPacket) {
         Entity entity = this.getEntityOrPending(clientboundSetEntityMotionPacket.getId());
         if (entity == null) {
+            forward(clientboundSetEntityMotionPacket);
             return;
         }
 
@@ -1041,6 +1061,10 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
     @Override
     public void handleSetEquipment(ClientboundSetEquipmentPacket clientboundSetEquipmentPacket) {
         Entity entity = this.getEntityOrPending(clientboundSetEquipmentPacket.getEntity());
+        if (entity == null) {
+            forward(clientboundSetEquipmentPacket);
+            return;
+        }
         if (entity instanceof LivingEntity livingEntity) {
             clientboundSetEquipmentPacket.getSlots().forEach((pair) -> {
                 livingEntity.setItemSlot(pair.getFirst(), pair.getSecond());
@@ -1168,6 +1192,7 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
     public void handleSoundEntityEvent(ClientboundSoundEntityPacket clientboundSoundEntityPacket) {
         Entity entity = this.level().getEntity(clientboundSoundEntityPacket.getId());
         if (entity == null) {
+            forward(clientboundSoundEntityPacket);
             return;
         }
 
@@ -1187,11 +1212,7 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
 
         Entity taken = this.level().getEntity(clientboundTakeItemEntityPacket.getItemId());
         if (taken != null) {
-            if (taken instanceof ServerPlayer serverPlayer) {
-                serverPlayer.connection.disconnect(Component.empty());
-            } else {
-                taken.discard();
-            }
+            taken.discard();
         }
     }
 
@@ -1199,6 +1220,7 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
     public void handleTeleportEntity(ClientboundTeleportEntityPacket clientboundTeleportEntityPacket) {
         Entity entity = this.getEntityOrPending(clientboundTeleportEntityPacket.id());
         if (entity == null) {
+            forward(clientboundTeleportEntityPacket);
             return;
         }
 
@@ -1227,6 +1249,10 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
     @Override
     public void handleUpdateAttributes(ClientboundUpdateAttributesPacket clientboundUpdateAttributesPacket) {
         Entity entity = this.getEntityOrPending(clientboundUpdateAttributesPacket.getEntityId());
+        if (entity == null) {
+            forward(clientboundUpdateAttributesPacket);
+            return;
+        }
         if (entity instanceof LivingEntity livingEntity) {
             AttributeMap attributeMap = livingEntity.getAttributes();
             for (ClientboundUpdateAttributesPacket.AttributeSnapshot snapshot : clientboundUpdateAttributesPacket.getValues()) {
@@ -1247,6 +1273,10 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
     @Override
     public void handleUpdateMobEffect(ClientboundUpdateMobEffectPacket clientboundUpdateMobEffectPacket) {
         Entity entity = this.getEntityOrPending(clientboundUpdateMobEffectPacket.getEntityId());
+        if (entity == null) {
+            forward(clientboundUpdateMobEffectPacket);
+            return;
+        }
         if (entity instanceof LivingEntity livingEntity) {
             Holder<MobEffect> holder = clientboundUpdateMobEffectPacket.getEffect();
             MobEffectInstance mobEffectInstance = new MobEffectInstance(holder, clientboundUpdateMobEffectPacket.getEffectDurationTicks(), clientboundUpdateMobEffectPacket.getEffectAmplifier(),

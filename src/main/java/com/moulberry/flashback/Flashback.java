@@ -20,10 +20,12 @@ import com.moulberry.flashback.keyframe.types.CameraKeyframeType;
 import com.moulberry.flashback.keyframe.types.CameraOrbitKeyframeType;
 import com.moulberry.flashback.keyframe.types.CameraShakeKeyframeType;
 import com.moulberry.flashback.keyframe.types.FOVKeyframeType;
+import com.moulberry.flashback.keyframe.types.FreezeKeyframeType;
 import com.moulberry.flashback.keyframe.types.SpeedKeyframeType;
 import com.moulberry.flashback.keyframe.types.TimeOfDayKeyframeType;
 import com.moulberry.flashback.keyframe.types.TimelapseKeyframeType;
 import com.moulberry.flashback.packet.FlashbackAccurateEntityPosition;
+import com.moulberry.flashback.packet.FlashbackClearEntities;
 import com.moulberry.flashback.packet.FlashbackClearParticles;
 import com.moulberry.flashback.packet.FinishedServerTick;
 import com.moulberry.flashback.packet.FlashbackForceClientTick;
@@ -106,6 +108,9 @@ import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.BasicFileAttributeView;
+import java.nio.file.attribute.BasicFileAttributes;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -116,6 +121,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Stream;
 
 public class Flashback implements ModInitializer, ClientModInitializer {
     public static final Logger LOGGER = LoggerFactory.getLogger("flashback");
@@ -166,6 +172,7 @@ public class Flashback implements ModInitializer, ClientModInitializer {
 
         PayloadTypeRegistry.playS2C().register(FlashbackForceClientTick.TYPE, StreamCodec.unit(FlashbackForceClientTick.INSTANCE));
         PayloadTypeRegistry.playS2C().register(FlashbackClearParticles.TYPE, StreamCodec.unit(FlashbackClearParticles.INSTANCE));
+        PayloadTypeRegistry.playS2C().register(FlashbackClearEntities.TYPE, StreamCodec.unit(FlashbackClearEntities.INSTANCE));
         PayloadTypeRegistry.playS2C().register(FlashbackInstantlyLerp.TYPE, StreamCodec.unit(FlashbackInstantlyLerp.INSTANCE));
         PayloadTypeRegistry.playS2C().register(FlashbackRemoteSelectHotbarSlot.TYPE, FlashbackRemoteSelectHotbarSlot.STREAM_CODEC);
         PayloadTypeRegistry.playS2C().register(FlashbackRemoteExperience.TYPE, FlashbackRemoteExperience.STREAM_CODEC);
@@ -231,6 +238,7 @@ public class Flashback implements ModInitializer, ClientModInitializer {
         KeyframeRegistry.register(SpeedKeyframeType.INSTANCE);
         KeyframeRegistry.register(TimelapseKeyframeType.INSTANCE);
         KeyframeRegistry.register(TimeOfDayKeyframeType.INSTANCE);
+        KeyframeRegistry.register(FreezeKeyframeType.INSTANCE);
 
         ClientPlayNetworking.registerGlobalReceiver(FlashbackForceClientTick.TYPE, (payload, context) -> {
             if (Flashback.isInReplay()) {
@@ -241,6 +249,16 @@ public class Flashback implements ModInitializer, ClientModInitializer {
         ClientPlayNetworking.registerGlobalReceiver(FlashbackClearParticles.TYPE, (payload, context) -> {
             if (Flashback.isInReplay()) {
                 Minecraft.getInstance().particleEngine.clearParticles();
+            }
+        });
+
+        ClientPlayNetworking.registerGlobalReceiver(FlashbackClearEntities.TYPE, (payload, context) -> {
+            if (Flashback.isInReplay()) {
+                for (Entity entity : Minecraft.getInstance().level.entitiesForRendering()) {
+                    if (entity != null && !(entity instanceof Player)) {
+                        entity.discard();
+                    }
+                }
             }
         });
 
@@ -356,13 +374,6 @@ public class Flashback implements ModInitializer, ClientModInitializer {
 
             AccurateEntityPositionHandler.tick();
 
-            if (Flashback.isInReplay() && !Flashback.isExporting()) {
-                EditorState editorState = EditorStateManager.getCurrent();
-                if (editorState != null) {
-                    editorState.recordCameraMovement();
-                }
-            }
-
             // Fix for camera entity sometimes being incorrect when respawning
             Entity camera = Minecraft.getInstance().cameraEntity;
             LocalPlayer player = Minecraft.getInstance().player;
@@ -374,6 +385,8 @@ public class Flashback implements ModInitializer, ClientModInitializer {
                     }
                 }
             }
+
+            Flashback.getConfig().tickDelayedSave();
         });
 
         ClientTickEvents.START_CLIENT_TICK.register(minecraft -> {
@@ -532,7 +545,7 @@ public class Flashback implements ModInitializer, ClientModInitializer {
 
     private void deleteUnusedReplayStates() {
         Path flashbackDir = Flashback.getDataDirectory();
-        Path replayDir = flashbackDir.resolve("replays");
+        Path replayDir = Flashback.getReplayFolder();
         Path replayStatesDir = flashbackDir.resolve("editor_states");
 
         if (!Files.exists(replayDir) || !Files.isDirectory(replayDir)) {
@@ -543,6 +556,7 @@ public class Flashback implements ModInitializer, ClientModInitializer {
         }
 
         CompletableFuture.runAsync(() -> {
+            long currentTime = System.currentTimeMillis();
             Map<UUID, Path> replayStates = new HashMap<>();
 
             // Find existing replay states
@@ -558,6 +572,15 @@ public class Flashback implements ModInitializer, ClientModInitializer {
                         withoutExtension = filename.substring(0, filename.length() - 9);
                     }
 
+                    BasicFileAttributeView attributeView = Files.getFileAttributeView(path, BasicFileAttributeView.class);
+                    BasicFileAttributes basicFileAttributes = attributeView.readAttributes();
+
+                    long lastModified = Math.max(basicFileAttributes.creationTime().toMillis(), basicFileAttributes.lastModifiedTime().toMillis());
+                    long timeDifference = Math.abs(currentTime - lastModified);
+                    if (timeDifference < Duration.ofDays(30).toMillis()) {
+                        continue;
+                    }
+
                     if (withoutExtension != null) {
                         UUID uuid;
                         try {
@@ -570,6 +593,10 @@ public class Flashback implements ModInitializer, ClientModInitializer {
                     }
                 }
             } catch (IOException ignored) {}
+
+            if (replayStates.isEmpty()) {
+                return;
+            }
 
             // Find which uuids are still valid because they have replays
             Set<UUID> replayUuids = new HashSet<>();
@@ -773,7 +800,7 @@ public class Flashback implements ModInitializer, ClientModInitializer {
         if (config.recentReplays.size() > 32) {
             config.recentReplays.remove(config.recentReplays.size() - 1);
         }
-        config.saveToDefaultFolder();
+        config.delayedSaveToDefaultFolder();
 
         // Actually load
         try {

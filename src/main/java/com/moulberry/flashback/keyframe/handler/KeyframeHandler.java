@@ -27,6 +27,10 @@ public interface KeyframeHandler {
         throw new UnsupportedOperationException();
     }
 
+    default void applyFreeze(boolean frozen, int frozenDelay) {
+        throw new UnsupportedOperationException();
+    }
+
     default void applyTimeOfDay(int timeOfDay) {
         throw new UnsupportedOperationException();
     }

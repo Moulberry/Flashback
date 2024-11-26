@@ -7,6 +7,7 @@ import com.moulberry.flashback.keyframe.impl.CameraKeyframe;
 import com.moulberry.flashback.keyframe.impl.CameraOrbitKeyframe;
 import com.moulberry.flashback.keyframe.impl.CameraShakeKeyframe;
 import com.moulberry.flashback.keyframe.impl.FOVKeyframe;
+import com.moulberry.flashback.keyframe.impl.FreezeKeyframe;
 import com.moulberry.flashback.keyframe.impl.TickrateKeyframe;
 import com.moulberry.flashback.keyframe.impl.TimeOfDayKeyframe;
 import com.moulberry.flashback.keyframe.impl.TimelapseKeyframe;
@@ -52,6 +53,7 @@ public abstract class Keyframe {
                 case "camera_orbit" -> context.deserialize(json, CameraOrbitKeyframe.class);
                 case "fov" -> context.deserialize(json, FOVKeyframe.class);
                 case "tickrate" -> context.deserialize(json, TickrateKeyframe.class);
+                case "freeze" -> context.deserialize(json, FreezeKeyframe.class);
                 case "timelapse" -> context.deserialize(json, TimelapseKeyframe.class);
                 case "time" -> context.deserialize(json, TimeOfDayKeyframe.class);
                 case "camera_shake" -> context.deserialize(json, CameraShakeKeyframe.class);
@@ -80,6 +82,10 @@ public abstract class Keyframe {
                 case TickrateKeyframe tickrateKeyframe -> {
                     jsonObject = (JsonObject) context.serialize(tickrateKeyframe);
                     jsonObject.addProperty("type", "tickrate");
+                }
+                case FreezeKeyframe freezeKeyframe -> {
+                    jsonObject = (JsonObject) context.serialize(freezeKeyframe);
+                    jsonObject.addProperty("type", "freeze");
                 }
                 case TimeOfDayKeyframe timeOfDayKeyframe -> {
                     jsonObject = (JsonObject) context.serialize(timeOfDayKeyframe);

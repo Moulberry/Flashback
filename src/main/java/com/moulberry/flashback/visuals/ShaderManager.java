@@ -6,8 +6,6 @@ import net.minecraft.client.renderer.ShaderDefines;
 import net.minecraft.client.renderer.ShaderProgram;
 import net.minecraft.resources.ResourceLocation;
 
-import java.io.IOException;
-
 public class ShaderManager {
 
     public static final ShaderManager INSTANCE = new ShaderManager();

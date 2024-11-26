@@ -8,6 +8,7 @@ import imgui.flag.ImGuiComboFlags;
 import imgui.flag.ImGuiHoveredFlags;
 import imgui.flag.ImGuiInputTextFlags;
 import imgui.flag.ImGuiNavInput;
+import imgui.flag.ImGuiStyleVar;
 import imgui.flag.ImGuiWindowFlags;
 import imgui.type.ImBoolean;
 import imgui.type.ImFloat;

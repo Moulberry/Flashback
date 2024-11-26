@@ -6,6 +6,7 @@ import com.moulberry.flashback.keyframe.types.CameraKeyframeType;
 import com.moulberry.flashback.keyframe.types.CameraOrbitKeyframeType;
 import com.moulberry.flashback.keyframe.types.CameraShakeKeyframeType;
 import com.moulberry.flashback.keyframe.types.FOVKeyframeType;
+import com.moulberry.flashback.keyframe.types.FreezeKeyframeType;
 import com.moulberry.flashback.keyframe.types.TimeOfDayKeyframeType;
 import com.moulberry.flashback.state.EditorState;
 import com.moulberry.flashback.state.EditorStateManager;

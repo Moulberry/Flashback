@@ -10,6 +10,7 @@ import com.moulberry.flashback.keyframe.impl.TimelapseKeyframe;
 import com.moulberry.flashback.keyframe.interpolation.InterpolationType;
 import com.moulberry.flashback.keyframe.interpolation.SidedInterpolationType;
 import com.moulberry.flashback.keyframe.types.TimelapseKeyframeType;
+import imgui.type.ImString;
 
 import java.util.Map;
 import java.util.TreeMap;
@@ -19,6 +20,12 @@ public class KeyframeTrack {
     public final KeyframeType<?> keyframeType;
     public TreeMap<Integer, Keyframe> keyframesByTick = new TreeMap<>();
     public boolean enabled = true;
+    public String customName = null;
+    public int customColour = 0;
+
+    public transient ImString nameEditField = null;
+    public transient boolean forceFocusTrack = false;
+    public transient float animatedOffsetInUi = 0.0f;
 
     public KeyframeTrack(KeyframeType<?> keyframeType) {
         this.keyframeType = keyframeType;

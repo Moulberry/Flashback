@@ -20,6 +20,7 @@ import com.moulberry.flashback.keyframe.types.CameraKeyframeType;
 import com.moulberry.flashback.keyframe.types.CameraOrbitKeyframeType;
 import com.moulberry.flashback.keyframe.types.FOVKeyframeType;
 import com.moulberry.flashback.playback.ReplayServer;
+import com.moulberry.flashback.state.EditorScene;
 import com.moulberry.flashback.state.EditorState;
 import com.moulberry.flashback.state.EditorStateManager;
 import com.moulberry.flashback.state.KeyframeTrack;
@@ -58,7 +59,7 @@ public class CameraPath {
         int replayTick = TimelineWindow.getCursorTick();
 
         if (lastEditorStateModCount != state.modCount || lastCursorTick != replayTick) {
-            CameraPathArgs cameraPathArgs = createCameraPathArgs(state, replayTick, SUPPORTED_CAMERA_KEYFRAMES);
+            CameraPathArgs cameraPathArgs = createCameraPathArgs(state.currentScene(), replayTick, SUPPORTED_CAMERA_KEYFRAMES);
 
             if (lastEditorStateModCount != state.modCount || !cameraPathArgs.equals(lastCameraPathArgs)) {
                 lastCameraPathArgs = cameraPathArgs;
@@ -134,12 +135,12 @@ public class CameraPath {
 
     private record CameraPathArgs(int lastLastCameraTick, int lastCameraTick, int nextCameraTick, int nextNextCameraTick) {}
 
-    private static CameraPathArgs createCameraPathArgs(EditorState state, int replayTick, Set<KeyframeType<?>> supportedKeyframes) {
+    private static CameraPathArgs createCameraPathArgs(EditorScene scene, int replayTick, Set<KeyframeType<?>> supportedKeyframes) {
         int lastCameraTick = -1;
         int nextCameraTick = -1;
 
-        for (int trackIndex = 0; trackIndex < state.keyframeTracks.size(); trackIndex++) {
-            KeyframeTrack keyframeTrack = state.keyframeTracks.get(trackIndex);
+        for (int trackIndex = 0; trackIndex < scene.keyframeTracks.size(); trackIndex++) {
+            KeyframeTrack keyframeTrack = scene.keyframeTracks.get(trackIndex);
             if (keyframeTrack.enabled && supportedKeyframes.contains(keyframeTrack.keyframeType) && !keyframeTrack.keyframesByTick.isEmpty()) {
                 var lastEntry = keyframeTrack.keyframesByTick.floorEntry(replayTick);
                 var nextEntry = keyframeTrack.keyframesByTick.ceilingEntry(replayTick + 1);
@@ -160,8 +161,8 @@ public class CameraPath {
         int lastLastCameraTick = -1;
         int nextNextCameraTick = -1;
 
-        for (int trackIndex = 0; trackIndex < state.keyframeTracks.size(); trackIndex++) {
-            KeyframeTrack keyframeTrack = state.keyframeTracks.get(trackIndex);
+        for (int trackIndex = 0; trackIndex < scene.keyframeTracks.size(); trackIndex++) {
+            KeyframeTrack keyframeTrack = scene.keyframeTracks.get(trackIndex);
             if (keyframeTrack.enabled && supportedKeyframes.contains(keyframeTrack.keyframeType) && !keyframeTrack.keyframesByTick.isEmpty()) {
                 var lastLastEntry = lastCameraTick == -1 ? null : keyframeTrack.keyframesByTick.floorEntry(lastCameraTick - 1);
                 var nextNextEntry = nextCameraTick == -1 ? null : keyframeTrack.keyframesByTick.ceilingEntry(nextCameraTick + 1);

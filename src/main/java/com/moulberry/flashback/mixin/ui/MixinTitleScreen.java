@@ -2,26 +2,18 @@ package com.moulberry.flashback.mixin.ui;
 
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
-import com.llamalad7.mixinextras.sugar.Local;
-import com.llamalad7.mixinextras.sugar.ref.LocalIntRef;
 import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.screen.FlashbackButton;
-import com.moulberry.flashback.screen.SelectReplayScreen;
-import net.fabricmc.fabric.api.client.screen.v1.Screens;
+import com.moulberry.flashback.screen.select_replay.SelectReplayScreen;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.components.AbstractButton;
 import net.minecraft.client.gui.components.AbstractWidget;
-import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.gui.components.ImageButton;
 import net.minecraft.client.gui.components.Renderable;
 import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.screens.AlertScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.TitleScreen;
-import net.minecraft.client.gui.screens.worldselection.SelectWorldScreen;
 import net.minecraft.network.chat.Component;
-import net.minecraft.util.StringUtil;
 import org.apache.commons.lang3.StringUtils;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
@@ -96,7 +88,7 @@ public class MixinTitleScreen extends Screen {
                         List<String> incompatibleMods = Screen.hasShiftDown() ? List.of() : Flashback.getReplayIncompatibleMods();
 
                         if (incompatibleMods.isEmpty()) {
-                            this.minecraft.setScreen(new SelectReplayScreen(this));
+                            this.minecraft.setScreen(new SelectReplayScreen(this, Flashback.getReplayFolder()));
                         } else {
                             String mods = StringUtils.join(incompatibleMods, ", ");
                             String description = """

@@ -3,6 +3,7 @@ package com.moulberry.flashback;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundAddEntityPacket;
+import net.minecraft.network.protocol.game.ClientboundTeleportEntityPacket;
 import net.minecraft.network.protocol.game.VecDeltaCodec;
 import net.minecraft.server.level.ServerEntity;
 import net.minecraft.util.Mth;
@@ -10,12 +11,15 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.ExperienceOrb;
 import net.minecraft.world.entity.Marker;
 import net.minecraft.world.entity.Pose;
+import net.minecraft.world.entity.PositionMoveRotation;
+import net.minecraft.world.entity.Relative;
 import net.minecraft.world.entity.boss.EnderDragonPart;
 import net.minecraft.world.entity.decoration.ItemFrame;
 import net.minecraft.world.entity.decoration.Painting;
 import net.minecraft.world.entity.item.FallingBlockEntity;
 import net.minecraft.world.entity.monster.warden.Warden;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.phys.Vec3;
 
 import java.util.ArrayList;
 
@@ -23,6 +27,15 @@ public class PacketHelper {
 
     public static boolean shouldIgnoreEntity(Entity entity) {
         return entity == null || entity.isRemoved() || entity instanceof EnderDragonPart || entity.getType().clientTrackingRange() <= 0;
+    }
+
+    public static ClientboundTeleportEntityPacket createTeleportForUnknown(int id, double x, double y, double z, byte yRot, byte xRot, boolean onGround) {
+        return new ClientboundTeleportEntityPacket(
+            id,
+            new PositionMoveRotation(new Vec3(x, y, z), Vec3.ZERO, yRot, xRot),
+            Relative.DELTA,
+            onGround
+        );
     }
 
     public static Packet<ClientGamePacketListener> createAddEntity(Entity entity) {

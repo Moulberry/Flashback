@@ -10,6 +10,7 @@ import com.moulberry.flashback.editor.ui.windows.MovementWindow;
 import com.moulberry.flashback.editor.ui.windows.PlayerListWindow;
 import com.moulberry.flashback.editor.ui.windows.PreferencesWindow;
 import com.moulberry.flashback.editor.ui.windows.SelectedEntityPopup;
+import com.moulberry.flashback.editor.ui.windows.WindowType;
 import com.moulberry.flashback.state.EditorState;
 import com.moulberry.flashback.state.EditorStateManager;
 import com.moulberry.flashback.combo_options.Sizing;
@@ -96,7 +97,6 @@ public class ReplayUI {
 
     private static String infoOverlayText = null;
     private static long infoOverlayEndMillis = 0;
-    public static boolean recordCameraMovement = false;
 
     private static UUID selectedEntity = null;
     private static boolean openSelectedEntityPopup = false;
@@ -216,10 +216,16 @@ public class ReplayUI {
         fontConfig.setOversampleV(2);
 
         fontConfig.setName("Inter (Medium), 16px");
+        fontConfig.setGlyphOffset(0, 0);
         font = fonts.addFontFromMemoryTTF(loadFont("inter-medium.ttf"), size, fontConfig, glyphRanges);
 
         // Merge in Japanese/Korean/Chinese/etc. characters if needed
         fontConfig.setMergeMode(true);
+
+        fontConfig.setGlyphOffset(0, (int)(5 * getUiScale()));
+        io.getFonts().addFontFromMemoryTTF(loadFont("materialiconsround-regular.otf"), (int)(20 * getUiScale()), fontConfig, buildMaterialIconRanges());
+        fontConfig.setGlyphOffset(0, 0);
+
         if (languageCode.startsWith("he")) {
             short[] hebrewRanges = new short[]{(short)'\u0590', (short)'\u05FF', (short)'\uFB1D', (short)'\uFB4F', 0};
             io.getFonts().addFontFromMemoryTTF(loadFont("heebo-medium.ttf"), size, fontConfig, hebrewRanges);
@@ -239,6 +245,27 @@ public class ReplayUI {
 
         fontConfig.destroy();
         fonts.clearTexData();
+    }
+
+    private static short[] buildMaterialIconRanges() {
+        ImFontGlyphRangesBuilder builder = new ImFontGlyphRangesBuilder();
+        builder.addChar('\ue04b');
+        builder.addChar('\ue577');
+        builder.addChar('\uefeb');
+        builder.addChar('\ue3af');
+        builder.addChar('\ue9e4');
+        builder.addChar('\ue422');
+        builder.addChar('\ue518');
+        builder.addChar('\ue945');
+        builder.addChar('\ue8f4');
+        builder.addChar('\ue8f5');
+        builder.addChar('\ue148');
+        builder.addChar('\ue5d2');
+        builder.addChar('\ue872');
+        builder.addChar('\ue3c9');
+        builder.addChar('\ue40a');
+        builder.addChar('\ue92b');
+        return builder.buildRanges();
     }
 
     private static byte[] loadFont(String name) {
@@ -629,9 +656,6 @@ public class ReplayUI {
                     showText = infoOverlayText;
                     showTextBorderColour = 0xFF00FFFF;
                 }
-            } else if (recordCameraMovement) {
-                showText = "Recording Movement as Keyframes...";
-                showTextBorderColour = 0xFF0000FF;
             }
 
             if (showText != null) {
@@ -743,8 +767,8 @@ public class ReplayUI {
         ExportScreenshotWindow.render();
         PreferencesWindow.render();
         ExportQueueWindow.render();
-        PlayerListWindow.render();
-        MovementWindow.render();
+
+        WindowType.renderAll();
 
         popupOpenLastFrame = ImGui.isPopupOpen("", ImGuiPopupFlags.AnyPopup);
 
