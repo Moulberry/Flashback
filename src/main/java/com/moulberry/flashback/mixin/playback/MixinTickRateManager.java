@@ -1,5 +1,6 @@
 package com.moulberry.flashback.mixin.playback;
 
+import com.llamalad7.mixinextras.injector.ModifyReturnValue;
 import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.playback.ReplayPlayer;
 import net.minecraft.client.Minecraft;
@@ -22,20 +23,17 @@ public abstract class MixinTickRateManager {
 
     @Shadow
     protected boolean runGameElements;
-
-    /*
-     * Freeze the replay server, preventing game elements from running normally
-     */
+    @Unique
+    private final boolean isServerTickRateManager = ((Object)this instanceof ServerTickRateManager);
 
     @Inject(method = "tick", at = @At("RETURN"))
     public void tick(CallbackInfo ci) {
-        if (Flashback.isInReplay() && this.isServerTickRateManager) {
-            this.runGameElements = false;
+        if (Flashback.isInReplay()) {
+            if (this.isServerTickRateManager) {
+                this.runGameElements = false;
+            }
         }
     }
-
-    @Unique
-    private final boolean isServerTickRateManager = ((Object)this instanceof ServerTickRateManager);
 
     @Inject(method = "isEntityFrozen", at = @At("HEAD"), cancellable = true)
     public void isEntityFrozen(Entity entity, CallbackInfoReturnable<Boolean> cir) {
@@ -43,11 +41,7 @@ public abstract class MixinTickRateManager {
             if (this.isServerTickRateManager) {
                 cir.setReturnValue(!(entity instanceof ReplayPlayer));
             } else {
-                if (Flashback.isExporting()) {
-                    cir.setReturnValue(false);
-                } else {
-                    cir.setReturnValue(!this.runsNormally() || entity == Minecraft.getInstance().player);
-                }
+                cir.setReturnValue(!this.runsNormally() || entity == Minecraft.getInstance().player);
             }
         }
     }

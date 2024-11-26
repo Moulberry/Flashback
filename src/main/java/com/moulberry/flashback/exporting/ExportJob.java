@@ -7,18 +7,15 @@ import com.mojang.blaze3d.platform.Window;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.*;
 import com.moulberry.flashback.Flashback;
+import com.moulberry.flashback.FreezeSlowdownFormula;
 import com.moulberry.flashback.Utils;
 import com.moulberry.flashback.combo_options.VideoContainer;
 import com.moulberry.flashback.editor.ui.ReplayUI;
-import com.moulberry.flashback.keyframe.KeyframeType;
 import com.moulberry.flashback.keyframe.handler.KeyframeHandler;
 import com.moulberry.flashback.keyframe.handler.MinecraftKeyframeHandler;
-import com.moulberry.flashback.keyframe.types.SpeedKeyframeType;
-import com.moulberry.flashback.keyframe.types.TimelapseKeyframeType;
+import com.moulberry.flashback.keyframe.handler.TickrateKeyframeCapture;
 import com.moulberry.flashback.state.EditorState;
 import com.moulberry.flashback.playback.ReplayServer;
-import it.unimi.dsi.fastutil.doubles.DoubleArrayList;
-import it.unimi.dsi.fastutil.doubles.DoubleList;
 import net.minecraft.ChatFormatting;
 import net.minecraft.Util;
 import net.minecraft.client.Camera;
@@ -51,7 +48,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Random;
-import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.LockSupport;
@@ -223,21 +219,23 @@ public class ExportJob {
         }
         Minecraft.getInstance().resizeDisplay();
 
-        DoubleList ticks = calculateTicks(this.settings.editorState(), this.settings.startTick(), this.settings.endTick(), this.settings.framerate());
+        List<TickInfo> ticks = calculateTicks(this.settings.editorState(), this.settings.startTick(), this.settings.endTick(), this.settings.framerate());
 
         int clientTickCount = 0;
 
         this.renderStartTime = System.currentTimeMillis();
 
-        double lastTickDouble = 0;
+        double lastClientTickDouble = 0;
 
         for (int tickIndex = 0; tickIndex < ticks.size(); tickIndex++) {
-            this.currentTickDouble = ticks.getDouble(tickIndex);
-            float deltaTicksFloat = (float)(currentTickDouble - lastTickDouble);
-            lastTickDouble = currentTickDouble;
-            int currentTick = (int) currentTickDouble;
-            double partialTick = currentTickDouble - currentTick;
-            int targetServerTick = this.settings.startTick() + currentTick;
+            TickInfo tickInfo = ticks.get(tickIndex);
+            boolean frozen = tickInfo.frozen;
+            this.currentTickDouble = tickInfo.serverTick;
+            int targetServerTick = this.settings.startTick() + (int) currentTickDouble;
+
+            float deltaTicksFloat = (float)(tickInfo.clientTick - lastClientTickDouble);
+            lastClientTickDouble = tickInfo.clientTick;
+            double partialClientTick = tickInfo.clientTick - (int) tickInfo.clientTick;
 
             // Wait until server is on correct replay tick
             long start = System.nanoTime();
@@ -245,10 +243,10 @@ public class ExportJob {
             serverTickTimeNanos += System.nanoTime() - start;
 
             // Tick client
-            while (clientTickCount < currentTick) {
+            while (clientTickCount < (int) tickInfo.clientTick) {
                 start = System.nanoTime();
                 this.updateRandoms(random, mathRandom);
-                this.runClientTick();
+                this.runClientTick(frozen);
                 clientTickTimeNanos += System.nanoTime() - start;
 
                 clientTickCount += 1;
@@ -256,7 +254,7 @@ public class ExportJob {
 
             long pauseScreenStart = System.currentTimeMillis();
             while (Minecraft.getInstance().getOverlay() != null || Minecraft.getInstance().screen != null) {
-                this.runClientTick();
+                this.runClientTick(frozen);
 
                 Window window = Minecraft.getInstance().getWindow();
                 RenderTarget renderTarget = Minecraft.getInstance().mainRenderTarget;
@@ -285,7 +283,7 @@ public class ExportJob {
                 }
             }
 
-            this.tryUnfreezeClient();
+            this.updateClientFreeze(frozen);
 
             KeyframeHandler keyframeHandler = new MinecraftKeyframeHandler(Minecraft.getInstance());
             this.settings.editorState().applyKeyframes(keyframeHandler, (float)(this.settings.startTick() + currentTickDouble));
@@ -302,12 +300,12 @@ public class ExportJob {
             RenderSystem.enableCull();
 
             DeltaTracker.Timer timer = Minecraft.getInstance().timer;
-            timer.updateFrozenState(false);
+            timer.updateFrozenState(frozen);
             timer.updatePauseState(false);
             timer.deltaTicks = deltaTicksFloat;
             timer.realtimeDeltaTicks = deltaTicksFloat;
-            timer.deltaTickResidual = (float) partialTick;
-            timer.pausedDeltaTickResidual = (float) partialTick;
+            timer.deltaTickResidual = (float) partialClientTick;
+            timer.pausedDeltaTickResidual = (float) partialClientTick;
 
             start = System.nanoTime();
             Minecraft.getInstance().gameRenderer.render(timer, true);
@@ -391,7 +389,7 @@ public class ExportJob {
 
         // Ensure replay server is paused at currentTick
         this.setServerTickAndWait(replayServer, currentTick, true);
-        this.runClientTick();
+        this.runClientTick(false);
 
         // Clear particles
         minecraft.particleEngine.clearParticles();
@@ -408,7 +406,7 @@ public class ExportJob {
         while (currentTick < this.settings.startTick()) {
             currentTick += 1;
             this.setServerTickAndWait(replayServer, currentTick, true);
-            this.runClientTick();
+            this.runClientTick(false);
         }
 
         // Apply initial position and keyframes at start tick
@@ -419,11 +417,11 @@ public class ExportJob {
             player.setDeltaMovement(Vec3.ZERO);
         }
         this.settings.editorState().applyKeyframes(new MinecraftKeyframeHandler(Minecraft.getInstance()), this.settings.startTick());
-        this.runClientTick();
+        this.runClientTick(false);
 
         // Ensured replay server is paused at startTick
         this.setServerTickAndWait(replayServer, this.settings.startTick(), true);
-        this.runClientTick();
+        this.runClientTick(false);
 
         // Remove screen
         minecraft.setScreen(null);
@@ -443,19 +441,20 @@ public class ExportJob {
         }
     }
 
-    private void runClientTick() {
-        this.tryUnfreezeClient();
+    private void runClientTick(boolean frozen) {
+        this.updateClientFreeze(frozen);
 
         Minecraft minecraft = Minecraft.getInstance();
 
         while (minecraft.pollTask()) {}
+        this.updateClientFreeze(frozen);
         minecraft.tick();
-        this.updateSoundSound(minecraft);
+        this.updateSoundSource(minecraft);
 
-        this.tryUnfreezeClient();
+        this.updateClientFreeze(frozen);
     }
 
-    private void updateSoundSound(Minecraft minecraft) {
+    private void updateSoundSource(Minecraft minecraft) {
         EditorState editorState = this.settings.editorState();
         if (editorState != null) {
             Camera audioCamera = editorState.getAudioCamera();
@@ -468,10 +467,10 @@ public class ExportJob {
         minecraft.getSoundManager().updateSource(Minecraft.getInstance().gameRenderer.getMainCamera());
     }
 
-    private void tryUnfreezeClient() {
+    private void updateClientFreeze(boolean frozen) {
         ClientLevel level = Minecraft.getInstance().level;
         if (level != null) {
-            level.tickRateManager().setFrozen(false);
+            level.tickRateManager().setFrozen(frozen);
         }
     }
 
@@ -667,29 +666,12 @@ public class ExportJob {
         }
     }
 
-    private static class TickrateKeyframeCapture implements KeyframeHandler {
-        private float tickrate = 20.0f;
+    private record TickInfo(double serverTick, double clientTick, boolean frozen) {}
 
-        @Override
-        public Set<KeyframeType<?>> supportedKeyframes() {
-            return Set.of(SpeedKeyframeType.INSTANCE, TimelapseKeyframeType.INSTANCE);
-        }
+    private static List<TickInfo> calculateTicks(EditorState editorState, int startTick, int endTick, double fps) {
+        List<TickInfo> ticks = new ArrayList<>();
 
-        @Override
-        public boolean alwaysApplyLastKeyframe() {
-            return true;
-        }
-
-        @Override
-        public void applyTickrate(float tickrate) {
-            this.tickrate = tickrate;
-        }
-    }
-
-    private static DoubleList calculateTicks(EditorState editorState, int startTick, int endTick, double fps) {
-        DoubleList ticks = new DoubleArrayList();
-
-        ticks.add(0);
+        ticks.add(new TickInfo(0, 0, false));
 
         double residual = 0;
         int currentTick = 0;
@@ -697,8 +679,10 @@ public class ExportJob {
         TickrateKeyframeCapture capture = new TickrateKeyframeCapture();
 
         int count = endTick - startTick;
+        int startFrozen = -1;
         while (currentTick <= count) {
             capture.tickrate = 20.0f;
+            capture.frozen = false;
             editorState.applyKeyframes(capture, startTick + currentTick + (float) residual);
 
             residual += capture.tickrate / fps;
@@ -711,10 +695,37 @@ public class ExportJob {
                 break;
             }
 
-            ticks.add(currentTick + residual);
+            double currentTickDouble = currentTick + residual;
+            if (!capture.frozen) {
+                startFrozen = -1;
+                ticks.add(new TickInfo(currentTickDouble, currentTickDouble, false));
+            } else {
+                if (startFrozen < 0) {
+                    startFrozen = currentTick;
+                }
+
+                if (capture.frozenDelay == 0) {
+                    ticks.add(new TickInfo(currentTickDouble, Math.min(currentTickDouble, startFrozen), true));
+                    continue;
+                }
+
+                double deltaFromStart = currentTickDouble - startFrozen;
+                double freezeClientTicks = capture.frozenDelay <= 5 ? 0.999 : 1.999;
+                double freezeDerivative = capture.frozenDelay <= 5 ? 1.0 : 0.5;
+                if (deltaFromStart > capture.frozenDelay) {
+                    ticks.add(new TickInfo(currentTickDouble, Math.min(currentTickDouble, startFrozen + freezeClientTicks), true));
+                } else if (capture.frozenDelay == 1) {
+                    ticks.add(new TickInfo(currentTickDouble, Math.min(currentTickDouble, startFrozen + freezeClientTicks), false));
+                } else {
+                    double freezePowerBase = FreezeSlowdownFormula.getFreezePowerBase(capture.frozenDelay, freezeDerivative);
+                    double clientTicks = freezeClientTicks * FreezeSlowdownFormula.calculateFreezeClientTick(deltaFromStart, capture.frozenDelay, freezePowerBase);
+                    ticks.add(new TickInfo(currentTickDouble, Math.min(currentTickDouble, startFrozen + clientTicks), false));
+                }
+            }
         }
 
         return ticks;
     }
+
 
 }

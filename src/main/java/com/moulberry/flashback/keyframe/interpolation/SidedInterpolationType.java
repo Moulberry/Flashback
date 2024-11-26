@@ -29,7 +29,7 @@ public enum SidedInterpolationType {
         } else if (left == SidedInterpolationType.EASE) {
             if (right == SidedInterpolationType.LINEAR) {
                 // https://easings.net/#easeInCubic
-                return amount * amount * amount;
+                return (float) Math.pow(amount, 3);
             } else if (right == SidedInterpolationType.EASE) {
                 // https://easings.net/#easeInOutCubic
                 if (amount < 0.5) {
