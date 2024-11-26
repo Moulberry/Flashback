@@ -20,6 +20,7 @@ import com.moulberry.flashback.keyframe.types.CameraKeyframeType;
 import com.moulberry.flashback.keyframe.types.CameraOrbitKeyframeType;
 import com.moulberry.flashback.keyframe.types.CameraShakeKeyframeType;
 import com.moulberry.flashback.keyframe.types.FOVKeyframeType;
+import com.moulberry.flashback.keyframe.types.FreezeKeyframeType;
 import com.moulberry.flashback.keyframe.types.SpeedKeyframeType;
 import com.moulberry.flashback.keyframe.types.TimeOfDayKeyframeType;
 import com.moulberry.flashback.keyframe.types.TimelapseKeyframeType;
@@ -107,6 +108,9 @@ import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.BasicFileAttributeView;
+import java.nio.file.attribute.BasicFileAttributes;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -117,6 +121,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Stream;
 
 public class Flashback implements ModInitializer, ClientModInitializer {
     public static final Logger LOGGER = LoggerFactory.getLogger("flashback");
@@ -233,6 +238,7 @@ public class Flashback implements ModInitializer, ClientModInitializer {
         KeyframeRegistry.register(SpeedKeyframeType.INSTANCE);
         KeyframeRegistry.register(TimelapseKeyframeType.INSTANCE);
         KeyframeRegistry.register(TimeOfDayKeyframeType.INSTANCE);
+        KeyframeRegistry.register(FreezeKeyframeType.INSTANCE);
 
         ClientPlayNetworking.registerGlobalReceiver(FlashbackForceClientTick.TYPE, (payload, context) -> {
             if (Flashback.isInReplay()) {
@@ -550,6 +556,7 @@ public class Flashback implements ModInitializer, ClientModInitializer {
         }
 
         CompletableFuture.runAsync(() -> {
+            long currentTime = System.currentTimeMillis();
             Map<UUID, Path> replayStates = new HashMap<>();
 
             // Find existing replay states
@@ -565,6 +572,15 @@ public class Flashback implements ModInitializer, ClientModInitializer {
                         withoutExtension = filename.substring(0, filename.length() - 9);
                     }
 
+                    BasicFileAttributeView attributeView = Files.getFileAttributeView(path, BasicFileAttributeView.class);
+                    BasicFileAttributes basicFileAttributes = attributeView.readAttributes();
+
+                    long lastModified = Math.max(basicFileAttributes.creationTime().toMillis(), basicFileAttributes.lastModifiedTime().toMillis());
+                    long timeDifference = Math.abs(currentTime - lastModified);
+                    if (timeDifference < Duration.ofDays(30).toMillis()) {
+                        continue;
+                    }
+
                     if (withoutExtension != null) {
                         UUID uuid;
                         try {
@@ -577,6 +593,10 @@ public class Flashback implements ModInitializer, ClientModInitializer {
                     }
                 }
             } catch (IOException ignored) {}
+
+            if (replayStates.isEmpty()) {
+                return;
+            }
 
             // Find which uuids are still valid because they have replays
             Set<UUID> replayUuids = new HashSet<>();

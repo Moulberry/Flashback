@@ -36,8 +36,6 @@ import it.unimi.dsi.fastutil.ints.IntIterator;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
-import net.fabricmc.loader.api.FabricLoader;
-import net.minecraft.FileUtil;
 import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.server.IntegratedServer;
@@ -51,6 +49,7 @@ import net.minecraft.network.protocol.configuration.ClientConfigurationPacketLis
 import net.minecraft.network.protocol.configuration.ConfigurationProtocols;
 import net.minecraft.network.protocol.game.*;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.server.ServerTickRateManager;
 import net.minecraft.server.Services;
 import net.minecraft.server.WorldStem;
 import net.minecraft.server.level.ChunkMap;
@@ -113,6 +112,10 @@ public class ReplayServer extends IntegratedServer {
     public AtomicBoolean sendFinishedServerTick = new AtomicBoolean(false);
     private volatile float desiredTickRate = 20.0f;
     private volatile float desiredTickRateManual = 20.0f;
+    private boolean desiredFrozen = false;
+    private int desiredFrozenDelay = -1;
+    private boolean isFrozen = false;
+    private int frozenDelay = -1;
 
     private int currentTick = 0;
     private volatile int targetTick = 0;
@@ -428,6 +431,11 @@ public class ReplayServer extends IntegratedServer {
         }
     }
 
+    public void setFrozen(boolean frozen, int delay) {
+        this.desiredFrozen = frozen;
+        this.desiredFrozenDelay = delay;
+    }
+
     public int getReplayTick() {
         return this.targetTick;
     }
@@ -645,7 +653,7 @@ public class ReplayServer extends IntegratedServer {
                         }
 
                         positionUpdateSet.add(id);
-                    } else {
+                    } else if (!this.isFrozen) {
                         byte yRot = (byte) Mth.floor(yaw * 256.0F / 360.0F);
                         byte xRot = (byte) Mth.floor(pitch * 256.0F / 360.0F);
                         this.getPlayerList().broadcastAll(PacketHelper.createTeleportForUnknown(id, x, y, z, yRot, xRot, onGround));
@@ -773,9 +781,7 @@ public class ReplayServer extends IntegratedServer {
             replayReader.handleSnapshot(this);
         }
 
-//        this.accurateEntityPositions = this.pendingAccurateEntityPositions;
-//        this.pendingAccurateEntityPositions = new ConcurrentHashMap<>();
-        this.lastReplayTick = this.currentTick;
+        this.lastReplayTick = this.targetTick;
         this.lastTickTimeNanos = this.nextTickTimeNanos - this.tickRateManager().nanosecondsPerTick();
 
         // Update list of replay viewers
@@ -821,10 +827,8 @@ public class ReplayServer extends IntegratedServer {
             this.replayPaused = true;
         }
 
-        boolean forceApplyKeyframes = this.forceApplyKeyframes.compareAndSet(true, false);
-
-        if (Flashback.EXPORT_JOB != null || this.targetTick == this.currentTick || normalPlayback) {
-            this.runUpdates(booleanSupplier, true);
+        if (Flashback.EXPORT_JOB != null || this.targetTick == this.currentTick || normalPlayback || this.isFrozen) {
+            this.runUpdates(booleanSupplier);
         } else {
             int realTargetTick = this.targetTick;
 
@@ -837,12 +841,12 @@ public class ReplayServer extends IntegratedServer {
 
             if (this.targetTick >= realTargetTick) {
                 this.targetTick = realTargetTick;
-                this.runUpdates(booleanSupplier, forceApplyKeyframes);
+                this.runUpdates(booleanSupplier);
             } else {
                 while (this.targetTick <= realTargetTick) {
                     this.fastForwarding = this.targetTick < realTargetTick;
 
-                    this.runUpdates(booleanSupplier, forceApplyKeyframes);
+                    this.runUpdates(booleanSupplier);
 
                     if (this.targetTick == realTargetTick) {
                         break;
@@ -854,7 +858,7 @@ public class ReplayServer extends IntegratedServer {
             }
         }
 
-        if (forceApplyKeyframes) {
+        if (this.forceApplyKeyframes.compareAndSet(true, false)) {
             ((MinecraftExt)Minecraft.getInstance()).flashback$applyKeyframes();
         }
 
@@ -982,10 +986,19 @@ public class ReplayServer extends IntegratedServer {
         }
     }
 
-    private void runUpdates(BooleanSupplier booleanSupplier, boolean forceApplyKeyframes) {
-        if (!this.replayPaused || forceApplyKeyframes) {
-            this.desiredTickRate = 20.0f;
-            this.getEditorState().applyKeyframes(new ReplayServerKeyframeHandler(this), this.targetTick);
+    private void runUpdates(BooleanSupplier booleanSupplier) {
+        this.desiredTickRate = 20.0f;
+        this.desiredFrozen = false;
+        this.getEditorState().applyKeyframes(new ReplayServerKeyframeHandler(this), this.targetTick);
+
+        if (this.desiredFrozen && this.frozenDelay < 0) {
+            if (this.desiredFrozenDelay <= 0) {
+                this.frozenDelay = 1;
+            } else if (this.desiredFrozenDelay <= 5) {
+                this.frozenDelay = 2;
+            } else {
+                this.frozenDelay = 3;
+            }
         }
 
         float tickRate = this.desiredTickRate;
@@ -993,14 +1006,34 @@ public class ReplayServer extends IntegratedServer {
             tickRate *= this.desiredTickRateManual / 20f;
         }
 
+        if (this.desiredFrozen) {
+            if (this.frozenDelay > 0) {
+                this.frozenDelay -= 1;
+            }
+            if (this.frozenDelay == 0) {
+                this.isFrozen = true;
+            }
+        } else {
+            this.frozenDelay = -1;
+            this.isFrozen = false;
+        }
+
         // Update tick rate & frozen state
-        if (this.tickRateManager().tickrate() != tickRate) {
-            this.tickRateManager().setTickRate(tickRate);
+        ServerTickRateManager tickRateManager = this.tickRateManager();
+        if (tickRateManager.tickrate() != tickRate) {
+            tickRateManager.setTickRate(tickRate);
+        }
+        if (tickRateManager.isFrozen() != isFrozen) {
+            tickRateManager.setFrozen(isFrozen);
         }
 
         boolean tickChanged = this.targetTick != this.currentTick;
 
-        this.handleActions();
+        if (this.isFrozen && this.targetTick >= this.currentTick) {
+            tickChanged = false;
+        } else {
+            this.handleActions();
+        }
 
         // Add tickets for keeping entities loaded
         for (ServerLevel level : this.getAllLevels()) {
@@ -1014,7 +1047,7 @@ public class ReplayServer extends IntegratedServer {
         super.tickServer(booleanSupplier);
 
         // Teleport entities
-        if (!this.needsPositionUpdate.isEmpty()) {
+        if (!this.isFrozen && !this.needsPositionUpdate.isEmpty()) {
             for (Map.Entry<ResourceKey<Level>, IntSet> entry : this.needsPositionUpdate.entrySet()) {
                 ResourceKey<Level> dimension = entry.getKey();
                 IntSet entities = entry.getValue();
@@ -1078,18 +1111,18 @@ public class ReplayServer extends IntegratedServer {
 
             if (this.replayPaused) {
                 if (tickChanged) {
-                    if (this.tickRateManager().isFrozen()) {
-                        this.tickRateManager().setFrozen(false);
+                    if (tickRateManager.isFrozen()) {
+                        tickRateManager.setFrozen(false);
                     }
                     for (ReplayPlayer replayViewer : this.replayViewers) {
                         ServerPlayNetworking.send(replayViewer, FlashbackForceClientTick.INSTANCE);
                     }
-                    this.tickRateManager().setFrozen(true);
-                } else if (!this.tickRateManager().isFrozen()) {
-                    this.tickRateManager().setFrozen(true);
+                    tickRateManager.setFrozen(true);
+                } else if (!tickRateManager.isFrozen()) {
+                    tickRateManager.setFrozen(true);
                 }
-            } else if (this.tickRateManager().isFrozen()) {
-                this.tickRateManager().setFrozen(false);
+            } else if (tickRateManager.isFrozen() != isFrozen) {
+                tickRateManager.setFrozen(isFrozen);
             }
         }
     }

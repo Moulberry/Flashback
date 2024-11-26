@@ -71,9 +71,7 @@ dependencies {
     modCompileOnly("maven.modrinth:bobby:2cuVyTav")
     modCompileOnly("maven.modrinth:simple-voice-chat:95BK1U8I")
     modCompileOnly("maven.modrinth:replaymod:NtlpUQgI")
-    // modCompileOnly("maven.modrinth:distanthorizons:pEvLEY5E")
-	modCompileOnly("maven.modrinth:modmenu:xhN1IvHi")
-	// modCompileOnly("maven.modrinth:axiom:D3uDJmiB")
+    modImplementation("maven.modrinth:modmenu:xhN1IvHi")
 
 	shadow(implementation("org.bytedeco:javacv-platform:1.5.10") {
 		exclude group: "org.bytedeco", module: "artoolkitplus"

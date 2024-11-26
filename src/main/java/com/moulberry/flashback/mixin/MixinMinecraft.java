@@ -5,16 +5,17 @@ import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.mojang.authlib.yggdrasil.YggdrasilAuthenticationService;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.moulberry.flashback.Flashback;
+import com.moulberry.flashback.FreezeSlowdownFormula;
 import com.moulberry.flashback.exporting.ExportJob;
 import com.moulberry.flashback.exporting.ExportJobQueue;
 import com.moulberry.flashback.keyframe.handler.MinecraftKeyframeHandler;
+import com.moulberry.flashback.keyframe.handler.TickrateKeyframeCapture;
 import com.moulberry.flashback.state.EditorState;
 import com.moulberry.flashback.state.EditorStateManager;
 import com.moulberry.flashback.exporting.PerfectFrames;
 import com.moulberry.flashback.playback.ReplayServer;
 import com.moulberry.flashback.ext.MinecraftExt;
 import com.moulberry.flashback.editor.ui.ReplayUI;
-import com.moulberry.flashback.visuals.AccurateEntityPositionHandler;
 import it.unimi.dsi.fastutil.floats.FloatUnaryOperator;
 import net.minecraft.CrashReport;
 import net.minecraft.ReportedException;
@@ -43,7 +44,6 @@ import net.minecraft.server.level.progress.ProcessorChunkProgressListener;
 import net.minecraft.server.level.progress.StoringChunkProgressListener;
 import net.minecraft.server.packs.repository.PackRepository;
 import net.minecraft.server.players.GameProfileCache;
-import net.minecraft.util.Mth;
 import net.minecraft.util.profiling.ProfilerFiller;
 import net.minecraft.world.TickRateManager;
 import net.minecraft.world.entity.Entity;
@@ -131,6 +131,13 @@ public abstract class MixinMinecraft implements MinecraftExt {
     @Nullable
     public Entity cameraEntity;
 
+    @Shadow
+    @Final
+    public DeltaTracker.Timer deltaTracker;
+
+    @Shadow
+    public long clientTickCount;
+
     @Inject(method="<init>", at=@At("RETURN"))
     public void init(GameConfig gameConfig, CallbackInfo ci) {
         ReplayUI.init();
@@ -195,17 +202,70 @@ public abstract class MixinMinecraft implements MinecraftExt {
         }
     }
 
+    @Unique
+    private int serverTickFreezeDelayStart = -1;
+    @Unique
+    private double clientTickFreezeDelayStart = -1;
+
     @Inject(method = "getTickTargetMillis", at = @At("HEAD"), cancellable = true)
     public void getTickTargetMillis(float f, CallbackInfoReturnable<Float> cir) {
-        if (Flashback.isInReplay()) {
+        ReplayServer replayServer = Flashback.getReplayServer();
+        if (replayServer != null) {
             if (this.level == null) {
+                clientTickFreezeDelayStart = -1;
+                serverTickFreezeDelayStart = -1;
                 return;
             }
 
-            TickRateManager tickRateManager = this.level.tickRateManager();
-            if (tickRateManager.runsNormally()) {
-                cir.setReturnValue(tickRateManager.millisecondsPerTick());
+            EditorState editorState = EditorStateManager.getCurrent();
+            if (editorState != null && !replayServer.replayPaused) {
+                float partialReplayTick = replayServer.getPartialReplayTick();
+
+                TickrateKeyframeCapture capture = new TickrateKeyframeCapture();
+                editorState.applyKeyframes(capture, partialReplayTick);
+
+                if (capture.frozen && capture.frozenDelay > 0 && this.deltaTracker instanceof DeltaTracker.Timer timer) {
+                    if (clientTickFreezeDelayStart < 0) {
+                        clientTickFreezeDelayStart = this.clientTickCount + 1;
+                        serverTickFreezeDelayStart = (int) partialReplayTick;
+
+                        TickRateManager tickRateManager = this.level.tickRateManager();
+                        tickRateManager.setFrozenTicksToRun(capture.frozenDelay <= 5 ? 1 : 2);
+                    }
+
+                    double freezeClientTicks = capture.frozenDelay <= 5 ? 0.999 : 1.999;
+                    double freezeDerivative = capture.frozenDelay <= 5 ? 1.0 : 0.5;
+
+                    double deltaFromStart = partialReplayTick - serverTickFreezeDelayStart;
+
+                    if (deltaFromStart >= 0 && deltaFromStart <= capture.frozenDelay) {
+                        double freezePowerBase = FreezeSlowdownFormula.getFreezePowerBase(capture.frozenDelay, freezeDerivative);
+                        double clientTicks = freezeClientTicks * FreezeSlowdownFormula.calculateFreezeClientTick(deltaFromStart,
+                            capture.frozenDelay, freezePowerBase);
+
+                        double currentClientTicks = this.clientTickCount + timer.deltaTickResidual - clientTickFreezeDelayStart;
+                        double freezeRate = Math.max(0.01f, Math.min(1f, clientTicks - currentClientTicks));
+
+                        float tickrate = Math.max(1f, capture.tickrate) * (float) freezeRate;
+                        cir.setReturnValue(1000f / tickrate);
+                        return;
+                    }
+                } else {
+                    clientTickFreezeDelayStart = -1;
+                    serverTickFreezeDelayStart = -1;
+                }
+
+                TickRateManager tickRateManager = this.level.tickRateManager();
+                if (tickRateManager.runsNormally()) {
+                    cir.setReturnValue(1000f / Math.max(1f, capture.tickrate));
+                }
+            } else {
+                TickRateManager tickRateManager = this.level.tickRateManager();
+                if (tickRateManager.runsNormally()) {
+                    cir.setReturnValue(tickRateManager.millisecondsPerTick());
+                }
             }
+
         }
     }
 
@@ -275,7 +335,9 @@ public abstract class MixinMinecraft implements MinecraftExt {
         this.applyKeyframes.set(true);
     }
 
-    @Inject(method = "runTick", at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/platform/Window;setErrorSection(Ljava/lang/String;)V", ordinal = 1), cancellable = true)
+    @Inject(method = "runTick", at = @At(value = "INVOKE",
+        target = "Lcom/mojang/blaze3d/platform/Window;setErrorSection(Ljava/lang/String;)V",
+        ordinal = 1), cancellable = true)
     public void runTick_setErrorSection(boolean bl, CallbackInfo ci) {
         ReplayServer replayServer = Flashback.getReplayServer();
         if (replayServer == null) {
