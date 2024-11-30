@@ -342,9 +342,11 @@ public abstract class MixinMinecraft implements MinecraftExt {
         this.applyKeyframes.set(true);
     }
 
-    @Inject(method = "runTick", at = @At(value = "INVOKE",
+    @Inject(method = "runTick", at = @At(
+        value = "INVOKE_STRING",
         target = "Lcom/mojang/blaze3d/platform/Window;setErrorSection(Ljava/lang/String;)V",
-        ordinal = 1), cancellable = true)
+        args = "ldc=Render"
+    ), cancellable = true)
     public void runTick_setErrorSection(boolean bl, CallbackInfo ci) {
         ReplayServer replayServer = Flashback.getReplayServer();
         if (replayServer == null) {
