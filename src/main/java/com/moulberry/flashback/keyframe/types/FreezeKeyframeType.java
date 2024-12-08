@@ -16,7 +16,7 @@ public class FreezeKeyframeType implements KeyframeType<FreezeKeyframe> {
 
     @Override
     public @Nullable String icon() {
-        return "\ue9e4";
+        return "\ueb3b";
     }
 
     @Override
