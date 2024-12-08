@@ -266,6 +266,7 @@ public class ReplayUI {
         builder.addChar('\ue3c9');
         builder.addChar('\ue40a');
         builder.addChar('\ue92b');
+        builder.addChar('\ueb3b');
         return builder.buildRanges();
     }
 
