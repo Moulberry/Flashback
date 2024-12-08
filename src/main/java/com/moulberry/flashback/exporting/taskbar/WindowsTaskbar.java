@@ -12,11 +12,7 @@ public class WindowsTaskbar extends COMInvoker implements ITaskbar {
     WindowsTaskbar(Pointer ptr, WinDef.HWND hwnd) {
         this.setPointer(ptr);
         this.hwnd = hwnd;
-        try {
-            this.invokeNative(3); // HrInit
-        } finally {
-            this.invokeNative(2); // Release
-        }
+        this.invokeNative(3); // HrInit
     }
 
     private void invokeNative(int ventry, Object... objects) {
