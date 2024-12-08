@@ -992,7 +992,7 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
 
     @Override
     public void handleSetHeldSlot(ClientboundSetHeldSlotPacket clientboundSetHeldSlotPacket) {
-        if (!Inventory.isHotbarSlot(clientboundSetHeldSlotPacket.getSlot())) {
+        if (!Inventory.isHotbarSlot(clientboundSetHeldSlotPacket.slot())) {
             return;
         }
 
@@ -1003,11 +1003,11 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
 
         Inventory inventory = player.getInventory();
 
-        if (inventory.selected == clientboundSetHeldSlotPacket.getSlot()) {
+        if (inventory.selected == clientboundSetHeldSlotPacket.slot()) {
             return;
         }
 
-        inventory.selected = clientboundSetHeldSlotPacket.getSlot();
+        inventory.selected = clientboundSetHeldSlotPacket.slot();
 
         for (ReplayPlayer replayViewer : this.replayServer.getReplayViewers()) {
             if (Objects.equals(replayViewer.lastFirstPersonDataUUID, player.getUUID())) {
@@ -1394,11 +1394,11 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
         if (player instanceof Player) {
             Entity vehicle = player.getRootVehicle();
             if (vehicle != player) {
-                double x = clientboundMoveVehiclePacket.getX();
-                double y = clientboundMoveVehiclePacket.getY();
-                double z = clientboundMoveVehiclePacket.getZ();
-                float yaw = clientboundMoveVehiclePacket.getYRot();
-                float pitch = clientboundMoveVehiclePacket.getXRot();
+                double x = clientboundMoveVehiclePacket.position().x;
+                double y = clientboundMoveVehiclePacket.position().y;
+                double z = clientboundMoveVehiclePacket.position().z;
+                float yaw = clientboundMoveVehiclePacket.yRot();
+                float pitch = clientboundMoveVehiclePacket.xRot();
                 vehicle.moveTo(x, y, z, yaw, pitch);
             }
         }

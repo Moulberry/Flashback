@@ -230,7 +230,7 @@ public class ReplaySelectionList extends ObjectSelectionList<ReplaySelectionEntr
     }
 
     private void notifyListUpdated() {
-        this.setScrollAmount(this.getScrollAmount());
+        this.refreshScrollAmount();
         this.screen.triggerImmediateNarration(true);
         this.screen.updateButtonStatus(null);
     }

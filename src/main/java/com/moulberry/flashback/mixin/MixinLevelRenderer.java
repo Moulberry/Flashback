@@ -73,7 +73,7 @@ public abstract class MixinLevelRenderer {
 
     @Inject(method = "renderLevel", at = @At("HEAD"))
     public void renderLevel(GraphicsResourceAllocator graphicsResourceAllocator, DeltaTracker deltaTracker, boolean bl, Camera camera, GameRenderer gameRenderer,
-                            LightTexture lightTexture, Matrix4f matrix4f, Matrix4f projection, CallbackInfo ci) {
+                            Matrix4f matrix4f, Matrix4f projection, CallbackInfo ci) {
         ReplayUI.lastProjectionMatrix = projection;
         ReplayUI.lastViewQuaternion = camera.rotation();
     }
@@ -184,7 +184,7 @@ public abstract class MixinLevelRenderer {
     }
 
     @Inject(method = "addParticlesPass", at = @At("HEAD"), cancellable = true)
-    public void addParticlesPass(FrameGraphBuilder frameGraphBuilder, Camera camera, LightTexture lightTexture, float f, FogParameters fogParameters, CallbackInfo ci) {
+    public void addParticlesPass(FrameGraphBuilder frameGraphBuilder, Camera camera, float f, FogParameters fogParameters, CallbackInfo ci) {
         EditorState editorState = EditorStateManager.getCurrent();
         if (editorState != null && !editorState.replayVisuals.renderParticles) {
             ci.cancel();

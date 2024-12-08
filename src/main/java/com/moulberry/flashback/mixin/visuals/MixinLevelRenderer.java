@@ -32,7 +32,7 @@ public class MixinLevelRenderer {
         target = "Lnet/minecraft/client/Options;getCloudsType()Lnet/minecraft/client/CloudStatus;",
         shift = At.Shift.BEFORE
     ))
-    public void renderLevelPost(GraphicsResourceAllocator graphicsResourceAllocator, net.minecraft.client.DeltaTracker deltaTracker, boolean renderBlockOutline, Camera camera, GameRenderer gameRenderer, LightTexture lightTexture,
+    public void renderLevelPost(GraphicsResourceAllocator graphicsResourceAllocator, net.minecraft.client.DeltaTracker deltaTracker, boolean renderBlockOutline, Camera camera, GameRenderer gameRenderer,
                                 Matrix4f matrix4f, Matrix4f projection, CallbackInfo ci, @Local FrameGraphBuilder frameGraphBuilder) {
 
         if (!Flashback.isInReplay()) {
@@ -53,7 +53,7 @@ public class MixinLevelRenderer {
             modelViewStack.identity();
 
             float tickDelta = deltaTracker.getGameTimeDeltaPartialTick(true);
-            WorldRenderHook.renderHook(poseStack, tickDelta, renderBlockOutline, camera, gameRenderer, lightTexture, projection);
+            WorldRenderHook.renderHook(poseStack, tickDelta, renderBlockOutline, camera, gameRenderer, projection);
 
             this.renderBuffers.bufferSource().endBatch();
 

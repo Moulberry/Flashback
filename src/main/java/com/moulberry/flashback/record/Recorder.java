@@ -907,17 +907,17 @@ public class Recorder {
                 PlayerInfo info = player.getPlayerInfo();
                 if (info != null) {
                     infoUpdatePacket.entries.add(new ClientboundPlayerInfoUpdatePacket.Entry(player.getUUID(),
-                        player.getGameProfile(), true, info.getLatency(), info.getGameMode(), info.getTabListDisplayName(), info.getTabListOrder(), null));
+                        player.getGameProfile(), true, info.getLatency(), info.getGameMode(), info.getTabListDisplayName(), info.showHat(), info.getTabListOrder(), null));
                 } else {
                     infoUpdatePacket.entries.add(new ClientboundPlayerInfoUpdatePacket.Entry(player.getUUID(),
-                        player.getGameProfile(), true, 0, GameType.DEFAULT_MODE, player.getDisplayName(), 0, null));
+                        player.getGameProfile(), true, 0, GameType.DEFAULT_MODE, player.getDisplayName(), true, 0, null));
                 }
             }
         }
         for (PlayerInfo info : connection.getListedOnlinePlayers()) {
             if (addedEntries.add(info.getProfile().getId())) {
                 infoUpdatePacket.entries.add(new ClientboundPlayerInfoUpdatePacket.Entry(info.getProfile().getId(),
-                    info.getProfile(), true, info.getLatency(), info.getGameMode(), info.getTabListDisplayName(), info.getTabListOrder(), null));
+                    info.getProfile(), true, info.getLatency(), info.getGameMode(), info.getTabListDisplayName(), info.showHat(), info.getTabListOrder(), null));
             }
         }
         gamePackets.add(infoUpdatePacket);
