@@ -1125,11 +1125,6 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
         Entity entity = this.level().getEntity(this.localPlayerId);
         if (entity instanceof Player player) {
             int slot = clientboundSetPlayerInventoryPacket.slot();
-            if (slot > 9) {
-                // Tried setting on slot in the inventory, not in the hotbar, continuing would result in index out of bounds crash
-                return;
-            }
-
             ItemStack itemStack = clientboundSetPlayerInventoryPacket.contents();
             player.getInventory().setItem(slot, itemStack);
 
