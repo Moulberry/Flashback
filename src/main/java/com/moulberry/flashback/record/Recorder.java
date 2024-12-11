@@ -804,6 +804,14 @@ public class Recorder {
             }
         }
 
+        // We are only interested in recording the hotbar inventory packets, anything other can be dropped.
+        if (packet instanceof ClientboundSetPlayerInventoryPacket inventoryPacket) {
+            int inventorySlot = inventoryPacket.slot();
+            if (inventorySlot > 9) {
+                return;
+            }
+        }
+
         if (IgnoredPacketSet.isIgnored(packet)) {
             return;
         }
