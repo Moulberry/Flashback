@@ -36,6 +36,7 @@ repositories {
 		}
 	}
     maven { url = "https://maven.bawnorton.com/releases" }
+	maven { url = "https://maven.maxhenkel.de/repository/public" }
 }
 
 loom {
@@ -69,7 +70,8 @@ dependencies {
     modCompileOnly("maven.modrinth:sodium:RncWhTxD")
     modCompileOnly("maven.modrinth:iris:kuOV4Ece")
     modCompileOnly("maven.modrinth:bobby:2cuVyTav")
-    modCompileOnly("maven.modrinth:simple-voice-chat:4Zzq92HE")
+    modCompileOnly("maven.modrinth:simple-voice-chat:fabric-1.21.4-2.5.27")
+	compileOnly("de.maxhenkel.voicechat:voicechat-api:2.5.0")
     modCompileOnly("maven.modrinth:replaymod:NtlpUQgI")
     modCompileOnly("maven.modrinth:modmenu:xhN1IvHi")
 
