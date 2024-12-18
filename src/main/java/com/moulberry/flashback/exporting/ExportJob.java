@@ -394,7 +394,7 @@ public class ExportJob {
     private void setup(ReplayServer replayServer) {
         Minecraft minecraft = Minecraft.getInstance();
 
-        int currentTick = Math.max(0, this.settings.startTick() - 20);
+        int currentTick = Math.max(0, this.settings.startTick() - 40);
 
         // Ensure replay server is paused at currentTick
         this.setServerTickAndWait(replayServer, currentTick, true);
