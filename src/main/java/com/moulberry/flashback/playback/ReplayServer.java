@@ -39,6 +39,7 @@ import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.server.IntegratedServer;
+import net.minecraft.core.Registry;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
@@ -237,13 +238,18 @@ public class ReplayServer extends IntegratedServer {
         return this.metadata;
     }
 
-    public void updateRegistry(FeatureFlagSet featureFlagSet, Collection<String> selectedPacks, List<Packet<? super ClientConfigurationPacketListener>> initialPackets,
-            List<ConfigurationTask> configurationTasks) {
+    public List<Registry.PendingTags<?>> overridePendingTags = null;
+
+    public void updateRegistry(FeatureFlagSet featureFlagSet, List<Registry.PendingTags<?>> pendingTags,
+                               List<Packet<? super ClientConfigurationPacketListener>> initialPackets,
+                               List<ConfigurationTask> configurationTasks) {
         this.worldData.setDataConfiguration(new WorldDataConfiguration(
             this.worldData.getDataConfiguration().dataPacks(),
             featureFlagSet
         ));
-        this.reloadResources(selectedPacks);
+
+        overridePendingTags = pendingTags;
+        this.reloadResources(Set.of());
 
         this.gamePacketCodec = GameProtocols.CLIENTBOUND_TEMPLATE.bind(RegistryFriendlyByteBuf.decorator(this.registryAccess())).codec();
 

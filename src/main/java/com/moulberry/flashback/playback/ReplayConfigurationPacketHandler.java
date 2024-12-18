@@ -62,7 +62,6 @@ public class ReplayConfigurationPacketHandler implements ClientConfigurationPack
     private Map<ResourceKey<? extends Registry<?>>, RegistryDataLoader.NetworkedRegistryData> pendingRegistryMap = null;
     private Map<ResourceKey<? extends Registry<?>>, TagNetworkSerialization.NetworkPayload> pendingTags = null;
     private FeatureFlagSet pendingFeatureFlags = null;
-    private List<KnownPack> pendingKnownPacks = null;
     private boolean pendingResetChat = false;
     private boolean dirty = false;
 
@@ -80,7 +79,6 @@ public class ReplayConfigurationPacketHandler implements ClientConfigurationPack
 
         List<ConfigurationTask> configurationTasks = new ArrayList<>();
         FeatureFlagSet currentFeatureFlags = this.replayServer.worldData.enabledFeatures();
-        List<KnownPack> currentKnownPacks = this.replayServer.getResourceManager().listPacks().flatMap(packResources -> packResources.location().knownPackInfo().stream()).toList();
         boolean synchronizeRegistries = false;
 
         List<Packet<? super ClientConfigurationPacketListener>> initialPackets = new ArrayList<>();
@@ -97,18 +95,6 @@ public class ReplayConfigurationPacketHandler implements ClientConfigurationPack
         if (this.pendingResetChat) {
             initialPackets.add(ClientboundResetChatPacket.INSTANCE);
             this.pendingResetChat = false;
-        }
-
-        if (this.pendingKnownPacks != null) {
-            Set<KnownPack> currentSet = new HashSet<>(currentKnownPacks);
-            Set<KnownPack> pendingSet = new HashSet<>(this.pendingKnownPacks);
-
-            if (!currentSet.equals(pendingSet)) {
-                currentKnownPacks = this.pendingKnownPacks;
-                synchronizeRegistries = true;
-            }
-
-            this.pendingKnownPacks = null;
         }
 
         List<Registry.PendingTags<?>> pendingTags = new ArrayList<>();
@@ -176,7 +162,7 @@ public class ReplayConfigurationPacketHandler implements ClientConfigurationPack
         }
 
         if (synchronizeRegistries) {
-            configurationTasks.add(new SynchronizeRegistriesTask(currentKnownPacks, this.replayServer.registries));
+            configurationTasks.add(new SynchronizeRegistriesTask(List.of(), this.replayServer.registries));
         } else if (sendTags) {
             this.replayServer.getPlayerList().broadcastAll(new ClientboundUpdateTagsPacket(TagNetworkSerialization.serializeTagsToNetwork(this.replayServer.registries)));
         }
@@ -187,8 +173,7 @@ public class ReplayConfigurationPacketHandler implements ClientConfigurationPack
 
         configurationTasks.add(new JoinWorldTask());
 
-        Collection<String> selectedPacks = knownPacksToIds(this.replayServer.getPackRepository(), currentKnownPacks);
-        this.replayServer.updateRegistry(currentFeatureFlags, selectedPacks, initialPackets, configurationTasks);
+        this.replayServer.updateRegistry(currentFeatureFlags, pendingTags, initialPackets, configurationTasks);
 
         // Remove all players
         for (ServerPlayer player : new ArrayList<>(this.replayServer.getPlayerList().getPlayers())) {
@@ -214,23 +199,6 @@ public class ReplayConfigurationPacketHandler implements ClientConfigurationPack
         this.replayServer.getPlayerList().addWorldborderListener(serverLevel);
     }
 
-    private static Collection<String> knownPacksToIds(PackRepository packRepository, Collection<KnownPack> knownPacks) {
-        Collection<String> selectedPacks = new ArrayList<>();
-        ImmutableMap.Builder<KnownPack, String> builder = ImmutableMap.builder();
-        packRepository.getAvailablePacks().forEach(pack -> {
-            PackLocationInfo packLocationInfo = pack.location();
-            packLocationInfo.knownPackInfo().ifPresent(knownPack -> builder.put(knownPack, packLocationInfo.id()));
-        });
-        Map<KnownPack, String> knownPackToId = builder.build();
-        for (KnownPack knownPack : knownPacks) {
-            String selectedId = knownPackToId.get(knownPack);
-            if (selectedId != null) {
-                selectedPacks.add(selectedId);
-            }
-        }
-        return selectedPacks;
-    }
-
     @Override
     public void handleConfigurationFinished(ClientboundFinishConfigurationPacket clientboundFinishConfigurationPacket) {
         throw new UnsupportedPacketException(clientboundFinishConfigurationPacket);
@@ -254,8 +222,6 @@ public class ReplayConfigurationPacketHandler implements ClientConfigurationPack
 
     @Override
     public void handleSelectKnownPacks(ClientboundSelectKnownPacks clientboundSelectKnownPacks) {
-        this.dirty = true;
-        this.pendingKnownPacks = clientboundSelectKnownPacks.knownPacks();
     }
 
     @Override

@@ -70,6 +70,7 @@
     "playback.MixinEntity",
     "playback.MixinLevelChunk",
     "playback.MixinLivingEntity",
+    "playback.MixinMinecraftServer",
     "playback.MixinPlayerChunkSender",
     "playback.MixinScoreboard",
     "playback.MixinTickRateManager",
