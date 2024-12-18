@@ -66,9 +66,7 @@ import net.minecraft.FileUtil;
 import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.toasts.SystemToast;
-import net.minecraft.client.gui.screens.PauseScreen;
-import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.gui.screens.TitleScreen;
+import net.minecraft.client.gui.screens.*;
 import net.minecraft.client.gui.screens.multiplayer.JoinMultiplayerScreen;
 import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.player.LocalPlayer;
@@ -99,6 +97,7 @@ import net.minecraft.world.level.levelgen.WorldOptions;
 import net.minecraft.world.level.storage.LevelStorageSource;
 import net.minecraft.world.level.storage.PrimaryLevelData;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -142,6 +141,7 @@ public class Flashback implements ModInitializer, ClientModInitializer {
 
     private static final List<Path> pendingReplaySave = new ArrayList<>();
     private static final List<Path> pendingReplayRecovery = new ArrayList<>();
+    private static List<String> pendingUnsupportedModsForRecording = null;
 
     public static ResourceLocation createResourceLocation(String value) {
         return ResourceLocation.fromNamespaceAndPath("flashback", value);
@@ -392,59 +392,8 @@ public class Flashback implements ModInitializer, ClientModInitializer {
         });
 
         ClientTickEvents.START_CLIENT_TICK.register(minecraft -> {
-            if (unsupportedLoader.get() != null && canReplaceScreen(Minecraft.getInstance().screen)) {
-                String loaderName = unsupportedLoader.get();
-                if (System.currentTimeMillis() > Flashback.getConfig().nextUnsupportedModLoaderWarning) {
-                    String warning = String.format("""
-                    You are using an unsupported modloader: %s
-
-                    Do not report crashes, bugs or other issues to Flashback
-
-                    You will not receive support from Flashback
-
-                    If you need assistance, please contact %s
-                    """, loaderName, loaderName);
-
-                    Minecraft.getInstance().setScreen(new UnsupportedLoaderScreen(Minecraft.getInstance().screen,
-                            Component.literal("Flashback: Unsupported"), Component.literal(warning)));
-                }
-                unsupportedLoader.set(null);
-            }
-
-            if (!pendingReplayRecovery.isEmpty() && canReplaceScreen(Minecraft.getInstance().screen)) {
-                Component title = Component.literal("Flashback: Recovery");
-                Component description = Component.empty()
-                     .append(Component.literal("Flashback has detected ").append(Component.literal("unfinished recordings\n").withStyle(ChatFormatting.YELLOW)))
-                     .append(Component.literal("This is usually because the game closed unexpectedly while recording\n\n"))
-                     .append(Component.literal("Unfortunately, up to 5 minutes of gameplay from the end of the recording may be lost\n\n").withStyle(ChatFormatting.RED)
-                     .append(Component.literal("Would you like to try to recover the recording?").withStyle(ChatFormatting.GREEN)));
-                Minecraft.getInstance().setScreen(new RecoverRecordingsScreen(Minecraft.getInstance().screen, title, description, recover -> {
-                    switch (recover) {
-                        case RECOVER -> {
-                            pendingReplaySave.addAll(pendingReplayRecovery);
-                            pendingReplayRecovery.clear();
-                        }
-                        case SKIP -> {
-                            pendingReplayRecovery.clear();
-                        }
-                        case DELETE -> {
-                            TempFolderProvider.tryDeleteStaleFolders(TempFolderProvider.TempFolderType.RECORDING);
-                            pendingReplayRecovery.clear();
-                        }
-                    }
-                }));
-            }
-
-            if (!pendingReplaySave.isEmpty()) {
-                Screen currentScreen = Minecraft.getInstance().screen;
-                if (canReplaceScreen(currentScreen)) {
-                    Path recordFolder = pendingReplaySave.getFirst();
-
-                    LocalDateTime dateTime = LocalDateTime.now();
-                    dateTime = dateTime.withNano(0);
-                    Minecraft.getInstance().setScreen(new SaveReplayScreen(Minecraft.getInstance().screen,
-                        recordFolder, dateTime.toString()));
-                }
+            if (canReplaceScreen(Minecraft.getInstance().screen)) {
+                openNewScreen(unsupportedLoader);
             }
 
             if (Minecraft.getInstance().level != null && delayedStartRecording > 0) {
@@ -482,6 +431,77 @@ public class Flashback implements ModInitializer, ClientModInitializer {
         }
 	}
 
+    private static void openNewScreen(AtomicReference<String> unsupportedLoader) {
+        if (unsupportedLoader.get() != null) {
+            String loaderName = unsupportedLoader.get();
+            unsupportedLoader.set(null);
+            if (System.currentTimeMillis() > Flashback.getConfig().nextUnsupportedModLoaderWarning) {
+                String warning = String.format("""
+            You are using an unsupported modloader: %s
+
+            Do not report crashes, bugs or other issues to Flashback
+
+            You will not receive support from Flashback
+
+            If you need assistance, please contact %s
+            """, loaderName, loaderName);
+
+                Minecraft.getInstance().setScreen(new UnsupportedLoaderScreen(Minecraft.getInstance().screen,
+                        Component.literal("Flashback: Unsupported"), Component.literal(warning)));
+                return;
+            }
+        }
+
+        if (!pendingReplayRecovery.isEmpty()) {
+            Component title = Component.literal("Flashback: Recovery");
+            Component description = Component.empty()
+                    .append(Component.literal("Flashback has detected ").append(Component.literal("unfinished recordings\n").withStyle(ChatFormatting.YELLOW)))
+                    .append(Component.literal("This is usually because the game closed unexpectedly while recording\n\n"))
+                    .append(Component.literal("Unfortunately, up to 5 minutes of gameplay from the end of the recording may be lost\n\n").withStyle(ChatFormatting.RED)
+                            .append(Component.literal("Would you like to try to recover the recording?").withStyle(ChatFormatting.GREEN)));
+            Minecraft.getInstance().setScreen(new RecoverRecordingsScreen(Minecraft.getInstance().screen, title, description, recover -> {
+                switch (recover) {
+                    case RECOVER -> {
+                        pendingReplaySave.addAll(pendingReplayRecovery);
+                        pendingReplayRecovery.clear();
+                    }
+                    case SKIP -> {
+                        pendingReplayRecovery.clear();
+                    }
+                    case DELETE -> {
+                        TempFolderProvider.tryDeleteStaleFolders(TempFolderProvider.TempFolderType.RECORDING);
+                        pendingReplayRecovery.clear();
+                    }
+                }
+            }));
+            return;
+        }
+
+        if (!pendingReplaySave.isEmpty()) {
+            Path recordFolder = pendingReplaySave.getFirst();
+
+            LocalDateTime dateTime = LocalDateTime.now();
+            dateTime = dateTime.withNano(0);
+            Minecraft.getInstance().setScreen(new SaveReplayScreen(Minecraft.getInstance().screen,
+                    recordFolder, dateTime.toString()));
+            return;
+        }
+
+        if (pendingUnsupportedModsForRecording != null) {
+            String mods = StringUtils.join(pendingUnsupportedModsForRecording, ", ");
+            String description = """
+                                You have mods which are known to cause issues when recording replays
+                                Please remove the following mods in order to be able to record replays:
+
+                                """;
+            Screen screen = Minecraft.getInstance().screen;
+            Minecraft.getInstance().setScreen(new AlertScreen(() -> Minecraft.getInstance().setScreen(screen),
+                    Component.literal("Incompatible Mods"), Component.literal(description).append(Component.literal(mods).withStyle(ChatFormatting.RED))));
+            pendingUnsupportedModsForRecording = null;
+            return;
+        }
+    }
+
     public static List<String> getReplayIncompatibleMods() {
         List<String> incompatible = new ArrayList<>();
         if (FabricLoader.getInstance().isModLoaded("vmp")) {
@@ -489,6 +509,17 @@ public class Flashback implements ModInitializer, ClientModInitializer {
         }
         if (FabricLoader.getInstance().isModLoaded("c2me")) {
             incompatible.add("Concurrent Chunk Management Engine (c2me)");
+        }
+        return incompatible;
+    }
+
+    public static List<String> getRecordingIncompatibleMods() {
+        List<String> incompatible = new ArrayList<>();
+        if (FabricLoader.getInstance().isModLoaded("farsight")) {
+            incompatible.add("Farsight");
+        }
+        if (incompatible.isEmpty()) {
+            return null;
         }
         return incompatible;
     }
@@ -693,6 +724,13 @@ public class Flashback implements ModInitializer, ClientModInitializer {
                     Component.literal("Already Recording"), Component.literal("Cannot start new recording when already recording"));
             return;
         }
+
+        List<String> unsupported = getRecordingIncompatibleMods();
+        if (unsupported != null && !unsupported.isEmpty()) {
+            pendingUnsupportedModsForRecording = unsupported;
+            return;
+        }
+
         RECORDER = new Recorder(Minecraft.getInstance().player.registryAccess());
         if (Flashback.getConfig().showRecordingToasts) {
             SystemToast.add(Minecraft.getInstance().getToastManager(), FlashbackSystemToasts.RECORDING_TOAST,
