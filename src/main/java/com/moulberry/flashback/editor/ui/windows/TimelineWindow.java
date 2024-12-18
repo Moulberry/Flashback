@@ -125,7 +125,6 @@ public class TimelineWindow {
 
     private static final float[] replayTickSpeeds = new float[]{1.0f, 2.0f, 4.0f, 10.0f, 20.0f, 40.0f, 100.0f, 200.0f, 400.0f};
 
-
     public static int getCursorTick() {
         return cursorTicks;
     }
@@ -627,14 +626,14 @@ public class TimelineWindow {
             togglePaused(replayServer);
         }
         if (ImGui.isKeyPressed(GLFW.GLFW_KEY_LEFT, false)) {
-            pendingStepBackwardsTicks += 1;
+            pendingStepBackwardsTicks += ReplayUI.isCtrlOrCmdDown() ? 5 : 1;
         } else if (pendingStepBackwardsTicks > 0 && !ImGui.isKeyDown(GLFW.GLFW_KEY_LEFT)) {
             replayServer.goToReplayTick(Math.max(0, replayServer.getReplayTick() - pendingStepBackwardsTicks));
             replayServer.forceApplyKeyframes.set(true);
             pendingStepBackwardsTicks = 0;
         }
         if (ImGui.isKeyPressed(GLFW.GLFW_KEY_RIGHT, false)) {
-            replayServer.goToReplayTick(Math.min(totalTicks, cursorTicks + 1));
+            replayServer.goToReplayTick(Math.min(totalTicks, cursorTicks + (ReplayUI.isCtrlOrCmdDown() ? 5 : 1)));
             replayServer.forceApplyKeyframes.set(true);
         }
         if (ImGui.isKeyPressed(GLFW.GLFW_KEY_UP, false)) {
