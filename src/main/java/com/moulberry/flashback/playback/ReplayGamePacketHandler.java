@@ -1128,6 +1128,10 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
             ItemStack itemStack = clientboundSetPlayerInventoryPacket.contents();
             player.getInventory().setItem(slot, itemStack);
 
+            if (slot < 0 || slot > 9) {
+                return;
+            }
+
             for (ReplayPlayer replayViewer : this.replayServer.getReplayViewers()) {
                 if (Objects.equals(replayViewer.lastFirstPersonDataUUID, player.getUUID())) {
                     replayViewer.lastFirstPersonHotbarItems[slot] = itemStack.copy();

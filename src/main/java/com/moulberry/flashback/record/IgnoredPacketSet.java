@@ -58,6 +58,7 @@ public class IgnoredPacketSet {
         ClientboundSetCursorItemPacket.class,
         ClientboundSetExperiencePacket.class,
         ClientboundSetHealthPacket.class,
+        ClientboundSetPlayerInventoryPacket.class,
         ClientboundTickingStatePacket.class,
         ClientboundTickingStepPacket.class,
         ClientboundPlayerCombatEndPacket.class,
