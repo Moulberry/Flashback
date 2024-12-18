@@ -121,6 +121,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 
 public class Flashback implements ModInitializer, ClientModInitializer {
@@ -367,7 +368,7 @@ public class Flashback implements ModInitializer, ClientModInitializer {
             }
         });
 
-        String unsupportedLoader = findUnsupportedLoaders();
+        AtomicReference<String> unsupportedLoader = new AtomicReference<>(findUnsupportedLoaders());
 
         ClientTickEvents.END_CLIENT_TICK.register(minecraft -> {
             updateIsInReplay();
@@ -390,10 +391,10 @@ public class Flashback implements ModInitializer, ClientModInitializer {
         });
 
         ClientTickEvents.START_CLIENT_TICK.register(minecraft -> {
-            if (unsupportedLoader != null &&
-                    System.currentTimeMillis() > Flashback.getConfig().nextUnsupportedModLoaderWarning &&
-                    canReplaceScreen(Minecraft.getInstance().screen)) {
-                String warning = String.format("""
+            if (unsupportedLoader.get() != null && canReplaceScreen(Minecraft.getInstance().screen)) {
+                String loaderName = unsupportedLoader.get();
+                if (System.currentTimeMillis() > Flashback.getConfig().nextUnsupportedModLoaderWarning) {
+                    String warning = String.format("""
                     You are using an unsupported modloader: %s
 
                     Do not report crashes, bugs or other issues to Flashback
@@ -401,10 +402,12 @@ public class Flashback implements ModInitializer, ClientModInitializer {
                     You will not receive support from Flashback
 
                     If you need assistance, please contact %s
-                    """, unsupportedLoader, unsupportedLoader);
+                    """, loaderName, loaderName);
 
-                Minecraft.getInstance().setScreen(new UnsupportedLoaderScreen(Minecraft.getInstance().screen,
-                    Component.literal("Flashback: Unsupported"), Component.literal(warning)));
+                    Minecraft.getInstance().setScreen(new UnsupportedLoaderScreen(Minecraft.getInstance().screen,
+                            Component.literal("Flashback: Unsupported"), Component.literal(warning)));
+                }
+                unsupportedLoader.set(null);
             }
 
             if (!pendingReplayRecovery.isEmpty() && canReplaceScreen(Minecraft.getInstance().screen)) {
