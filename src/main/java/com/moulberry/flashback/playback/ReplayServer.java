@@ -96,6 +96,7 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.LockSupport;
 import java.util.function.BooleanSupplier;
 import java.util.function.Function;
 
@@ -762,6 +763,11 @@ public class ReplayServer extends IntegratedServer {
     @Override
     public boolean haveTime() {
         return super.haveTime() && this.jumpToTick < 0;
+    }
+
+    @Override
+    public void waitForTasks() {
+        LockSupport.parkNanos("waiting for tasks", 100000L);
     }
 
     public EditorState getEditorState() {
