@@ -1550,6 +1550,7 @@ public class TimelineWindow {
 
     private static void renderKeyframeElements(float x, float y, int cursorTicks, int middleX) {
         ImGui.setCursorScreenPos(x + 8, y + 6);
+        float lineHeight = ImGui.getTextLineHeightWithSpacing() + ImGui.getStyle().getItemSpacingY();
 
         int keyframeTrackToClear = -1;
 
@@ -1602,6 +1603,17 @@ public class TimelineWindow {
             float trackOffset = repositioningKeyframeTrack == trackIndex ? mouseY - dragStartMouseY : (int) keyframeTrack.animatedOffsetInUi;
             ImGui.setCursorPosX(repositioningKeyframeTrack == trackIndex ? 3 : 2);
             ImGui.setCursorPosY(ImGui.getCursorPosY() + trackOffset);
+
+            if (keyframeTrack.customColour != 0) {
+                int colour = keyframeTrack.customColour & 0xFFFFFF;
+                colour |= 0x30000000;
+                float rectY = y + 3 + trackIndex * lineHeight;
+                if (trackIndex == 0) {
+                    rectY -= 1;
+                }
+                drawList.addRectFilled(x + middleX + 1, rectY, x + width,
+                        y + 2 + trackIndex * lineHeight + lineHeight, colour);
+            }
 
             ImGui.pushStyleVar(ImGuiStyleVar.ItemSpacing, 0, 0);
             if (repositioningKeyframeTrack == trackIndex) {
