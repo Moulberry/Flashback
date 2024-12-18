@@ -166,17 +166,24 @@ public class TimelineWindow {
             width = maxX - minX;
             height = maxY - minY;
 
-            if (width < 1 || height < 1) {
-                ImGui.end();
-                return;
-            }
-
             minorSeparatorHeight = ReplayUI.scaleUi(10);
             majorSeparatorHeight = minorSeparatorHeight * 2;
             timestampHeight = ReplayUI.scaleUi(20);
             middleY = timestampHeight + majorSeparatorHeight;
             middleX = ReplayUI.scaleUi(240);
             keyframeSize = ReplayUI.scaleUi(10);
+
+            float totalTrackHeight = (editorScene.keyframeTracks.size() + 1) * (ImGui.getTextLineHeightWithSpacing() + ImGui.getStyle().getItemSpacingY());
+            boolean showTrackScroll = totalTrackHeight > height - middleY;
+
+            if (showTrackScroll) {
+                width -= ImGui.getStyle().getScrollbarSize() - 1;
+            }
+
+            if (width < 1 || height < 1) {
+                ImGui.end();
+                return;
+            }
 
             selectedKeyframesList.removeIf(k -> !k.checkValid(editorScene));
 
@@ -282,18 +289,32 @@ public class TimelineWindow {
             drawList.addLine(x + middleX, y + timestampHeight, x + middleX, y + height, -1);
 
             // Middle divider (y)
-            drawList.addLine(x, y + middleY, x + width, y + middleY, -1);
+            drawList.addLine(x, y + middleY, x + width - 2, y + middleY, -1);
 
-            renderKeyframeElements(x, y + middleY, cursorTicks, middleX);
+            ImGui.dummy(0, middleY - 1);
+
+            int timelineContentsFlags = ImGuiWindowFlags.NoScrollWithMouse;
+            if (showTrackScroll) {
+                timelineContentsFlags |= ImGuiWindowFlags.AlwaysVerticalScrollbar;
+            } else {
+                timelineContentsFlags |= ImGuiWindowFlags.NoScrollbar;
+            }
+            ImGui.beginChild("##TimelineContents", 0, 0, false, timelineContentsFlags);
+
+            ImDrawList childDrawList = ImGui.getWindowDrawList();
+
+            float contentY = y + middleY - ImGui.getScrollY();
+            renderKeyframeElements(x, contentY, cursorTicks, middleX);
+
+            childDrawList.pushClipRect(x + middleX, y + middleY, x + width, y + height);
+            renderKeyframes(x, contentY, mouseX, minTicks, availableTicks, totalTicks);
+            childDrawList.popClipRect();
+
+            ImGui.endChild();
 
             drawList.pushClipRect(x + middleX, y, x + width, y + height);
 
             renderExportBar(drawList);
-
-            drawList.pushClipRect(x + middleX, y + middleY, x + width, y + height);
-            renderKeyframes(x, y + middleY, mouseX, minTicks, availableTicks, totalTicks);
-            drawList.popClipRect();
-
             renderSeparators(minorsPerMajor, x, middleX, minorSeparatorWidth, errorOffset, width, drawList, y, timestampHeight, middleY, minTicks, ticksPerMinor, showSubSeconds, majorSeparatorHeight, minorSeparatorHeight);
 
             // render markers
@@ -337,7 +358,7 @@ public class TimelineWindow {
 
             // Timeline end line
             if (editorState.zoomMax >= 1.0) {
-                drawList.addLine(x + width -2, y + timestampHeight, x + width -2, y + height - zoomBarHeight, -1);
+                drawList.addLine(x + width - 2, y + timestampHeight, x + width - 2, y + height - zoomBarHeight, -1);
             }
 
             // Zoom Bar
@@ -468,8 +489,8 @@ public class TimelineWindow {
 
                 boolean leftClicked = ImGui.isMouseClicked(ImGuiMouseButton.Left);
                 boolean rightClicked = ImGui.isMouseClicked(ImGuiMouseButton.Right);
-                if (leftClicked || rightClicked) {
-                    handleClick(replayServer, totalTicks);
+                if (mouseX < x + width - 2 && (leftClicked || rightClicked)) {
+                    handleClick(replayServer, totalTicks, contentY);
                     if (leftClicked) {
                         draggingMouseButton = ImGuiMouseButton.Left;
                     } else {
@@ -582,10 +603,10 @@ public class TimelineWindow {
                     dragStartMouseX = mouseX;
                     dragStartMouseY = mouseY;
                 } else if (!ImGui.isAnyMouseDown()) {
-                    releaseGrabbed(replayServer, totalTicks);
+                    releaseGrabbed(replayServer, totalTicks, contentY);
                 }
             } else {
-                releaseGrabbed(replayServer, totalTicks);
+                releaseGrabbed(replayServer, totalTicks, contentY);
             }
         }
         ImGui.end();
@@ -787,8 +808,8 @@ public class TimelineWindow {
         editorState.markDirty();
     }
 
-    private static void handleClick(ReplayServer replayServer, int totalTicks) {
-        releaseGrabbed(replayServer, totalTicks);
+    private static void handleClick(ReplayServer replayServer, int totalTicks, float contentY) {
+        releaseGrabbed(replayServer, totalTicks, contentY);
         List<SelectedKeyframes> oldSelectedKeyframesList = new ArrayList<>(selectedKeyframesList);
         selectedKeyframesList.clear();
 
@@ -919,7 +940,7 @@ public class TimelineWindow {
         if (mouseY > y + middleY && mouseY < y + height && mouseX > x + middleX && mouseX < x + width) {
             float lineHeight = ImGui.getTextLineHeightWithSpacing() + ImGui.getStyle().getItemSpacingY();
 
-            int trackIndex = (int) Math.max(0, Math.floor((mouseY - (y + middleY + 2))/lineHeight));
+            int trackIndex = (int) Math.max(0, Math.floor((mouseY - (contentY + 2))/lineHeight));
 
             if (trackIndex >= 0 && trackIndex < editorScene.keyframeTracks.size()) {
                 KeyframeTrack keyframeTrack = editorScene.keyframeTracks.get(trackIndex);
@@ -1125,7 +1146,7 @@ public class TimelineWindow {
         }
     }
 
-    private static void releaseGrabbed(ReplayServer replayServer, int totalTicks) {
+    private static void releaseGrabbed(ReplayServer replayServer, int totalTicks, float contentY) {
         grabbedZoomBar = false;
         grabbedZoomBarResizeLeft = false;
         grabbedZoomBarResizeRight = false;
@@ -1144,8 +1165,8 @@ public class TimelineWindow {
             float dragMaxY = Math.max(dragSelectOrigin.y, mouseY);
 
             float lineHeight = ImGui.getTextLineHeightWithSpacing() + ImGui.getStyle().getItemSpacingY();
-            int minTrackIndex = (int) Math.floor((dragMinY - (y + middleY + 2))/lineHeight);
-            int maxTrackIndex = (int) Math.floor((dragMaxY - (y + middleY + 2))/lineHeight);
+            int minTrackIndex = (int) Math.floor((dragMinY - (contentY + 2))/lineHeight);
+            int maxTrackIndex = (int) Math.floor((dragMaxY - (contentY + 2))/lineHeight);
             minTrackIndex = Math.max(0, minTrackIndex);
             maxTrackIndex = Math.min(editorScene.keyframeTracks.size()-1, maxTrackIndex);
 
@@ -1835,6 +1856,9 @@ public class TimelineWindow {
         }
         ImGui.popStyleVar();
 
+        // Add a bit of extra space at the bottom
+        ImGui.dummy(0, lineHeight / 4);
+
         if (openNewScenePopup) {
             ImGui.openPopup("##NewScene");
             sceneNameString = ImGuiHelper.createResizableImString("Scene " + (editorState.scenes.size() + 1));
@@ -1953,7 +1977,7 @@ public class TimelineWindow {
             float h = x + middleX + minorSeparatorWidth * minor;
             int hi = (int) (h + errorOffset);
 
-            if (hi >= x + width) {
+            if (hi >= x + width - 1) {
                 break;
             }
 
