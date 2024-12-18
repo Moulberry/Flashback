@@ -41,7 +41,7 @@ public class EnhancedFlight {
 
         float movementY = 0;
         if (player.input.keyPresses.shift()) movementY -= 1;
-        if (player.input.keyPresses.sprint()) movementY += 1;
+        if (player.input.keyPresses.jump()) movementY += 1;
         if (movementY != 0) {
             player.move(MoverType.SELF, new Vec3(0, flyingSpeed * movementY * 0.98, 0));
 
@@ -83,7 +83,6 @@ public class EnhancedFlight {
         if (cameraDirection && movementY >= 0) {
             player.setOnGround(false);
         }
-
 
         player.setNoGravity(originalHasNoGravity);
         player.resetFallDistance();
