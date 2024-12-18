@@ -8,6 +8,7 @@ import com.moulberry.flashback.combo_options.AudioCodec;
 import com.moulberry.flashback.combo_options.Sizing;
 import com.moulberry.flashback.combo_options.VideoCodec;
 import com.moulberry.flashback.combo_options.VideoContainer;
+import com.moulberry.flashback.editor.ui.ReplayUI;
 import com.moulberry.flashback.exporting.ExportJobQueue;
 import com.moulberry.flashback.state.EditorScene;
 import com.moulberry.flashback.state.EditorState;
@@ -225,10 +226,10 @@ public class StartExportWindow {
                 ImGui.popTextWrapPos();
             }
 
-            ImGui.dummy(0, 10);
+            ImGui.dummy(0, 10 * ReplayUI.getUiScale());
 
             float buttonSize = (ImGui.getContentRegionAvailX() - ImGui.getStyle().getItemSpacingX()) / 2f;
-            if (ImGui.button("Start Export", buttonSize, 25)) {
+            if (ImGui.button("Start Export", buttonSize, ReplayUI.scaleUi(25))) {
                 createExportSettings(null).thenAccept(settings -> {
                     if (settings != null) {
                         close = true;
@@ -238,7 +239,7 @@ public class StartExportWindow {
                 });
             }
             ImGui.sameLine();
-            if (ImGui.button("Add to Queue", buttonSize, 25)) {
+            if (ImGui.button("Add to Queue", buttonSize, ReplayUI.scaleUi(25))) {
                 jobName.set("Job #" + (ExportJobQueue.count()+1));
                 ImGui.openPopup("QueuedJobName");
             }

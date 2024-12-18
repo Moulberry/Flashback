@@ -376,6 +376,10 @@ public class ReplayUI {
         return globalScale * contentScale;
     }
 
+    public static int scaleUi(int v) {
+        return (int)(v * getUiScale());
+    }
+
     public static double getNewMouseX(double x) {
         return x - frameX;
     }

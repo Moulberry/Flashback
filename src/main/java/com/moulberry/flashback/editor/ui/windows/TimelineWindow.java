@@ -109,11 +109,12 @@ public class TimelineWindow {
     private static float zoomBarMax;
     private static boolean zoomBarExpanded;
 
-    private static final int minorSeparatorHeight = 10;
-    private static final int majorSeparatorHeight = minorSeparatorHeight * 2;
-    private static final int timestampHeight = 20;
-    private static final int middleY = timestampHeight + majorSeparatorHeight;
-    private static final int middleX = 240;
+    private static int minorSeparatorHeight = 10;
+    private static int majorSeparatorHeight = minorSeparatorHeight * 2;
+    private static int timestampHeight = 20;
+    private static int middleY = timestampHeight + majorSeparatorHeight;
+    private static int middleX = 240;
+    private static int keyframeSize = 10;
 
     private static final List<SelectedKeyframes> selectedKeyframesList = new ArrayList<>();
     private static int editingKeyframeTrack = 0;
@@ -122,10 +123,8 @@ public class TimelineWindow {
     private static int createKeyframeAtTick = 0;
     private static int openCreateKeyframeAtTickTrack = -1;
 
-
     private static final float[] replayTickSpeeds = new float[]{1.0f, 2.0f, 4.0f, 10.0f, 20.0f, 40.0f, 100.0f, 200.0f, 400.0f};
 
-    private static final int KEYFRAME_SIZE = 10;
 
     public static int getCursorTick() {
         return cursorTicks;
@@ -172,6 +171,13 @@ public class TimelineWindow {
                 ImGui.end();
                 return;
             }
+
+            minorSeparatorHeight = ReplayUI.scaleUi(10);
+            majorSeparatorHeight = minorSeparatorHeight * 2;
+            timestampHeight = ReplayUI.scaleUi(20);
+            middleY = timestampHeight + majorSeparatorHeight;
+            middleX = ReplayUI.scaleUi(240);
+            keyframeSize = ReplayUI.scaleUi(10);
 
             selectedKeyframesList.removeIf(k -> !k.checkValid(editorScene));
 
@@ -305,7 +311,7 @@ public class TimelineWindow {
                     float markerX = x + replayTickToTimelineX(markerTick);
                     int colour = marker.colour();
                     colour = ((colour >> 16) & 0xFF) | (colour & 0xFF00) | ((colour << 16) & 0xFF0000) | 0xFF000000; // change endianness
-                    drawList.addCircleFilled(markerX, y+middleY, 5, colour);
+                    drawList.addCircleFilled(markerX, y+middleY, ReplayUI.scaleUi(5), colour);
 
                     if (!ImGui.isAnyMouseDown() && marker.description() != null && Math.abs(markerX - mouseX) <= 5 && Math.abs(y+middleY - mouseY) <= 5) {
                         ImGuiHelper.drawTooltip(marker.description());
@@ -350,7 +356,7 @@ public class TimelineWindow {
             }
 
             // Pause/play button
-            int controlSize = 24;
+            int controlSize = ReplayUI.scaleUi(24);
             int controlsY = (int) y + middleY/2 - controlSize/2;
 
             // Skip backwards
@@ -401,7 +407,6 @@ public class TimelineWindow {
                 skipForwardsX, controlsY + controlSize, -1);
             drawList.addRectFilled(skipForwardsX + controlSize*2f/3f, controlsY,
                 skipForwardsX + controlSize, controlsY+controlSize, -1);
-
 
             hoveredControls = mouseY > controlsY && mouseY < controlsY + controlSize;
             hoveredSkipBackwards = hoveredControls && mouseX >= skipBackwardsX && mouseX <= skipBackwardsX+controlSize;
@@ -596,7 +601,7 @@ public class TimelineWindow {
             float floorX = floor == null ? Float.NaN : x + replayTickToTimelineX(floor);
             float ceilX = ceil == null ? Float.NaN : x + replayTickToTimelineX(ceil);
 
-            Integer closest = Utils.chooseClosest(mouseX, floorX, floor, ceilX, ceil, KEYFRAME_SIZE);
+            Integer closest = Utils.chooseClosest(mouseX, floorX, floor, ceilX, ceil, keyframeSize);
             if (closest != null) {
                 if (closestTick == -1) {
                     closestTick = closest;
@@ -928,7 +933,7 @@ public class TimelineWindow {
                 float floorX = floor == null ? Float.NaN : x + replayTickToTimelineX(floor.getKey());
                 float ceilX = ceil == null ? Float.NaN : x + replayTickToTimelineX(ceil.getKey());
 
-                Map.Entry<Integer, Keyframe> closest = Utils.chooseClosest(mouseX, floorX, floor, ceilX, ceil, KEYFRAME_SIZE);
+                Map.Entry<Integer, Keyframe> closest = Utils.chooseClosest(mouseX, floorX, floor, ceilX, ceil, keyframeSize);
                 if (closest != null) {
                     boolean reuseOld = false;
                     for (SelectedKeyframes selectedKeyframes : oldSelectedKeyframesList) {
@@ -1148,8 +1153,8 @@ public class TimelineWindow {
             for (int trackIndex = minTrackIndex; trackIndex <= maxTrackIndex; trackIndex++) {
                 KeyframeTrack keyframeTrack = editorScene.keyframeTracks.get(trackIndex);
 
-                int minTick = timelineXToReplayTick(dragMinX - KEYFRAME_SIZE);
-                int maxTick = timelineXToReplayTick(dragMaxX + KEYFRAME_SIZE);
+                int minTick = timelineXToReplayTick(dragMinX - keyframeSize);
+                int maxTick = timelineXToReplayTick(dragMaxX + keyframeSize);
 
                 IntSet intSet = new IntOpenHashSet();
 
@@ -1331,7 +1336,7 @@ public class TimelineWindow {
                     float floorX = floor == null ? Float.NaN : x + replayTickToTimelineX(floor);
                     float ceilX = ceil == null ? Float.NaN : x + replayTickToTimelineX(ceil);
 
-                    Integer closest = Utils.chooseClosest(mouseX, floorX, floor, ceilX, ceil, KEYFRAME_SIZE);
+                    Integer closest = Utils.chooseClosest(mouseX, floorX, floor, ceilX, ceil, keyframeSize);
                     if (closest != null) {
                         if (closestTick == -1) {
                             closestTick = closest;
@@ -1426,7 +1431,7 @@ public class TimelineWindow {
                         if (keyframeTrack.keyframesByTick.size() == 1) {
                             colour = 0xFF155FFF;
 
-                            if (Math.abs(mouseX - midX) < KEYFRAME_SIZE && Math.abs(mouseY - midY) < KEYFRAME_SIZE) {
+                            if (Math.abs(mouseX - midX) < keyframeSize && Math.abs(mouseY - midY) < keyframeSize) {
                                 ImGuiHelper.drawTooltip("Timelapse requires two keyframes");
                             }
                         } else {
@@ -1435,7 +1440,7 @@ public class TimelineWindow {
                                 if (timelapseKeyframe.ticks >= ((TimelapseKeyframe) keyframe).ticks) {
                                     colour = 0xFF155FFF;
 
-                                    if (Math.abs(mouseX - midX) < KEYFRAME_SIZE && Math.abs(mouseY - midY) < KEYFRAME_SIZE) {
+                                    if (Math.abs(mouseX - midX) < keyframeSize && Math.abs(mouseY - midY) < keyframeSize) {
                                         ImGuiHelper.drawTooltip("This keyframe's Time must be greater than the Time on the left.\nThe left keyframe must be set to the base time, e.g. 0s and the right keyframe must be set to the duration of the timelapse e.g. 10s");
                                     }
                                 }
@@ -1484,10 +1489,10 @@ public class TimelineWindow {
                             }
                         }
 
-                        float startLine1 = x + leftX + KEYFRAME_SIZE;
+                        float startLine1 = x + leftX + keyframeSize;
                         float endLine1 = x + midX - textWidth/2f - 5;
                         float startLine2 = x + midX + textWidth/2f + 5;
-                        float endLine2 = x + rightX - KEYFRAME_SIZE;
+                        float endLine2 = x + rightX - keyframeSize;
                         if (startLine1 < endLine1) {
                             ImGui.getWindowDrawList().addLine(startLine1, midY, endLine1, midY, 0x80FFFFFF);
                         }
@@ -1501,45 +1506,45 @@ public class TimelineWindow {
     }
 
     private static void drawKeyframe(ImDrawList drawList, InterpolationType interpolationType, float x, float y, int colour) {
-        int easeSize = KEYFRAME_SIZE / 5;
+        int easeSize = keyframeSize / 5;
         switch (interpolationType) {
             case SMOOTH -> {
-                drawList.addCircleFilled(x, y, KEYFRAME_SIZE, colour);
+                drawList.addCircleFilled(x, y, keyframeSize, colour);
             }
             case LINEAR -> {
-                drawList.addTriangleFilled(x - KEYFRAME_SIZE, y, x, y - KEYFRAME_SIZE, x, y + KEYFRAME_SIZE, colour);
-                drawList.addTriangleFilled(x + KEYFRAME_SIZE, y, x, y + KEYFRAME_SIZE, x, y - KEYFRAME_SIZE, colour);
+                drawList.addTriangleFilled(x - keyframeSize, y, x, y - keyframeSize, x, y + keyframeSize, colour);
+                drawList.addTriangleFilled(x + keyframeSize, y, x, y + keyframeSize, x, y - keyframeSize, colour);
             }
             case EASE_IN -> {
                 // Left inverted triangle
-                drawList.addTriangleFilled(x - KEYFRAME_SIZE, y - KEYFRAME_SIZE, x - easeSize, y - KEYFRAME_SIZE, x - easeSize, y, colour);
-                drawList.addTriangleFilled(x - KEYFRAME_SIZE, y + KEYFRAME_SIZE, x - easeSize, y, x - easeSize, y + KEYFRAME_SIZE, colour);
+                drawList.addTriangleFilled(x - keyframeSize, y - keyframeSize, x - easeSize, y - keyframeSize, x - easeSize, y, colour);
+                drawList.addTriangleFilled(x - keyframeSize, y + keyframeSize, x - easeSize, y, x - easeSize, y + keyframeSize, colour);
                 // Right triangle
-                drawList.addTriangleFilled(x + KEYFRAME_SIZE, y, x + easeSize, y + KEYFRAME_SIZE, x + easeSize, y - KEYFRAME_SIZE, colour);
+                drawList.addTriangleFilled(x + keyframeSize, y, x + easeSize, y + keyframeSize, x + easeSize, y - keyframeSize, colour);
                 // Center
-                drawList.addRectFilled(x - easeSize, y - KEYFRAME_SIZE, x + easeSize, y + KEYFRAME_SIZE, colour);
+                drawList.addRectFilled(x - easeSize, y - keyframeSize, x + easeSize, y + keyframeSize, colour);
             }
             case EASE_OUT -> {
                 // Left triangle
-                drawList.addTriangleFilled(x - KEYFRAME_SIZE, y, x - easeSize, y - KEYFRAME_SIZE, x - easeSize, y + KEYFRAME_SIZE, colour);
+                drawList.addTriangleFilled(x - keyframeSize, y, x - easeSize, y - keyframeSize, x - easeSize, y + keyframeSize, colour);
                 // Right inverted triangle
-                drawList.addTriangleFilled(x + KEYFRAME_SIZE, y - KEYFRAME_SIZE, x + easeSize, y, x + easeSize, y - KEYFRAME_SIZE, colour);
-                drawList.addTriangleFilled(x + KEYFRAME_SIZE, y + KEYFRAME_SIZE, x + easeSize, y + KEYFRAME_SIZE, x + easeSize, y, colour);
+                drawList.addTriangleFilled(x + keyframeSize, y - keyframeSize, x + easeSize, y, x + easeSize, y - keyframeSize, colour);
+                drawList.addTriangleFilled(x + keyframeSize, y + keyframeSize, x + easeSize, y + keyframeSize, x + easeSize, y, colour);
                 // Center
-                drawList.addRectFilled(x - easeSize, y - KEYFRAME_SIZE, x + easeSize, y + KEYFRAME_SIZE, colour);
+                drawList.addRectFilled(x - easeSize, y - keyframeSize, x + easeSize, y + keyframeSize, colour);
             }
             case EASE_IN_OUT -> {
                 // Left inverted triangle
-                drawList.addTriangleFilled(x - KEYFRAME_SIZE, y - KEYFRAME_SIZE, x - easeSize, y - KEYFRAME_SIZE, x - easeSize, y, colour);
-                drawList.addTriangleFilled(x - KEYFRAME_SIZE, y + KEYFRAME_SIZE, x - easeSize, y, x - easeSize, y + KEYFRAME_SIZE, colour);
+                drawList.addTriangleFilled(x - keyframeSize, y - keyframeSize, x - easeSize, y - keyframeSize, x - easeSize, y, colour);
+                drawList.addTriangleFilled(x - keyframeSize, y + keyframeSize, x - easeSize, y, x - easeSize, y + keyframeSize, colour);
                 // Right inverted triangle
-                drawList.addTriangleFilled(x + KEYFRAME_SIZE, y - KEYFRAME_SIZE, x + easeSize, y, x + easeSize, y - KEYFRAME_SIZE, colour);
-                drawList.addTriangleFilled(x + KEYFRAME_SIZE, y + KEYFRAME_SIZE, x + easeSize, y + KEYFRAME_SIZE, x + easeSize, y, colour);
+                drawList.addTriangleFilled(x + keyframeSize, y - keyframeSize, x + easeSize, y, x + easeSize, y - keyframeSize, colour);
+                drawList.addTriangleFilled(x + keyframeSize, y + keyframeSize, x + easeSize, y + keyframeSize, x + easeSize, y, colour);
                 // Center
-                drawList.addRectFilled(x - easeSize, y - KEYFRAME_SIZE, x + easeSize, y + KEYFRAME_SIZE, colour);
+                drawList.addRectFilled(x - easeSize, y - keyframeSize, x + easeSize, y + keyframeSize, colour);
             }
             case HOLD -> {
-                drawList.addRectFilled(x - KEYFRAME_SIZE, y - KEYFRAME_SIZE, x + KEYFRAME_SIZE, y + KEYFRAME_SIZE, colour);
+                drawList.addRectFilled(x - keyframeSize, y - keyframeSize, x + keyframeSize, y + keyframeSize, colour);
             }
         }
     }
@@ -1966,8 +1971,9 @@ public class TimelineWindow {
                 colour = 0x80FFFFFF;
             }
 
-            drawList.addTriangleFilled(x + cursorX, y + middleY, x + cursorX -10, y + timestampHeight +5,
-                x + cursorX +10, y + timestampHeight +5, colour);
+            int size = ReplayUI.scaleUi(5);
+            drawList.addTriangleFilled(x + cursorX, y + middleY, x + cursorX - size*2, y + timestampHeight + size,
+                x + cursorX + size*2, y + timestampHeight + size, colour);
             drawList.addRectFilled(x + cursorX -1, y + middleY -2, x + cursorX +1, y + height - zoomBarHeight, colour);
         }
     }
