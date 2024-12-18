@@ -40,8 +40,12 @@ public abstract class MixinTickRateManager {
         if (Flashback.isInReplay()) {
             if (this.isServerTickRateManager) {
                 cir.setReturnValue(!(entity instanceof ReplayPlayer));
+            } else if (entity == Minecraft.getInstance().player) {
+                // When in an export job, the client must always tick
+                // When not in an export job, the player entity is ticked manually, so it must always be frozen
+                cir.setReturnValue(Flashback.EXPORT_JOB == null);
             } else {
-                cir.setReturnValue(!this.runsNormally() || entity == Minecraft.getInstance().player);
+                cir.setReturnValue(!this.runsNormally());
             }
         }
     }
