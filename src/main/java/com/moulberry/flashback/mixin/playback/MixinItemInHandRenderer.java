@@ -3,6 +3,8 @@ package com.moulberry.flashback.mixin.playback;
 import com.google.common.base.MoreObjects;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
+import com.llamalad7.mixinextras.sugar.Local;
+import com.llamalad7.mixinextras.sugar.ref.LocalRef;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.ext.ItemInHandRendererExt;
@@ -15,6 +17,7 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import org.spongepowered.asm.mixin.Mixin;
@@ -114,7 +117,14 @@ public abstract class MixinItemInHandRenderer implements ItemInHandRendererExt {
         bufferSource.endBatch();
     }
 
-    // todo: render player arm
+    @Inject(method = "renderPlayerArm", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/entity/EntityRenderDispatcher;getRenderer(Lnet/minecraft/world/entity/Entity;)Lnet/minecraft/client/renderer/entity/EntityRenderer;", shift = At.Shift.AFTER))
+    public void renderPlayerArm(PoseStack poseStack, MultiBufferSource multiBufferSource, int i, float f, float g,
+                                HumanoidArm humanoidArm, CallbackInfo ci, @Local LocalRef<AbstractClientPlayer> player) {
+        AbstractClientPlayer spectatingPlayer = Flashback.getSpectatingPlayer();
+        if (spectatingPlayer != null) {
+            player.set(spectatingPlayer);
+        }
+    }
 
     @Unique
     private UUID lastSpectatingPlayer = null;
