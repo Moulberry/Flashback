@@ -10,7 +10,7 @@ buildscript {
 }
 
 plugins {
-	id 'fabric-loom' version '1.6-SNAPSHOT'
+	id 'fabric-loom' version '1.8-SNAPSHOT'
     id 'com.github.johnrengelman.shadow' version "7.1.2"
 	id 'maven-publish'
 }
