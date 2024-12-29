@@ -65,6 +65,14 @@ public class MixinTitleScreen extends Screen {
         for (int offsetX = 0; offsetX < 5; offsetX++) {
             for (int i = this.normalMenuWidgets.size()-1; i >= 0; i--) {
                 AbstractWidget widget = this.normalMenuWidgets.get(i);
+
+                // Some mods which add custom menu functionality will run TitleScreen#createNormalMenuOptions
+                // but then later clear all the renderables. Simple fix is to scan the renderables list to
+                // ensure that the normal menu widget is still actually present
+                if (!this.renderables.contains(widget)) {
+                    continue;
+                }
+
                 int size = widget.getHeight();
                 int x = widget.getRight() + 4 + size * offsetX;
                 int y = widget.getY();
