@@ -14,6 +14,7 @@ import com.moulberry.flashback.Utils;
 import com.moulberry.flashback.combo_options.Sizing;
 import com.moulberry.flashback.editor.ui.windows.TimelineWindow;
 import com.moulberry.flashback.keyframe.KeyframeType;
+import com.moulberry.flashback.keyframe.change.*;
 import com.moulberry.flashback.keyframe.handler.KeyframeHandler;
 import com.moulberry.flashback.keyframe.types.CameraKeyframeType;
 import com.moulberry.flashback.keyframe.types.CameraOrbitKeyframeType;
@@ -55,7 +56,7 @@ public class CameraPath {
         int replayTick = TimelineWindow.getCursorTick();
 
         if (lastEditorStateModCount != state.modCount || lastCursorTick != replayTick) {
-            CameraPathArgs cameraPathArgs = createCameraPathArgs(state.currentScene(), replayTick, SUPPORTED_CAMERA_KEYFRAMES);
+            CameraPathArgs cameraPathArgs = createCameraPathArgs(state.currentScene(), replayTick);
 
             if (lastEditorStateModCount != state.modCount || !cameraPathArgs.equals(lastCameraPathArgs)) {
                 lastCameraPathArgs = cameraPathArgs;
@@ -131,13 +132,13 @@ public class CameraPath {
 
     private record CameraPathArgs(int lastLastCameraTick, int lastCameraTick, int nextCameraTick, int nextNextCameraTick) {}
 
-    private static CameraPathArgs createCameraPathArgs(EditorScene scene, int replayTick, Set<KeyframeType<?>> supportedKeyframes) {
+    private static CameraPathArgs createCameraPathArgs(EditorScene scene, int replayTick) {
         int lastCameraTick = -1;
         int nextCameraTick = -1;
 
         for (int trackIndex = 0; trackIndex < scene.keyframeTracks.size(); trackIndex++) {
             KeyframeTrack keyframeTrack = scene.keyframeTracks.get(trackIndex);
-            if (keyframeTrack.enabled && supportedKeyframes.contains(keyframeTrack.keyframeType) && !keyframeTrack.keyframesByTick.isEmpty()) {
+            if (keyframeTrack.enabled && keyframeTrack.keyframeType.keyframeChangeType() == KeyframeChangeCameraPosition.class && !keyframeTrack.keyframesByTick.isEmpty()) {
                 var lastEntry = keyframeTrack.keyframesByTick.floorEntry(replayTick);
                 var nextEntry = keyframeTrack.keyframesByTick.ceilingEntry(replayTick + 1);
 
@@ -159,7 +160,7 @@ public class CameraPath {
 
         for (int trackIndex = 0; trackIndex < scene.keyframeTracks.size(); trackIndex++) {
             KeyframeTrack keyframeTrack = scene.keyframeTracks.get(trackIndex);
-            if (keyframeTrack.enabled && supportedKeyframes.contains(keyframeTrack.keyframeType) && !keyframeTrack.keyframesByTick.isEmpty()) {
+            if (keyframeTrack.enabled &&keyframeTrack.keyframeType.keyframeChangeType() == KeyframeChangeCameraPosition.class && !keyframeTrack.keyframesByTick.isEmpty()) {
                 var lastLastEntry = lastCameraTick == -1 ? null : keyframeTrack.keyframesByTick.floorEntry(lastCameraTick - 1);
                 var nextNextEntry = nextCameraTick == -1 ? null : keyframeTrack.keyframesByTick.ceilingEntry(nextCameraTick + 1);
 
@@ -305,15 +306,13 @@ public class CameraPath {
         cameraPoseStack.popPose();
     }
 
-    private static final Set<KeyframeType<?>> SUPPORTED_CAMERA_KEYFRAMES = Set.of(CameraKeyframeType.INSTANCE, CameraOrbitKeyframeType.INSTANCE);
-
     private static class CapturingKeyframeHandler implements KeyframeHandler {
         private Vector3d position;
         private Quaterniond angle;
 
         @Override
-        public Set<KeyframeType<?>> supportedKeyframes() {
-            return SUPPORTED_CAMERA_KEYFRAMES;
+        public boolean supportsKeyframeChange(Class<? extends KeyframeChange> clazz) {
+            return clazz == KeyframeChangeCameraPosition.class;
         }
 
         @Override
@@ -332,8 +331,8 @@ public class CameraPath {
         private float fov;
 
         @Override
-        public Set<KeyframeType<?>> supportedKeyframes() {
-            return Set.of(FOVKeyframeType.INSTANCE);
+        public boolean supportsKeyframeChange(Class<? extends KeyframeChange> clazz) {
+            return clazz == KeyframeChangeFov.class;
         }
 
         @Override

@@ -1,5 +1,7 @@
 package com.moulberry.flashback.keyframe;
 
+import com.moulberry.flashback.keyframe.change.KeyframeChange;
+import com.moulberry.flashback.keyframe.handler.KeyframeHandler;
 import org.jetbrains.annotations.Nullable;
 
 public interface KeyframeType<T extends Keyframe> {
@@ -11,6 +13,11 @@ public interface KeyframeType<T extends Keyframe> {
     String id();
     @Nullable T createDirect();
     @Nullable KeyframeCreatePopup<T> createPopup();
+
+    Class<? extends KeyframeChange> keyframeChangeType();
+    default boolean supportsHandler(KeyframeHandler handler) {
+        return handler.supportsKeyframeChange(this.keyframeChangeType());
+    }
 
     default boolean allowChangingInterpolationType() {
         return true;

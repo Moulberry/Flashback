@@ -2,6 +2,7 @@ package com.moulberry.flashback.keyframe;
 
 import com.google.gson.*;
 import com.moulberry.flashback.Flashback;
+import com.moulberry.flashback.keyframe.change.KeyframeChange;
 import com.moulberry.flashback.keyframe.handler.KeyframeHandler;
 import com.moulberry.flashback.keyframe.impl.CameraKeyframe;
 import com.moulberry.flashback.keyframe.impl.CameraOrbitKeyframe;
@@ -14,6 +15,7 @@ import com.moulberry.flashback.keyframe.impl.TimelapseKeyframe;
 import com.moulberry.flashback.keyframe.interpolation.InterpolationType;
 
 import java.lang.reflect.Type;
+import java.util.Map;
 import java.util.Objects;
 import java.util.function.Consumer;
 
@@ -31,10 +33,9 @@ public abstract class Keyframe {
 
     public abstract KeyframeType<?> keyframeType();
     public abstract Keyframe copy();
-    public abstract void apply(KeyframeHandler t);
-    public abstract void applyInterpolated(KeyframeHandler t, Keyframe other, float amount);
-    public abstract void applyInterpolatedSmooth(KeyframeHandler t, Keyframe p1, Keyframe p2, Keyframe p3, float t0, float t1, float t2, float t3, float amount,
-        float lerpAmount, boolean lerpFromRight);
+    public abstract KeyframeChange createChange();
+    public abstract KeyframeChange createSmoothInterpolatedChange(Keyframe p1, Keyframe p2, Keyframe p3, float t0, float t1, float t2, float t3, float amount);
+    public abstract KeyframeChange createHermiteInterpolatedChange(Map<Integer, Keyframe> keyframes, float amount);
 
     public void renderEditKeyframe(Consumer<Consumer<Keyframe>> update) {}
 

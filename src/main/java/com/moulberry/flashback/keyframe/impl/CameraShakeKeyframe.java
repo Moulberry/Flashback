@@ -1,5 +1,6 @@
 package com.moulberry.flashback.keyframe.impl;
 
+import com.google.common.collect.Maps;
 import com.google.gson.JsonDeserializationContext;
 import com.google.gson.JsonDeserializer;
 import com.google.gson.JsonElement;
@@ -10,15 +11,20 @@ import com.google.gson.JsonSerializer;
 import com.moulberry.flashback.Interpolation;
 import com.moulberry.flashback.keyframe.Keyframe;
 import com.moulberry.flashback.keyframe.KeyframeType;
+import com.moulberry.flashback.keyframe.change.KeyframeChange;
+import com.moulberry.flashback.keyframe.change.KeyframeChangeCameraShake;
+import com.moulberry.flashback.keyframe.change.KeyframeChangeFov;
 import com.moulberry.flashback.keyframe.handler.KeyframeHandler;
 import com.moulberry.flashback.keyframe.interpolation.InterpolationType;
 import com.moulberry.flashback.keyframe.types.CameraShakeKeyframeType;
 import com.moulberry.flashback.spline.CatmullRom;
+import com.moulberry.flashback.spline.Hermite;
 import com.moulberry.flashback.state.EditorState;
 import com.moulberry.flashback.state.EditorStateManager;
 import imgui.ImGui;
 
 import java.lang.reflect.Type;
+import java.util.Map;
 import java.util.function.Consumer;
 
 public class CameraShakeKeyframe extends Keyframe {
@@ -123,60 +129,36 @@ public class CameraShakeKeyframe extends Keyframe {
     }
 
     @Override
-    public void apply(KeyframeHandler keyframeHandler) {
-        keyframeHandler.applyCameraShake(this.frequencyX, this.amplitudeX, this.frequencyY, this.amplitudeY);
+    public KeyframeChange createChange() {
+        return new KeyframeChangeCameraShake(this.frequencyX, this.amplitudeX, this.frequencyY, this.amplitudeY);
     }
 
     @Override
-    public void applyInterpolated(KeyframeHandler keyframeHandler, Keyframe otherGeneric, float amount) {
-        if (!(otherGeneric instanceof CameraShakeKeyframe other)) {
-            this.apply(keyframeHandler);
-            return;
-        }
-
-        float frequencyX = Interpolation.linear(this.frequencyX, other.frequencyX, amount);
-        float amplitudeX = Interpolation.linear(this.amplitudeX, other.amplitudeX, amount);
-        float frequencyY = Interpolation.linear(this.frequencyY, other.frequencyY, amount);
-        float amplitudeY = Interpolation.linear(this.amplitudeY, other.amplitudeY, amount);
-
-        keyframeHandler.applyCameraShake(frequencyX, amplitudeX, frequencyY, amplitudeY);
-    }
-
-    @Override
-    public void applyInterpolatedSmooth(KeyframeHandler keyframeHandler, Keyframe p1, Keyframe p2, Keyframe p3, float t0, float t1, float t2, float t3, float amount, float lerpAmount, boolean lerpFromRight) {
+    public KeyframeChange createSmoothInterpolatedChange(Keyframe p1, Keyframe p2, Keyframe p3, float t0, float t1, float t2, float t3, float amount) {
         float time1 = t1 - t0;
         float time2 = t2 - t0;
         float time3 = t3 - t0;
 
         float frequencyX = CatmullRom.value(this.frequencyX, ((CameraShakeKeyframe)p1).frequencyX,
-            ((CameraShakeKeyframe)p2).frequencyX, ((CameraShakeKeyframe)p3).frequencyX, time1, time2, time3, amount);
+                ((CameraShakeKeyframe)p2).frequencyX, ((CameraShakeKeyframe)p3).frequencyX, time1, time2, time3, amount);
         float amplitudeX = CatmullRom.value(this.amplitudeX, ((CameraShakeKeyframe)p1).amplitudeX,
-            ((CameraShakeKeyframe)p2).amplitudeX, ((CameraShakeKeyframe)p3).amplitudeX, time1, time2, time3, amount);
+                ((CameraShakeKeyframe)p2).amplitudeX, ((CameraShakeKeyframe)p3).amplitudeX, time1, time2, time3, amount);
         float frequencyY = CatmullRom.value(this.frequencyY, ((CameraShakeKeyframe)p1).frequencyY,
-            ((CameraShakeKeyframe)p2).frequencyY, ((CameraShakeKeyframe)p3).frequencyY, time1, time2, time3, amount);
+                ((CameraShakeKeyframe)p2).frequencyY, ((CameraShakeKeyframe)p3).frequencyY, time1, time2, time3, amount);
         float amplitudeY = CatmullRom.value(this.amplitudeY, ((CameraShakeKeyframe)p1).amplitudeY,
-            ((CameraShakeKeyframe)p2).amplitudeY, ((CameraShakeKeyframe)p3).amplitudeY, time1, time2, time3, amount);
+                ((CameraShakeKeyframe)p2).amplitudeY, ((CameraShakeKeyframe)p3).amplitudeY, time1, time2, time3, amount);
 
-        if (lerpAmount >= 0) {
-            float linearFrequencyX = Interpolation.linear(((CameraShakeKeyframe)p1).frequencyX, ((CameraShakeKeyframe)p2).frequencyX, lerpAmount);
-            float linearAmplitudeX = Interpolation.linear(((CameraShakeKeyframe)p1).amplitudeX, ((CameraShakeKeyframe)p2).amplitudeX, lerpAmount);
-            float linearFrequencyY = Interpolation.linear(((CameraShakeKeyframe)p1).frequencyY, ((CameraShakeKeyframe)p2).frequencyY, lerpAmount);
-            float linearAmplitudeY = Interpolation.linear(((CameraShakeKeyframe)p1).amplitudeY, ((CameraShakeKeyframe)p2).amplitudeY, lerpAmount);
+        return new KeyframeChangeCameraShake(frequencyX, amplitudeX, frequencyY, amplitudeY);
+    }
 
-            if (lerpFromRight) {
-                frequencyX = Interpolation.linear(frequencyX, linearFrequencyX, amount);
-                amplitudeX = Interpolation.linear(amplitudeX, linearAmplitudeX, amount);
-                frequencyY = Interpolation.linear(frequencyY, linearFrequencyY, amount);
-                amplitudeY = Interpolation.linear(amplitudeY, linearAmplitudeY, amount);
-            } else {
-                frequencyX = Interpolation.linear(linearFrequencyX, frequencyX, amount);
-                amplitudeX = Interpolation.linear(linearAmplitudeX, amplitudeX, amount);
-                frequencyY = Interpolation.linear(linearFrequencyY, frequencyY, amount);
-                amplitudeY = Interpolation.linear(linearAmplitudeY, amplitudeY, amount);
-            }
-        }
+    @Override
+    public KeyframeChange createHermiteInterpolatedChange(Map<Integer, Keyframe> keyframes, float amount) {
+        float frequencyX = (float) Hermite.value(Maps.transformValues(keyframes, k -> (double) ((CameraShakeKeyframe)k).frequencyX), amount);
+        float amplitudeX = (float) Hermite.value(Maps.transformValues(keyframes, k -> (double) ((CameraShakeKeyframe)k).amplitudeX), amount);
+        float frequencyY = (float) Hermite.value(Maps.transformValues(keyframes, k -> (double) ((CameraShakeKeyframe)k).frequencyY), amount);
+        float amplitudeY = (float) Hermite.value(Maps.transformValues(keyframes, k -> (double) ((CameraShakeKeyframe)k).amplitudeY), amount);
 
-        keyframeHandler.applyCameraShake(frequencyX, amplitudeX, frequencyY, amplitudeY);
+        return new KeyframeChangeCameraShake(frequencyX, amplitudeX, frequencyY, amplitudeY);
     }
 
     public static class TypeAdapter implements JsonSerializer<CameraShakeKeyframe>, JsonDeserializer<CameraShakeKeyframe> {

@@ -3,6 +3,10 @@ package com.moulberry.flashback.keyframe.types;
 import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.editor.ui.ImGuiHelper;
 import com.moulberry.flashback.keyframe.KeyframeType;
+import com.moulberry.flashback.keyframe.change.KeyframeChange;
+import com.moulberry.flashback.keyframe.change.KeyframeChangeCameraPosition;
+import com.moulberry.flashback.keyframe.change.KeyframeChangeTimeOfDay;
+import com.moulberry.flashback.keyframe.handler.KeyframeHandler;
 import com.moulberry.flashback.keyframe.impl.TickrateKeyframe;
 import com.moulberry.flashback.keyframe.impl.TimeOfDayKeyframe;
 import com.moulberry.flashback.playback.ReplayServer;
@@ -18,6 +22,11 @@ public class TimeOfDayKeyframeType implements KeyframeType<TimeOfDayKeyframe> {
     public static TimeOfDayKeyframeType INSTANCE = new TimeOfDayKeyframeType();
 
     private TimeOfDayKeyframeType() {
+    }
+
+    @Override
+    public Class<? extends KeyframeChange> keyframeChangeType() {
+        return KeyframeChangeTimeOfDay.class;
     }
 
     @Override

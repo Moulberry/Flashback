@@ -974,8 +974,8 @@ public class TimelineWindow {
                     if (leftClicked) {
                         if (ImGui.isMouseDoubleClicked(ImGuiMouseButton.Left)) {
                             MinecraftKeyframeHandler minecraftKeyframeHandler = new MinecraftKeyframeHandler(Minecraft.getInstance());
-                            if (minecraftKeyframeHandler.supportedKeyframes().contains(closest.getValue().keyframeType())) {
-                                closest.getValue().apply(minecraftKeyframeHandler);
+                            if (closest.getValue().keyframeType().supportsHandler(minecraftKeyframeHandler)) {
+                                closest.getValue().createChange().apply(minecraftKeyframeHandler);
                             }
                         } else {
                             grabbedKeyframe = true;
@@ -1141,7 +1141,7 @@ public class TimelineWindow {
         if (!multiple && editingKeyframe instanceof CameraKeyframe cameraKeyframe) {
             ImGui.sameLine();
             if (ImGui.button("Apply")) {
-                cameraKeyframe.apply(new MinecraftKeyframeHandler(Minecraft.getInstance()));
+                cameraKeyframe.createChange().apply(new MinecraftKeyframeHandler(Minecraft.getInstance()));
             }
         }
     }
@@ -1565,6 +1565,10 @@ public class TimelineWindow {
             }
             case HOLD -> {
                 drawList.addRectFilled(x - keyframeSize, y - keyframeSize, x + keyframeSize, y + keyframeSize, colour);
+            }
+            case HERMITE -> {
+                drawList.addTriangleFilled(x, y - keyframeSize, x + keyframeSize, y + keyframeSize,
+                        x - keyframeSize, y + keyframeSize, colour);
             }
         }
     }

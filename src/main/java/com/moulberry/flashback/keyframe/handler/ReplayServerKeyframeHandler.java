@@ -1,6 +1,9 @@
 package com.moulberry.flashback.keyframe.handler;
 
 import com.moulberry.flashback.keyframe.KeyframeType;
+import com.moulberry.flashback.keyframe.change.KeyframeChange;
+import com.moulberry.flashback.keyframe.change.KeyframeChangeFreeze;
+import com.moulberry.flashback.keyframe.change.KeyframeChangeTickrate;
 import com.moulberry.flashback.keyframe.types.FreezeKeyframeType;
 import com.moulberry.flashback.keyframe.types.SpeedKeyframeType;
 import com.moulberry.flashback.keyframe.types.TimelapseKeyframeType;
@@ -9,22 +12,20 @@ import com.moulberry.flashback.playback.ReplayServer;
 import java.util.EnumSet;
 import java.util.Set;
 
-public class ReplayServerKeyframeHandler implements KeyframeHandler {
+public record ReplayServerKeyframeHandler(ReplayServer replayServer) implements KeyframeHandler {
 
-    private final ReplayServer replayServer;
+    private static final Set<Class<? extends KeyframeChange>> supportedChanges = Set.of(
+        KeyframeChangeTickrate.class, KeyframeChangeFreeze.class
+    );
 
-    public ReplayServerKeyframeHandler(ReplayServer replayServer) {
-        this.replayServer = replayServer;
+    @Override
+    public boolean supportsKeyframeChange(Class<? extends KeyframeChange> clazz) {
+        return supportedChanges.contains(clazz);
     }
 
     @Override
     public boolean alwaysApplyLastKeyframe() {
         return true;
-    }
-
-    @Override
-    public Set<KeyframeType<?>> supportedKeyframes() {
-        return Set.of(SpeedKeyframeType.INSTANCE, TimelapseKeyframeType.INSTANCE, FreezeKeyframeType.INSTANCE);
     }
 
     @Override

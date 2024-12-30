@@ -2,6 +2,10 @@ package com.moulberry.flashback.keyframe.types;
 
 import com.moulberry.flashback.editor.ui.ImGuiHelper;
 import com.moulberry.flashback.keyframe.KeyframeType;
+import com.moulberry.flashback.keyframe.change.KeyframeChange;
+import com.moulberry.flashback.keyframe.change.KeyframeChangeCameraPosition;
+import com.moulberry.flashback.keyframe.change.KeyframeChangeFreeze;
+import com.moulberry.flashback.keyframe.handler.KeyframeHandler;
 import com.moulberry.flashback.keyframe.impl.FreezeKeyframe;
 import imgui.ImGui;
 import imgui.type.ImBoolean;
@@ -12,6 +16,11 @@ public class FreezeKeyframeType implements KeyframeType<FreezeKeyframe> {
     public static FreezeKeyframeType INSTANCE = new FreezeKeyframeType();
 
     private FreezeKeyframeType() {
+    }
+
+    @Override
+    public Class<? extends KeyframeChange> keyframeChangeType() {
+        return KeyframeChangeFreeze.class;
     }
 
     @Override

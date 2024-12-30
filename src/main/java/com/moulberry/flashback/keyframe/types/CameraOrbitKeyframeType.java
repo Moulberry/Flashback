@@ -3,6 +3,9 @@ package com.moulberry.flashback.keyframe.types;
 import com.moulberry.flashback.editor.ui.ImGuiHelper;
 import com.moulberry.flashback.keyframe.Keyframe;
 import com.moulberry.flashback.keyframe.KeyframeType;
+import com.moulberry.flashback.keyframe.change.KeyframeChange;
+import com.moulberry.flashback.keyframe.change.KeyframeChangeCameraPosition;
+import com.moulberry.flashback.keyframe.handler.KeyframeHandler;
 import com.moulberry.flashback.keyframe.impl.CameraKeyframe;
 import com.moulberry.flashback.keyframe.impl.CameraOrbitKeyframe;
 import imgui.ImGui;
@@ -20,6 +23,11 @@ public class CameraOrbitKeyframeType implements KeyframeType<CameraOrbitKeyframe
     public static CameraOrbitKeyframeType INSTANCE = new CameraOrbitKeyframeType();
 
     private CameraOrbitKeyframeType() {
+    }
+
+    @Override
+    public Class<? extends KeyframeChange> keyframeChangeType() {
+        return KeyframeChangeCameraPosition.class;
     }
 
     @Override

@@ -1,21 +1,27 @@
 package com.moulberry.flashback.keyframe.impl;
 
+import com.google.common.collect.Maps;
 import com.google.gson.*;
 import com.moulberry.flashback.Interpolation;
 import com.moulberry.flashback.editor.ui.ImGuiHelper;
 import com.moulberry.flashback.keyframe.Keyframe;
 import com.moulberry.flashback.keyframe.KeyframeType;
+import com.moulberry.flashback.keyframe.change.KeyframeChange;
+import com.moulberry.flashback.keyframe.change.KeyframeChangeCameraPosition;
 import com.moulberry.flashback.keyframe.handler.KeyframeHandler;
 import com.moulberry.flashback.keyframe.interpolation.InterpolationType;
 import com.moulberry.flashback.keyframe.types.CameraKeyframeType;
 import com.moulberry.flashback.spline.CatmullRom;
+import com.moulberry.flashback.spline.Hermite;
 import com.moulberry.flashback.state.EditorState;
 import com.moulberry.flashback.state.EditorStateManager;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
+import org.apache.commons.math3.analysis.interpolation.HermiteInterpolator;
 import org.joml.Vector3d;
 
 import java.lang.reflect.Type;
+import java.util.Map;
 import java.util.function.Consumer;
 
 public class CameraKeyframe extends Keyframe {
@@ -107,84 +113,43 @@ public class CameraKeyframe extends Keyframe {
     }
 
     @Override
-    public void apply(KeyframeHandler keyframeHandler) {
-        keyframeHandler.applyCameraPosition(this.position, this.yaw, this.pitch, this.roll);
+    public KeyframeChange createChange() {
+        return new KeyframeChangeCameraPosition(this.position, this.yaw, this.pitch, this.roll);
     }
 
     @Override
-    public void applyInterpolated(KeyframeHandler keyframeHandler, Keyframe genericOther, float amount) {
-        if (!(genericOther instanceof CameraKeyframe other)) {
-            this.apply(keyframeHandler);
-            return;
-        }
-
-        double x = Interpolation.linear(this.position.x, other.position.x, amount);
-        double y = Interpolation.linear(this.position.y, other.position.y, amount);
-        double z = Interpolation.linear(this.position.z, other.position.z, amount);
-        Vector3d position = new Vector3d(x, y, z);
-
-        float yaw = Interpolation.linearAngle(this.yaw, other.yaw, amount);
-        float pitch = Interpolation.linearAngle(this.pitch, other.pitch, amount);
-        float roll = Interpolation.linearAngle(this.roll, other.roll, amount);
-
-        keyframeHandler.applyCameraPosition(position, yaw, pitch, roll);
-    }
-
-    @Override
-    public void applyInterpolatedSmooth(KeyframeHandler keyframeHandler, Keyframe p1, Keyframe p2, Keyframe p3, float t0, float t1, float t2, float t3, float amount, float lerpAmount, boolean lerpFromRight) {
+    public KeyframeChange createSmoothInterpolatedChange(Keyframe p1, Keyframe p2, Keyframe p3, float t0, float t1, float t2, float t3, float amount) {
         float time1 = t1 - t0;
         float time2 = t2 - t0;
         float time3 = t3 - t0;
 
         // Calculate position
         Vector3d position = CatmullRom.position(this.position,
-            ((CameraKeyframe)p1).position, ((CameraKeyframe)p2).position,
-            ((CameraKeyframe)p3).position, time1, time2, time3, amount);
-
-        double x = position.x;
-        double y = position.y;
-        double z = position.z;
+                ((CameraKeyframe)p1).position, ((CameraKeyframe)p2).position,
+                ((CameraKeyframe)p3).position, time1, time2, time3, amount);
 
         // Calculate rotation
         float yaw = CatmullRom.degrees(this.yaw,
-            ((CameraKeyframe)p1).yaw, ((CameraKeyframe)p2).yaw,
-            ((CameraKeyframe)p3).yaw, time1, time2, time3, amount);
+                ((CameraKeyframe)p1).yaw, ((CameraKeyframe)p2).yaw,
+                ((CameraKeyframe)p3).yaw, time1, time2, time3, amount);
         float pitch = CatmullRom.degrees(this.pitch,
-            ((CameraKeyframe)p1).pitch, ((CameraKeyframe)p2).pitch,
-            ((CameraKeyframe)p3).pitch, time1, time2, time3, amount);
+                ((CameraKeyframe)p1).pitch, ((CameraKeyframe)p2).pitch,
+                ((CameraKeyframe)p3).pitch, time1, time2, time3, amount);
         float roll = CatmullRom.degrees(this.roll,
-            ((CameraKeyframe)p1).roll, ((CameraKeyframe)p2).roll,
-            ((CameraKeyframe)p3).roll, time1, time2, time3, amount);
+                ((CameraKeyframe)p1).roll, ((CameraKeyframe)p2).roll,
+                ((CameraKeyframe)p3).roll, time1, time2, time3, amount);
 
-        if (lerpAmount >= 0) {
-            double linearX = Interpolation.linear(((CameraKeyframe)p1).position.x, ((CameraKeyframe)p2).position.x, lerpAmount);
-            double linearY = Interpolation.linear(((CameraKeyframe)p1).position.y, ((CameraKeyframe)p2).position.y, lerpAmount);
-            double linearZ = Interpolation.linear(((CameraKeyframe)p1).position.z, ((CameraKeyframe)p2).position.z, lerpAmount);
-            float linearYaw = Interpolation.linearAngle(((CameraKeyframe)p1).yaw, ((CameraKeyframe)p2).yaw, lerpAmount);
-            float linearPitch = Interpolation.linearAngle(((CameraKeyframe)p1).pitch, ((CameraKeyframe)p2).pitch, lerpAmount);
-            float linearRoll = Interpolation.linearAngle(((CameraKeyframe)p1).roll, ((CameraKeyframe)p2).roll, lerpAmount);
+        return new KeyframeChangeCameraPosition(position, yaw, pitch, roll);
+    }
 
-            if (lerpFromRight) {
-                x = Interpolation.linear(x, linearX, amount);
-                y = Interpolation.linear(y, linearY, amount);
-                z = Interpolation.linear(z, linearZ, amount);
-                yaw = Interpolation.linearAngle(yaw, linearYaw, amount);
-                pitch = Interpolation.linearAngle(pitch, linearPitch, amount);
-                roll = Interpolation.linearAngle(roll, linearRoll, amount);
-            } else {
-                x = Interpolation.linear(linearX, x, amount);
-                y = Interpolation.linear(linearY, y, amount);
-                z = Interpolation.linear(linearZ, z, amount);
-                yaw = Interpolation.linearAngle(linearYaw, yaw, amount);
-                pitch = Interpolation.linearAngle(linearPitch, pitch, amount);
-                roll = Interpolation.linearAngle(linearRoll, roll, amount);
-            }
-        }
+    @Override
+    public KeyframeChange createHermiteInterpolatedChange(Map<Integer, Keyframe> keyframes, float amount) {
+        Vector3d position = Hermite.position(Maps.transformValues(keyframes, k -> ((CameraKeyframe)k).position), amount);
+        double yaw = Hermite.degrees(Maps.transformValues(keyframes, k -> (double) ((CameraKeyframe)k).yaw), amount);
+        double pitch = Hermite.degrees(Maps.transformValues(keyframes, k -> (double) ((CameraKeyframe)k).pitch), amount);
+        double roll = Hermite.degrees(Maps.transformValues(keyframes, k -> (double) ((CameraKeyframe)k).roll), amount);
 
-        position.x = x;
-        position.y = y;
-        position.z = z;
-        keyframeHandler.applyCameraPosition(position, yaw, pitch, roll);
+        return new KeyframeChangeCameraPosition(position, yaw, pitch, roll);
     }
 
     public static class TypeAdapter implements JsonSerializer<CameraKeyframe>, JsonDeserializer<CameraKeyframe> {

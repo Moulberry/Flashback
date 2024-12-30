@@ -1,6 +1,10 @@
 package com.moulberry.flashback.keyframe.types;
 
 import com.moulberry.flashback.keyframe.KeyframeType;
+import com.moulberry.flashback.keyframe.change.KeyframeChange;
+import com.moulberry.flashback.keyframe.change.KeyframeChangeCameraPosition;
+import com.moulberry.flashback.keyframe.change.KeyframeChangeFov;
+import com.moulberry.flashback.keyframe.handler.KeyframeHandler;
 import com.moulberry.flashback.keyframe.impl.CameraOrbitKeyframe;
 import com.moulberry.flashback.keyframe.impl.FOVKeyframe;
 import com.moulberry.flashback.state.EditorState;
@@ -18,6 +22,11 @@ public class FOVKeyframeType implements KeyframeType<FOVKeyframe> {
     public static FOVKeyframeType INSTANCE = new FOVKeyframeType();
 
     private FOVKeyframeType() {
+    }
+
+    @Override
+    public Class<? extends KeyframeChange> keyframeChangeType() {
+        return KeyframeChangeFov.class;
     }
 
     @Override

@@ -5,11 +5,23 @@ public enum SidedInterpolationType {
     SMOOTH,
     LINEAR,
     EASE,
-    HOLD;
+    HOLD,
+    HERMITE;
+
+    private boolean isSpecial() {
+        return this == SidedInterpolationType.SMOOTH || this == SidedInterpolationType.HERMITE;
+    }
 
     public static float interpolate(SidedInterpolationType left, SidedInterpolationType right, float amount) {
-        if (left == SidedInterpolationType.SMOOTH || right == SidedInterpolationType.SMOOTH) {
-            throw new IllegalArgumentException("SMOOTH not allowed");
+        if (left.isSpecial()) {
+            if (right.isSpecial()) {
+                left = SidedInterpolationType.LINEAR;
+                right = SidedInterpolationType.LINEAR;
+            } else {
+                left = right;
+            }
+        } else if (right.isSpecial()) {
+            right = left;
         }
 
         if (left == SidedInterpolationType.HOLD) {

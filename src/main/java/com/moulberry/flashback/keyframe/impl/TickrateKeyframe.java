@@ -1,16 +1,21 @@
 package com.moulberry.flashback.keyframe.impl;
 
+import com.google.common.collect.Maps;
 import com.google.gson.*;
 import com.moulberry.flashback.Interpolation;
 import com.moulberry.flashback.keyframe.Keyframe;
 import com.moulberry.flashback.keyframe.KeyframeType;
+import com.moulberry.flashback.keyframe.change.KeyframeChange;
+import com.moulberry.flashback.keyframe.change.KeyframeChangeTickrate;
 import com.moulberry.flashback.keyframe.handler.KeyframeHandler;
 import com.moulberry.flashback.keyframe.interpolation.InterpolationType;
 import com.moulberry.flashback.keyframe.types.SpeedKeyframeType;
 import com.moulberry.flashback.spline.CatmullRom;
+import com.moulberry.flashback.spline.Hermite;
 import imgui.ImGui;
 
 import java.lang.reflect.Type;
+import java.util.Map;
 import java.util.function.Consumer;
 
 public class TickrateKeyframe extends Keyframe {
@@ -49,42 +54,27 @@ public class TickrateKeyframe extends Keyframe {
     }
 
     @Override
-    public void apply(KeyframeHandler keyframeHandler) {
-        keyframeHandler.applyTickrate(this.tickrate);
+    public KeyframeChange createChange() {
+        return new KeyframeChangeTickrate(this.tickrate);
     }
 
     @Override
-    public void applyInterpolated(KeyframeHandler keyframeHandler, Keyframe otherGeneric, float amount) {
-        if (!(otherGeneric instanceof TickrateKeyframe other)) {
-            this.apply(keyframeHandler);
-            return;
-        }
-
-        float tickrate = Interpolation.linear(this.tickrate, other.tickrate, amount);
-        keyframeHandler.applyTickrate(tickrate);
-    }
-
-    @Override
-    public void applyInterpolatedSmooth(KeyframeHandler keyframeHandler, Keyframe p1, Keyframe p2, Keyframe p3, float t0, float t1, float t2, float t3, float amount, float lerpAmount, boolean lerpFromRight) {
+    public KeyframeChange createSmoothInterpolatedChange(Keyframe p1, Keyframe p2, Keyframe p3, float t0, float t1, float t2, float t3, float amount) {
         float time1 = t1 - t0;
         float time2 = t2 - t0;
         float time3 = t3 - t0;
 
         float tickrate = CatmullRom.value(this.tickrate,
-            ((TickrateKeyframe)p1).tickrate, ((TickrateKeyframe)p2).tickrate,
-            ((TickrateKeyframe)p3).tickrate, time1, time2, time3, amount);
+                ((TickrateKeyframe)p1).tickrate, ((TickrateKeyframe)p2).tickrate,
+                ((TickrateKeyframe)p3).tickrate, time1, time2, time3, amount);
 
-        if (lerpAmount >= 0) {
-            float linearTickrate = Interpolation.linear(((TickrateKeyframe)p1).tickrate, ((TickrateKeyframe)p2).tickrate, lerpAmount);
+        return new KeyframeChangeTickrate(tickrate);
+    }
 
-            if (lerpFromRight) {
-                tickrate = Interpolation.linear(tickrate, linearTickrate, amount);
-            } else {
-                tickrate = Interpolation.linear(linearTickrate, tickrate, amount);
-            }
-        }
-
-        keyframeHandler.applyTickrate(tickrate);
+    @Override
+    public KeyframeChange createHermiteInterpolatedChange(Map<Integer, Keyframe> keyframes, float amount) {
+        float tickrate = (float) Hermite.value(Maps.transformValues(keyframes, k -> (double) ((TickrateKeyframe)k).tickrate), amount);
+        return new KeyframeChangeTickrate(tickrate);
     }
 
     public static class TypeAdapter implements JsonSerializer<TickrateKeyframe>, JsonDeserializer<TickrateKeyframe> {
