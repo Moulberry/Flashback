@@ -2,6 +2,10 @@ package com.moulberry.flashback.keyframe.types;
 
 import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.keyframe.KeyframeType;
+import com.moulberry.flashback.keyframe.change.KeyframeChange;
+import com.moulberry.flashback.keyframe.change.KeyframeChangeCameraPosition;
+import com.moulberry.flashback.keyframe.change.KeyframeChangeCameraShake;
+import com.moulberry.flashback.keyframe.handler.KeyframeHandler;
 import com.moulberry.flashback.keyframe.impl.CameraShakeKeyframe;
 import com.moulberry.flashback.keyframe.impl.TickrateKeyframe;
 import com.moulberry.flashback.playback.ReplayServer;
@@ -17,6 +21,10 @@ public class CameraShakeKeyframeType implements KeyframeType<CameraShakeKeyframe
     private CameraShakeKeyframeType() {
     }
 
+    @Override
+    public Class<? extends KeyframeChange> keyframeChangeType() {
+        return KeyframeChangeCameraShake.class;
+    }
 
     @Override
     public @Nullable String icon() {

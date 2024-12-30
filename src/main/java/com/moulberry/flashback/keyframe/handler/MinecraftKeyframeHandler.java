@@ -1,37 +1,24 @@
 package com.moulberry.flashback.keyframe.handler;
 
-import com.moulberry.flashback.Flashback;
-import com.moulberry.flashback.keyframe.KeyframeType;
-import com.moulberry.flashback.keyframe.types.CameraKeyframeType;
-import com.moulberry.flashback.keyframe.types.CameraOrbitKeyframeType;
-import com.moulberry.flashback.keyframe.types.CameraShakeKeyframeType;
-import com.moulberry.flashback.keyframe.types.FOVKeyframeType;
-import com.moulberry.flashback.keyframe.types.FreezeKeyframeType;
-import com.moulberry.flashback.keyframe.types.TimeOfDayKeyframeType;
+import com.moulberry.flashback.keyframe.change.*;
 import com.moulberry.flashback.state.EditorState;
 import com.moulberry.flashback.state.EditorStateManager;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
-import net.minecraft.util.Mth;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Vector3d;
-import org.joml.Vector3f;
 
-import java.util.EnumSet;
 import java.util.Set;
 
-public class MinecraftKeyframeHandler implements KeyframeHandler {
+public record MinecraftKeyframeHandler(Minecraft minecraft) implements KeyframeHandler {
 
-    private final Minecraft minecraft;
-
-    public MinecraftKeyframeHandler(Minecraft minecraft) {
-        this.minecraft = minecraft;
-    }
+    private static final Set<Class<? extends KeyframeChange>> supportedChanges = Set.of(
+            KeyframeChangeCameraPosition.class, KeyframeChangeFov.class, KeyframeChangeTimeOfDay.class, KeyframeChangeCameraShake.class
+    );
 
     @Override
-    public Set<KeyframeType<?>> supportedKeyframes() {
-        return Set.of(CameraKeyframeType.INSTANCE, CameraOrbitKeyframeType.INSTANCE, FOVKeyframeType.INSTANCE,
-            TimeOfDayKeyframeType.INSTANCE, CameraShakeKeyframeType.INSTANCE);
+    public boolean supportsKeyframeChange(Class<? extends KeyframeChange> clazz) {
+        return supportedChanges.contains(clazz);
     }
 
     @Override
@@ -61,11 +48,6 @@ public class MinecraftKeyframeHandler implements KeyframeHandler {
         if (editorState != null) {
             editorState.replayVisuals.setFov(fov);
         }
-    }
-
-    @Override
-    public void applyTickrate(float tickrate) {
-        throw new UnsupportedOperationException();
     }
 
     @Override

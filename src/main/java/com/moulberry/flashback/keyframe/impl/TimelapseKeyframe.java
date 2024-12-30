@@ -1,5 +1,6 @@
 package com.moulberry.flashback.keyframe.impl;
 
+import com.google.common.collect.Maps;
 import com.google.gson.JsonDeserializationContext;
 import com.google.gson.JsonDeserializer;
 import com.google.gson.JsonElement;
@@ -11,13 +12,18 @@ import com.moulberry.flashback.Utils;
 import com.moulberry.flashback.editor.ui.ImGuiHelper;
 import com.moulberry.flashback.keyframe.Keyframe;
 import com.moulberry.flashback.keyframe.KeyframeType;
+import com.moulberry.flashback.keyframe.change.KeyframeChange;
+import com.moulberry.flashback.keyframe.change.KeyframeChangeTickrate;
 import com.moulberry.flashback.keyframe.handler.KeyframeHandler;
 import com.moulberry.flashback.keyframe.interpolation.InterpolationType;
 import com.moulberry.flashback.keyframe.types.TimelapseKeyframeType;
+import com.moulberry.flashback.spline.CatmullRom;
+import com.moulberry.flashback.spline.Hermite;
 import imgui.ImGui;
 import imgui.type.ImString;
 
 import java.lang.reflect.Type;
+import java.util.Map;
 import java.util.function.Consumer;
 
 public class TimelapseKeyframe extends Keyframe {
@@ -61,17 +67,17 @@ public class TimelapseKeyframe extends Keyframe {
     }
 
     @Override
-    public void apply(KeyframeHandler keyframeHandler) {
+    public KeyframeChange createChange() {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public void applyInterpolated(KeyframeHandler keyframeHandler, Keyframe otherGeneric, float amount) {
+    public KeyframeChange createSmoothInterpolatedChange(Keyframe p1, Keyframe p2, Keyframe p3, float t0, float t1, float t2, float t3, float amount) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public void applyInterpolatedSmooth(KeyframeHandler keyframeHandler, Keyframe p1, Keyframe p2, Keyframe p3, float t0, float t1, float t2, float t3, float amount, float lerpAmount, boolean lerpFromRight) {
+    public KeyframeChange createHermiteInterpolatedChange(Map<Integer, Keyframe> keyframes, float amount) {
         throw new UnsupportedOperationException();
     }
 

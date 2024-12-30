@@ -1,18 +1,24 @@
 package com.moulberry.flashback.keyframe.impl;
 
+import com.google.common.collect.Maps;
 import com.google.gson.*;
 import com.moulberry.flashback.Interpolation;
 import com.moulberry.flashback.editor.ui.ImGuiHelper;
 import com.moulberry.flashback.keyframe.Keyframe;
 import com.moulberry.flashback.keyframe.KeyframeType;
+import com.moulberry.flashback.keyframe.change.KeyframeChange;
+import com.moulberry.flashback.keyframe.change.KeyframeChangeTickrate;
+import com.moulberry.flashback.keyframe.change.KeyframeChangeTimeOfDay;
 import com.moulberry.flashback.keyframe.handler.KeyframeHandler;
 import com.moulberry.flashback.keyframe.interpolation.InterpolationType;
 import com.moulberry.flashback.keyframe.types.TimeOfDayKeyframeType;
 import com.moulberry.flashback.spline.CatmullRom;
+import com.moulberry.flashback.spline.Hermite;
 import imgui.ImGui;
 import imgui.type.ImInt;
 
 import java.lang.reflect.Type;
+import java.util.Map;
 import java.util.function.Consumer;
 
 public class TimeOfDayKeyframe extends Keyframe {
@@ -50,44 +56,28 @@ public class TimeOfDayKeyframe extends Keyframe {
     }
 
     @Override
-    public void apply(KeyframeHandler keyframeHandler) {
-        keyframeHandler.applyTimeOfDay(this.time);
+    public KeyframeChange createChange() {
+        return new KeyframeChangeTimeOfDay(this.time);
     }
 
     @Override
-    public void applyInterpolated(KeyframeHandler keyframeHandler, Keyframe otherGeneric, float amount) {
-        if (!(otherGeneric instanceof TimeOfDayKeyframe other)) {
-            this.apply(keyframeHandler);
-            return;
-        }
-
-        int time = Math.round(Interpolation.linear(this.time, other.time, amount));
-        keyframeHandler.applyTimeOfDay(time);
-    }
-
-    @Override
-    public void applyInterpolatedSmooth(KeyframeHandler keyframeHandler, Keyframe p1, Keyframe p2, Keyframe p3, float t0, float t1, float t2, float t3, float amount, float lerpAmount, boolean lerpFromRight) {
+    public KeyframeChange createSmoothInterpolatedChange(Keyframe p1, Keyframe p2, Keyframe p3, float t0, float t1, float t2, float t3, float amount) {
         float time1 = t1 - t0;
         float time2 = t2 - t0;
         float time3 = t3 - t0;
 
-        float timeOfDay = CatmullRom.value(this.time,
-            ((TimeOfDayKeyframe)p1).time, ((TimeOfDayKeyframe)p2).time,
-            ((TimeOfDayKeyframe)p3).time, time1, time2, time3, amount);
+        int timeOfDay = (int) CatmullRom.value(this.time,
+                ((TimeOfDayKeyframe)p1).time, ((TimeOfDayKeyframe)p2).time,
+                ((TimeOfDayKeyframe)p3).time, time1, time2, time3, amount);
 
-        if (lerpAmount >= 0) {
-            float linearTimeOfDay = Interpolation.linear(((TimeOfDayKeyframe)p1).time, ((TimeOfDayKeyframe)p2).time, lerpAmount);
-
-            if (lerpFromRight) {
-                timeOfDay = Interpolation.linear(timeOfDay, linearTimeOfDay, amount);
-            } else {
-                timeOfDay = Interpolation.linear(linearTimeOfDay, timeOfDay, amount);
-            }
-        }
-
-        keyframeHandler.applyTimeOfDay(Math.round(timeOfDay));
+        return new KeyframeChangeTimeOfDay(timeOfDay);
     }
 
+    @Override
+    public KeyframeChange createHermiteInterpolatedChange(Map<Integer, Keyframe> keyframes, float amount) {
+        int timeOfDay = (int) Hermite.value(Maps.transformValues(keyframes, k -> (double) ((TimeOfDayKeyframe)k).time), amount);
+        return new KeyframeChangeTimeOfDay(timeOfDay);
+    }
 
     public static class TypeAdapter implements JsonSerializer<TimeOfDayKeyframe>, JsonDeserializer<TimeOfDayKeyframe> {
         @Override

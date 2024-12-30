@@ -6,6 +6,7 @@ import com.moulberry.flashback.FlashbackGson;
 import com.moulberry.flashback.editor.ui.ReplayUI;
 import com.moulberry.flashback.keyframe.Keyframe;
 import com.moulberry.flashback.keyframe.KeyframeType;
+import com.moulberry.flashback.keyframe.change.KeyframeChange;
 import com.moulberry.flashback.keyframe.handler.KeyframeHandler;
 import com.moulberry.flashback.keyframe.impl.CameraKeyframe;
 import com.moulberry.flashback.keyframe.types.CameraKeyframeType;
@@ -125,23 +126,63 @@ public class EditorState {
     }
 
     public void applyKeyframes(KeyframeHandler keyframeHandler, float tick) {
-        Set<KeyframeType<?>> applied = new HashSet<>();
+        Set<Class<? extends KeyframeChange>> applied = new HashSet<>();
+
+        Map<Class<? extends KeyframeChange>, KeyframeTrack> maybeApplyLastTick = new HashMap<>();
+
         for (KeyframeTrack keyframeTrack : this.currentScene().keyframeTracks) {
             // Ignore lines that are disabled
             if (!keyframeTrack.enabled) {
                 continue;
             }
 
-            KeyframeType<?> baseType = keyframeTrack.keyframeType == CameraOrbitKeyframeType.INSTANCE ? CameraKeyframeType.INSTANCE : keyframeTrack.keyframeType;
+            Class<? extends KeyframeChange> keyframeChangeType = keyframeTrack.keyframeType.keyframeChangeType();
 
             // Already applied a keyframe of this type earlier, skip
-            if (applied.contains(baseType)) {
+            if (applied.contains(keyframeChangeType)) {
+                continue;
+            }
+
+            if (!keyframeTrack.keyframeType.supportsHandler(keyframeHandler)) {
                 continue;
             }
 
             // Try to apply keyframes, mark applied if successful
-            if (keyframeTrack.tryApplyKeyframes(keyframeHandler, tick)) {
-                applied.add(baseType);
+
+            KeyframeChange change = keyframeTrack.createKeyframeChange(tick);
+            if (change == null) {
+                if (keyframeHandler.alwaysApplyLastKeyframe() && !keyframeTrack.keyframesByTick.isEmpty()) {
+                    KeyframeTrack oldTrack = maybeApplyLastTick.get(keyframeChangeType);
+                    if (oldTrack == null || keyframeTrack.keyframesByTick.lastKey() > oldTrack.keyframesByTick.lastKey()) {
+                        maybeApplyLastTick.put(keyframeChangeType, keyframeTrack);
+                    }
+                }
+                continue;
+            }
+
+            if (change.getClass() != keyframeChangeType) {
+                throw new IllegalStateException("Expected " + keyframeChangeType + ", got " + change.getClass() + ". Caused by: " + keyframeTrack.keyframeType.id());
+            }
+
+            applied.add(keyframeChangeType);
+            maybeApplyLastTick.remove(keyframeChangeType);
+            change.apply(keyframeHandler);
+        }
+
+        if (keyframeHandler.alwaysApplyLastKeyframe() && !maybeApplyLastTick.isEmpty()) {
+            for (Map.Entry<Class<? extends KeyframeChange>, KeyframeTrack> entry : maybeApplyLastTick.entrySet()) {
+                KeyframeTrack keyframeTrack = entry.getValue();
+                KeyframeChange change = keyframeTrack.createKeyframeChange(keyframeTrack.keyframesByTick.lastKey());
+
+                if (change == null) {
+                    continue;
+                }
+
+                if (change.getClass() != entry.getKey()) {
+                    throw new IllegalStateException("Expected " + entry.getKey() + ", got " + change.getClass() + ". Caused by: " + keyframeTrack.keyframeType.id());
+                }
+
+                change.apply(keyframeHandler);
             }
         }
     }

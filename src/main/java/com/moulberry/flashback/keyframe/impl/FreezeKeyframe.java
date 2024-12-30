@@ -11,6 +11,8 @@ import com.moulberry.flashback.Interpolation;
 import com.moulberry.flashback.editor.ui.ImGuiHelper;
 import com.moulberry.flashback.keyframe.Keyframe;
 import com.moulberry.flashback.keyframe.KeyframeType;
+import com.moulberry.flashback.keyframe.change.KeyframeChange;
+import com.moulberry.flashback.keyframe.change.KeyframeChangeFreeze;
 import com.moulberry.flashback.keyframe.handler.KeyframeHandler;
 import com.moulberry.flashback.keyframe.interpolation.InterpolationType;
 import com.moulberry.flashback.keyframe.types.SpeedKeyframeType;
@@ -18,6 +20,7 @@ import com.moulberry.flashback.spline.CatmullRom;
 import imgui.ImGui;
 
 import java.lang.reflect.Type;
+import java.util.Map;
 import java.util.function.Consumer;
 
 public class FreezeKeyframe extends Keyframe {
@@ -62,18 +65,18 @@ public class FreezeKeyframe extends Keyframe {
     }
 
     @Override
-    public void apply(KeyframeHandler keyframeHandler) {
-        keyframeHandler.applyFreeze(this.frozen, Math.max(0, Math.min(10, this.frozenDelay)));
+    public KeyframeChange createChange() {
+        return new KeyframeChangeFreeze(this.frozen, Math.max(0, Math.min(10, this.frozenDelay)));
     }
 
     @Override
-    public void applyInterpolated(KeyframeHandler keyframeHandler, Keyframe otherGeneric, float amount) {
-        this.apply(keyframeHandler);
+    public KeyframeChange createSmoothInterpolatedChange(Keyframe p1, Keyframe p2, Keyframe p3, float t0, float t1, float t2, float t3, float amount) {
+        return this.createChange();
     }
 
     @Override
-    public void applyInterpolatedSmooth(KeyframeHandler keyframeHandler, Keyframe p1, Keyframe p2, Keyframe p3, float t0, float t1, float t2, float t3, float amount, float lerpAmount, boolean lerpFromRight) {
-        p1.apply(keyframeHandler);
+    public KeyframeChange createHermiteInterpolatedChange(Map<Integer, Keyframe> keyframes, float amount) {
+        return this.createChange();
     }
 
     public static class TypeAdapter implements JsonSerializer<FreezeKeyframe>, JsonDeserializer<FreezeKeyframe> {

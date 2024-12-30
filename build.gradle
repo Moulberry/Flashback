@@ -113,6 +113,8 @@ dependencies {
 	shadow(api(rootProject.files('deps/imgui-java-natives-macos-1.86.11-10-g0dbf36c.jar')))
 	shadow(api(rootProject.files('deps/imgui-java-natives-windows-1.86.11-10-g0dbf36c.jar')))
 
+	shadow(implementation("org.apache.commons:commons-math3:3.6.1"))
+
 	// Native File Dialogs
 	String nfdVersion = "org.lwjgl:lwjgl-nfd:3.3.3";
 
