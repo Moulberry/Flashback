@@ -524,9 +524,7 @@ public class Recorder {
         for (EquipmentSlot equipmentSlot : EquipmentSlot.values()) {
             ItemStack itemStack = player.getItemBySlot(equipmentSlot);
 
-            if (!this.lastPlayerEquipment.containsKey(equipmentSlot)) {
-                this.lastPlayerEquipment.put(equipmentSlot, itemStack.copy());
-            } else if (!ItemStack.matches(this.lastPlayerEquipment.get(equipmentSlot), itemStack)) {
+            if (!this.lastPlayerEquipment.containsKey(equipmentSlot) || !ItemStack.matches(this.lastPlayerEquipment.get(equipmentSlot), itemStack)) {
                 ItemStack copied = itemStack.copy();
                 this.lastPlayerEquipment.put(equipmentSlot, copied);
                 changedSlots.add(Pair.of(equipmentSlot, copied));
