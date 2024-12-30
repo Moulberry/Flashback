@@ -19,13 +19,11 @@ import com.moulberry.flashback.playback.ReplayServer;
 import com.moulberry.flashback.ext.MinecraftExt;
 import com.moulberry.flashback.editor.ui.ReplayUI;
 import it.unimi.dsi.fastutil.floats.FloatUnaryOperator;
+import net.minecraft.ChatFormatting;
 import net.minecraft.CrashReport;
 import net.minecraft.ReportedException;
 import net.minecraft.Util;
-import net.minecraft.client.Camera;
-import net.minecraft.client.DeltaTracker;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.User;
+import net.minecraft.client.*;
 import net.minecraft.client.gui.screens.LevelLoadingScreen;
 import net.minecraft.client.gui.screens.Overlay;
 import net.minecraft.client.gui.screens.Screen;
@@ -35,9 +33,11 @@ import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.multiplayer.chat.report.ReportEnvironment;
 import net.minecraft.client.particle.ParticleEngine;
 import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.client.server.IntegratedServer;
 import net.minecraft.client.sounds.SoundManager;
 import net.minecraft.network.Connection;
+import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.login.ServerboundHelloPacket;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.Services;
@@ -140,6 +140,10 @@ public abstract class MixinMinecraft implements MinecraftExt {
     @Shadow
     public long clientTickCount;
 
+    @Shadow @Final public Options options;
+
+    @Shadow @Final public LevelRenderer levelRenderer;
+
     @Inject(method="<init>", at=@At("RETURN"))
     public void init(GameConfig gameConfig, CallbackInfo ci) {
         ReplayUI.init();
@@ -200,6 +204,16 @@ public abstract class MixinMinecraft implements MinecraftExt {
                 Minecraft.getInstance().options.hideGui = false;
             } else {
                 EditorStateManager.reset();
+            }
+        }
+
+        if (inReplay) {
+            // Force camera type to first person
+            if (this.player != null && this.cameraEntity == this.player && this.options.getCameraType() != CameraType.FIRST_PERSON) {
+                this.options.setCameraType(CameraType.FIRST_PERSON);
+                this.levelRenderer.needsUpdate();
+
+                ReplayUI.setInfoOverlay("Forced perspective to First-Person");
             }
         }
     }
