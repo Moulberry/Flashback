@@ -1085,8 +1085,8 @@ public class ReplayServer extends IntegratedServer {
                         byte quantizedXRot = (byte) Mth.floor(serverEntity.entity.getXRot() * 256.0F / 360.0F);
 
                         if (!serverEntity.positionCodec.getBase().equals(trackingPosition)) {
-                            trackedEntity.broadcast(new ClientboundTeleportEntityPacket(serverEntity.entity.getId(),
-                                    PositionMoveRotation.of(serverEntity.entity), Set.of(), serverEntity.wasOnGround));
+                            trackedEntity.broadcast(new ClientboundEntityPositionSyncPacket(serverEntity.entity.getId(),
+                                    PositionMoveRotation.of(serverEntity.entity), serverEntity.wasOnGround));
                             serverEntity.positionCodec.setBase(trackingPosition);
                             serverEntity.lastSentYRot = quantizedYRot;
                             serverEntity.lastSentXRot = quantizedXRot;
