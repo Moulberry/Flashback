@@ -649,7 +649,13 @@ public class ReplayServer extends IntegratedServer {
                 if (level != null) {
                     Entity entity = level.getEntity(id);
                     if (entity != null) {
-                        entity.moveTo(x, y, z, yaw, pitch);
+                        if (entity.isPassenger()) {
+                            entity.setYRot(yaw);
+                            entity.setXRot(pitch);
+                        } else {
+                            entity.moveTo(x, y, z, yaw, pitch);
+                        }
+
                         entity.setYHeadRot(headYaw);
                         if (entity.onGround() != onGround) {
                             entity.setOnGround(onGround);
@@ -1084,7 +1090,7 @@ public class ReplayServer extends IntegratedServer {
                         byte quantizedYRot = (byte) Mth.floor(serverEntity.entity.getYRot() * 256.0F / 360.0F);
                         byte quantizedXRot = (byte) Mth.floor(serverEntity.entity.getXRot() * 256.0F / 360.0F);
 
-                        if (!serverEntity.positionCodec.getBase().equals(trackingPosition)) {
+                        if (!serverEntity.entity.isPassenger() && !serverEntity.positionCodec.getBase().equals(trackingPosition)) {
                             trackedEntity.broadcast(new ClientboundEntityPositionSyncPacket(serverEntity.entity.getId(),
                                     PositionMoveRotation.of(serverEntity.entity), serverEntity.wasOnGround));
                             serverEntity.positionCodec.setBase(trackingPosition);
