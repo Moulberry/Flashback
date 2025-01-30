@@ -1,10 +1,7 @@
 package com.moulberry.flashback;
 
 import net.minecraft.network.protocol.Packet;
-import net.minecraft.network.protocol.game.ClientGamePacketListener;
-import net.minecraft.network.protocol.game.ClientboundAddEntityPacket;
-import net.minecraft.network.protocol.game.ClientboundTeleportEntityPacket;
-import net.minecraft.network.protocol.game.VecDeltaCodec;
+import net.minecraft.network.protocol.game.*;
 import net.minecraft.server.level.ServerEntity;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
@@ -29,11 +26,10 @@ public class PacketHelper {
         return entity == null || entity.isRemoved() || entity instanceof EnderDragonPart || entity.getType().clientTrackingRange() <= 0;
     }
 
-    public static ClientboundTeleportEntityPacket createTeleportForUnknown(int id, double x, double y, double z, byte yRot, byte xRot, boolean onGround) {
-        return new ClientboundTeleportEntityPacket(
+    public static Packet<ClientGamePacketListener> createTeleportForUnknown(int id, double x, double y, double z, byte yRot, byte xRot, boolean onGround) {
+        return new ClientboundEntityPositionSyncPacket(
             id,
             new PositionMoveRotation(new Vec3(x, y, z), Vec3.ZERO, yRot, xRot),
-            Relative.DELTA,
             onGround
         );
     }
