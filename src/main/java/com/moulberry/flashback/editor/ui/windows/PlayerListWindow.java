@@ -138,7 +138,7 @@ public class PlayerListWindow {
 
                 ImGui.text(profile.getName());
                 ImGui.sameLine();
-                if (ImGui.smallButton("Teleport")) {
+                if (ImGui.smallButton("TP")) {
                     Minecraft.getInstance().getConnection().sendUnsignedCommand("teleport " + profile.getId());
                     lastUpdate = currentTime;
                 }
@@ -153,6 +153,11 @@ public class PlayerListWindow {
                         editorState.hideDuringExport.add(profile.getId());
                         lastUpdate = currentTime;
                     }
+                }
+                ImGui.sameLine();
+                if (ImGui.smallButton("Spectate")) {
+                    Minecraft.getInstance().getConnection().sendUnsignedCommand("spectate " + profile.getId());
+                    lastUpdate = currentTime;
                 }
                 ImGui.popID();
             }
