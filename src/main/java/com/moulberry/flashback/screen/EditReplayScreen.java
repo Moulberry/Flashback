@@ -57,6 +57,7 @@ public class EditReplayScreen extends Screen {
         rowHelper.addChild(new BottomTextWidget(204, 10, Component.literal("Replay Name"), this.font).alignLeft(), 2);
 
         EditBox replayNameEditBox = new EditBox(this.font, 0, 0, 204, 20, Component.literal(this.changedReplayName));
+        replayNameEditBox.setMaxLength(128);
         replayNameEditBox.setValue(this.changedReplayName);
         replayNameEditBox.setResponder(this::setReplayName);
         rowHelper.addChild(replayNameEditBox, 2);

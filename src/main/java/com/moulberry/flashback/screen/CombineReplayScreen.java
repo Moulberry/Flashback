@@ -92,6 +92,7 @@ public class CombineReplayScreen extends Screen {
         rowHelper.addChild(new BottomTextWidget(204, 10, Component.literal("New Replay Name"), this.font).alignLeft(), 2);
 
         EditBox replayNameEditBox = new EditBox(this.font, 0, 0, 204, 20, Component.literal(this.newReplayName));
+        replayNameEditBox.setMaxLength(128);
         replayNameEditBox.setValue(this.newReplayName);
         replayNameEditBox.setResponder(string -> this.newReplayName = string);
         rowHelper.addChild(replayNameEditBox, 2);
