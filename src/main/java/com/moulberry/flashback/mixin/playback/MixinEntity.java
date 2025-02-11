@@ -33,15 +33,6 @@ public abstract class MixinEntity {
     @Shadow
     public abstract UUID getUUID();
 
-    // Force entities to be able to ride players on servers
-    @WrapOperation(method = "startRiding(Lnet/minecraft/world/entity/Entity;Z)Z", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/Level;isClientSide()Z"))
-    public boolean startRiding_isClientSide(Level instance, Operation<Boolean> original) {
-        if (Flashback.isInReplay()) {
-            return true; // Always pretend we're clientside so mounting players is allowed
-        }
-        return original.call(instance);
-    }
-
     @Inject(method = "isInvisibleTo", at = @At("HEAD"), cancellable = true)
     public void isInvisibleTo(Player player, CallbackInfoReturnable<Boolean> cir) {
         ReplayServer replayServer = Flashback.getReplayServer();

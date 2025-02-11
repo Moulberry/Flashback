@@ -47,7 +47,7 @@ public class FilePlayerSkin {
             NativeImage nativeImage = NativeImage.read(inputStream);
 
             // We determine the type using the alpha of the pixel at 54, 20
-            int argb = nativeImage.getPixel(54, 20);
+            int argb = nativeImage.getPixelRGBA(54, 20);
             PlayerSkin.Model model = PlayerSkin.Model.WIDE;
             if (((argb >> 24) & 0xFF) < 20) {
                 model = PlayerSkin.Model.SLIM;
@@ -63,7 +63,7 @@ public class FilePlayerSkin {
             this.playerSkin = new PlayerSkin(resourceLocation, null, null, null, model, false);
         } catch (Exception e) {
             Flashback.LOGGER.error("Unable to load skin from file", e);
-            this.playerSkin = DefaultPlayerSkin.getDefaultSkin();
+            this.playerSkin = DefaultPlayerSkin.get(UUID.randomUUID());
         }
 
         return this.playerSkin;
