@@ -4,6 +4,9 @@ import com.mojang.serialization.Codec;
 import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.FlashbackGson;
 import com.moulberry.flashback.SneakyThrow;
+import com.moulberry.flashback.combo_options.AudioCodec;
+import com.moulberry.flashback.combo_options.VideoCodec;
+import com.moulberry.flashback.combo_options.VideoContainer;
 import com.moulberry.flashback.keyframe.interpolation.InterpolationType;
 import com.moulberry.flashback.screen.select_replay.ReplaySorting;
 import net.fabricmc.loader.api.FabricLoader;
@@ -82,6 +85,24 @@ public class FlashbackConfig {
 
     public ReplaySorting replaySorting = ReplaySorting.CREATED_DATE;
     public boolean sortDescending = true;
+
+    public int[] resolution = new int[]{1920, 1080};
+    public float[] framerate = new float[]{60};
+    public boolean resetRng = false;
+    public boolean ssaa = false;
+    public boolean noGui = false;
+
+    public VideoContainer container = null;
+    public VideoCodec videoCodec = null;
+    public int[] selectedVideoEncoder = new int[]{0};
+    public boolean useMaximumBitrate = false;
+
+    public boolean recordAudio = false;
+    public boolean transparentBackground = false;
+    public AudioCodec audioCodec = AudioCodec.AAC;
+    public boolean stereoAudio = false;
+
+    public String defaultExportPath = null;
 
     private transient int saveDelay = 0;
 
