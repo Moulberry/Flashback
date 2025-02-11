@@ -394,43 +394,45 @@ public class ExportJob {
     private void setup(ReplayServer replayServer) {
         Minecraft minecraft = Minecraft.getInstance();
 
-        int currentTick = Math.max(0, this.settings.startTick() - 40);
+        if (replayServer.getReplayTick() != this.settings.startTick()) {
+            int currentTick = Math.max(0, this.settings.startTick() - 40);
 
-        // Ensure replay server is paused at currentTick
-        this.setServerTickAndWait(replayServer, currentTick, true);
-        this.runClientTick(false);
-
-        // Clear particles
-        minecraft.particleEngine.clearParticles();
-
-        // Reset all walk animations & tick counts
-        for (Entity entity : minecraft.level.entitiesForRendering()) {
-            if (entity instanceof LivingEntity livingEntity) {
-                // livingEntity.walkAnimation.stop(); // unsupported in 1.21.1
-            }
-            entity.tickCount = 0;
-        }
-
-        // Advance until tick is at start
-        while (currentTick < this.settings.startTick()) {
-            currentTick += 1;
+            // Ensure replay server is paused at currentTick
             this.setServerTickAndWait(replayServer, currentTick, true);
             this.runClientTick(false);
-        }
 
-        // Apply initial position and keyframes at start tick
-        LocalPlayer player = minecraft.player;
-        if (player != null) {
-            Vec3 position = this.settings.initialCameraPosition();
-            player.moveTo(position.x, position.y, position.z, this.settings.initialCameraYaw(), this.settings.initialCameraPitch());
-            player.setDeltaMovement(Vec3.ZERO);
-        }
-        this.settings.editorState().applyKeyframes(new MinecraftKeyframeHandler(Minecraft.getInstance()), this.settings.startTick());
-        this.runClientTick(false);
+            // Clear particles
+            minecraft.particleEngine.clearParticles();
 
-        // Ensured replay server is paused at startTick
-        this.setServerTickAndWait(replayServer, this.settings.startTick(), true);
-        this.runClientTick(false);
+            // Reset all walk animations & tick counts
+            for (Entity entity : minecraft.level.entitiesForRendering()) {
+                if (entity instanceof LivingEntity livingEntity) {
+                    // livingEntity.walkAnimation.stop(); // unsupported in 1.21.1
+                }
+                entity.tickCount = 0;
+            }
+
+            // Advance until tick is at start
+            while (currentTick < this.settings.startTick()) {
+                currentTick += 1;
+                this.setServerTickAndWait(replayServer, currentTick, true);
+                this.runClientTick(false);
+            }
+
+            // Apply initial position and keyframes at start tick
+            LocalPlayer player = minecraft.player;
+            if (player != null) {
+                Vec3 position = this.settings.initialCameraPosition();
+                player.moveTo(position.x, position.y, position.z, this.settings.initialCameraYaw(), this.settings.initialCameraPitch());
+                player.setDeltaMovement(Vec3.ZERO);
+            }
+            this.settings.editorState().applyKeyframes(new MinecraftKeyframeHandler(Minecraft.getInstance()), this.settings.startTick());
+            this.runClientTick(false);
+
+            // Ensured replay server is paused at startTick
+            this.setServerTickAndWait(replayServer, this.settings.startTick(), true);
+            this.runClientTick(false);
+        }
 
         // Remove screen
         minecraft.setScreen(null);
