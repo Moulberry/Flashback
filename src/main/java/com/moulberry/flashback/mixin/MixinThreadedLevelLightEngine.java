@@ -11,7 +11,7 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 
-@Mixin(ThreadedLevelLightEngine.class)
+@Mixin(value = ThreadedLevelLightEngine.class, priority = 1010) // needs a higher priority so that it doesn't clash with Moonrise's @Overwrite
 public abstract class MixinThreadedLevelLightEngine extends LevelLightEngine implements ThreadedLevelLightEngineExt {
 
     @Shadow
@@ -26,7 +26,7 @@ public abstract class MixinThreadedLevelLightEngine extends LevelLightEngine imp
         this.addTask(x, z, ThreadedLevelLightEngine.TaskType.POST_UPDATE, runnable);
     }
 
-    @WrapOperation(method = "runUpdate", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/lighting/LevelLightEngine;runLightUpdates()I"))
+    @WrapOperation(method = "runUpdate", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/lighting/LevelLightEngine;runLightUpdates()I"), require = 0)
     public int runUpdate_runLightUpdates(ThreadedLevelLightEngine instance, Operation<Integer> original) {
         if (Flashback.isInReplay()) {
             try {
