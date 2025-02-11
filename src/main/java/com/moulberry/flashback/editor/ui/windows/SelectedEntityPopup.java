@@ -2,17 +2,24 @@ package com.moulberry.flashback.editor.ui.windows;
 
 import com.mojang.authlib.GameProfile;
 import com.mojang.authlib.yggdrasil.ProfileResult;
+import com.moulberry.flashback.FilePlayerSkin;
+import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.editor.ui.ImGuiHelper;
+import com.moulberry.flashback.exporting.AsyncFileDialogs;
 import com.moulberry.flashback.state.EditorState;
 import imgui.ImGui;
 import imgui.type.ImString;
+import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.PlayerInfo;
 import net.minecraft.commands.arguments.EntityAnchorArgument;
+import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 
+import java.nio.file.Path;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
 public class SelectedEntityPopup {
 
@@ -98,25 +105,35 @@ public class SelectedEntityPopup {
             ImGui.setNextItemWidth(320);
             ImGui.inputTextWithHint("##SetSkinInput", "e.g. d0e05de7-6067-454d-beae-c6d19d886191", changeSkinInput);
 
-            boolean hasApplySkin = false;
             if (!changeSkinInput.isEmpty()) {
                 String string = ImGuiHelper.getString(changeSkinInput);
                 try {
                     UUID changeSkinUuid = UUID.fromString(string);
-                    if (ImGui.button("Apply Skin")) {
+                    if (ImGui.button("Apply Skin from UUID")) {
                         ProfileResult profile = Minecraft.getInstance().getMinecraftSessionService().fetchProfile(changeSkinUuid, true);
                         editorState.skinOverride.put(entity.getUUID(), profile.profile());
+                        editorState.skinOverrideFromFile.remove(entity.getUUID());
                     }
-                    hasApplySkin = true;
                 } catch (Exception ignored) {}
             }
 
-            if (editorState.skinOverride.containsKey(entity.getUUID())) {
-                if (hasApplySkin) {
-                    ImGui.sameLine();
-                }
+            if (ImGui.button("Upload Skin from File")) {
+                Path gameDir = FabricLoader.getInstance().getGameDir();
+                CompletableFuture<String> future = AsyncFileDialogs.openFileDialog(gameDir.toString(),
+                    "Skin Texture", "png");
+                future.thenAccept(pathStr -> {
+                    if (pathStr != null) {
+                        Path path = Path.of(pathStr);
+                        editorState.skinOverride.remove(entity.getUUID());
+                        editorState.skinOverrideFromFile.put(entity.getUUID(), new FilePlayerSkin(path));
+                    }
+                });
+            }
+
+            if (editorState.skinOverride.containsKey(entity.getUUID()) || editorState.skinOverrideFromFile.containsKey(entity.getUUID())) {
                 if (ImGui.button("Reset Skin")) {
                     editorState.skinOverride.remove(entity.getUUID());
+                    editorState.skinOverrideFromFile.remove(entity.getUUID());
                     changeSkinInput.set("");
                 }
             }

@@ -1,6 +1,7 @@
 package com.moulberry.flashback.state;
 
 import com.mojang.authlib.GameProfile;
+import com.moulberry.flashback.FilePlayerSkin;
 import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.FlashbackGson;
 import com.moulberry.flashback.editor.ui.ReplayUI;
@@ -48,6 +49,7 @@ public class EditorState {
     public Set<UUID> hideDuringExport = new HashSet<>();
     public Set<UUID> hideNametags = new HashSet<>();
     public Map<UUID, GameProfile> skinOverride = new HashMap<>();
+    public Map<UUID, FilePlayerSkin> skinOverrideFromFile = new HashMap<>();
     public Map<UUID, String> nameOverride = new HashMap<>();
 
     public EditorState() {
