@@ -11,6 +11,8 @@
     "MixinWindow",
     "audio.MixinAudioLibrary",
     "audio.MixinSoundEngine",
+    "millis.MixinRenderStateShard",
+    "millis.MixinWorldBorderRenderer",
     "movement.MixinMouseHandler",
     "movement.MixinPlayerEntity",
     "norandom.MixinParticle",
@@ -42,7 +44,6 @@
     "visuals.MixinMouseHandler",
     "visuals.MixinOptions",
     "visuals.MixinPlayer",
-    "visuals.MixinRenderStateShard",
     "visuals.MixinWeatherEffectRenderer"
   ],
   "injectors": {
@@ -65,6 +66,7 @@
     "compat.voice_chat.MixinVoiceChatClientVoicechat",
     "compat.voice_chat.MixinVoiceChatRenderEvents",
     "compat.voice_chat.MixinVoiceChatSoundManager",
+    "millis.MixinWorldBorderMovingBorderExtent",
     "playback.MixinAttributeInstance",
     "playback.MixinBoat",
     "playback.MixinChunkHolder",

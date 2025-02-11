@@ -35,6 +35,7 @@ import com.moulberry.flashback.packet.FlashbackRemoteExperience;
 import com.moulberry.flashback.packet.FlashbackRemoteFoodData;
 import com.moulberry.flashback.packet.FlashbackRemoteSelectHotbarSlot;
 import com.moulberry.flashback.packet.FlashbackRemoteSetSlot;
+import com.moulberry.flashback.packet.FlashbackSetBorderLerpStartTime;
 import com.moulberry.flashback.packet.FlashbackVoiceChatSound;
 import com.moulberry.flashback.playback.EmptyLevelSource;
 import com.moulberry.flashback.playback.ReplayServer;
@@ -143,6 +144,8 @@ public class Flashback implements ModInitializer, ClientModInitializer {
     private static final List<Path> pendingReplayRecovery = new ArrayList<>();
     private static List<String> pendingUnsupportedModsForRecording = null;
 
+    public static long worldBorderLerpStartTime = -1L;
+
     public static ResourceLocation createResourceLocation(String value) {
         return ResourceLocation.fromNamespaceAndPath("flashback", value);
     }
@@ -182,6 +185,7 @@ public class Flashback implements ModInitializer, ClientModInitializer {
         PayloadTypeRegistry.playS2C().register(FlashbackRemoteSetSlot.TYPE, FlashbackRemoteSetSlot.STREAM_CODEC);
         PayloadTypeRegistry.playS2C().register(FlashbackVoiceChatSound.TYPE, FlashbackVoiceChatSound.STREAM_CODEC);
         PayloadTypeRegistry.playS2C().register(FlashbackAccurateEntityPosition.TYPE, FlashbackAccurateEntityPosition.STREAM_CODEC);
+        PayloadTypeRegistry.playS2C().register(FlashbackSetBorderLerpStartTime.TYPE, FlashbackSetBorderLerpStartTime.STREAM_CODEC);
     }
 
     @Override
@@ -326,6 +330,12 @@ public class Flashback implements ModInitializer, ClientModInitializer {
         ClientPlayNetworking.registerGlobalReceiver(FlashbackAccurateEntityPosition.TYPE, (payload, context) -> {
             if (Flashback.isInReplay()) {
                 AccurateEntityPositionHandler.update(payload);
+            }
+        });
+
+        ClientPlayNetworking.registerGlobalReceiver(FlashbackSetBorderLerpStartTime.TYPE, (payload, context) -> {
+            if (Flashback.isInReplay()) {
+                worldBorderLerpStartTime = payload.time();
             }
         });
 
@@ -701,6 +711,24 @@ public class Flashback implements ModInitializer, ClientModInitializer {
 
     public static boolean isInReplay() {
         return isInReplay;
+    }
+
+    public static long getVisualMillis() {
+        ReplayServer replayServer = Flashback.getReplayServer();
+        if (replayServer != null) {
+            float tick;
+
+            ExportJob exportJob = Flashback.EXPORT_JOB;
+            if (exportJob != null) {
+                tick = (float) exportJob.getCurrentTickDouble();
+            } else {
+                tick = replayServer.getPartialReplayTick();
+            }
+
+            return (long)(tick * 50L);
+        } else {
+            return Util.getMillis();
+        }
     }
 
     private int startRecordingReplay(CommandContext<FabricClientCommandSource> command) {
