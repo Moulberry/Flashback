@@ -163,3 +163,5 @@ accessible field net/minecraft/client/sounds/SoundEngine executor Lnet/minecraft
 accessible field net/minecraft/client/sounds/SoundEngineExecutor thread Ljava/lang/Thread;
 
 accessible class net/minecraft/world/level/border/WorldBorder$MovingBorderExtent
+accessible field net/minecraft/world/entity/player/Player DATA_PLAYER_MODE_CUSTOMISATION Lnet/minecraft/network/syncher/EntityDataAccessor;
+accessible field net/minecraft/world/entity/player/Player DATA_PLAYER_MAIN_HAND Lnet/minecraft/network/syncher/EntityDataAccessor;

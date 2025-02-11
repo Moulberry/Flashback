@@ -954,6 +954,11 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
                 return;
             }
 
+            // Copy over the customization & main hand even if the entity data flag isn't set
+            // This should ensure that the skin layers are kept properly when respawning
+            newServerPlayer.getEntityData().set(Player.DATA_PLAYER_MODE_CUSTOMISATION, oldServerPlayer.getEntityData().get(Player.DATA_PLAYER_MODE_CUSTOMISATION));
+            newServerPlayer.getEntityData().set(Player.DATA_PLAYER_MAIN_HAND, oldServerPlayer.getEntityData().get(Player.DATA_PLAYER_MAIN_HAND));
+
             if (clientboundRespawnPacket.shouldKeep((byte)2)) {
                 newServerPlayer.setShiftKeyDown(oldServerPlayer.isShiftKeyDown());
                 newServerPlayer.setSprinting(oldServerPlayer.isSprinting());
