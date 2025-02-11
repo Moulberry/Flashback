@@ -1,5 +1,6 @@
 package com.moulberry.flashback.playback;
 
+import com.google.common.collect.ImmutableMap;
 import com.moulberry.flashback.exception.UnsupportedPacketException;
 import com.moulberry.flashback.registry.RegistryHelper;
 import net.fabricmc.fabric.api.event.registry.DynamicRegistries;
@@ -33,6 +34,7 @@ import net.minecraft.world.flag.FeatureFlagSet;
 import net.minecraft.world.flag.FeatureFlags;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -123,7 +125,7 @@ public class ReplayConfigurationPacketHandler implements ClientConfigurationPack
                     boolean replacedPartOfLayer = false;
 
                     for (RegistryAccess.RegistryEntry<?> registryEntry : registriesForLayer.registries().toList()) {
-                        var overriden = synchronizedRegistries.lookup(registryEntry.key());
+                        var overriden = synchronizedRegistries.registry(registryEntry.key());
                         if (neededRegistries.contains(registryEntry.key()) && overriden.isPresent()) {
                             registries.add(overriden.get());
                             replacedPartOfLayer = true;
