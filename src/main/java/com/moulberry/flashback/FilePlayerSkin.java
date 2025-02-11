@@ -31,10 +31,10 @@ public class FilePlayerSkin {
         }
     }
 
-    private PlayerSkin playerSkin = null;
-    private final Path pathToSkin;
+    private transient PlayerSkin playerSkin = null;
+    private final String pathToSkin;
 
-    public FilePlayerSkin(Path pathToSkin) {
+    public FilePlayerSkin(String pathToSkin) {
         this.pathToSkin = pathToSkin;
     }
 
@@ -43,7 +43,8 @@ public class FilePlayerSkin {
             return this.playerSkin;
         }
 
-        try (InputStream inputStream = Files.newInputStream(this.pathToSkin)) {
+        Path path = Path.of(this.pathToSkin);
+        try (InputStream inputStream = Files.newInputStream(path)) {
             NativeImage nativeImage = NativeImage.read(inputStream);
 
             // We determine the type using the alpha of the pixel at 54, 20

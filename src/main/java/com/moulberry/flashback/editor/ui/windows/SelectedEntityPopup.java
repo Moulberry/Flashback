@@ -153,9 +153,8 @@ public class SelectedEntityPopup {
                     "Skin Texture", "png");
                 future.thenAccept(pathStr -> {
                     if (pathStr != null) {
-                        Path path = Path.of(pathStr);
                         editorState.skinOverride.remove(entity.getUUID());
-                        editorState.skinOverrideFromFile.put(entity.getUUID(), new FilePlayerSkin(path));
+                        editorState.skinOverrideFromFile.put(entity.getUUID(), new FilePlayerSkin(pathStr));
                     }
                 });
             }
