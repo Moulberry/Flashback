@@ -4,6 +4,7 @@ import com.mojang.blaze3d.platform.NativeImage;
 import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.SneakyThrow;
 import com.moulberry.flashback.combo_options.AudioCodec;
+import it.unimi.dsi.fastutil.ints.IntSet;
 import org.bytedeco.ffmpeg.avutil.AVFrame;
 import org.bytedeco.ffmpeg.avutil.AVPixFmtDescriptor;
 import org.bytedeco.ffmpeg.global.avutil;
@@ -11,6 +12,7 @@ import org.bytedeco.ffmpeg.global.swscale;
 import org.bytedeco.ffmpeg.swscale.SwsContext;
 import org.bytedeco.javacpp.BytePointer;
 import org.bytedeco.javacpp.DoublePointer;
+import org.bytedeco.javacpp.IntPointer;
 import org.bytedeco.javacpp.PointerPointer;
 import org.bytedeco.javacv.FFmpegFrameRecorder;
 import org.bytedeco.javacv.FFmpegLogCallback;
@@ -237,6 +239,14 @@ public class AsyncFFmpegVideoWriter implements AutoCloseable, VideoWriter {
                     if (img_convert_ctx == null) {
                         throw new RuntimeException("sws_getCachedContext() error: Cannot initialize the conversion context.");
                     }
+
+                    int dstRange = 1; // Full
+                    if (dstPixelFormat == AV_PIX_FMT_YUV420P) { // todo: check more values
+                        dstRange = 0; // Partial
+                    }
+
+                    IntPointer coefficients = swscale.sws_getCoefficients(swscale.SWS_CS_ITU709);
+                    swscale.sws_setColorspaceDetails(img_convert_ctx, coefficients, 1, coefficients, dstRange, 0, 1 << 16, 1 << 16);
 
                     BytePointer data = new BytePointer() {{
                         this.address = src.pointer;
