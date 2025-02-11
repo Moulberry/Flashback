@@ -26,6 +26,7 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import net.minecraft.client.Camera;
 import net.minecraft.client.CloudStatus;
 import net.minecraft.client.DeltaTracker;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.Options;
 import net.minecraft.client.particle.Particle;
 import net.minecraft.client.renderer.*;
@@ -87,43 +88,33 @@ public abstract class MixinLevelRenderer {
         if (editorState != null) {
             if (!editorState.replayVisuals.renderBlocks) {
                 ci.cancel();
+                return;
             }
         }
-    }
 
-    @Inject(method = "addMainPass", at = @At("HEAD"))
-    public void addMainPass(FrameGraphBuilder frameGraphBuilder, Frustum frustum, Camera camera, Matrix4f matrix4f, Matrix4f matrix4f2, FogParameters fogParameters, boolean bl, boolean bl2, DeltaTracker deltaTracker, ProfilerFiller profilerFiller, CallbackInfo ci) {
-        if (Flashback.isExporting() && Flashback.EXPORT_JOB.getSettings().transparent()) {
-            FramePass framePass = frameGraphBuilder.addPass("flashback_round_alpha");
-            this.targets.main = framePass.readsAndWrites(this.targets.main);
+        if (renderType == RenderType.cutout() && Flashback.isExporting() && Flashback.EXPORT_JOB.getSettings().transparent()) {
+            RenderTarget main = Minecraft.getInstance().mainRenderTarget;
 
-            ResourceHandle<RenderTarget> resourceHandle = this.targets.main;
-            framePass.executes(() -> {
-                RenderTarget main = resourceHandle.get();
-
-                RenderSystem.assertOnRenderThread();
-                GlStateManager._disableDepthTest();
-                GlStateManager._depthMask(false);
-                GlStateManager._viewport(0, 0, main.viewWidth, main.viewHeight);
-                GlStateManager._disableBlend();
-                CompiledShaderProgram shaderInstance = Objects.requireNonNull(
-                        RenderSystem.setShader(ShaderManager.blitScreenRoundAlpha), "Blit shader not loaded"
-                );
-                shaderInstance.bindSampler("InSampler", main.colorTextureId);
-                shaderInstance.apply();
-                BufferBuilder bufferBuilder = RenderSystem.renderThreadTesselator().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.BLIT_SCREEN);
-                bufferBuilder.addVertex(0.0f, 0.0f, 0.0f);
-                bufferBuilder.addVertex(1.0f, 0.0f, 0.0f);
-                bufferBuilder.addVertex(1.0f, 1.0f, 0.0f);
-                bufferBuilder.addVertex(0.0f, 1.0f, 0.0f);
-                BufferUploader.draw(bufferBuilder.buildOrThrow());
-                shaderInstance.clear();
-                GlStateManager._enableBlend();
-                GlStateManager._depthMask(true);
-                GlStateManager._enableDepthTest();
-            });
+            GlStateManager._disableDepthTest();
+            GlStateManager._depthMask(false);
+            GlStateManager._viewport(0, 0, main.viewWidth, main.viewHeight);
+            GlStateManager._disableBlend();
+            CompiledShaderProgram shaderInstance = Objects.requireNonNull(
+                RenderSystem.setShader(ShaderManager.blitScreenRoundAlpha), "Blit shader not loaded"
+            );
+            shaderInstance.bindSampler("InSampler", main.colorTextureId);
+            shaderInstance.apply();
+            BufferBuilder bufferBuilder = RenderSystem.renderThreadTesselator().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.BLIT_SCREEN);
+            bufferBuilder.addVertex(0.0f, 0.0f, 0.0f);
+            bufferBuilder.addVertex(1.0f, 0.0f, 0.0f);
+            bufferBuilder.addVertex(1.0f, 1.0f, 0.0f);
+            bufferBuilder.addVertex(0.0f, 1.0f, 0.0f);
+            BufferUploader.draw(bufferBuilder.buildOrThrow());
+            shaderInstance.clear();
+            GlStateManager._enableBlend();
+            GlStateManager._depthMask(true);
+            GlStateManager._enableDepthTest();
         }
-
     }
 
     @WrapOperation(method = "renderLevel", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/FogRenderer;setupFog(Lnet/minecraft/client/Camera;Lnet/minecraft/client/renderer/FogRenderer$FogMode;Lorg/joml/Vector4f;FZF)Lnet/minecraft/client/renderer/FogParameters;"))
