@@ -4,6 +4,7 @@ import com.mojang.authlib.GameProfile;
 import com.mojang.authlib.yggdrasil.ProfileResult;
 import com.moulberry.flashback.FilePlayerSkin;
 import com.moulberry.flashback.Flashback;
+import com.moulberry.flashback.Utils;
 import com.moulberry.flashback.editor.ui.ImGuiHelper;
 import com.moulberry.flashback.exporting.AsyncFileDialogs;
 import com.moulberry.flashback.state.EditorState;
@@ -13,9 +14,12 @@ import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.PlayerInfo;
 import net.minecraft.commands.arguments.EntityAnchorArgument;
+import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.scores.PlayerTeam;
+import net.minecraft.world.scores.Team;
 
 import java.nio.file.Path;
 import java.util.UUID;
@@ -97,6 +101,32 @@ public class SelectedEntityPopup {
                         editorState.nameOverride.remove(entity.getUUID());
                     } else {
                         editorState.nameOverride.put(entity.getUUID(), string);
+                    }
+                }
+
+                if (editorState.hideTeamPrefix.contains(player.getUUID())) {
+                    if (ImGui.checkbox("Hide Team Prefix", true)) {
+                        editorState.hideTeamPrefix.remove(player.getUUID());
+                    }
+                } else {
+                    PlayerTeam team = player.getTeam();
+                    if (team != null && !Utils.isComponentEmpty(team.getPlayerPrefix())) {
+                        if (ImGui.checkbox("Hide Team Prefix", false)) {
+                            editorState.hideTeamPrefix.add(player.getUUID());
+                        }
+                    }
+                }
+
+                if (editorState.hideTeamSuffix.contains(player.getUUID())) {
+                    if (ImGui.checkbox("Hide Team Suffix", true)) {
+                        editorState.hideTeamSuffix.remove(player.getUUID());
+                    }
+                } else {
+                    PlayerTeam team = player.getTeam();
+                    if (team != null && !Utils.isComponentEmpty(team.getPlayerSuffix())) {
+                        if (ImGui.checkbox("Hide Team Suffix", false)) {
+                            editorState.hideTeamSuffix.add(player.getUUID());
+                        }
                     }
                 }
             }

@@ -51,6 +51,8 @@ public class EditorState {
     public Map<UUID, GameProfile> skinOverride = new HashMap<>();
     public Map<UUID, FilePlayerSkin> skinOverrideFromFile = new HashMap<>();
     public Map<UUID, String> nameOverride = new HashMap<>();
+    public Set<UUID> hideTeamPrefix = new HashSet<>();
+    public Set<UUID> hideTeamSuffix = new HashSet<>();
 
     public EditorState() {
         this.scenes = new ArrayList<>();
