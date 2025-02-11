@@ -3,7 +3,6 @@ package com.moulberry.flashback.playback;
 import com.google.common.collect.ImmutableMap;
 import com.moulberry.flashback.exception.UnsupportedPacketException;
 import com.moulberry.flashback.registry.RegistryHelper;
-import net.fabricmc.fabric.api.event.registry.DynamicRegistries;
 import net.minecraft.core.*;
 import net.minecraft.network.DisconnectionDetails;
 import net.minecraft.network.protocol.Packet;
@@ -106,14 +105,9 @@ public class ReplayConfigurationPacketHandler implements ClientConfigurationPack
             RegistryAccess.Frozen synchronizedRegistries = RegistryDataLoader.load(entries, resourceProvider, accessForLoading,
                 RegistryDataLoader.SYNCHRONIZED_REGISTRIES);
 
-            var changedRegistries = RegistryHelper.findChangedRegistries(this.replayServer.registryAccess(), synchronizedRegistries, DynamicRegistries.getDynamicRegistries());
+            var changedRegistries = RegistryHelper.findChangedRegistries(this.replayServer.registryAccess(), synchronizedRegistries, RegistryDataLoader.SYNCHRONIZED_REGISTRIES);
 
             if (!changedRegistries.isEmpty()) {
-                Set<ResourceKey<?>> neededRegistries = new HashSet<>();
-                for (RegistryDataLoader.RegistryData<?> worldgenRegistry : changedRegistries) {
-                    neededRegistries.add(worldgenRegistry.key());
-                }
-
                 var newRegistries = this.replayServer.registries;
                 boolean replacedPreviousLayer = false;
 
@@ -126,7 +120,7 @@ public class ReplayConfigurationPacketHandler implements ClientConfigurationPack
 
                     for (RegistryAccess.RegistryEntry<?> registryEntry : registriesForLayer.registries().toList()) {
                         var overriden = synchronizedRegistries.registry(registryEntry.key());
-                        if (neededRegistries.contains(registryEntry.key()) && overriden.isPresent()) {
+                        if (changedRegistries.contains(registryEntry.key()) && overriden.isPresent()) {
                             registries.add(overriden.get());
                             replacedPartOfLayer = true;
                         } else {
