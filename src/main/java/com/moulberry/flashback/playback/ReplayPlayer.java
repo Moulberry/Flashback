@@ -9,9 +9,11 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.stats.Stat;
 import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.level.biome.BiomeManager;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
 import java.util.UUID;
@@ -41,6 +43,15 @@ public class ReplayPlayer extends ServerPlayer {
             ((ServerLevelExt)serverLevel).flashback$getSeedHash(), this.gameMode.getGameModeForPlayer(),
             this.gameMode.getPreviousGameModeForPlayer(),
             serverLevel.isDebug(), serverLevel.isFlat(), this.getLastDeathLocation(), this.getPortalCooldown());
+    }
+
+    @Override
+    public void setCamera(@Nullable Entity entity) {
+        super.setCamera(entity);
+
+        if (entity == null) {
+            this.spectatingUuid = null;
+        }
     }
 
     @Override
