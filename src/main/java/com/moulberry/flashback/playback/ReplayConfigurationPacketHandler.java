@@ -2,7 +2,6 @@ package com.moulberry.flashback.playback;
 
 import com.moulberry.flashback.exception.UnsupportedPacketException;
 import com.moulberry.flashback.registry.RegistryHelper;
-import net.fabricmc.fabric.api.event.registry.DynamicRegistries;
 import net.minecraft.core.*;
 import net.minecraft.network.DisconnectionDetails;
 import net.minecraft.network.protocol.Packet;
@@ -30,10 +29,8 @@ import net.minecraft.world.flag.FeatureFlags;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 public class ReplayConfigurationPacketHandler implements ClientConfigurationPacketListener {
 
@@ -106,14 +103,9 @@ public class ReplayConfigurationPacketHandler implements ClientConfigurationPack
             RegistryAccess.Frozen synchronizedRegistries = RegistryDataLoader.load(entries, resourceManager, updatedLookups,
                 RegistryDataLoader.SYNCHRONIZED_REGISTRIES);
 
-            var changedRegistries = RegistryHelper.findChangedRegistries(this.replayServer.registryAccess(), synchronizedRegistries, DynamicRegistries.getDynamicRegistries());
+            var changedRegistries = RegistryHelper.findChangedRegistries(this.replayServer.registryAccess(), synchronizedRegistries, RegistryDataLoader.SYNCHRONIZED_REGISTRIES);
 
             if (!changedRegistries.isEmpty()) {
-                Set<ResourceKey<?>> neededRegistries = new HashSet<>();
-                for (RegistryDataLoader.RegistryData<?> worldgenRegistry : changedRegistries) {
-                    neededRegistries.add(worldgenRegistry.key());
-                }
-
                 var newRegistries = this.replayServer.registries;
                 boolean replacedPreviousLayer = false;
 
@@ -126,7 +118,7 @@ public class ReplayConfigurationPacketHandler implements ClientConfigurationPack
 
                     for (RegistryAccess.RegistryEntry<?> registryEntry : registriesForLayer.registries().toList()) {
                         var overriden = synchronizedRegistries.lookup(registryEntry.key());
-                        if (neededRegistries.contains(registryEntry.key()) && overriden.isPresent()) {
+                        if (changedRegistries.contains(registryEntry.key()) && overriden.isPresent()) {
                             registries.add(overriden.get());
                             replacedPartOfLayer = true;
                         } else {
