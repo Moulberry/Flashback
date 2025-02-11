@@ -18,6 +18,7 @@ import com.moulberry.flashback.packet.FlashbackRemoteExperience;
 import com.moulberry.flashback.packet.FlashbackRemoteFoodData;
 import com.moulberry.flashback.packet.FlashbackRemoteSelectHotbarSlot;
 import com.moulberry.flashback.packet.FlashbackRemoteSetSlot;
+import com.moulberry.flashback.packet.FlashbackSetBorderLerpStartTime;
 import com.moulberry.flashback.state.EditorState;
 import com.moulberry.flashback.state.EditorStateManager;
 import com.moulberry.flashback.ext.MinecraftExt;
@@ -310,6 +311,18 @@ public class ReplayServer extends IntegratedServer {
             }
 
             @Override
+            public void broadcastAll(Packet<?> packet) {
+                if (packet instanceof ClientboundSetBorderLerpSizePacket) {
+                    long time = ReplayServer.this.currentTick * 50L;
+                    for (ReplayPlayer replayViewer : replayViewers) {
+                        ServerPlayNetworking.send(replayViewer, new FlashbackSetBorderLerpStartTime(time));
+                    }
+                }
+
+                super.broadcastAll(packet);
+            }
+
+            @Override
             public void broadcast(@Nullable Player player, double x, double y, double z, double distance, ResourceKey<Level> resourceKey, Packet<?> packet) {
                 UUID audioSourceEntity = null;
 
@@ -448,18 +461,6 @@ public class ReplayServer extends IntegratedServer {
             partial = Math.max(0, Math.min(1, partial));
 
             return this.lastReplayTick + (float) partial;
-        }
-    }
-
-    public float getPartialServerTick() {
-        if (this.replayPaused || this.isPaused()) {
-            return 1.0f;
-        } else {
-            long currentNanos = Util.getNanos();
-            long nanosPerTick = this.tickRateManager().nanosecondsPerTick();
-
-            double partial = (currentNanos - this.lastTickTimeNanos) / (double) nanosPerTick;
-            return Math.max(0, Math.min(1, (float) partial));
         }
     }
 

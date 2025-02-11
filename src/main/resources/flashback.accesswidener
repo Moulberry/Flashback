@@ -176,3 +176,5 @@ accessible field net/minecraft/network/protocol/game/ClientboundTeleportEntityPa
 mutable field net/minecraft/network/protocol/game/ClientboundTeleportEntityPacket xRot B
 accessible field net/minecraft/network/protocol/game/ClientboundTeleportEntityPacket onGround Z
 mutable field net/minecraft/network/protocol/game/ClientboundTeleportEntityPacket onGround Z
+
+accessible class net/minecraft/world/level/border/WorldBorder$MovingBorderExtent
