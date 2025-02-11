@@ -2,6 +2,10 @@ package com.moulberry.flashback;
 
 import com.moulberry.flashback.playback.ReplayServer;
 import it.unimi.dsi.fastutil.objects.Object2FloatFunction;
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.CommonComponents;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.contents.PlainTextContents;
 import org.jetbrains.annotations.Nullable;
 
 import java.lang.reflect.Field;
@@ -158,6 +162,31 @@ public class Utils {
         } else if (ticks > 0) {
             builder.append(ticks).append('t');
         }
+    }
+
+    public static boolean isComponentEmpty(Component component) {
+        if (component == CommonComponents.EMPTY) {
+            return true;
+        }
+
+        boolean isSelfEmpty = false;
+
+        if (component.getContents() == PlainTextContents.EMPTY) {
+            isSelfEmpty = true;
+        } else if (component.getContents() instanceof PlainTextContents plainTextContents) {
+            isSelfEmpty = ChatFormatting.stripFormatting(plainTextContents.text()).isEmpty();
+        }
+
+        if (isSelfEmpty) {
+            for (Component sibling : component.getSiblings()) {
+                if (!isComponentEmpty(sibling)) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        return false;
     }
 
     public static int exportSequenceCount = 1;
