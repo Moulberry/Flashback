@@ -108,6 +108,10 @@ public class RegistryHelper {
             return registryOne.isEmpty() && registryTwo.isEmpty();
         }
 
+        if (registryOne.get().size() != registryTwo.get().size()) {
+            return false;
+        }
+
         return equalsAssumeSameSize(one, two, dynamicOpsOne, dynamicOpsTwo, registryData);
     }
 
@@ -117,25 +121,22 @@ public class RegistryHelper {
         Optional<? extends Registry<T>> registryTwo = two.lookup(registryData.key());
 
         if (registryOne.isEmpty() || registryTwo.isEmpty()) {
-            return true;
+            return false;
         }
 
         Iterator<T> iteratorOne = registryOne.get().iterator();
         Iterator<T> iteratorTwo = registryTwo.get().iterator();
 
-        boolean matches = true;
-
-        // Do this for every element in order to find dependent registries
         while (iteratorOne.hasNext()) {
             T valueOne = iteratorOne.next();
             T valueTwo = iteratorTwo.next();
 
             if (!equalsUsingCodec(valueOne, valueTwo, dynamicOpsOne, dynamicOpsTwo, registryData.elementCodec())) {
-                matches = false;
+                return false;
             }
         }
 
-        return matches;
+        return true;
     }
 
     private static <T> boolean equalsUsingCodec(T one, T two, RegistryOps<?> dynamicOpsOne, RegistryOps<?> dynamicOpsTwo, Codec<T> codec) {
