@@ -64,6 +64,7 @@
     "compat.voice_chat.MixinVoiceChatClientVoicechat",
     "compat.voice_chat.MixinVoiceChatRenderEvents",
     "compat.voice_chat.MixinVoiceChatSoundManager",
+    "compat.voice_chat.MixinVoiceChatClientPlayerStateManager",
     "playback.MixinAttributeInstance",
     "playback.MixinBoat",
     "playback.MixinChunkHolder",
