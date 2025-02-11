@@ -13,11 +13,12 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 public class RegistryHelper {
 
     // Checks if all the given registries in one match two
-    public static boolean equals(RegistryAccess one, RegistryAccess two, List<RegistryDataLoader.RegistryData<?>> registries) {
+    public static List<RegistryDataLoader.RegistryData<?>> findChangedRegistries(RegistryAccess one, RegistryAccess two, List<RegistryDataLoader.RegistryData<?>> registries) {
         List<Registry<?>> listOne = new ArrayList<>();
         List<Registry<?>> listTwo = new ArrayList<>();
 
@@ -27,15 +28,17 @@ public class RegistryHelper {
             Optional<? extends Registry<?>> registryTwo = two.registry(registryData.key());
 
             if (registryOne.isEmpty() || registryTwo.isEmpty()) {
-                if (registryOne.isEmpty() && registryTwo.isEmpty()) {
+                if (registryOne.isPresent()) {
+                    listOne.add(registryOne.get());
+                    listTwo.add(registryOne.get());
+                    continue;
+                } else if (registryTwo.isPresent()) {
+                    listOne.add(registryTwo.get());
+                    listTwo.add(registryTwo.get());
                     continue;
                 } else {
-                    return false;
+                    continue;
                 }
-            }
-
-            if (registryOne.get().size() != registryTwo.get().size()) {
-                return false;
             }
 
             listOne.add(registryOne.get());
@@ -54,15 +57,37 @@ public class RegistryHelper {
         RegistryOps<?> dynamicOpsOne = RegistryOps.create(JsonOps.INSTANCE, layeredOne.compositeAccess());
         RegistryOps<?> dynamicOpsTwo = RegistryOps.create(JsonOps.INSTANCE, layeredTwo.compositeAccess());
 
-        // Check if all objects match
+        List<RegistryDataLoader.RegistryData<?>> changedRegistries = new ArrayList<>();
+
         for (RegistryDataLoader.RegistryData<?> registryData : registries) {
-            if (!equalsAssumeSameSize(layeredOne.compositeAccess(), layeredTwo.compositeAccess(), dynamicOpsOne, dynamicOpsTwo, registryData)) {
-                return false;
+            if (!equalsCheckSize(layeredOne.compositeAccess(), layeredTwo.compositeAccess(), dynamicOpsOne, dynamicOpsTwo, registryData)) {
+                changedRegistries.add(registryData);
             }
         }
 
-        return true;
+        return changedRegistries;
     }
+
+    private static <T> boolean equalsCheckSize(RegistryAccess one, RegistryAccess two, RegistryOps<?> dynamicOpsOne, RegistryOps<?> dynamicOpsTwo,
+            RegistryDataLoader.RegistryData<T> registryData) {
+        Optional<? extends Registry<?>> registryOne = one.lookup(registryData.key());
+        Optional<? extends Registry<?>> registryTwo = two.lookup(registryData.key());
+
+        if (registryOne.isEmpty() || registryTwo.isEmpty()) {
+            return registryOne.isEmpty() && registryTwo.isEmpty();
+        }
+
+        if (registryOne.get().size() != registryTwo.get().size()) {
+            return false;
+        }
+
+        if (registryOne == registryTwo) {
+            return true;
+        }
+
+        return equalsAssumeSameSize(one, two, dynamicOpsOne, dynamicOpsTwo, registryData);
+    }
+
 
     private static <T> boolean equalsAssumeSameSize(RegistryAccess one, RegistryAccess two, RegistryOps<?> dynamicOpsOne, RegistryOps<?> dynamicOpsTwo,
         RegistryDataLoader.RegistryData<T> registryData) {

@@ -1,16 +1,10 @@
 package com.moulberry.flashback.playback;
 
-import com.google.common.collect.ImmutableMap;
 import com.moulberry.flashback.exception.UnsupportedPacketException;
 import com.moulberry.flashback.registry.RegistryHelper;
 import net.fabricmc.fabric.api.event.registry.DynamicRegistries;
-import net.minecraft.core.Holder;
-import net.minecraft.core.Registry;
-import net.minecraft.core.RegistryAccess;
-import net.minecraft.core.RegistrySynchronization;
-import net.minecraft.core.registries.Registries;
+import net.minecraft.core.*;
 import net.minecraft.network.DisconnectionDetails;
-import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.common.*;
 import net.minecraft.network.protocol.configuration.ClientConfigurationPacketListener;
@@ -32,29 +26,18 @@ import net.minecraft.server.packs.PackLocationInfo;
 import net.minecraft.server.packs.repository.KnownPack;
 import net.minecraft.server.packs.repository.PackRepository;
 import net.minecraft.server.packs.resources.ResourceProvider;
+import net.minecraft.server.packs.resources.ResourceManager;
+import net.minecraft.tags.TagLoader;
 import net.minecraft.tags.TagNetworkSerialization;
-import net.minecraft.world.entity.Entity;
 import net.minecraft.world.flag.FeatureFlagSet;
 import net.minecraft.world.flag.FeatureFlags;
-import net.minecraft.world.level.GameRules;
-import net.minecraft.world.level.Level;
-import net.minecraft.world.level.biome.Biome;
-import net.minecraft.world.level.biome.Biomes;
-import net.minecraft.world.level.dimension.BuiltinDimensionTypes;
-import net.minecraft.world.level.dimension.LevelStem;
-import net.minecraft.world.level.storage.DerivedLevelData;
-import net.minecraft.world.level.storage.PrimaryLevelData;
-import net.minecraft.world.level.storage.ServerLevelData;
 
-import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.function.Consumer;
 
 public class ReplayConfigurationPacketHandler implements ClientConfigurationPacketListener {
 
@@ -121,37 +104,51 @@ public class ReplayConfigurationPacketHandler implements ClientConfigurationPack
             RegistryAccess.Frozen synchronizedRegistries = RegistryDataLoader.load(entries, resourceProvider, accessForLoading,
                 RegistryDataLoader.SYNCHRONIZED_REGISTRIES);
 
-            if (!RegistryHelper.equals(this.replayServer.registryAccess(), synchronizedRegistries, RegistryDataLoader.SYNCHRONIZED_REGISTRIES)) {
+            var changedRegistries = RegistryHelper.findChangedRegistries(this.replayServer.registryAccess(), synchronizedRegistries, DynamicRegistries.getDynamicRegistries());
+
+            if (!changedRegistries.isEmpty()) {
                 Set<ResourceKey<?>> neededRegistries = new HashSet<>();
-                for (RegistryDataLoader.RegistryData<?> worldgenRegistry : DynamicRegistries.getDynamicRegistries()) {
+                for (RegistryDataLoader.RegistryData<?> worldgenRegistry : changedRegistries) {
                     neededRegistries.add(worldgenRegistry.key());
                 }
 
-                List<Registry<?>> registries = new ArrayList<>();
+                var newRegistries = this.replayServer.registries;
+                boolean replacedPreviousLayer = false;
 
-                // Add all synchronized registries
-                synchronizedRegistries.registries().forEach(e -> {
-                    if (neededRegistries.remove(e.key())) {
-                        registries.add(e.value());
+                for (RegistryLayer layer : RegistryLayer.values()) {
+                    RegistryAccess.Frozen registriesForLayer = this.replayServer.registries.getLayer(layer);
+
+                    List<Registry<?>> registries = new ArrayList<>();
+
+                    boolean replacedPartOfLayer = false;
+
+                    for (RegistryAccess.RegistryEntry<?> registryEntry : registriesForLayer.registries().toList()) {
+                        var overriden = synchronizedRegistries.lookup(registryEntry.key());
+                        if (neededRegistries.contains(registryEntry.key()) && overriden.isPresent()) {
+                            registries.add(overriden.get());
+                            replacedPartOfLayer = true;
+                        } else {
+                            registries.add(registryEntry.value());
+                        }
                     }
-                });
-                // Add all other registries
-                this.replayServer.registryAccess().registries().forEach(e -> {
-                    if (neededRegistries.remove(e.key())) {
-                        registries.add(e.value());
+
+                    if (replacedPartOfLayer) {
+                        replacedPreviousLayer = true;
+                        var finalRegistries = new RegistryAccess.ImmutableRegistryAccess(registries);
+                        newRegistries = newRegistries.replaceFrom(layer, finalRegistries.freeze());
+                    } else if (replacedPreviousLayer) {
+                        newRegistries = newRegistries.replaceFrom(layer, registriesForLayer);
                     }
-                });
+                }
 
-                var finalRegistries = new RegistryAccess.ImmutableRegistryAccess(registries);
+                if (newRegistries != this.replayServer.registries) {
+                    this.replayServer.registries.keys = newRegistries.keys;
+                    this.replayServer.registries.values = newRegistries.values;
+                    ((RegistryAccess.ImmutableRegistryAccess)this.replayServer.registries.composite).registries =
+                        ((RegistryAccess.ImmutableRegistryAccess)newRegistries.composite).registries;
 
-                var newRegistries = this.replayServer.registries.replaceFrom(RegistryLayer.WORLDGEN, finalRegistries.freeze());
-
-                this.replayServer.registries.keys = newRegistries.keys;
-                this.replayServer.registries.values = newRegistries.values;
-                ((RegistryAccess.ImmutableRegistryAccess)this.replayServer.registries.composite).registries =
-                    ((RegistryAccess.ImmutableRegistryAccess)newRegistries.composite).registries;
-
-                synchronizeRegistries = true;
+                    synchronizeRegistries = true;
+                }
             }
         }
 
@@ -189,17 +186,8 @@ public class ReplayConfigurationPacketHandler implements ClientConfigurationPack
         }
         this.replayServer.levels.clear();
 
-        // Recreate overworld
-        ServerLevelData serverLevelData = this.replayServer.worldData.overworldData();
-        Holder.Reference<Biome> plains = this.replayServer.registryAccess().registryOrThrow(Registries.BIOME).getHolderOrThrow(Biomes.PLAINS);
-        LevelStem levelStem = new LevelStem(this.replayServer.registryAccess().registryOrThrow(Registries.DIMENSION_TYPE).getHolderOrThrow(BuiltinDimensionTypes.OVERWORLD), new EmptyLevelSource(plains));
-        var progressListener = this.replayServer.progressListenerFactory.create(this.replayServer.worldData.getGameRules().getInt(GameRules.RULE_SPAWN_CHUNK_RADIUS));
-        ServerLevel serverLevel = new ServerLevel(this.replayServer, this.replayServer.executor, this.replayServer.storageSource,
-            serverLevelData, Level.OVERWORLD, levelStem, progressListener,
-            false, 0, List.of(), false, null);
-        serverLevel.noSave = true;
-        this.replayServer.levels.put(Level.OVERWORLD, serverLevel);
-        this.replayServer.getPlayerList().addWorldborderListener(serverLevel);
+        // Recreate levels
+        this.replayServer.loadLevel();
     }
 
     private static Collection<String> knownPacksToIds(PackRepository packRepository, Collection<KnownPack> knownPacks) {
