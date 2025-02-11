@@ -10,6 +10,7 @@ import com.moulberry.flashback.editor.ui.ReplayUI;
 import com.moulberry.flashback.keyframe.KeyframeType;
 import com.moulberry.flashback.keyframe.KeyframeRegistry;
 import com.moulberry.flashback.keyframe.handler.MinecraftKeyframeHandler;
+import com.moulberry.flashback.keyframe.types.CameraKeyframeType;
 import com.moulberry.flashback.keyframe.types.TimelapseKeyframeType;
 import com.moulberry.flashback.record.ReplayMarker;
 import com.moulberry.flashback.state.EditorScene;
@@ -1730,6 +1731,11 @@ public class TimelineWindow {
             ImGui.setCursorPosX(buttonX - x);
             if (ImGui.invisibleButton("##Add", buttonSize, buttonSize)) {
                 createNewKeyframe(trackIndex, cursorTicks, keyframeType, keyframeTrack);
+
+                if (keyframeType instanceof CameraKeyframeType && Minecraft.getInstance().player != Minecraft.getInstance().cameraEntity) {
+                    ReplayUI.setInfoOverlay("Warning: Don't use Camera keyframes for spectating a player");
+                    Minecraft.getInstance().getConnection().sendUnsignedCommand("spectate");
+                }
             }
             drawList.addText(buttonX - 2, buttonY, -1, "\ue148");
             ImGuiHelper.tooltip("Add keyframe");

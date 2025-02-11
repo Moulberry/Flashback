@@ -905,6 +905,7 @@ public class ReplayServer extends IntegratedServer {
                     if (targetEntity != null && !targetEntity.isRemoved()) {
                         replayViewer.setCamera(null);
                         replayViewer.setCamera(targetEntity);
+                        replayViewer.spectatingUuid = targetEntity.getUUID();
 
                         if (replayViewer.forceRespectateTickCount == 0) {
                             replayViewer.forceRespectateTickCount = 5;

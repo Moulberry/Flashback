@@ -25,6 +25,10 @@ public record MinecraftKeyframeHandler(Minecraft minecraft) implements KeyframeH
     public void applyCameraPosition(Vector3d position, double yaw, double pitch, double roll) {
         LocalPlayer player = this.minecraft.player;
         if (player != null) {
+            if (this.minecraft.cameraEntity != this.minecraft.player) {
+                Minecraft.getInstance().getConnection().sendUnsignedCommand("spectate");
+            }
+
             player.moveTo(position.x, position.y, position.z, (float) yaw, (float) pitch);
 
             EditorState editorState = EditorStateManager.getCurrent();
