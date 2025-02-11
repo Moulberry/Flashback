@@ -395,8 +395,6 @@ public class ReplayServer extends IntegratedServer {
 
         super.initServer();
 
-        this.overworld().noSave = true;
-
         return true;
     }
 
@@ -728,6 +726,15 @@ public class ReplayServer extends IntegratedServer {
 
     public static final TicketType<ChunkPos> ENTITY_LOAD_TICKET = TicketType.create("replay_entity_load", Comparator.comparingLong(ChunkPos::toLong), 5);
 
+    @Override
+    public void loadLevel() {
+        super.loadLevel();
+
+        for (ServerLevel level : this.levels.values()) {
+            level.noSave = true;
+        }
+    }
+
     public void closeLevel(ServerLevel serverLevel) {
         if (serverLevel == null) {
             return;
@@ -787,6 +794,11 @@ public class ReplayServer extends IntegratedServer {
             return Flashback.EXPORT_JOB.getSettings().editorState();
         }
         return EditorStateManager.get(this.metadata.replayIdentifier);
+    }
+
+    @Override
+    public boolean isReady() {
+        return super.isReady() && this.initializedWithSnapshot;
     }
 
     @Override
