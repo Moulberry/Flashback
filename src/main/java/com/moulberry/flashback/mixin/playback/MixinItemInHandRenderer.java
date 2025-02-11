@@ -9,6 +9,8 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.ext.ItemInHandRendererExt;
 import com.moulberry.flashback.ext.RemotePlayerExt;
+import com.moulberry.flashback.state.EditorState;
+import com.moulberry.flashback.state.EditorStateManager;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.player.LocalPlayer;
@@ -92,6 +94,11 @@ public abstract class MixinItemInHandRenderer implements ItemInHandRendererExt {
 
     @Override
     public void flashback$renderHandsWithItems(float partialTick, PoseStack poseStack, MultiBufferSource.BufferSource bufferSource, AbstractClientPlayer clientPlayer, int i) {
+        EditorState editorState = EditorStateManager.getCurrent();
+        if (editorState != null && editorState.hideDuringExport.contains(clientPlayer.getUUID())) {
+            return;
+        }
+
         float m;
         float l;
         float g = clientPlayer.getAttackAnim(partialTick);
