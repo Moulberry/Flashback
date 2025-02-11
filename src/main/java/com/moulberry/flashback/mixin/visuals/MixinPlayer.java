@@ -24,8 +24,9 @@ public abstract class MixinPlayer extends LivingEntity {
     public void isModelPartShown(PlayerModelPart playerModelPart, CallbackInfoReturnable<Boolean> cir) {
         EditorState editorState = EditorStateManager.getCurrent();
         if (editorState != null) {
-            GameProfile skinOverride = editorState.skinOverride.get(this.uuid);
-            if (skinOverride != null) {
+            var skinOverride = editorState.skinOverride.get(this.uuid);
+            var skinOverrideFile = editorState.skinOverrideFromFile.get(this.uuid);
+            if (skinOverride != null || skinOverrideFile != null) {
                 cir.setReturnValue(true);
             }
         }

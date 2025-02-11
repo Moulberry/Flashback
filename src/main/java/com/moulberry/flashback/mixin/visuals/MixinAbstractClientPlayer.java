@@ -1,6 +1,7 @@
 package com.moulberry.flashback.mixin.visuals;
 
 import com.mojang.authlib.GameProfile;
+import com.moulberry.flashback.FilePlayerSkin;
 import com.moulberry.flashback.state.EditorState;
 import com.moulberry.flashback.state.EditorStateManager;
 import net.minecraft.client.multiplayer.PlayerInfo;
@@ -29,6 +30,12 @@ public abstract class MixinAbstractClientPlayer extends Player {
     public void getSkin(CallbackInfoReturnable<PlayerSkin> cir) {
         EditorState editorState = EditorStateManager.getCurrent();
         if (editorState != null) {
+            FilePlayerSkin filePlayerSkin = editorState.skinOverrideFromFile.get(this.getUUID());
+            if (filePlayerSkin != null) {
+                cir.setReturnValue(filePlayerSkin.getSkin());
+                return;
+            }
+
             GameProfile skinOverride = editorState.skinOverride.get(this.getUUID());
             if (skinOverride != null) {
                 if (skinOverridePlayerInfo == null || skinOverridePlayerInfo.getProfile() != skinOverride) {
