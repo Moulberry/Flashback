@@ -43,9 +43,7 @@
     "visuals.MixinLoadingOverlay",
     "visuals.MixinMouseHandler",
     "visuals.MixinOptions",
-    "visuals.MixinRenderStateShard",
-    "visuals.MixinPlayer",
-    "visuals.MixinWeatherEffectRenderer"
+    "visuals.MixinPlayer"
   ],
   "injectors": {
     "defaultRequire": 1
@@ -68,7 +66,6 @@
     "compat.voice_chat.MixinVoiceChatRenderEvents",
     "compat.voice_chat.MixinVoiceChatSoundManager",
     "playback.MixinAbstractMinecart",
-    "compat.voice_chat.MixinVoiceChatClientPlayerStateManager",
     "millis.MixinWorldBorderMovingBorderExtent",
     "playback.MixinAttributeInstance",
     "playback.MixinBoat",
