@@ -16,6 +16,7 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntList;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerWorldEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.client.multiplayer.PlayerInfo;
 import net.minecraft.core.BlockPos;
@@ -738,6 +739,7 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
                 serverLevelData, dimension, levelStem, progressListener,
                 false, commonPlayerSpawnInfo.seed(), List.of(), false, null);
             serverLevel.noSave = true;
+            ServerWorldEvents.LOAD.invoker().onWorldLoad(this.replayServer, serverLevel);
             this.replayServer.levels.put(dimension, serverLevel);
             this.replayServer.getPlayerList().addWorldborderListener(serverLevel);
 
