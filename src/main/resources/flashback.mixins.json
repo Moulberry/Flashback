@@ -58,6 +58,7 @@
     "compat.bobby.MixinBobbyFakeChunkManager",
     "compat.fabric.MixinBiomeModificationImpl",
     "compat.fabric.MixinFabricServerPlayNetworking",
+    "compat.iris.MixinIrisHandRenderer",
     "compat.iris.MixinIrisSystemTimeUniforms",
     "compat.replaymod.MixinReplayModRecording",
     "compat.voice_chat.MixinVoiceChatALSpeakerBase",
