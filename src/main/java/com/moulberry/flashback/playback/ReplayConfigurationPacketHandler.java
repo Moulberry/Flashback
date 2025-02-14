@@ -29,6 +29,7 @@ import net.minecraft.world.flag.FeatureFlags;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
@@ -103,11 +104,16 @@ public class ReplayConfigurationPacketHandler implements ClientConfigurationPack
             RegistryAccess.Frozen synchronizedRegistries = RegistryDataLoader.load(entries, resourceManager, updatedLookups,
                 RegistryDataLoader.SYNCHRONIZED_REGISTRIES);
 
-            var changedRegistries = RegistryHelper.findChangedRegistries(this.replayServer.registryAccess(), synchronizedRegistries, RegistryDataLoader.SYNCHRONIZED_REGISTRIES);
+            boolean hasRegistriesChanged = !RegistryHelper.equals(this.replayServer.registryAccess(), synchronizedRegistries, RegistryDataLoader.SYNCHRONIZED_REGISTRIES);
 
-            if (!changedRegistries.isEmpty()) {
+            if (hasRegistriesChanged) {
                 var newRegistries = this.replayServer.registries;
                 boolean replacedPreviousLayer = false;
+
+                HashSet<ResourceKey<? extends Registry<?>>> changedRegistries = new HashSet<>();
+                for (RegistryDataLoader.RegistryData<?> synchronizedRegistry : RegistryDataLoader.SYNCHRONIZED_REGISTRIES) {
+                    changedRegistries.add(synchronizedRegistry.key());
+                }
 
                 for (RegistryLayer layer : RegistryLayer.values()) {
                     RegistryAccess.Frozen registriesForLayer = this.replayServer.registries.getLayer(layer);

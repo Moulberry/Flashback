@@ -36,6 +36,7 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerWorldEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
@@ -741,6 +742,7 @@ public class ReplayServer extends IntegratedServer {
             return;
         }
         this.clearLevel(serverLevel);
+        ServerWorldEvents.UNLOAD.invoker().onWorldUnload(this, serverLevel);
         try {
             serverLevel.close();
         } catch (IOException e) {
