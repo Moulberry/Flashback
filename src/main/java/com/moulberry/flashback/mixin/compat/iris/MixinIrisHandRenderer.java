@@ -26,14 +26,14 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Mixin(HandRenderer.class)
 public class MixinIrisHandRenderer {
 
-    @Inject(method = "isHandTranslucent", remap = false, at = @At("HEAD"), cancellable = true)
+    @Inject(method = "isHandTranslucent", remap = false, at = @At("HEAD"), cancellable = true, require = 0)
     public void isHandTransluent(InteractionHand hand, CallbackInfoReturnable<Boolean> cir) {
         if (Flashback.getSpectatingPlayer() != null) {
             cir.setReturnValue(false);
         }
     }
 
-    @WrapOperation(method = "canRender", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/multiplayer/MultiPlayerGameMode;getPlayerMode()Lnet/minecraft/world/level/GameType;"))
+    @WrapOperation(method = "canRender", remap = false, at = @At(value = "INVOKE", target = "Lnet/minecraft/client/multiplayer/MultiPlayerGameMode;getPlayerMode()Lnet/minecraft/world/level/GameType;"), require = 0)
     public GameType getPlayerMode(MultiPlayerGameMode instance, Operation<GameType> original) {
         if (Flashback.getSpectatingPlayer() != null) {
             return GameType.SURVIVAL;
