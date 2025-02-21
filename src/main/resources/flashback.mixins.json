@@ -1,6 +1,7 @@
 {
   "required": true,
   "package": "com.moulberry.flashback.mixin",
+  "plugin": "com.moulberry.mixinconstraints.ConstraintsMixinPlugin",
   "compatibilityLevel": "JAVA_21",
   "client": [
     "MixinDebugScreenOverlay",

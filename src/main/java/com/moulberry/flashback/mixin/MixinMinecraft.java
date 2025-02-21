@@ -6,6 +6,7 @@ import com.mojang.authlib.yggdrasil.YggdrasilAuthenticationService;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.FreezeSlowdownFormula;
+import com.moulberry.flashback.configuration.FlashbackConfig;
 import com.moulberry.flashback.editor.ui.windows.ExportDoneWindow;
 import com.moulberry.flashback.editor.ui.windows.WindowType;
 import com.moulberry.flashback.exporting.ExportJob;
@@ -207,7 +208,8 @@ public abstract class MixinMinecraft implements MinecraftExt {
             }
         }
 
-        if (inReplay) {
+        FlashbackConfig config = Flashback.getConfig();
+        if (inReplay && !config.disableThirdPersonCancel) {
             // Force camera type to first person
             if (this.player != null && this.cameraEntity == this.player && this.options.getCameraType() != CameraType.FIRST_PERSON) {
                 this.options.setCameraType(CameraType.FIRST_PERSON);
