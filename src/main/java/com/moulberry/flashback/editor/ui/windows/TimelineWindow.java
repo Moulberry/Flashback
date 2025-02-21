@@ -1578,6 +1578,7 @@ public class TimelineWindow {
         ImGui.setCursorScreenPos(x + 8, y + 6);
         float lineHeight = ImGui.getTextLineHeightWithSpacing() + ImGui.getStyle().getItemSpacingY();
 
+        int keyframeTrackToDelete = -1;
         int keyframeTrackToClear = -1;
 
         ImDrawList drawList = ImGui.getWindowDrawList();
@@ -1766,6 +1767,9 @@ public class TimelineWindow {
                     openTrackColourPopup = true;
                 }
                 if (ImGui.menuItem("\ue872 Delete track")) {
+                    keyframeTrackToDelete = trackIndex;
+                }
+                if (ImGui.menuItem("\ue14a Clear Keyframes")) {
                     keyframeTrackToClear = trackIndex;
                 }
                 ImGui.endPopup();
@@ -1806,20 +1810,34 @@ public class TimelineWindow {
         }
         openCreateKeyframeAtTickTrack = -1;
 
-        if (keyframeTrackToClear >= 0) {
+        if (keyframeTrackToDelete >= 0) {
+            List<EditorSceneHistoryAction> undo = new ArrayList<>();
+            List<EditorSceneHistoryAction> redo = new ArrayList<>();
+
+            KeyframeTrack keyframeTrack = editorScene.keyframeTracks.get(keyframeTrackToDelete);
+
+            undo.add(new EditorSceneHistoryAction.AddTrack(keyframeTrack.keyframeType, keyframeTrackToDelete));
+            for (Map.Entry<Integer, Keyframe> entry : keyframeTrack.keyframesByTick.entrySet()) {
+                undo.add(new EditorSceneHistoryAction.SetKeyframe(keyframeTrack.keyframeType, keyframeTrackToDelete, entry.getKey(), entry.getValue().copy()));
+            }
+
+            redo.add(new EditorSceneHistoryAction.RemoveTrack(keyframeTrack.keyframeType, keyframeTrackToDelete));
+
+            editorScene.push(new EditorSceneHistoryEntry(undo, redo, "Delete " + keyframeTrack.keyframeType.name() + " track"));
+            editorState.markDirty();
+            selectedKeyframesList.clear();
+        } else if (keyframeTrackToClear >= 0) {
             List<EditorSceneHistoryAction> undo = new ArrayList<>();
             List<EditorSceneHistoryAction> redo = new ArrayList<>();
 
             KeyframeTrack keyframeTrack = editorScene.keyframeTracks.get(keyframeTrackToClear);
 
-            undo.add(new EditorSceneHistoryAction.AddTrack(keyframeTrack.keyframeType, keyframeTrackToClear));
             for (Map.Entry<Integer, Keyframe> entry : keyframeTrack.keyframesByTick.entrySet()) {
                 undo.add(new EditorSceneHistoryAction.SetKeyframe(keyframeTrack.keyframeType, keyframeTrackToClear, entry.getKey(), entry.getValue().copy()));
+                redo.add(new EditorSceneHistoryAction.RemoveKeyframe(keyframeTrack.keyframeType, keyframeTrackToClear, entry.getKey()));
             }
 
-            redo.add(new EditorSceneHistoryAction.RemoveTrack(keyframeTrack.keyframeType, keyframeTrackToClear));
-
-            editorScene.push(new EditorSceneHistoryEntry(undo, redo, "Delete " + keyframeTrack.keyframeType.name() + " track"));
+            editorScene.push(new EditorSceneHistoryEntry(undo, redo, "Clear " + keyframeTrack.keyframeType.name() + " track"));
             editorState.markDirty();
             selectedKeyframesList.clear();
         }

@@ -109,6 +109,8 @@ public class FlashbackConfig {
 
     private transient int saveDelay = 0;
 
+    public boolean signedRenderFilter = false;
+
     @SuppressWarnings("unchecked")
     public OptionInstance<?>[] createOptionInstances() {
         List<OptionInstance<?>> options = new ArrayList<>();

@@ -53,6 +53,8 @@ public class EditorState {
     public Map<UUID, String> nameOverride = new HashMap<>();
     public Set<UUID> hideTeamPrefix = new HashSet<>();
     public Set<UUID> hideTeamSuffix = new HashSet<>();
+    public Set<String> filteredEntities = new HashSet<>();
+    public Set<String> filteredParticles = new HashSet<>();
 
     public EditorState() {
         this.scenes = new ArrayList<>();

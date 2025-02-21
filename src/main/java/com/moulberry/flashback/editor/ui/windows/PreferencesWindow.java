@@ -11,6 +11,8 @@ import com.moulberry.flashback.keyframe.interpolation.InterpolationType;
 import com.moulberry.flashback.state.EditorState;
 import com.moulberry.flashback.state.EditorStateManager;
 import imgui.ImGui;
+import imgui.ImVec2;
+import imgui.flag.ImGuiCond;
 import imgui.flag.ImGuiWindowFlags;
 import imgui.type.ImShort;
 import imgui.type.ImString;
@@ -32,7 +34,10 @@ public class PreferencesWindow {
 
         boolean wasOpen = ImGui.isPopupOpen("###Preferences");
 
-        if (ImGuiHelper.beginPopupModalCloseable("Preferences###Preferences", ImGuiWindowFlags.AlwaysAutoResize)) {
+        ImVec2 center = ImGui.getMainViewport().getCenter();
+        ImGui.setNextWindowPos(center.x, center.y, ImGuiCond.Appearing, 0.5f, 0.5f);
+        ImGui.setNextWindowSize(400, 0);
+        if (ImGuiHelper.beginPopupModalCloseable("Preferences###Preferences", ImGuiWindowFlags.NoResize)) {
             if (close) {
                 close = false;
                 ImGui.closeCurrentPopup();
@@ -46,6 +51,7 @@ public class PreferencesWindow {
             ImGuiHelper.separatorWithText("Exporting");
 
             ImString imString = ImGuiHelper.createResizableImString(config.defaultExportFilename);
+            ImGui.setNextItemWidth(200);
             if (ImGui.inputText("Export Filename", imString)) {
                 config.defaultExportFilename = ImGuiHelper.getString(imString);
                 config.delayedSaveToDefaultFolder();
@@ -55,13 +61,11 @@ public class PreferencesWindow {
             // Keyframes
             ImGuiHelper.separatorWithText("Keyframes");
 
+            ImGui.setNextItemWidth(200);
             config.defaultInterpolationType = ImGuiHelper.enumCombo("Default Interpolation", config.defaultInterpolationType);
 
-            ImGuiHelper.endPopupModalCloseable();
-
             if (ImGui.collapsingHeader("Advanced")) {
-                ImGui.textWrapped("Don't change any of these unless you know what you're doing");
-                ImGui.textWrapped("If you change one of these and then ask for support you will be made fun of");
+                ImGui.textWrapped("Don't change any of these unless you know what you're doing!! If you change one of these and then ask for support you will be made fun of!!");
                 if (ImGui.checkbox("Disable increased first-person updates", config.disableIncreasedFirstPersonUpdates)) {
                     config.disableIncreasedFirstPersonUpdates = !config.disableIncreasedFirstPersonUpdates;
                     config.delayedSaveToDefaultFolder();
@@ -71,6 +75,8 @@ public class PreferencesWindow {
                     config.delayedSaveToDefaultFolder();
                 }
             }
+
+            ImGuiHelper.endPopupModalCloseable();
         }
 
         if (wasOpen && !ImGui.isPopupOpen("###Preferences")) {

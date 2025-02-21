@@ -88,6 +88,9 @@ public class MainMenuBar {
         if (ImGui.menuItem("Movement")) {
             toggleWindow("movement");
         }
+        if (ImGui.menuItem("Render Filter")) {
+            toggleWindow("render_filter");
+        }
 
         ImGui.separator();
 
