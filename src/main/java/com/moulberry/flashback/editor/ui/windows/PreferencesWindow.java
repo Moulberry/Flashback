@@ -48,6 +48,7 @@ public class PreferencesWindow {
             ImString imString = ImGuiHelper.createResizableImString(config.defaultExportFilename);
             if (ImGui.inputText("Export Filename", imString)) {
                 config.defaultExportFilename = ImGuiHelper.getString(imString);
+                config.delayedSaveToDefaultFolder();
             }
             ImGuiHelper.tooltip("The default filename when exporting\nVariables:\n\t%date%\tyear-month-day\n\t%time%\thh_mm_ss\n\t%replay%\tReplay name\n\t%seq%\tExport count for this session");
 
@@ -57,6 +58,19 @@ public class PreferencesWindow {
             config.defaultInterpolationType = ImGuiHelper.enumCombo("Default Interpolation", config.defaultInterpolationType);
 
             ImGuiHelper.endPopupModalCloseable();
+
+            if (ImGui.collapsingHeader("Advanced")) {
+                ImGui.textWrapped("Don't change any of these unless you know what you're doing");
+                ImGui.textWrapped("If you change one of these and then ask for support you will be made fun of");
+                if (ImGui.checkbox("Disable increased first-person updates", config.disableIncreasedFirstPersonUpdates)) {
+                    config.disableIncreasedFirstPersonUpdates = !config.disableIncreasedFirstPersonUpdates;
+                    config.delayedSaveToDefaultFolder();
+                }
+                if (ImGui.checkbox("Disable third-person cancel", config.disableThirdPersonCancel)) {
+                    config.disableThirdPersonCancel = !config.disableThirdPersonCancel;
+                    config.delayedSaveToDefaultFolder();
+                }
+            }
         }
 
         if (wasOpen && !ImGui.isPopupOpen("###Preferences")) {

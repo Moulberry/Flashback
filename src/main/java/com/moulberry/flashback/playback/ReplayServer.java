@@ -6,6 +6,7 @@ import com.mojang.authlib.GameProfile;
 import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.PacketHelper;
 import com.moulberry.flashback.SneakyThrow;
+import com.moulberry.flashback.configuration.FlashbackConfig;
 import com.moulberry.flashback.ext.LevelChunkExt;
 import com.moulberry.flashback.TempFolderProvider;
 import com.moulberry.flashback.keyframe.handler.ReplayServerKeyframeHandler;
@@ -605,6 +606,11 @@ public class ReplayServer extends IntegratedServer {
     }
 
     public void handleAccuratePlayerPosition(RegistryFriendlyByteBuf friendlyByteBuf) {
+        FlashbackConfig config = Flashback.getConfig();
+        if (config.disableIncreasedFirstPersonUpdates) {
+            return;
+        }
+
         var packet = FlashbackAccurateEntityPosition.STREAM_CODEC.decode(friendlyByteBuf);
 
         for (ReplayPlayer replayViewer : this.replayViewers) {

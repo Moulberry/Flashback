@@ -83,6 +83,9 @@ public class FlashbackConfig {
     public String defaultExportFilename = "%date%T%time%";
     public InterpolationType defaultInterpolationType = InterpolationType.SMOOTH;
 
+    public boolean disableIncreasedFirstPersonUpdates = false;
+    public boolean disableThirdPersonCancel = false;
+
     public ReplaySorting replaySorting = ReplaySorting.CREATED_DATE;
     public boolean sortDescending = true;
 
