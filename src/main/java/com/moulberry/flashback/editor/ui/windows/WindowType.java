@@ -10,7 +10,8 @@ import java.util.Set;
 public enum WindowType {
 
     PLAYER_LIST("player_list", PlayerListWindow::render),
-    MOVEMENT("movement", MovementWindow::render);
+    MOVEMENT("movement", MovementWindow::render),
+    RENDER_FILTER("render_filter", RenderFilterWindow::render);
 
     private final String windowId;
     private final ImGuiWindowRenderer renderMethod;

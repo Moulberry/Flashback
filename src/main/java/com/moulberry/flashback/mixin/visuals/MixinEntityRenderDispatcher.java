@@ -9,6 +9,7 @@ import com.moulberry.flashback.state.EditorStateManager;
 import com.moulberry.flashback.editor.ui.ReplayUI;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.culling.Frustum;
 import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
 import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.state.EntityRenderState;
@@ -19,12 +20,24 @@ import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(value = EntityRenderDispatcher.class, priority = 990)
 public abstract class MixinEntityRenderDispatcher {
 
     @Shadow
     private static void renderHitbox(PoseStack poseStack, VertexConsumer vertexConsumer, Entity entity, float f, float g, float h, float i) {
+    }
+
+    @Inject(method = "shouldRender", at = @At("HEAD"), cancellable = true)
+    public void shouldRender(Entity entity, Frustum frustum, double d, double e, double f, CallbackInfoReturnable<Boolean> cir) {
+        EditorState editorState = EditorStateManager.getCurrent();
+        if (editorState != null && !editorState.filteredEntities.isEmpty()) {
+            String id = entity.getType().builtInRegistryHolder().key().location().toString();
+            if (editorState.filteredEntities.contains(id)) {
+                cir.setReturnValue(false);
+            }
+        }
     }
 
     @Inject(method = "render(Lnet/minecraft/world/entity/Entity;DDDFLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;ILnet/minecraft/client/renderer/entity/EntityRenderer;)V", at = @At("HEAD"), cancellable = true)
