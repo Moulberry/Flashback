@@ -470,7 +470,7 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
             return;
         }
 
-        if (clientboundContainerSetSlotPacket.getContainerId() == -2) {
+        if (clientboundContainerSetSlotPacket.getContainerId() == 0) {
             int slot = clientboundContainerSetSlotPacket.getSlot();
             ItemStack itemStack = clientboundContainerSetSlotPacket.getItem();
             player.getInventory().setItem(slot, itemStack);
