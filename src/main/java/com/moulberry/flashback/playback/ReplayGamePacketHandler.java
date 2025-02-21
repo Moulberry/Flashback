@@ -16,6 +16,8 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntList;
+import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
+import it.unimi.dsi.fastutil.longs.LongSet;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerWorldEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.client.multiplayer.PlayerInfo;
@@ -44,6 +46,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.level.ThreadedLevelLightEngine;
 import net.minecraft.server.network.CommonListenerCookie;
 import net.minecraft.sounds.SoundEvent;
+import net.minecraft.tags.BlockTags;
 import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.Entity;
@@ -67,6 +70,8 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LightLayer;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.biome.Biomes;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.piston.PistonBaseBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.border.WorldBorder;
 import net.minecraft.world.level.chunk.ChunkAccess;
@@ -99,6 +104,7 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
     private Int2ObjectMap<Entity> pendingEntities = new Int2ObjectOpenHashMap<>();
     private ResourceKey<Level> currentDimension = null;
     public int localPlayerId = -1;
+    public LongSet forceSendChunksDueToMovingPistonShenanigans = new LongOpenHashSet();
 
     public ReplayGamePacketHandler(ReplayServer replayServer) {
         this.replayServer = replayServer;
@@ -361,8 +367,18 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
     @Override
     public void handleBlockEvent(ClientboundBlockEventPacket clientboundBlockEventPacket) {
         BlockPos pos = clientboundBlockEventPacket.getPos();
-        this.replayServer.getPlayerList().broadcast(null, pos.getX(), pos.getY(), pos.getZ(),
-            64.0, this.level().dimension(), clientboundBlockEventPacket);
+
+        BlockState blockState = this.level().getBlockState(pos);
+
+        if (blockState.getBlock() instanceof PistonBaseBlock) {
+            this.forceSendChunksDueToMovingPistonShenanigans.add(ChunkPos.asLong(pos.getX() >> 4, pos.getZ() >> 4));
+            this.forceSendChunksDueToMovingPistonShenanigans.add(ChunkPos.asLong((pos.getX() >> 4) + 1, pos.getZ() >> 4));
+            this.forceSendChunksDueToMovingPistonShenanigans.add(ChunkPos.asLong(pos.getX() >> 4, (pos.getZ() >> 4) + 1));
+            this.forceSendChunksDueToMovingPistonShenanigans.add(ChunkPos.asLong((pos.getX() >> 4) - 1, pos.getZ() >> 4));
+            this.forceSendChunksDueToMovingPistonShenanigans.add(ChunkPos.asLong(pos.getX() >> 4, (pos.getZ() >> 4) - 1));
+        }
+
+        this.replayServer.getPlayerList().broadcastAll(clientboundBlockEventPacket);
     }
 
     @Override
@@ -763,6 +779,8 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
                     replayViewer.getYRot(), replayViewer.getXRot());
                 replayViewer.followLocalPlayerNextTick = true;
             }
+
+            this.forceSendChunksDueToMovingPistonShenanigans.clear();
         }
 
         // Delete current dimension
