@@ -7,6 +7,7 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntList;
+import it.unimi.dsi.fastutil.ints.IntSet;
 import org.bytedeco.ffmpeg.avcodec.AVCodec;
 import org.bytedeco.ffmpeg.global.avcodec;
 import org.bytedeco.ffmpeg.global.avutil;
@@ -120,6 +121,16 @@ public class PixelFormatHelper {
             return name.getString();
         } catch (Throwable ignored) {}
         return "UNKNOWN(" + pixelFormat + ")";
+    }
+
+    public static boolean isYuvFormat(int pixelFormat) {
+        try (var descriptor = avutil.av_pix_fmt_desc_get(pixelFormat)) {
+            if (descriptor == null || descriptor.isNull()) {
+                throw new RuntimeException();
+            }
+
+            return (descriptor.flags() & avutil.AV_PIX_FMT_FLAG_RGB) == 0 && descriptor.nb_components() >= 2;
+        }
     }
 
 }

@@ -216,6 +216,10 @@ public class AsyncFFmpegVideoWriter implements AutoCloseable, VideoWriter {
         PointerPointer<AVFrame> tmp_picture_ptr = new PointerPointer<>(tmp_picture);
         PointerPointer<AVFrame> picture_ptr = new PointerPointer<>(picture);
 
+        Flashback.LOGGER.info("Rescaling to pixel format: {}", dstPixelFormat);
+
+        boolean useItu709Colorspace = PixelFormatHelper.isYuvFormat(dstPixelFormat);
+
         Thread scaleThread = new Thread(() -> {
             SwsContext img_convert_ctx = null;
 
@@ -234,19 +238,16 @@ public class AsyncFFmpegVideoWriter implements AutoCloseable, VideoWriter {
                     }
 
                     img_convert_ctx = swscale.sws_getCachedContext(img_convert_ctx, src.width, src.height, src.pixelFormat,
-                            dstWidth, dstHeight, dstPixelFormat, swscale.SWS_BILINEAR,
+                            dstWidth, dstHeight, dstPixelFormat, swscale.SWS_LANCZOS | swscale.SWS_ACCURATE_RND | swscale.SWS_FULL_CHR_H_INT,
                             null, null, (DoublePointer) null);
                     if (img_convert_ctx == null) {
                         throw new RuntimeException("sws_getCachedContext() error: Cannot initialize the conversion context.");
                     }
 
-                    int dstRange = 1; // Full
-                    if (dstPixelFormat == AV_PIX_FMT_YUV420P) { // todo: check more values
-                        dstRange = 0; // Partial
+                    if (useItu709Colorspace) {
+                        IntPointer coefficients = swscale.sws_getCoefficients(swscale.SWS_CS_ITU709);
+                        swscale.sws_setColorspaceDetails(img_convert_ctx, coefficients, 1, coefficients, 0, 0, 1 << 16, 1 << 16);
                     }
-
-                    IntPointer coefficients = swscale.sws_getCoefficients(swscale.SWS_CS_ITU709);
-                    swscale.sws_setColorspaceDetails(img_convert_ctx, coefficients, 1, coefficients, dstRange, 0, 1 << 16, 1 << 16);
 
                     BytePointer data = new BytePointer() {{
                         this.address = src.pointer;
