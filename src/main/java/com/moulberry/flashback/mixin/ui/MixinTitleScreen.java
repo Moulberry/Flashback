@@ -37,12 +37,13 @@ public class MixinTitleScreen extends Screen {
     @Unique
     private AbstractWidget openSelectReplayScreenButton = null;
 
+    @Unique
+    private boolean checkedPositionOfReplayButton = false;
+
     @Inject(method = "init", at = @At("RETURN"))
     public void init(CallbackInfo ci) {
-        if (this.openSelectReplayScreenButton != null) {
-            this.removeWidget(this.openSelectReplayScreenButton);
-            this.openSelectReplayScreenButton = null;
-        }
+        this.createOrPositionOpenSelectReplayScreenButton(true);
+        this.checkedPositionOfReplayButton = false;
     }
 
     // We do this on tick to ensure that our button is added after ever other mod's
@@ -50,16 +51,50 @@ public class MixinTitleScreen extends Screen {
     // might not implement repositioning logic, causing our button to render under theirs
     @Inject(method = "tick", at = @At("RETURN"))
     public void tick(CallbackInfo ci) {
-        if (this.openSelectReplayScreenButton == null) {
-            this.createOpenSelectReplayScreenButton();
+        if (!this.checkedPositionOfReplayButton) {
+            this.checkedPositionOfReplayButton = true;
+            this.createOrPositionOpenSelectReplayScreenButton(false);
         }
     }
 
     @Unique
-    private void createOpenSelectReplayScreenButton() {
-        if (this.openSelectReplayScreenButton != null) {
-            this.removeWidget(this.openSelectReplayScreenButton);
+    private void createOrPositionOpenSelectReplayScreenButton(boolean allowCreating) {
+        // Set button to null if not in renderables list
+        if (this.openSelectReplayScreenButton != null && !this.renderables.contains(this.openSelectReplayScreenButton)) {
             this.openSelectReplayScreenButton = null;
+        }
+
+        // Exit early if the button doesn't exist and we aren't allowed to create it
+        if (!allowCreating && this.openSelectReplayScreenButton == null) {
+            return;
+        }
+
+        // If the button already exists, check if it overlaps with anything
+        // If there's no overlap, no need to move it
+        if (this.openSelectReplayScreenButton != null) {
+            int x = this.openSelectReplayScreenButton.getX();
+            int y = this.openSelectReplayScreenButton.getY();
+            int width = this.openSelectReplayScreenButton.getWidth();
+            int height = this.openSelectReplayScreenButton.getHeight();
+
+            boolean overlapsWithExistingButton = false;
+
+            for (Renderable renderable : this.renderables) {
+                if (renderable == this.openSelectReplayScreenButton) {
+                    continue;
+                }
+                if (renderable instanceof AbstractWidget otherWidget) {
+                    if (x < otherWidget.getRight() && x+width > otherWidget.getX() &&
+                        y < otherWidget.getBottom() && y+height > otherWidget.getY()) {
+                        overlapsWithExistingButton = true;
+                        break;
+                    }
+                }
+            }
+
+            if (!overlapsWithExistingButton) {
+                return;
+            }
         }
 
         for (int offsetX = 0; offsetX < 5; offsetX++) {
@@ -81,6 +116,9 @@ public class MixinTitleScreen extends Screen {
 
                 // Check for overlaps with any existing buttons
                 for (Renderable renderable : this.renderables) {
+                    if (renderable == this.openSelectReplayScreenButton) {
+                        continue;
+                    }
                     if (renderable instanceof AbstractWidget otherWidget) {
                         if (x < otherWidget.getRight() && x+size > otherWidget.getX() &&
                             y < otherWidget.getBottom() && y+size > otherWidget.getY()) {
@@ -91,24 +129,28 @@ public class MixinTitleScreen extends Screen {
                 }
 
                 if (!overlapsWithExistingButton) {
-                    this.openSelectReplayScreenButton = new FlashbackButton(x, y, size, size, Component.literal("Open Replays"), button -> {
-                        List<String> incompatibleMods = Screen.hasShiftDown() ? List.of() : Flashback.getReplayIncompatibleMods();
+                    if (this.openSelectReplayScreenButton == null) {
+                        this.openSelectReplayScreenButton = new FlashbackButton(x, y, size, size, Component.literal("Open Replays"), button -> {
+                            List<String> incompatibleMods = Screen.hasShiftDown() ? List.of() : Flashback.getReplayIncompatibleMods();
 
-                        if (incompatibleMods.isEmpty()) {
-                            this.minecraft.setScreen(new SelectReplayScreen(this, Flashback.getReplayFolder()));
-                        } else {
-                            String mods = StringUtils.join(incompatibleMods, ", ");
-                            String description = """
+                            if (incompatibleMods.isEmpty()) {
+                                this.minecraft.setScreen(new SelectReplayScreen(this, Flashback.getReplayFolder()));
+                            } else {
+                                String mods = StringUtils.join(incompatibleMods, ", ");
+                                String description = """
                                 You have mods which are known to cause crashes when loading replays
                                 Please remove the following mods in order to be able to load replays:
 
                                 """;
-                            this.minecraft.setScreen(new AlertScreen(() -> Minecraft.getInstance().setScreen(this),
-                                Component.literal("Incompatible Mods"), Component.literal(description).append(Component.literal(mods).withStyle(ChatFormatting.RED))));
-                        }
+                                this.minecraft.setScreen(new AlertScreen(() -> Minecraft.getInstance().setScreen(this),
+                                    Component.literal("Incompatible Mods"), Component.literal(description).append(Component.literal(mods).withStyle(ChatFormatting.RED))));
+                            }
 
-                    });
-                    this.addRenderableWidget(this.openSelectReplayScreenButton);
+                        });
+                        this.addRenderableWidget(this.openSelectReplayScreenButton);
+                    } else {
+                        this.openSelectReplayScreenButton.setPosition(x, y);
+                    }
                     return;
                 }
             }
