@@ -15,9 +15,9 @@ public record KeyframeChangeCameraPosition(Vector3d position, double yaw, double
         KeyframeChangeCameraPosition other = (KeyframeChangeCameraPosition) to;
         return new KeyframeChangeCameraPosition(
             this.position.lerp(other.position, amount, new Vector3d()),
-            Interpolation.linear(this.yaw, other.yaw, amount),
-            Interpolation.linear(this.pitch, other.pitch, amount),
-            Interpolation.linear(this.roll, other.roll, amount)
+            Interpolation.linearAngle(this.yaw, other.yaw, amount),
+            Interpolation.linearAngle(this.pitch, other.pitch, amount),
+            Interpolation.linearAngle(this.roll, other.roll, amount)
         );
     }
 }
