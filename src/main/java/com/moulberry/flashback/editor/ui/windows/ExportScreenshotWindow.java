@@ -39,6 +39,8 @@ public class ExportScreenshotWindow {
             }
 
             FlashbackConfig config = Flashback.getConfig();
+            config.forceDefaultExportSettings.apply(config);
+
             if (config.resolution == null || config.resolution.length != 2) {
                 config.resolution = new int[]{1920, 1080};
             }

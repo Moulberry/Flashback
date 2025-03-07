@@ -107,6 +107,8 @@ public class FlashbackConfig {
 
     public String defaultExportPath = null;
 
+    public ForceDefaultExportSettings forceDefaultExportSettings = new ForceDefaultExportSettings();
+
     private transient int saveDelay = 0;
 
     public boolean signedRenderFilter = false;
