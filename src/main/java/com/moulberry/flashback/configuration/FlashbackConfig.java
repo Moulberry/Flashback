@@ -109,9 +109,12 @@ public class FlashbackConfig {
 
     public ForceDefaultExportSettings forceDefaultExportSettings = new ForceDefaultExportSettings();
 
-    private transient int saveDelay = 0;
+    public boolean filterUnnecessaryPackets = true;
 
     public boolean signedRenderFilter = false;
+
+    private transient int saveDelay = 0;
+
 
     @SuppressWarnings("unchecked")
     public OptionInstance<?>[] createOptionInstances() {
