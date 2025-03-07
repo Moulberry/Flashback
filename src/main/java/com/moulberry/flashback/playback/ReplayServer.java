@@ -7,6 +7,7 @@ import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.PacketHelper;
 import com.moulberry.flashback.SneakyThrow;
 import com.moulberry.flashback.configuration.FlashbackConfig;
+import com.moulberry.flashback.ext.ConnectionExt;
 import com.moulberry.flashback.ext.LevelChunkExt;
 import com.moulberry.flashback.TempFolderProvider;
 import com.moulberry.flashback.keyframe.handler.ReplayServerKeyframeHandler;
@@ -45,11 +46,13 @@ import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.server.IntegratedServer;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.network.Connection;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.common.*;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.network.protocol.configuration.ClientConfigurationPacketListener;
 import net.minecraft.network.protocol.configuration.ConfigurationProtocols;
 import net.minecraft.network.protocol.game.*;
@@ -64,6 +67,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.level.TicketType;
 import net.minecraft.server.level.progress.ChunkProgressListenerFactory;
+import net.minecraft.server.network.CommonListenerCookie;
 import net.minecraft.server.network.ConfigurationTask;
 import net.minecraft.server.packs.repository.PackRepository;
 import net.minecraft.server.players.PlayerList;
@@ -287,6 +291,14 @@ public class ReplayServer extends IntegratedServer {
                 player.setId(newPlayerIds.getAndDecrement());
                 player.followLocalPlayerNextTick = true;
                 return player;
+            }
+
+            @Override
+            public void placeNewPlayer(Connection connection, ServerPlayer serverPlayer, CommonListenerCookie commonListenerCookie) {
+                if (Flashback.getConfig().filterUnnecessaryPackets) {
+                    ((ConnectionExt)connection).flashback$setFilterUnnecessaryPackets();
+                }
+                super.placeNewPlayer(connection, serverPlayer, commonListenerCookie);
             }
 
             @Override
