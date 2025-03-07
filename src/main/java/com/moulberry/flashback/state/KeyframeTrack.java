@@ -167,7 +167,6 @@ public class KeyframeTrack {
                 rightChange = hermiteChange;
             }
         }
-        // todo: hermite
         if (leftChange == null || rightChange == null) {
             double adjustedAmount = SidedInterpolationType.interpolate(leftInterpolation, rightInterpolation, amount);
 
