@@ -124,7 +124,7 @@ public abstract class MixinItemInHandRenderer implements ItemInHandRendererExt {
         bufferSource.endBatch();
     }
 
-    @Inject(method = "renderPlayerArm", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/entity/EntityRenderDispatcher;getRenderer(Lnet/minecraft/world/entity/Entity;)Lnet/minecraft/client/renderer/entity/EntityRenderer;", shift = At.Shift.AFTER))
+    @Inject(method = "renderPlayerArm", at = @At(value = "FIELD", target = "Lnet/minecraft/client/renderer/ItemInHandRenderer;entityRenderDispatcher:Lnet/minecraft/client/renderer/entity/EntityRenderDispatcher;"))
     public void renderPlayerArm(PoseStack poseStack, MultiBufferSource multiBufferSource, int i, float f, float g,
                                 HumanoidArm humanoidArm, CallbackInfo ci, @Local LocalRef<AbstractClientPlayer> player) {
         AbstractClientPlayer spectatingPlayer = Flashback.getSpectatingPlayer();
