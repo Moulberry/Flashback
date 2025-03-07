@@ -651,6 +651,7 @@ public class ReplayServer extends IntegratedServer {
                             entity.setXRot(pitch);
                         } else {
                             entity.moveTo(x, y, z, yaw, pitch);
+                            updatePositionOfPassengers(entity);
                         }
 
                         entity.setYHeadRot(headYaw);
@@ -666,6 +667,13 @@ public class ReplayServer extends IntegratedServer {
                     }
                 }
             }
+        }
+    }
+
+    private void updatePositionOfPassengers(Entity vehicle) {
+        for (Entity passenger : vehicle.getPassengers()) {
+            vehicle.positionRider(passenger);
+            updatePositionOfPassengers(passenger);
         }
     }
 
