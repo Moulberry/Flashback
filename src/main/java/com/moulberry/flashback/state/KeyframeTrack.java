@@ -223,6 +223,8 @@ public class KeyframeTrack {
                 double tickrate = (double) (ceilEntry.getKey() - lowerEntry.getKey()) / (ceilTicks - lowerTicks) * 20;
                 return new KeyframeChangeTickrate((float) tickrate);
             }
+        } else if (lowerEntry != null) {
+            return new KeyframeChangeTickrate(20.0f);
         }
 
         return null;
