@@ -105,10 +105,10 @@ public abstract class MixinLevelRenderer {
 
             RenderSystem.assertOnRenderThread();
             if (this.roundAlphaBuffer == null) {
-                this.roundAlphaBuffer = new TextureTarget(main.width, main.height, false);
+                this.roundAlphaBuffer = new TextureTarget(main.width, main.height, false, Minecraft.ON_OSX);
             } else if (this.roundAlphaBuffer.width != main.width || this.roundAlphaBuffer.height != main.height) {
                 this.roundAlphaBuffer.destroyBuffers();
-                this.roundAlphaBuffer = new TextureTarget(main.width, main.height, false);
+                this.roundAlphaBuffer = new TextureTarget(main.width, main.height, false, Minecraft.ON_OSX);
             }
 
             this.roundAlphaBuffer.bindWrite(true);
