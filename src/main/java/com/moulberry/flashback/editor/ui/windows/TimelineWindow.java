@@ -535,7 +535,6 @@ public class TimelineWindow {
                     if (grabbedExportBarResizeLeft) {
                         ImGui.setMouseCursor(ImGuiMouseCursor.ResizeEW);
 
-
                         int target = timelineXToReplayTick(mouseX - x);
 
                         if (ImGui.isKeyDown(GLFW.GLFW_KEY_LEFT_SHIFT) || ImGui.isKeyDown(GLFW.GLFW_KEY_RIGHT_SHIFT)) {
@@ -589,6 +588,13 @@ public class TimelineWindow {
                     }
                     if (grabbedPlayback) {
                         int desiredTick = timelineXToReplayTick(mouseX - x);
+
+                        if (ImGui.isKeyDown(GLFW.GLFW_KEY_LEFT_SHIFT) || ImGui.isKeyDown(GLFW.GLFW_KEY_RIGHT_SHIFT)) {
+                            int closestTick = findClosestKeyframeForSnap(desiredTick);
+                            if (closestTick != -1) {
+                                desiredTick = closestTick;
+                            }
+                        }
 
                         if (desiredTick > currentReplayTick) {
                             replayServer.goToReplayTick(desiredTick);
@@ -1198,6 +1204,14 @@ public class TimelineWindow {
 
         if (grabbedPlayback) {
             int desiredTick = timelineXToReplayTick(mouseX - x);
+
+            if (ImGui.isKeyDown(GLFW.GLFW_KEY_LEFT_SHIFT) || ImGui.isKeyDown(GLFW.GLFW_KEY_RIGHT_SHIFT)) {
+                int closestTick = findClosestKeyframeForSnap(desiredTick);
+                if (closestTick != -1) {
+                    desiredTick = closestTick;
+                }
+            }
+
             replayServer.goToReplayTick(desiredTick);
             replayServer.replayPaused = true;
             grabbedPlayback = false;
