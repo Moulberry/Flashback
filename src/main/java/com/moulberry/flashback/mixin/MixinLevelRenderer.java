@@ -5,6 +5,7 @@ import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.mojang.blaze3d.framegraph.FrameGraphBuilder;
 import com.mojang.blaze3d.framegraph.FramePass;
 import com.mojang.blaze3d.pipeline.RenderTarget;
+import com.mojang.blaze3d.pipeline.TextureTarget;
 import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.resource.GraphicsResourceAllocator;
 import com.mojang.blaze3d.resource.ResourceHandle;
@@ -82,6 +83,14 @@ public abstract class MixinLevelRenderer {
         ReplayUI.lastViewQuaternion = camera.rotation();
     }
 
+    @Unique
+    private RenderTarget roundAlphaBuffer = null;
+
+    @Inject(method = "close", at = @At("HEAD"))
+    public void close(CallbackInfo ci) {
+        this.roundAlphaBuffer.destroyBuffers();
+    }
+
     @Inject(method = "renderSectionLayer", at = @At("HEAD"), cancellable = true, require = 0)
     public void renderSectionLayer(RenderType renderType, double d, double e, double f, Matrix4f matrix4f, Matrix4f matrix4f2, CallbackInfo ci) {
         EditorState editorState = EditorStateManager.getCurrent();
@@ -94,6 +103,15 @@ public abstract class MixinLevelRenderer {
 
         if (renderType == RenderType.cutout() && Flashback.isExporting() && Flashback.EXPORT_JOB.getSettings().transparent()) {
             RenderTarget main = Minecraft.getInstance().mainRenderTarget;
+
+            if (this.roundAlphaBuffer == null) {
+                this.roundAlphaBuffer = new TextureTarget(main.width, main.height, false);
+            } else if (this.roundAlphaBuffer.width != main.width || this.roundAlphaBuffer.height != main.height) {
+                this.roundAlphaBuffer.destroyBuffers();
+                this.roundAlphaBuffer = new TextureTarget(main.width, main.height, false);
+            }
+
+            this.roundAlphaBuffer.bindWrite(true);
 
             GlStateManager._disableDepthTest();
             GlStateManager._depthMask(false);
@@ -111,6 +129,10 @@ public abstract class MixinLevelRenderer {
             bufferBuilder.addVertex(0.0f, 1.0f, 0.0f);
             BufferUploader.draw(bufferBuilder.buildOrThrow());
             shaderInstance.clear();
+
+            main.bindWrite(true);
+            this.roundAlphaBuffer.blitToScreen(main.width, main.height);
+
             GlStateManager._enableBlend();
             GlStateManager._depthMask(true);
             GlStateManager._enableDepthTest();
