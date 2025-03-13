@@ -115,7 +115,6 @@ public class FlashbackConfig {
 
     private transient int saveDelay = 0;
 
-
     @SuppressWarnings("unchecked")
     public OptionInstance<?>[] createOptionInstances() {
         List<OptionInstance<?>> options = new ArrayList<>();
