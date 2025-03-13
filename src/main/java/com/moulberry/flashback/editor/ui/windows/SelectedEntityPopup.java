@@ -5,6 +5,7 @@ import com.mojang.authlib.yggdrasil.ProfileResult;
 import com.moulberry.flashback.FilePlayerSkin;
 import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.Utils;
+import com.moulberry.flashback.combo_options.GlowingOverride;
 import com.moulberry.flashback.editor.ui.ImGuiHelper;
 import com.moulberry.flashback.exporting.AsyncFileDialogs;
 import com.moulberry.flashback.state.EditorState;
@@ -82,89 +83,95 @@ public class SelectedEntityPopup {
             editorState.markDirty();
         }
 
-        if (!isHiddenDuringExport && entity instanceof Player player) {
-            boolean hideNametag = editorState.hideNametags.contains(entity.getUUID());
-            if (ImGui.checkbox("Render Nametag", !hideNametag)) {
-                if (hideNametag) {
-                    editorState.hideNametags.remove(entity.getUUID());
-                } else {
-                    editorState.hideNametags.add(entity.getUUID());
-                }
-            }
-
-            if (!hideNametag) {
-                boolean changedName = ImGui.inputTextWithHint("Name##SetNameInput", player.getScoreboardName(), changeNameInput);
-
-                if (changedName) {
-                    String string = ImGuiHelper.getString(changeNameInput);
-                    if (string.isEmpty()) {
-                        editorState.nameOverride.remove(entity.getUUID());
+        if (!isHiddenDuringExport) {
+            if (entity instanceof Player player) {
+                boolean hideNametag = editorState.hideNametags.contains(entity.getUUID());
+                if (ImGui.checkbox("Render Nametag", !hideNametag)) {
+                    if (hideNametag) {
+                        editorState.hideNametags.remove(entity.getUUID());
                     } else {
-                        editorState.nameOverride.put(entity.getUUID(), string);
+                        editorState.hideNametags.add(entity.getUUID());
                     }
                 }
 
-                if (editorState.hideTeamPrefix.contains(player.getUUID())) {
-                    if (ImGui.checkbox("Hide Team Prefix", true)) {
-                        editorState.hideTeamPrefix.remove(player.getUUID());
+                if (!hideNametag) {
+                    boolean changedName = ImGui.inputTextWithHint("Name##SetNameInput", player.getScoreboardName(), changeNameInput);
+
+                    if (changedName) {
+                        String string = ImGuiHelper.getString(changeNameInput);
+                        if (string.isEmpty()) {
+                            editorState.nameOverride.remove(entity.getUUID());
+                        } else {
+                            editorState.nameOverride.put(entity.getUUID(), string);
+                        }
                     }
-                } else {
-                    PlayerTeam team = player.getTeam();
-                    if (team != null && !Utils.isComponentEmpty(team.getPlayerPrefix())) {
-                        if (ImGui.checkbox("Hide Team Prefix", false)) {
-                            editorState.hideTeamPrefix.add(player.getUUID());
+
+                    if (editorState.hideTeamPrefix.contains(player.getUUID())) {
+                        if (ImGui.checkbox("Hide Team Prefix", true)) {
+                            editorState.hideTeamPrefix.remove(player.getUUID());
+                        }
+                    } else {
+                        PlayerTeam team = player.getTeam();
+                        if (team != null && !Utils.isComponentEmpty(team.getPlayerPrefix())) {
+                            if (ImGui.checkbox("Hide Team Prefix", false)) {
+                                editorState.hideTeamPrefix.add(player.getUUID());
+                            }
+                        }
+                    }
+
+                    if (editorState.hideTeamSuffix.contains(player.getUUID())) {
+                        if (ImGui.checkbox("Hide Team Suffix", true)) {
+                            editorState.hideTeamSuffix.remove(player.getUUID());
+                        }
+                    } else {
+                        PlayerTeam team = player.getTeam();
+                        if (team != null && !Utils.isComponentEmpty(team.getPlayerSuffix())) {
+                            if (ImGui.checkbox("Hide Team Suffix", false)) {
+                                editorState.hideTeamSuffix.add(player.getUUID());
+                            }
                         }
                     }
                 }
 
-                if (editorState.hideTeamSuffix.contains(player.getUUID())) {
-                    if (ImGui.checkbox("Hide Team Suffix", true)) {
-                        editorState.hideTeamSuffix.remove(player.getUUID());
-                    }
-                } else {
-                    PlayerTeam team = player.getTeam();
-                    if (team != null && !Utils.isComponentEmpty(team.getPlayerSuffix())) {
-                        if (ImGui.checkbox("Hide Team Suffix", false)) {
-                            editorState.hideTeamSuffix.add(player.getUUID());
+                showGlowingDropdown(entity, editorState);
+
+                ImGuiHelper.separatorWithText("Change Skin & Cape (UUID)");
+                ImGui.setNextItemWidth(320);
+                ImGui.inputTextWithHint("##SetSkinInput", "e.g. d0e05de7-6067-454d-beae-c6d19d886191", changeSkinInput);
+
+                if (!changeSkinInput.isEmpty()) {
+                    String string = ImGuiHelper.getString(changeSkinInput);
+                    try {
+                        UUID changeSkinUuid = UUID.fromString(string);
+                        if (ImGui.button("Apply Skin from UUID")) {
+                            ProfileResult profile = Minecraft.getInstance().getMinecraftSessionService().fetchProfile(changeSkinUuid, true);
+                            editorState.skinOverride.put(entity.getUUID(), profile.profile());
+                            editorState.skinOverrideFromFile.remove(entity.getUUID());
                         }
-                    }
+                    } catch (Exception ignored) {}
                 }
-            }
 
-            ImGuiHelper.separatorWithText("Change Skin & Cape (UUID)");
-            ImGui.setNextItemWidth(320);
-            ImGui.inputTextWithHint("##SetSkinInput", "e.g. d0e05de7-6067-454d-beae-c6d19d886191", changeSkinInput);
+                if (ImGui.button("Upload Skin from File")) {
+                    Path gameDir = FabricLoader.getInstance().getGameDir();
+                    CompletableFuture<String> future = AsyncFileDialogs.openFileDialog(gameDir.toString(),
+                        "Skin Texture", "png");
+                    future.thenAccept(pathStr -> {
+                        if (pathStr != null) {
+                            editorState.skinOverride.remove(entity.getUUID());
+                            editorState.skinOverrideFromFile.put(entity.getUUID(), new FilePlayerSkin(pathStr));
+                        }
+                    });
+                }
 
-            if (!changeSkinInput.isEmpty()) {
-                String string = ImGuiHelper.getString(changeSkinInput);
-                try {
-                    UUID changeSkinUuid = UUID.fromString(string);
-                    if (ImGui.button("Apply Skin from UUID")) {
-                        ProfileResult profile = Minecraft.getInstance().getMinecraftSessionService().fetchProfile(changeSkinUuid, true);
-                        editorState.skinOverride.put(entity.getUUID(), profile.profile());
-                        editorState.skinOverrideFromFile.remove(entity.getUUID());
-                    }
-                } catch (Exception ignored) {}
-            }
-
-            if (ImGui.button("Upload Skin from File")) {
-                Path gameDir = FabricLoader.getInstance().getGameDir();
-                CompletableFuture<String> future = AsyncFileDialogs.openFileDialog(gameDir.toString(),
-                    "Skin Texture", "png");
-                future.thenAccept(pathStr -> {
-                    if (pathStr != null) {
+                if (editorState.skinOverride.containsKey(entity.getUUID()) || editorState.skinOverrideFromFile.containsKey(entity.getUUID())) {
+                    if (ImGui.button("Reset Skin")) {
                         editorState.skinOverride.remove(entity.getUUID());
-                        editorState.skinOverrideFromFile.put(entity.getUUID(), new FilePlayerSkin(pathStr));
+                        editorState.skinOverrideFromFile.remove(entity.getUUID());
+                        changeSkinInput.set("");
                     }
-                });
-            }
-
-            if (editorState.skinOverride.containsKey(entity.getUUID()) || editorState.skinOverrideFromFile.containsKey(entity.getUUID())) {
-                if (ImGui.button("Reset Skin")) {
-                    editorState.skinOverride.remove(entity.getUUID());
-                    editorState.skinOverrideFromFile.remove(entity.getUUID());
-                    changeSkinInput.set("");
                 }
+            } else {
+                showGlowingDropdown(entity, editorState);
             }
         }
 
@@ -184,6 +191,21 @@ public class SelectedEntityPopup {
 //        if (entity instanceof Player) {
 //            ImGui.checkbox("Override Skin", false);
 //        }
+    }
+
+    private static void showGlowingDropdown(Entity entity, EditorState editorState) {
+        GlowingOverride glowingOverride = GlowingOverride.DEFAULT;
+        if (editorState.glowingOverride.containsKey(entity.getUUID())) {
+            glowingOverride = editorState.glowingOverride.get(entity.getUUID());
+        }
+        GlowingOverride newGlowingOverride = ImGuiHelper.enumCombo("Glowing", glowingOverride);
+        if (newGlowingOverride != glowingOverride) {
+            if (newGlowingOverride == GlowingOverride.DEFAULT) {
+                editorState.glowingOverride.remove(entity.getUUID());
+            } else {
+                editorState.glowingOverride.put(entity.getUUID(), newGlowingOverride);
+            }
+        }
     }
 
 }

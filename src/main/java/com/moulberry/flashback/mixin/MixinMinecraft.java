@@ -6,6 +6,7 @@ import com.mojang.authlib.yggdrasil.YggdrasilAuthenticationService;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.FreezeSlowdownFormula;
+import com.moulberry.flashback.combo_options.GlowingOverride;
 import com.moulberry.flashback.configuration.FlashbackConfig;
 import com.moulberry.flashback.editor.ui.windows.ExportDoneWindow;
 import com.moulberry.flashback.editor.ui.windows.WindowType;
@@ -169,6 +170,20 @@ public abstract class MixinMinecraft implements MinecraftExt {
         EditorState editorState = EditorStateManager.getCurrent();
         if (editorState != null && !editorState.replayVisuals.renderNametags) {
             cir.setReturnValue(false);
+        }
+    }
+
+    @Inject(method = "shouldEntityAppearGlowing", at = @At("HEAD"), cancellable = true)
+    private void shouldEntityAppearGlowing(Entity entity, CallbackInfoReturnable<Boolean> cir) {
+        EditorState editorState = EditorStateManager.getCurrent();
+        if (editorState != null) {
+            GlowingOverride glowingOverride = editorState.glowingOverride.get(entity.getUUID());
+
+            if (glowingOverride == GlowingOverride.FORCE_GLOW) {
+                cir.setReturnValue(true);
+            } else if (glowingOverride == GlowingOverride.FORCE_NO_GLOW) {
+                cir.setReturnValue(false);
+            }
         }
     }
 
