@@ -4,6 +4,7 @@ import com.mojang.authlib.GameProfile;
 import com.moulberry.flashback.FilePlayerSkin;
 import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.FlashbackGson;
+import com.moulberry.flashback.combo_options.GlowingOverride;
 import com.moulberry.flashback.editor.ui.ReplayUI;
 import com.moulberry.flashback.keyframe.Keyframe;
 import com.moulberry.flashback.keyframe.KeyframeType;
@@ -51,6 +52,7 @@ public class EditorState {
     public Map<UUID, GameProfile> skinOverride = new HashMap<>();
     public Map<UUID, FilePlayerSkin> skinOverrideFromFile = new HashMap<>();
     public Map<UUID, String> nameOverride = new HashMap<>();
+    public Map<UUID, GlowingOverride> glowingOverride = new HashMap<>();
     public Set<UUID> hideTeamPrefix = new HashSet<>();
     public Set<UUID> hideTeamSuffix = new HashSet<>();
     public Set<String> filteredEntities = new HashSet<>();
