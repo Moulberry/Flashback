@@ -88,7 +88,9 @@ public abstract class MixinLevelRenderer {
 
     @Inject(method = "close", at = @At("HEAD"))
     public void close(CallbackInfo ci) {
-        this.roundAlphaBuffer.destroyBuffers();
+        if (this.roundAlphaBuffer != null) {
+            this.roundAlphaBuffer.destroyBuffers();
+        }
     }
 
     @Inject(method = "renderSectionLayer", at = @At("HEAD"), cancellable = true, require = 0)
