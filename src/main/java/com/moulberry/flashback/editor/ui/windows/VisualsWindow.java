@@ -164,6 +164,10 @@ public class VisualsWindow {
                 editorState.markDirty();
             }
             if (visuals.overrideFov) {
+                if (visuals.overrideFovAmount < 0) {
+                    visuals.overrideFovAmount = Flashback.getConfig().defaultOverrideFov;
+                }
+
                 ImGui.sameLine();
                 if (ImGui.smallButton("+")) {
                     addKeyframe(editorState, replayServer, new FOVKeyframe(visuals.overrideFovAmount));
