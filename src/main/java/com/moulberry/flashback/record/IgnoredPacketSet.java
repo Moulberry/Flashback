@@ -21,9 +21,7 @@ public class IgnoredPacketSet {
 
     private static final Set<Class<?>> IGNORED_IN_REPLAY = Set.of(
         ClientboundAwardStatsPacket.class,
-        ClientboundRecipeBookAddPacket.class,
-        ClientboundRecipeBookRemovePacket.class,
-        ClientboundRecipeBookSettingsPacket.class,
+        ClientboundRecipePacket.class,
         ClientboundUpdateRecipesPacket.class,
         ClientboundTransferPacket.class,
         ClientboundUpdateAdvancementsPacket.class
