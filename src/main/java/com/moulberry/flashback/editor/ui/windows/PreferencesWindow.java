@@ -4,6 +4,7 @@ import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.combo_options.VideoContainer;
 import com.moulberry.flashback.configuration.FlashbackConfig;
 import com.moulberry.flashback.editor.ui.ImGuiHelper;
+import com.moulberry.flashback.editor.ui.ReplayUI;
 import com.moulberry.flashback.exporting.AsyncFileDialogs;
 import com.moulberry.flashback.exporting.ExportJob;
 import com.moulberry.flashback.exporting.ExportSettings;
@@ -36,7 +37,7 @@ public class PreferencesWindow {
 
         ImVec2 center = ImGui.getMainViewport().getCenter();
         ImGui.setNextWindowPos(center.x, center.y, ImGuiCond.Appearing, 0.5f, 0.5f);
-        ImGui.setNextWindowSize(400, 0);
+        ImGui.setNextWindowSize(ReplayUI.scaleUi(400), 0);
         if (ImGuiHelper.beginPopupModalCloseable("Preferences###Preferences", ImGuiWindowFlags.NoResize)) {
             if (close) {
                 close = false;
@@ -51,7 +52,7 @@ public class PreferencesWindow {
             ImGuiHelper.separatorWithText("Exporting");
 
             ImString imString = ImGuiHelper.createResizableImString(config.defaultExportFilename);
-            ImGui.setNextItemWidth(200);
+            ImGui.setNextItemWidth(ReplayUI.scaleUi(200));
             if (ImGui.inputText("Export Filename", imString)) {
                 config.defaultExportFilename = ImGuiHelper.getString(imString);
                 config.delayedSaveToDefaultFolder();
@@ -61,7 +62,7 @@ public class PreferencesWindow {
             // Keyframes
             ImGuiHelper.separatorWithText("Keyframes");
 
-            ImGui.setNextItemWidth(200);
+            ImGui.setNextItemWidth(ReplayUI.scaleUi(200));
             config.defaultInterpolationType = ImGuiHelper.enumCombo("Default Interpolation", config.defaultInterpolationType);
 
             if (ImGui.collapsingHeader("Advanced")) {
