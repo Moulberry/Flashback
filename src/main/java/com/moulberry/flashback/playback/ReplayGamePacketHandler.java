@@ -129,20 +129,24 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
                 if (existingEntity instanceof ServerPlayer existingPlayer) {
                     existingPlayer.discard();
                 } else if (existingEntity.getType().equals(pendingEntity.getType())) {
-                    existingEntity.restoreFrom(pendingEntity);
-                    existingEntity.setPos(pendingEntity.getX(), pendingEntity.getY(), pendingEntity.getZ());
-                    existingEntity.setXRot(pendingEntity.getXRot());
-                    existingEntity.setYRot(pendingEntity.getYRot());
-                    existingEntity.setYHeadRot(pendingEntity.getYHeadRot());
-                    existingEntity.setDeltaMovement(pendingEntity.getDeltaMovement());
-                    existingEntity.hasImpulse = pendingEntity.hasImpulse;
-                    if (pendingEntity instanceof LivingEntity pendingLiving) {
-                        existingEntity.setYBodyRot(pendingLiving.yBodyRot);
+                    try {
+                        existingEntity.restoreFrom(pendingEntity);
+                        existingEntity.setPos(pendingEntity.getX(), pendingEntity.getY(), pendingEntity.getZ());
+                        existingEntity.setXRot(pendingEntity.getXRot());
+                        existingEntity.setYRot(pendingEntity.getYRot());
+                        existingEntity.setYHeadRot(pendingEntity.getYHeadRot());
+                        existingEntity.setDeltaMovement(pendingEntity.getDeltaMovement());
+                        existingEntity.hasImpulse = pendingEntity.hasImpulse;
+                        if (pendingEntity instanceof LivingEntity pendingLiving) {
+                            existingEntity.setYBodyRot(pendingLiving.yBodyRot);
+                        }
+                        for (SynchedEntityData.DataItem<?> dataItem : pendingEntity.getEntityData().itemsById) {
+                            existingEntity.getEntityData().set((EntityDataAccessor) dataItem.getAccessor(), dataItem.getValue());
+                        }
+                        continue;
+                    } catch (Exception ignored) {
+                        existingEntity.discard();
                     }
-                    for (SynchedEntityData.DataItem<?> dataItem : pendingEntity.getEntityData().itemsById) {
-                        existingEntity.getEntityData().set((EntityDataAccessor) dataItem.getAccessor(), dataItem.getValue());
-                    }
-                    continue;
                 } else {
                     existingEntity.discard();
                 }
