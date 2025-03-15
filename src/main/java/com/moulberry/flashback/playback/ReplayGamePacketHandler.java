@@ -1031,51 +1031,35 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
     @Override
     public void handleSetEntityData(ClientboundSetEntityDataPacket clientboundSetEntityDataPacket) {
         Entity entity = this.getEntityOrPending(clientboundSetEntityDataPacket.id());
-        if (entity == null) {
-            forward(clientboundSetEntityDataPacket);
-            return;
-        }
+        forward(entity, clientboundSetEntityDataPacket);
 
-        // Note: SynchedEntityData#assignValues isn't used because it doesn't mark the value as dirty
-
-        SynchedEntityData entityData = entity.getEntityData();
-        for (SynchedEntityData.DataValue<?> dataValue : clientboundSetEntityDataPacket.packedItems()) {
-            if (dataValue.id() >= entityData.itemsById.length) {
-                continue;
-            }
-
-            SynchedEntityData.DataItem<?> dataItem = entityData.itemsById[dataValue.id()];
-            entityData.set((EntityDataAccessor) dataItem.getAccessor(), dataValue.value(), true);
+        if (entity != null) {
+            entity.getEntityData().assignValues(clientboundSetEntityDataPacket.packedItems());
         }
     }
 
     @Override
     public void handleSetEntityMotion(ClientboundSetEntityMotionPacket clientboundSetEntityMotionPacket) {
         Entity entity = this.getEntityOrPending(clientboundSetEntityMotionPacket.getId());
-        if (entity == null) {
-            forward(clientboundSetEntityMotionPacket);
-            return;
-        }
+        forward(entity, clientboundSetEntityMotionPacket);
 
-        double motionX = clientboundSetEntityMotionPacket.getXa();
-        double motionY = clientboundSetEntityMotionPacket.getYa();
-        double motionZ = clientboundSetEntityMotionPacket.getZa();
-        entity.setDeltaMovement(motionX, motionY, motionZ);
-        entity.hasImpulse = true;
+        if (entity != null) {
+            double motionX = clientboundSetEntityMotionPacket.getXa();
+            double motionY = clientboundSetEntityMotionPacket.getYa();
+            double motionZ = clientboundSetEntityMotionPacket.getZa();
+            entity.setDeltaMovement(motionX, motionY, motionZ);
+        }
     }
 
     @Override
     public void handleSetEquipment(ClientboundSetEquipmentPacket clientboundSetEquipmentPacket) {
         Entity entity = this.getEntityOrPending(clientboundSetEquipmentPacket.getEntity());
-        if (entity == null) {
-            forward(clientboundSetEquipmentPacket);
-            return;
-        }
+        forward(entity, clientboundSetEquipmentPacket);
+
         if (entity instanceof LivingEntity livingEntity) {
             clientboundSetEquipmentPacket.getSlots().forEach((pair) -> {
                 livingEntity.setItemSlot(pair.getFirst(), pair.getSecond());
             });
-            forward(entity, clientboundSetEquipmentPacket);
         }
     }
 
