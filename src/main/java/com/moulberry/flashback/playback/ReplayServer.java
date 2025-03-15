@@ -631,6 +631,7 @@ public class ReplayServer extends IntegratedServer {
     public void handleAccuratePlayerPosition(RegistryFriendlyByteBuf friendlyByteBuf) {
         FlashbackConfig config = Flashback.getConfig();
         if (config.disableIncreasedFirstPersonUpdates) {
+            friendlyByteBuf.readerIndex(friendlyByteBuf.writerIndex());
             return;
         }
 
