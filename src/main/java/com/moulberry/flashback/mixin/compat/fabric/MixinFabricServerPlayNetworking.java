@@ -12,7 +12,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-@Mixin(value = ServerPlayNetworking.class, remap = false)
+@Mixin(value = ServerPlayNetworking.class)
 public class MixinFabricServerPlayNetworking {
 
     @Inject(method = "canSend(Lnet/minecraft/server/network/ServerGamePacketListenerImpl;Lnet/minecraft/network/protocol/common/custom/CustomPacketPayload$Type;)Z", at = @At("HEAD"), cancellable = true, require = 0)
