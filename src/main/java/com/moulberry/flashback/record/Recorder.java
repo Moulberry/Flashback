@@ -59,6 +59,7 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.TagNetworkSerialization;
 import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.Display;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.Leashable;
@@ -602,6 +603,9 @@ public class Recorder {
                 double lerpHeadRot = livingEntity.lerpHeadSteps > 0 ? livingEntity.lerpYHeadRot : livingEntity.getYHeadRot();
                 position = new Position(livingEntity.lerpTargetX(), entity.lerpTargetY(), entity.lerpTargetZ(),
                     entity.lerpTargetYRot(), entity.lerpTargetXRot(), (float) lerpHeadRot, entity.onGround());
+            } else if (entity instanceof Display display) {
+                position = new Position(display.lerpTargetX(), display.lerpTargetY(), display.lerpTargetZ(),
+                    display.lerpTargetYRot(), display.lerpTargetXRot(), display.getYHeadRot(), entity.onGround());
             } else {
                 var trackingPosition = entity.trackingPosition();
                 position = new Position(trackingPosition.x, trackingPosition.y, trackingPosition.z,
