@@ -902,24 +902,57 @@ public class Recorder {
         // Create player info update packet
         var infoUpdatePacket = new ClientboundPlayerInfoUpdatePacket(EnumSet.of(ClientboundPlayerInfoUpdatePacket.Action.ADD_PLAYER,
             ClientboundPlayerInfoUpdatePacket.Action.UPDATE_LISTED, ClientboundPlayerInfoUpdatePacket.Action.UPDATE_DISPLAY_NAME), List.of());
-        infoUpdatePacket.entries = new ArrayList<>(level.players().size());
+        infoUpdatePacket.entries = new ArrayList<>();
         Set<UUID> addedEntries = new HashSet<>();
-        for (AbstractClientPlayer player : level.players()) {
-            if (addedEntries.add(player.getUUID())) {
-                PlayerInfo info = player.getPlayerInfo();
-                if (info != null) {
-                    infoUpdatePacket.entries.add(new ClientboundPlayerInfoUpdatePacket.Entry(player.getUUID(),
-                        player.getGameProfile(), true, info.getLatency(), info.getGameMode(), info.getTabListDisplayName(), info.showHat(), info.getTabListOrder(), null));
-                } else {
-                    infoUpdatePacket.entries.add(new ClientboundPlayerInfoUpdatePacket.Entry(player.getUUID(),
-                        player.getGameProfile(), true, 0, GameType.DEFAULT_MODE, player.getDisplayName(), true, 0, null));
-                }
-            }
-        }
+        Set<UUID> addedWithValidProperties = new HashSet<>();
         for (PlayerInfo info : connection.getListedOnlinePlayers()) {
+            boolean isValidProperties = !info.getProfile().getProperties().isEmpty();
             if (addedEntries.add(info.getProfile().getId())) {
                 infoUpdatePacket.entries.add(new ClientboundPlayerInfoUpdatePacket.Entry(info.getProfile().getId(),
                     info.getProfile(), true, info.getLatency(), info.getGameMode(), info.getTabListDisplayName(), info.showHat(), info.getTabListOrder(), null));
+                if (isValidProperties) {
+                    addedWithValidProperties.add(info.getProfile().getId());
+                }
+            }
+        }
+        for (PlayerInfo info : connection.getOnlinePlayers()) {
+            boolean isValidProperties = !info.getProfile().getProperties().isEmpty();
+            boolean add = false;
+            if (addedEntries.add(info.getProfile().getId())) {
+                add = true;
+            } else if (isValidProperties && !addedWithValidProperties.contains(info.getProfile().getId())) {
+                infoUpdatePacket.entries.removeIf(entry -> entry.profileId().equals(info.getProfile().getId()));
+                add = true;
+            }
+            if (add) {
+                infoUpdatePacket.entries.add(new ClientboundPlayerInfoUpdatePacket.Entry(info.getProfile().getId(),
+                    info.getProfile(), false, info.getLatency(), info.getGameMode(), info.getTabListDisplayName(), info.showHat(), info.getTabListOrder(), null));
+                if (isValidProperties) {
+                    addedWithValidProperties.add(info.getProfile().getId());
+                }
+            }
+        }
+        for (AbstractClientPlayer player : level.players()) {
+            PlayerInfo info = player.getPlayerInfo();
+            if (info != null) {
+                boolean isValidProperties = !info.getProfile().getProperties().isEmpty();
+                boolean add = false;
+                if (addedEntries.add(info.getProfile().getId())) {
+                    add = true;
+                } else if (isValidProperties && !addedWithValidProperties.contains(info.getProfile().getId())) {
+                    infoUpdatePacket.entries.removeIf(entry -> entry.profileId().equals(info.getProfile().getId()));
+                    add = true;
+                }
+                if (add) {
+                    infoUpdatePacket.entries.add(new ClientboundPlayerInfoUpdatePacket.Entry(player.getUUID(),
+                        player.getGameProfile(), false, info.getLatency(), info.getGameMode(), info.getTabListDisplayName(), info.showHat(), info.getTabListOrder(), null));
+                    if (isValidProperties) {
+                        addedWithValidProperties.add(info.getProfile().getId());
+                    }
+                }
+            } else if (addedEntries.add(player.getUUID())) {
+                infoUpdatePacket.entries.add(new ClientboundPlayerInfoUpdatePacket.Entry(player.getUUID(),
+                    player.getGameProfile(), false, 0, GameType.DEFAULT_MODE, player.getDisplayName(), true, 0, null));
             }
         }
         gamePackets.add(infoUpdatePacket);
