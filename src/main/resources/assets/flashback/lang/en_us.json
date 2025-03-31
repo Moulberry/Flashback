@@ -1,4 +1,5 @@
 {
+  "modmenu.descriptionTranslation.flashback": "Record your gameplay, view the recordings and export cinematic shots",
   "flashback.select_replay": "Select Replay",
   "flashback.select_replay.open": "Open Replay",
   "flashback.select_replay.loading_replays": "Loading Replays",
