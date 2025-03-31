@@ -43,7 +43,11 @@ public class DistantHorizonsSupport {
 
                     ReplayServer replayServer = Flashback.getReplayServer();
                     REPLAY_SAVE_STRUCTURE.pathOverrides.clear();
-                    REPLAY_SAVE_STRUCTURE.pathOverrides.putAll(replayServer.getMetadata().distantHorizonPaths);
+                    for (Map.Entry<String, File> entry : replayServer.getMetadata().distantHorizonPaths.entrySet()) {
+                        if (entry.getValue().exists()) {
+                            REPLAY_SAVE_STRUCTURE.pathOverrides.put(entry.getKey(), entry.getValue());
+                        }
+                    }
 
                     DhApi.overrides.bind(IDhApiSaveStructure.class, REPLAY_SAVE_STRUCTURE);
                     boundReplaySaveStructure = true;
