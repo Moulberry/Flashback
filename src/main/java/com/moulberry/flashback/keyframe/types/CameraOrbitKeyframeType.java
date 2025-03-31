@@ -5,6 +5,7 @@ import com.moulberry.flashback.keyframe.Keyframe;
 import com.moulberry.flashback.keyframe.KeyframeType;
 import com.moulberry.flashback.keyframe.change.KeyframeChange;
 import com.moulberry.flashback.keyframe.change.KeyframeChangeCameraPosition;
+import com.moulberry.flashback.keyframe.change.KeyframeChangeCameraPositionOrbit;
 import com.moulberry.flashback.keyframe.handler.KeyframeHandler;
 import com.moulberry.flashback.keyframe.impl.CameraKeyframe;
 import com.moulberry.flashback.keyframe.impl.CameraOrbitKeyframe;
@@ -27,7 +28,7 @@ public class CameraOrbitKeyframeType implements KeyframeType<CameraOrbitKeyframe
 
     @Override
     public Class<? extends KeyframeChange> keyframeChangeType() {
-        return KeyframeChangeCameraPosition.class;
+        return KeyframeChangeCameraPositionOrbit.class;
     }
 
     @Override
