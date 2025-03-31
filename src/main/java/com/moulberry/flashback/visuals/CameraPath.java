@@ -138,7 +138,7 @@ public class CameraPath {
 
         for (int trackIndex = 0; trackIndex < scene.keyframeTracks.size(); trackIndex++) {
             KeyframeTrack keyframeTrack = scene.keyframeTracks.get(trackIndex);
-            if (keyframeTrack.enabled && keyframeTrack.keyframeType.keyframeChangeType() == KeyframeChangeCameraPosition.class && !keyframeTrack.keyframesByTick.isEmpty()) {
+            if (keyframeTrack.enabled && isChangeCameraKeyframeType(keyframeTrack.keyframeType.keyframeChangeType()) && !keyframeTrack.keyframesByTick.isEmpty()) {
                 var lastEntry = keyframeTrack.keyframesByTick.floorEntry(replayTick);
                 var nextEntry = keyframeTrack.keyframesByTick.ceilingEntry(replayTick + 1);
 
@@ -160,7 +160,7 @@ public class CameraPath {
 
         for (int trackIndex = 0; trackIndex < scene.keyframeTracks.size(); trackIndex++) {
             KeyframeTrack keyframeTrack = scene.keyframeTracks.get(trackIndex);
-            if (keyframeTrack.enabled &&keyframeTrack.keyframeType.keyframeChangeType() == KeyframeChangeCameraPosition.class && !keyframeTrack.keyframesByTick.isEmpty()) {
+            if (keyframeTrack.enabled && isChangeCameraKeyframeType(keyframeTrack.keyframeType.keyframeChangeType()) && !keyframeTrack.keyframesByTick.isEmpty()) {
                 var lastLastEntry = lastCameraTick == -1 ? null : keyframeTrack.keyframesByTick.floorEntry(lastCameraTick - 1);
                 var nextNextEntry = nextCameraTick == -1 ? null : keyframeTrack.keyframesByTick.ceilingEntry(nextCameraTick + 1);
 
@@ -306,13 +306,17 @@ public class CameraPath {
         cameraPoseStack.popPose();
     }
 
+    private static boolean isChangeCameraKeyframeType(Class<? extends KeyframeChange> clazz) {
+        return clazz == KeyframeChangeCameraPosition.class || clazz == KeyframeChangeCameraPositionOrbit.class;
+    }
+
     private static class CapturingKeyframeHandler implements KeyframeHandler {
         private Vector3d position;
         private Quaterniond angle;
 
         @Override
         public boolean supportsKeyframeChange(Class<? extends KeyframeChange> clazz) {
-            return clazz == KeyframeChangeCameraPosition.class;
+            return isChangeCameraKeyframeType(clazz);
         }
 
         @Override

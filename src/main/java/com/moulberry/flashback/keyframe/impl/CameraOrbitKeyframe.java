@@ -8,27 +8,15 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
 import com.google.gson.JsonSerializationContext;
 import com.google.gson.JsonSerializer;
-import com.moulberry.flashback.Interpolation;
 import com.moulberry.flashback.editor.ui.ImGuiHelper;
 import com.moulberry.flashback.keyframe.Keyframe;
 import com.moulberry.flashback.keyframe.KeyframeType;
 import com.moulberry.flashback.keyframe.change.KeyframeChange;
-import com.moulberry.flashback.keyframe.change.KeyframeChangeCameraPosition;
-import com.moulberry.flashback.keyframe.handler.KeyframeHandler;
+import com.moulberry.flashback.keyframe.change.KeyframeChangeCameraPositionOrbit;
 import com.moulberry.flashback.keyframe.interpolation.InterpolationType;
 import com.moulberry.flashback.keyframe.types.CameraOrbitKeyframeType;
 import com.moulberry.flashback.spline.CatmullRom;
 import com.moulberry.flashback.spline.Hermite;
-import com.moulberry.flashback.state.EditorState;
-import com.moulberry.flashback.state.EditorStateManager;
-import imgui.ImGui;
-import imgui.type.ImFloat;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.player.LocalPlayer;
-import net.minecraft.util.Mth;
-import net.minecraft.world.entity.Entity;
-import net.minecraft.world.phys.Vec3;
-import org.joml.Quaternionf;
 import org.joml.Vector3d;
 
 import java.lang.reflect.Type;
@@ -98,21 +86,8 @@ public class CameraOrbitKeyframe extends Keyframe {
         }
     }
 
-    private static KeyframeChangeCameraPosition createChangeFrom(Vector3d center, float distance, float yaw, float pitch) {
-        float pitchRadians = (float) Math.toRadians(pitch);
-        float yawRadians = (float) Math.toRadians(-yaw);
-        float cosYaw = Mth.cos(yawRadians);
-        float sinYaw = Mth.sin(yawRadians);
-        float cosPitch = Mth.cos(pitchRadians);
-        float sinPitch = Mth.sin(pitchRadians);
-
-        Vector3d look = new Vector3d(sinYaw * cosPitch, -sinPitch, cosYaw * cosPitch);
-        Vector3d cameraPosition = new Vector3d(center).sub(look.mul(distance));
-        LocalPlayer player = Minecraft.getInstance().player;
-        if (player != null) {
-            cameraPosition.y -= player.getEyeHeight();
-        }
-        return new KeyframeChangeCameraPosition(cameraPosition, yaw, pitch, 0.0f);
+    private static KeyframeChangeCameraPositionOrbit createChangeFrom(Vector3d center, float distance, float yaw, float pitch) {
+        return new KeyframeChangeCameraPositionOrbit(center, distance, yaw, pitch);
     }
 
     @Override
