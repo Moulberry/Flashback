@@ -6,6 +6,7 @@ import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.llamalad7.mixinextras.sugar.Local;
 import com.llamalad7.mixinextras.sugar.ref.LocalRef;
 import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.math.Axis;
 import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.ext.ItemInHandRendererExt;
 import com.moulberry.flashback.ext.RemotePlayerExt;
@@ -106,10 +107,10 @@ public abstract class MixinItemInHandRenderer implements ItemInHandRendererExt {
         float h = Mth.lerp(partialTick, clientPlayer.xRotO, clientPlayer.getXRot());
          int handRenderSelection = evaluateWhichHandsToRender(clientPlayer);
         if (clientPlayer instanceof RemotePlayerExt remotePlayerExt) {
-//            float xBob = remotePlayerExt.flashback$getXBob(partialTick);
-//            float yBob = remotePlayerExt.flashback$getYBob(partialTick);
-//            poseStack.mulPose(Axis.XP.rotationDegrees((clientPlayer.getViewXRot(partialTick) - xBob) * 0.1f));
-//            poseStack.mulPose(Axis.YP.rotationDegrees((clientPlayer.getViewYRot(partialTick) - yBob) * 0.1f));
+            float xBob = remotePlayerExt.flashback$getXBob(partialTick);
+            float yBob = remotePlayerExt.flashback$getYBob(partialTick);
+            poseStack.mulPose(Axis.XP.rotationDegrees((clientPlayer.getViewXRot(partialTick) - xBob) * 0.1f));
+            poseStack.mulPose(Axis.YP.rotationDegrees((clientPlayer.getViewYRot(partialTick) - yBob) * 0.1f));
         }
         if ((handRenderSelection & RENDER_MAIN_HAND) != 0) {
             l = interactionHand == InteractionHand.MAIN_HAND ? g : 0.0f;
