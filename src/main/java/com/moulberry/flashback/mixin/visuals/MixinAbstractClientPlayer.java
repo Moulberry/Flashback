@@ -5,6 +5,7 @@ import com.moulberry.flashback.FilePlayerSkin;
 import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.state.EditorState;
 import com.moulberry.flashback.state.EditorStateManager;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.multiplayer.PlayerInfo;
 import net.minecraft.client.player.AbstractClientPlayer;
@@ -37,7 +38,11 @@ public abstract class MixinAbstractClientPlayer extends Player {
     @Inject(method = "<init>", at = @At("RETURN"))
     public void postInit(ClientLevel clientLevel, GameProfile gameProfile, CallbackInfo ci) {
         if (Flashback.isInReplay()) {
-            this.getPlayerInfo();
+            if (Minecraft.getInstance().getConnection() != null) {
+                try {
+                    this.getPlayerInfo();
+                } catch (Exception ignored) {}
+            }
             this.fallbackPlayerInfo = new PlayerInfo(gameProfile, false);
         }
     }
