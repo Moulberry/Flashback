@@ -22,6 +22,7 @@
     "playback.MixinArmorStandRenderer",
     "playback.MixinCamera",
     "playback.MixinClientCommonPacketListenerImpl",
+    "playback.MixinClientPacketListener",
     "playback.MixinGameRenderer",
     "playback.MixinItemInHandRenderer",
     "playback.MixinRemotePlayer",
