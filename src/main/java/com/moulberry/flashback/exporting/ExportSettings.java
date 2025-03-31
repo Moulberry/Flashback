@@ -21,6 +21,6 @@ public record ExportSettings(@Nullable String name, EditorState editorState,
                              // Audio
                              boolean recordAudio, boolean stereoAudio, AudioCodec audioCodec,
                              // Output
-                             Path output) {
+                             Path output, @Nullable String pngSequenceFormat) {
 
 }

@@ -95,7 +95,7 @@ public class ExportScreenshotWindow {
                             config.resolution[0], config.resolution[1], tick, tick,
                             1, false, VideoContainer.PNG_SEQUENCE, null, null, 0, transparent, ssaa, noGui,
                             false, false, null,
-                            path);
+                            path, null);
 
                         close = true;
                         Utils.exportSequenceCount += 1;

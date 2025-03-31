@@ -50,8 +50,8 @@ public class StartExportWindow {
     private static VideoContainer[] supportedContainersWithTransparency = null;
 
     private static final ImString bitrate = ImGuiHelper.createResizableImString("20m");
-
     private static final ImString jobName = ImGuiHelper.createResizableImString("");
+    private static final ImString pngSequenceFormat = ImGuiHelper.createResizableImString("%04d");
 
     private static String installedIncompatibleModsString = null;
     private static final List<String> potentialIncompatibleMods = List.of(
@@ -299,6 +299,7 @@ public class StartExportWindow {
         config.container = ImGuiHelper.enumCombo("Container", config.container, containers);
 
         if (config.container == VideoContainer.PNG_SEQUENCE) {
+            ImGui.inputText("Filenames", pngSequenceFormat);
             return;
         }
 
@@ -400,7 +401,7 @@ public class StartExportWindow {
                     config.resolution[0], config.resolution[1], start, end,
                     Math.max(1, config.framerate[0]), config.resetRng, config.container, useVideoCodec, encoder, numBitrate, transparent, config.ssaa, config.noGui,
                     shouldRecordAudio, config.stereoAudio, useAudioCodec,
-                    path);
+                    path, ImGuiHelper.getString(pngSequenceFormat));
             }
 
             return null;

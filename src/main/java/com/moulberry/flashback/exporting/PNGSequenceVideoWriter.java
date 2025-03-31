@@ -77,12 +77,31 @@ public class PNGSequenceVideoWriter implements VideoWriter {
 
                     Path output = this.settings.output();
                     if (encodeMultiple) {
+                        String format = this.settings.pngSequenceFormat();
+                        if (format == null) {
+                            format = "%04d";
+                        }
                         if (outputIsDirectory) {
-                            String filename = String.format("%04d.png", this.sequenceNumber);
+                            String filename;
+                            try {
+                                filename = String.format(format, this.sequenceNumber);
+                            } catch (Exception e) {
+                                filename = String.format("%04d", this.sequenceNumber);
+                            }
+                            if (!filename.endsWith(".png")) {
+                                filename += ".png";
+                            }
                             src.writeToFile(output.resolve(filename));
                         } else {
-                            String filename = output.getFileName().toString();
-                            filename += String.format("-%04d.png", this.sequenceNumber);
+                            String filename = output.getFileName().toString() + "-";
+                            try {
+                                filename += String.format(format, this.sequenceNumber);
+                            } catch (Exception e) {
+                                filename += String.format("%04d", this.sequenceNumber);
+                            }
+                            if (!filename.endsWith(".png")) {
+                                filename += ".png";
+                            }
                             src.writeToFile(output.getParent().resolve(filename));
                         }
                     } else {
