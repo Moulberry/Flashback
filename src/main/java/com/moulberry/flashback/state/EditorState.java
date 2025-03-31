@@ -6,24 +6,13 @@ import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.FlashbackGson;
 import com.moulberry.flashback.combo_options.GlowingOverride;
 import com.moulberry.flashback.configuration.FlashbackConfig;
-import com.moulberry.flashback.editor.ui.ReplayUI;
-import com.moulberry.flashback.keyframe.Keyframe;
-import com.moulberry.flashback.keyframe.KeyframeType;
 import com.moulberry.flashback.keyframe.change.KeyframeChange;
 import com.moulberry.flashback.keyframe.handler.KeyframeHandler;
-import com.moulberry.flashback.keyframe.impl.CameraKeyframe;
-import com.moulberry.flashback.keyframe.types.CameraKeyframeType;
-import com.moulberry.flashback.keyframe.types.CameraOrbitKeyframeType;
-import com.moulberry.flashback.playback.ReplayServer;
 import com.moulberry.flashback.visuals.ReplayVisuals;
-import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
-import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
-import net.minecraft.client.multiplayer.PlayerInfo;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
@@ -32,7 +21,6 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.function.Consumer;
 
 public class EditorState {
 
