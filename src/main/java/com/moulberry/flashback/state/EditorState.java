@@ -156,7 +156,7 @@ public class EditorState {
 
             KeyframeChange change = keyframeTrack.createKeyframeChange(tick);
             if (change == null) {
-                if (keyframeHandler.alwaysApplyLastKeyframe() && !keyframeTrack.keyframesByTick.isEmpty()) {
+                if (keyframeHandler.alwaysApplyLastKeyframe() && !keyframeTrack.keyframeType.neverApplyLastKeyframe() && !keyframeTrack.keyframesByTick.isEmpty()) {
                     KeyframeTrack oldTrack = maybeApplyLastTick.get(keyframeChangeType);
                     if (oldTrack == null || keyframeTrack.keyframesByTick.lastKey() > oldTrack.keyframesByTick.lastKey()) {
                         maybeApplyLastTick.put(keyframeChangeType, keyframeTrack);

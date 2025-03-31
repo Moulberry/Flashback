@@ -25,6 +25,9 @@ public interface KeyframeType<T extends Keyframe> {
     default boolean allowChangingTimelineTick() {
         return true;
     }
+    default boolean neverApplyLastKeyframe() {
+        return false;
+    }
 
     interface KeyframeCreatePopup<T extends Keyframe> {
         @Nullable T render();
