@@ -60,6 +60,8 @@ import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
+import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
+import net.fabricmc.fabric.api.command.v2.FabricEntitySelectorReader;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.ChatFormatting;
@@ -72,7 +74,10 @@ import net.minecraft.client.gui.screens.multiplayer.JoinMultiplayerScreen;
 import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.server.IntegratedServer;
+import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
+import net.minecraft.commands.arguments.EntityArgument;
+import net.minecraft.commands.arguments.selector.EntitySelector;
 import net.minecraft.core.*;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
@@ -113,6 +118,8 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -142,6 +149,8 @@ public class Flashback implements ModInitializer, ClientModInitializer {
     private static final List<Path> pendingReplaySave = new ArrayList<>();
     private static final List<Path> pendingReplayRecovery = new ArrayList<>();
     private static List<String> pendingUnsupportedModsForRecording = null;
+
+    private static boolean isOpeningReplay = false;
 
     public static long worldBorderLerpStartTime = -1L;
 
@@ -367,6 +376,56 @@ public class Flashback implements ModInitializer, ClientModInitializer {
                     return 0;
                 })))));
             dispatcher.register(flashback);
+        });
+
+        CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
+            if (!Flashback.isInReplay() && !isOpeningReplay) {
+                return;
+            }
+
+            String hideName = "hide";
+            if (dispatcher.findNode(Collections.singleton("hide")) != null) {
+                hideName = "hide_flashback";
+            }
+            var hideEntity = Commands.literal(hideName).then(Commands.argument("targets", EntityArgument.entities()).executes(command -> {
+                EditorState editorState = EditorStateManager.getCurrent();
+                if (!Flashback.isInReplay() || editorState == null) {
+                    command.getSource().sendFailure(Component.literal("/hide is only available inside a Flashback replay"));
+                    return 0;
+                }
+                var entities = EntityArgument.getEntities(command, "targets");
+
+                for (Entity entity : entities) {
+                    editorState.hideDuringExport.add(entity.getUUID());
+                }
+
+                int count = entities.size();
+                command.getSource().sendSuccess(() -> Component.literal(count + " entities are now hidden during export"), false);
+                return 0;
+            }));
+            dispatcher.register(hideEntity);
+
+            String showName = "show";
+            if (dispatcher.findNode(Collections.singleton("show")) != null) {
+                showName = "show_flashback";
+            }
+            var showEntity = Commands.literal(showName).then(Commands.argument("targets", EntityArgument.entities()).executes(command -> {
+                EditorState editorState = EditorStateManager.getCurrent();
+                if (!Flashback.isInReplay() || editorState == null) {
+                    command.getSource().sendFailure(Component.literal("/show is only available inside a Flashback replay"));
+                    return 0;
+                }
+                var entities = EntityArgument.getEntities(command, "targets");
+
+                for (Entity entity : entities) {
+                    editorState.hideDuringExport.remove(entity.getUUID());
+                }
+
+                int count = entities.size();
+                command.getSource().sendSuccess(() -> Component.literal(count + " entities are no longer hidden during export"), false);
+                return 0;
+            }));
+            dispatcher.register(showEntity);
         });
 
         ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
@@ -873,6 +932,8 @@ public class Flashback implements ModInitializer, ClientModInitializer {
 
         // Actually load
         try {
+            isOpeningReplay = true;
+
             UUID replayUuid = UUID.randomUUID();
             Path replayTemp = TempFolderProvider.createTemp(TempFolderProvider.TempFolderType.SERVER, replayUuid);
             FileUtils.deleteDirectory(replayTemp.toFile());
@@ -920,6 +981,8 @@ public class Flashback implements ModInitializer, ClientModInitializer {
             TaskbarManager.launchTaskbarManager();
         } catch (Exception e) {
             throw new RuntimeException(e);
+        } finally {
+            isOpeningReplay = false;
         }
     }
 }
