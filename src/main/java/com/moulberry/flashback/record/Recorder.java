@@ -580,6 +580,8 @@ public class Recorder {
         this.lastSwingTime = player.swingTime;
         this.wasSwinging = player.swinging;
 
+        gamePackets.add(new ClientboundSetEntityMotionPacket(player.getId(), player.getDeltaMovement()));
+
         this.asyncReplaySaver.writeGamePackets(this.gamePacketCodec, gamePackets);
     }
 
