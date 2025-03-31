@@ -50,6 +50,11 @@ public class TimelapseKeyframeType implements KeyframeType<TimelapseKeyframe> {
     }
 
     @Override
+    public boolean neverApplyLastKeyframe() {
+        return true;
+    }
+
+    @Override
     public @Nullable TimelapseKeyframe createDirect() {
         return null;
     }
