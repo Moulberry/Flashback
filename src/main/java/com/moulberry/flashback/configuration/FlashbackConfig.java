@@ -108,6 +108,7 @@ public class FlashbackConfig {
     public String defaultExportPath = null;
 
     public float defaultOverrideFov = 70.0f;
+    public boolean enableOverrideFovByDefault = false;
 
     public ForceDefaultExportSettings forceDefaultExportSettings = new ForceDefaultExportSettings();
 

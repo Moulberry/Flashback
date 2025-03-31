@@ -5,6 +5,7 @@ import com.moulberry.flashback.FilePlayerSkin;
 import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.FlashbackGson;
 import com.moulberry.flashback.combo_options.GlowingOverride;
+import com.moulberry.flashback.configuration.FlashbackConfig;
 import com.moulberry.flashback.editor.ui.ReplayUI;
 import com.moulberry.flashback.keyframe.Keyframe;
 import com.moulberry.flashback.keyframe.KeyframeType;
@@ -61,6 +62,14 @@ public class EditorState {
     public EditorState() {
         this.scenes = new ArrayList<>();
         this.scenes.add(new EditorScene("Scene 1"));
+
+        FlashbackConfig config = Flashback.getConfig();
+        if (config.enableOverrideFovByDefault) {
+            this.replayVisuals.overrideFov = true;
+            if (this.replayVisuals.overrideFovAmount < 0) {
+                this.replayVisuals.overrideFovAmount = config.defaultOverrideFov;
+            }
+        }
     }
 
     public EditorScene currentScene() {
