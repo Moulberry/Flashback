@@ -14,10 +14,8 @@ accessible method net/minecraft/tags/TagNetworkSerialization serializeToNetwork 
 
 accessible field net/minecraft/world/entity/LivingEntity lerpHeadSteps I
 accessible field net/minecraft/world/entity/LivingEntity lerpYHeadRot D
-accessible field net/minecraft/world/entity/LivingEntity lerpSteps I
 accessible method net/minecraft/world/entity/Entity lerpPositionAndRotationStep (IDDDDD)V
 accessible method net/minecraft/world/entity/LivingEntity lerpHeadRotationStep (ID)V
-accessible method net/minecraft/world/entity/LivingEntity tickHeadTurn (FF)F
 
 accessible field net/minecraft/client/gui/components/BossHealthOverlay events Ljava/util/Map;
 
@@ -150,7 +148,6 @@ accessible field net/minecraft/client/renderer/SectionOcclusionGraph fullUpdateT
 accessible field net/minecraft/client/renderer/SectionOcclusionGraph needsFullUpdate Z
 accessible field com/mojang/blaze3d/platform/Window framebufferWidth I
 accessible field com/mojang/blaze3d/platform/Window framebufferHeight I
-accessible field com/mojang/blaze3d/pipeline/RenderTarget colorTextureId I
 accessible field net/minecraft/client/Minecraft mainRenderTarget Lcom/mojang/blaze3d/pipeline/RenderTarget;
 mutable field net/minecraft/client/Minecraft mainRenderTarget Lcom/mojang/blaze3d/pipeline/RenderTarget;
 accessible field net/minecraft/client/multiplayer/ClientPacketListener random Lnet/minecraft/util/RandomSource;

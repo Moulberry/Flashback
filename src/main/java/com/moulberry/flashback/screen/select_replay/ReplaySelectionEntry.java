@@ -147,9 +147,7 @@ public abstract class ReplaySelectionEntry extends ObjectSelectionList.Entry<Rep
 
             guiGraphics.drawString(this.minecraft.font, "Replays: " + this.replayCount, x + ICON_WIDTH + 3, textY + 3, 0xFF808080, false);
 
-            RenderSystem.enableBlend();
             guiGraphics.blitSprite(RenderType::guiTextured, FOLDER_SPRITE, x, y, ICON_WIDTH, ICON_HEIGHT);
-            RenderSystem.disableBlend();
 
             if (this.minecraft.options.touchscreen().get() || hovered) {
                 guiGraphics.fill(x, y, x + ICON_WIDTH, y + ICON_HEIGHT, -1601138544);
@@ -229,9 +227,7 @@ public abstract class ReplaySelectionEntry extends ObjectSelectionList.Entry<Rep
             guiGraphics.drawString(this.minecraft.font, fileAndTime, x + ICON_WIDTH + 3, y + this.minecraft.font.lineHeight + 3, 0xFF808080, false);
             guiGraphics.drawString(this.minecraft.font, info, x + ICON_WIDTH + 3, y + this.minecraft.font.lineHeight + this.minecraft.font.lineHeight + 3, 0xFF808080, false);
 
-            RenderSystem.enableBlend();
             guiGraphics.blit(RenderType::guiTextured, this.icon.textureLocation(), x, y, 0.0f, 0.0f, 32, 32, 32, 32);
-            RenderSystem.disableBlend();
 
             if (this.minecraft.options.touchscreen().get() || hovered) {
                 guiGraphics.fill(x, y, x + ICON_WIDTH, y + ICON_HEIGHT, -1601138544);

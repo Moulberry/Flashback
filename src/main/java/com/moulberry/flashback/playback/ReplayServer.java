@@ -671,7 +671,7 @@ public class ReplayServer extends IntegratedServer {
                             entity.setYRot(yaw);
                             entity.setXRot(pitch);
                         } else {
-                            entity.moveTo(x, y, z, yaw, pitch);
+                            entity.snapTo(x, y, z, yaw, pitch);
                             updatePositionOfPassengers(entity);
                         }
 
@@ -752,7 +752,7 @@ public class ReplayServer extends IntegratedServer {
         return false;
     }
 
-    public static final TicketType<ChunkPos> ENTITY_LOAD_TICKET = TicketType.create("replay_entity_load", Comparator.comparingLong(ChunkPos::toLong), 5);
+    public static final TicketType ENTITY_LOAD_TICKET = new TicketType(20L, false, TicketType.TicketUse.LOADING_AND_SIMULATION);
 
     @Override
     public void loadLevel() {
@@ -962,8 +962,8 @@ public class ReplayServer extends IntegratedServer {
                     replayViewer.lastFirstPersonSaturationLevel = foodData.getSaturationLevel();
                     ServerPlayNetworking.send(replayViewer, new FlashbackRemoteFoodData(playerCamera.getId(), foodData.getFoodLevel(), foodData.getSaturationLevel()));
 
-                    replayViewer.lastFirstPersonSelectedSlot = inventory.selected;
-                    ServerPlayNetworking.send(replayViewer, new FlashbackRemoteSelectHotbarSlot(playerCamera.getId(), inventory.selected));
+                    replayViewer.lastFirstPersonSelectedSlot = inventory.getSelectedSlot();
+                    ServerPlayNetworking.send(replayViewer, new FlashbackRemoteSelectHotbarSlot(playerCamera.getId(), inventory.getSelectedSlot()));
 
                     for (int i = 0; i < 9; i++) {
                         ItemStack hotbarItem = inventory.getItem(i);
@@ -988,9 +988,9 @@ public class ReplayServer extends IntegratedServer {
                         ServerPlayNetworking.send(replayViewer, new FlashbackRemoteFoodData(playerCamera.getId(), foodData.getFoodLevel(), foodData.getSaturationLevel()));
                     }
 
-                    if (replayViewer.lastFirstPersonSelectedSlot != inventory.selected) {
-                        replayViewer.lastFirstPersonSelectedSlot = inventory.selected;
-                        ServerPlayNetworking.send(replayViewer, new FlashbackRemoteSelectHotbarSlot(playerCamera.getId(), inventory.selected));
+                    if (replayViewer.lastFirstPersonSelectedSlot != inventory.getSelectedSlot()) {
+                        replayViewer.lastFirstPersonSelectedSlot = inventory.getSelectedSlot();
+                        ServerPlayNetworking.send(replayViewer, new FlashbackRemoteSelectHotbarSlot(playerCamera.getId(), inventory.getSelectedSlot()));
                     }
 
                     for (int i = 0; i < 9; i++) {
@@ -1099,7 +1099,7 @@ public class ReplayServer extends IntegratedServer {
         for (ServerLevel level : this.getAllLevels()) {
             for (Entity entity : level.getAllEntities()) {
                 ChunkPos chunkPos = new ChunkPos(entity.blockPosition());
-                level.getChunkSource().addRegionTicket(ENTITY_LOAD_TICKET, chunkPos, 3, chunkPos);
+                level.getChunkSource().addTicketWithRadius(ENTITY_LOAD_TICKET, chunkPos, 3);
             }
         }
 

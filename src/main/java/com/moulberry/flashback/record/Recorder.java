@@ -105,6 +105,7 @@ public class Recorder {
     private int writtenTicks = 0;
     private final FlashbackMeta metadata = new FlashbackMeta();
     private boolean hasTakenScreenshot = false;
+    private NativeImage finishedScreenshot = null;
 
     private record PacketWithPhase(Packet<?> packet, ConnectionProtocol phase){}
     private final Queue<PacketWithPhase> pendingPackets = new ConcurrentLinkedQueue<>();
@@ -282,9 +283,12 @@ public class Recorder {
             this.writtenTicksInChunk += 1;
             this.writtenTicks += 1;
 
+            if (this.finishedScreenshot != null) {
+                this.asyncReplaySaver.writeIcon(this.finishedScreenshot);
+                this.finishedScreenshot = null;
+            }
             if (!this.hasTakenScreenshot && ((this.writtenTicks >= 20 && minecraft.screen == null) || close)) {
-                NativeImage nativeImage = Screenshot.takeScreenshot(minecraft.getMainRenderTarget());
-                this.asyncReplaySaver.writeIcon(nativeImage);
+                Screenshot.takeScreenshot(minecraft.getMainRenderTarget(), image -> this.finishedScreenshot = image);
                 this.hasTakenScreenshot = true;
             }
 
@@ -488,7 +492,7 @@ public class Recorder {
                 gamePackets.add(new ClientboundSetHealthPacket(player.getHealth(), foodData.getFoodLevel(), foodData.getSaturationLevel()));
             }
 
-            int selectedSlot = player.getInventory().selected;
+            int selectedSlot = player.getInventory().getSelectedSlot();
             if (selectedSlot != this.lastSelectedSlot) {
                 gamePackets.add(new ClientboundSetHeldSlotPacket(selectedSlot));
                 this.lastSelectedSlot = selectedSlot;
@@ -609,17 +613,19 @@ public class Recorder {
             }
 
             Position position;
+
+            float headRot = entity.getYHeadRot();
             if (entity instanceof LivingEntity livingEntity) {
-                double lerpHeadRot = livingEntity.lerpHeadSteps > 0 ? livingEntity.lerpYHeadRot : livingEntity.getYHeadRot();
-                position = new Position(livingEntity.lerpTargetX(), entity.lerpTargetY(), entity.lerpTargetZ(),
-                    entity.lerpTargetYRot(), entity.lerpTargetXRot(), (float) lerpHeadRot, entity.onGround());
-            } else if (entity instanceof Display display) {
-                position = new Position(display.lerpTargetX(), display.lerpTargetY(), display.lerpTargetZ(),
-                    display.lerpTargetYRot(), display.lerpTargetXRot(), display.getYHeadRot(), entity.onGround());
+                headRot = livingEntity.lerpHeadSteps > 0 ? (float) livingEntity.lerpYHeadRot : livingEntity.getYHeadRot();
+            }
+
+            var interpolation = entity.getInterpolation();
+            if (interpolation != null && interpolation.hasActiveInterpolation()) {
+                var xyz = interpolation.position();
+                position = new Position(xyz.x, xyz.y, xyz.z, interpolation.yRot(), interpolation.xRot(), headRot, entity.onGround());
             } else {
-                var trackingPosition = entity.trackingPosition();
-                position = new Position(trackingPosition.x, trackingPosition.y, trackingPosition.z,
-                    entity.getYRot(), entity.getXRot(), entity.getYHeadRot(), entity.onGround());
+                var xyz = entity.trackingPosition();
+                position = new Position(xyz.x, xyz.y, xyz.z, entity.getYRot(), entity.getXRot(), headRot, entity.onGround());
             }
             Position lastPosition = this.lastPositions.get(entity);
 
@@ -1095,7 +1101,7 @@ public class Recorder {
             this.lastSaturationLevel = foodData.getSaturationLevel();
             gamePackets.add(new ClientboundSetHealthPacket(localPlayer.getHealth(), foodData.getFoodLevel(), foodData.getSaturationLevel()));
 
-            int selectedSlot = localPlayer.getInventory().selected;
+            int selectedSlot = localPlayer.getInventory().getSelectedSlot();
             this.lastSelectedSlot = selectedSlot;
             gamePackets.add(new ClientboundSetHeldSlotPacket(selectedSlot));
 

@@ -40,7 +40,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Mixin(GameRenderer.class)
 public abstract class MixinGameRenderer {
 
-
     @WrapOperation(method = "render", at=@At(value = "FIELD", target = "Lnet/minecraft/client/Options;pauseOnLostFocus:Z"))
     public boolean getPauseOnLostFocus(Options instance, Operation<Boolean> original) {
         if (ReplayUI.isActive() || Flashback.EXPORT_JOB != null) {
@@ -69,7 +68,7 @@ public abstract class MixinGameRenderer {
         AccurateEntityPositionHandler.apply(Minecraft.getInstance().level, deltaTracker);
     }
 
-    @Inject(method = "render", at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/systems/RenderSystem;clear(I)V", remap = false, ordinal = 0), cancellable = true)
+    @Inject(method = "render", at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/systems/CommandEncoder;clearDepthTexture(Lcom/mojang/blaze3d/textures/GpuTexture;D)V", remap = false, ordinal = 0), cancellable = true)
     public void render_noGui(DeltaTracker deltaTracker, boolean bl, CallbackInfo ci) {
         if (Flashback.isExporting() && Flashback.EXPORT_JOB.getSettings().noGui()) {
             ci.cancel();

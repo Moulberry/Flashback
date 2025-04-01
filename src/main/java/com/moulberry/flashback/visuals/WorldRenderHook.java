@@ -1,13 +1,6 @@
 package com.moulberry.flashback.visuals;
 
-import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.vertex.BufferBuilder;
-import com.mojang.blaze3d.vertex.BufferUploader;
-import com.mojang.blaze3d.vertex.DefaultVertexFormat;
-import com.mojang.blaze3d.vertex.MeshData;
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.Tesselator;
-import com.mojang.blaze3d.vertex.VertexFormat;
 import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.playback.ReplayServer;
 import com.moulberry.flashback.record.FlashbackMeta;
@@ -17,10 +10,8 @@ import com.moulberry.flashback.state.EditorStateManager;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.renderer.CoreShaders;
 import net.minecraft.client.renderer.GameRenderer;
-import net.minecraft.client.renderer.LightTexture;
-import net.minecraft.network.chat.Component;
+import net.minecraft.client.renderer.RenderType;
 import net.minecraft.resources.ResourceLocation;
 import org.joml.Matrix4f;
 
@@ -39,8 +30,8 @@ public class WorldRenderHook {
 
         FlashbackMeta meta = replayServer.getMetadata();
         if (!meta.replayMarkers.isEmpty()) {
-            BufferBuilder bufferBuilder = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
             var multiBufferSource = Minecraft.getInstance().renderBuffers().bufferSource();
+            var bufferBuilder = multiBufferSource.getBuffer(RenderType.guiTextured(ResourceLocation.parse("flashback:world_marker_circle.png")));
 
             String dimension = Minecraft.getInstance().level.dimension().toString();
 
@@ -84,14 +75,10 @@ public class WorldRenderHook {
                 poseStack.popPose();
             }
 
-            MeshData meshData = bufferBuilder.build();
-            if (meshData != null) {
-                RenderSystem.enableBlend();
-                RenderSystem.defaultBlendFunc();
-                RenderSystem.setShader(CoreShaders.POSITION_TEX_COLOR);
-                RenderSystem.setShaderTexture(0, ResourceLocation.parse("flashback:world_marker_circle.png"));
-                BufferUploader.drawWithShader(meshData);
-            }
+//            MeshData meshData = bufferBuilder.build();
+//            if (meshData != null) {
+//                RenderType.guiTextured(ResourceLocation.parse("flashback:world_marker_circle.png")).draw(meshData);
+//            }
 
             multiBufferSource.endBatch();
         }

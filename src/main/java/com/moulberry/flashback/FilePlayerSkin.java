@@ -54,7 +54,7 @@ public class FilePlayerSkin {
                 model = PlayerSkin.Model.SLIM;
             }
 
-            DynamicTexture dynamicTexture = new DynamicTexture(nativeImage);
+            DynamicTexture dynamicTexture = new DynamicTexture(() -> "file player skin", nativeImage);
 
             ResourceLocation resourceLocation = ResourceLocation.fromNamespaceAndPath("flashback", "skin_from_file/" + UUID.randomUUID());
             Minecraft.getInstance().getTextureManager().register(resourceLocation, dynamicTexture);

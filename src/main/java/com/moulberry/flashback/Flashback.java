@@ -280,11 +280,13 @@ public class Flashback implements ModInitializer, ClientModInitializer {
         ClientPlayNetworking.registerGlobalReceiver(FlashbackInstantlyLerp.TYPE, (payload, context) -> {
             if (Flashback.isInReplay()) {
                 for (Entity entity : Minecraft.getInstance().level.entitiesForRendering()) {
-                    if (entity instanceof LivingEntity && !entity.isRemoved() && !(entity instanceof LocalPlayer)) {
-                        entity.moveTo(entity.lerpTargetX(), entity.lerpTargetY(), entity.lerpTargetZ(),
-                            entity.lerpTargetYRot(), entity.lerpTargetXRot());
+                    if (entity.isInterpolating()) {
+                        var interpolation = entity.getInterpolation();
+                        entity.snapTo(interpolation.position(), interpolation.yRot(), interpolation.xRot());
+                        interpolation.cancel();
+                    } else {
+                        entity.setOldPosAndRot();
                     }
-                    entity.setOldPosAndRot();
                 }
             }
         });
@@ -293,7 +295,7 @@ public class Flashback implements ModInitializer, ClientModInitializer {
             if (Flashback.isInReplay()) {
                 Entity entity = Minecraft.getInstance().level.getEntity(payload.entityId());
                 if (entity instanceof Player player) {
-                    player.getInventory().selected = payload.slot();
+                    player.getInventory().setSelectedSlot(payload.slot());
                 }
             }
         });
@@ -347,8 +349,6 @@ public class Flashback implements ModInitializer, ClientModInitializer {
                 worldBorderLerpStartTime = payload.time();
             }
         });
-
-        ShaderManager.INSTANCE.register();
 
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) -> {
             var flashback = ClientCommandManager.literal("flashback");

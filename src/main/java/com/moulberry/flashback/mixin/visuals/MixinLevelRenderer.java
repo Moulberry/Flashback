@@ -51,10 +51,8 @@ public class MixinLevelRenderer {
         if (this.targets.particles != null) {
             this.targets.particles = framePass.readsAndWrites(this.targets.particles);
         }
-        ResourceHandle<RenderTarget> resourceHandle = this.targets.main;
         framePass.executes(() -> {
             this.renderBuffers.bufferSource().endBatch();
-            resourceHandle.get().bindWrite(false); // Ensure main framebuffer is bound, for some reason this isn't the case with Fabulous in 1.21.4+
 
             PoseStack poseStack = new PoseStack();
             poseStack.mulPose(matrix4f);

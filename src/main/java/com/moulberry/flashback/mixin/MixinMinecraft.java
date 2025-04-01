@@ -54,6 +54,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.block.entity.SkullBlockEntity;
 import net.minecraft.world.level.storage.LevelStorageSource;
 import org.jetbrains.annotations.Nullable;
+import org.lwjgl.opengl.GL11;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -146,11 +147,6 @@ public abstract class MixinMinecraft implements MinecraftExt {
 
     @Shadow @Final public LevelRenderer levelRenderer;
 
-    @Inject(method="<init>", at=@At("RETURN"))
-    public void init(GameConfig gameConfig, CallbackInfo ci) {
-        ReplayUI.init();
-    }
-
     @Inject(method = "pauseGame", at = @At("HEAD"), cancellable = true)
     public void pauseGame(boolean bl, CallbackInfo ci) {
         if (Flashback.EXPORT_JOB != null) {
@@ -194,10 +190,19 @@ public abstract class MixinMinecraft implements MinecraftExt {
         original.call(instance, camera);
     }
 
-    @Inject(method = "runTick", at=@At(value = "INVOKE", target = "Lcom/mojang/blaze3d/pipeline/RenderTarget;blitToScreen(II)V", shift = At.Shift.AFTER))
+    @Inject(method = "runTick", at=@At(value = "INVOKE", target = "Lcom/mojang/blaze3d/pipeline/RenderTarget;blitToScreen()V", shift = At.Shift.AFTER))
     public void afterMainBlit(boolean bl, CallbackInfo ci) {
         if (!RenderSystem.isOnRenderThread()) return;
         ReplayUI.drawOverlay();
+    }
+
+    @Inject(method = "runTick", at=@At(value = "INVOKE", target = "Lcom/mojang/blaze3d/systems/CommandEncoder;clearColorAndDepthTextures(Lcom/mojang/blaze3d/textures/GpuTexture;ILcom/mojang/blaze3d/textures/GpuTexture;D)V", remap = false, shift = At.Shift.AFTER))
+    public void afterClearMain(boolean bl, CallbackInfo ci) {
+        if (!RenderSystem.isOnRenderThread()) return;
+        if (ReplayUI.isActive()) {
+            GL11.glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+            GL11.glClear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT);
+        }
     }
 
     @Unique

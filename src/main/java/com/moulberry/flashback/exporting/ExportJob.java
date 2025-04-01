@@ -3,19 +3,14 @@ package com.moulberry.flashback.exporting;
 import com.mojang.blaze3d.ProjectionType;
 import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.pipeline.TextureTarget;
-import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.platform.Window;
 import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.vertex.*;
 import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.FreezeSlowdownFormula;
 import com.moulberry.flashback.Utils;
 import com.moulberry.flashback.combo_options.VideoContainer;
 import com.moulberry.flashback.editor.ui.ReplayUI;
-import com.moulberry.flashback.exporting.taskbar.ITaskbar;
-import com.moulberry.flashback.exporting.taskbar.TaskbarHost;
 import com.moulberry.flashback.exporting.taskbar.TaskbarManager;
-import com.moulberry.flashback.keyframe.KeyframeType;
 import com.moulberry.flashback.keyframe.handler.KeyframeHandler;
 import com.moulberry.flashback.keyframe.handler.MinecraftKeyframeHandler;
 import com.moulberry.flashback.keyframe.handler.TickrateKeyframeCapture;
@@ -29,8 +24,6 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.player.LocalPlayer;
-import net.minecraft.client.renderer.CompiledShaderProgram;
-import net.minecraft.client.renderer.CoreShaders;
 import net.minecraft.client.renderer.FogParameters;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.network.chat.Component;
@@ -151,7 +144,7 @@ public class ExportJob {
             Files.createDirectories(exportTempFolder);
 
             RenderTarget mainTarget = Minecraft.getInstance().mainRenderTarget;
-            infoRenderTarget = new TextureTarget(mainTarget.width, mainTarget.height, false);
+            infoRenderTarget = new TextureTarget("info_export_target", mainTarget.width, mainTarget.height, false);
 
             try (VideoWriter encoder = createVideoWriter(this.settings, tempFileName);
                  SaveableFramebufferQueue downloader = new SaveableFramebufferQueue(this.settings.resolutionX(), this.settings.resolutionY())) {
@@ -268,13 +261,12 @@ public class ExportJob {
 
                 Window window = Minecraft.getInstance().getWindow();
                 RenderTarget renderTarget = Minecraft.getInstance().mainRenderTarget;
-                renderTarget.bindWrite(true);
-                RenderSystem.clear(16640);
+                RenderSystem.getDevice().createCommandEncoder().clearColorAndDepthTextures(renderTarget.getColorTexture(), 0, renderTarget.getDepthTexture(), 1.0);
+                RenderSystem.setShaderFog(FogParameters.NO_FOG);
                 Minecraft.getInstance().gameRenderer.render(Minecraft.getInstance().deltaTracker, true);
-                renderTarget.unbindWrite();
 
                 this.shouldChangeFramebufferSize = false;
-                renderTarget.blitToScreen(window.getWidth(), window.getHeight());
+                renderTarget.blitToScreen();
                 window.updateDisplay(null);
                 this.shouldChangeFramebufferSize = true;
 
@@ -301,13 +293,10 @@ public class ExportJob {
             SaveableFramebuffer saveable = downloader.take();
             RenderTarget renderTarget = Minecraft.getInstance().mainRenderTarget;
 
-            renderTarget.bindWrite(true);
-            RenderSystem.clear(16640);
-
             // Perform rendering
             PerfectFrames.waitUntilFrameReady();
+            RenderSystem.getDevice().createCommandEncoder().clearColorAndDepthTextures(renderTarget.getColorTexture(), 0, renderTarget.getDepthTexture(), 1.0);
             RenderSystem.setShaderFog(FogParameters.NO_FOG);
-            RenderSystem.enableCull();
 
             DeltaTracker.Timer timer = Minecraft.getInstance().deltaTracker;
             timer.updateFrozenState(frozen);
@@ -320,8 +309,6 @@ public class ExportJob {
             start = System.nanoTime();
             Minecraft.getInstance().gameRenderer.render(timer, true);
             renderTimeNanos += System.nanoTime() - start;
-
-            renderTarget.unbindWrite();
 
             boolean cancel;
 
@@ -423,7 +410,8 @@ public class ExportJob {
             LocalPlayer player = minecraft.player;
             if (player != null) {
                 Vec3 position = this.settings.initialCameraPosition();
-                player.moveTo(position.x, position.y, position.z, this.settings.initialCameraYaw(), this.settings.initialCameraPitch());
+                player.snapTo(position.x, position.y, position.z, this.settings.initialCameraYaw(), this.settings.initialCameraPitch());
+                player.getInterpolation().cancel();
                 player.setDeltaMovement(Vec3.ZERO);
             }
             this.settings.editorState().applyKeyframes(new MinecraftKeyframeHandler(Minecraft.getInstance()), this.settings.startTick());
@@ -517,7 +505,9 @@ public class ExportJob {
             Font font = Minecraft.getInstance().font;
             var bufferSource = Minecraft.getInstance().renderBuffers().bufferSource();
             bufferSource.endBatch();
-            framebuffer.bindWrite(true);
+            RenderSystem.getDevice().createCommandEncoder().clearDepthTexture(framebuffer.getDepthTexture(), 1.0);
+
+            // todo: need to override the main render target with framebuffer I think?
 
             float guiScale = 4f;
             int scaledWidth = (int) Math.ceil(framebuffer.width / guiScale);
@@ -527,9 +517,7 @@ public class ExportJob {
             RenderSystem.setProjectionMatrix(matrix4f, ProjectionType.ORTHOGRAPHIC);
 
             Matrix4f matrix = new Matrix4f();
-            matrix.translate(0.0f, 0.0f, -11000.0f);
-
-            RenderSystem.disableDepthTest();
+            matrix.translate(0.0f, 0.0f, -1001.0f);
 
             List<String> lines = new ArrayList<>();
 
@@ -627,10 +615,8 @@ public class ExportJob {
             }
 
             bufferSource.endBatch();
-            RenderSystem.enableDepthTest();
 
-            framebuffer.unbindWrite();
-            framebuffer.blitToScreen(window.getWidth(), window.getHeight());
+            framebuffer.blitToScreen();
             Minecraft.getInstance().getWindow().updateDisplay(null);
         }
 
