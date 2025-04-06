@@ -13,7 +13,8 @@ import java.util.Set;
 public record MinecraftKeyframeHandler(Minecraft minecraft) implements KeyframeHandler {
 
     private static final Set<Class<? extends KeyframeChange>> supportedChanges = Set.of(
-            KeyframeChangeCameraPosition.class, KeyframeChangeFov.class, KeyframeChangeTimeOfDay.class, KeyframeChangeCameraShake.class
+            KeyframeChangeCameraPosition.class, KeyframeChangeCameraPositionOrbit.class,
+            KeyframeChangeFov.class, KeyframeChangeTimeOfDay.class, KeyframeChangeCameraShake.class
     );
 
     @Override
