@@ -394,6 +394,8 @@ public class ExportJob {
     private void setup(ReplayServer replayServer) {
         Minecraft minecraft = Minecraft.getInstance();
 
+        replayServer.setDesiredTickRate(20.0f, true);
+
         if (replayServer.getReplayTick() != this.settings.startTick()) {
             int currentTick = Math.max(0, this.settings.startTick() - 40);
 
