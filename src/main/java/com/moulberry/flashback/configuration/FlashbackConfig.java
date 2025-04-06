@@ -115,6 +115,9 @@ public class FlashbackConfig {
     public boolean filterUnnecessaryPackets = true;
 
     public boolean signedRenderFilter = false;
+    public int viewedTipsOfTheDay = 0;
+    public boolean showTipOfTheDay = true;
+    public long nextTipOfTheDay = 0;
 
     private transient int saveDelay = 0;
 
