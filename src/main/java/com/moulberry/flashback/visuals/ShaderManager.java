@@ -22,6 +22,19 @@ public class ShaderManager {
                       .build()
     );
 
+    public static final RenderPipeline BLIT_SCREEN_WITH_UV = RenderPipelines.register(
+        RenderPipeline.builder()
+                      .withLocation(ResourceLocation.fromNamespaceAndPath("flashback", "pipeline/blit_screen_with_uv"))
+                      .withVertexShader(ResourceLocation.fromNamespaceAndPath("flashback", "core/blit_screen_old"))
+                      .withFragmentShader(ResourceLocation.fromNamespaceAndPath("flashback", "core/blit_screen_old"))
+                      .withSampler("InSampler")
+                      .withDepthWrite(false)
+                      .withCull(false)
+                      .withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST)
+                      .withVertexFormat(DefaultVertexFormat.POSITION_TEX, VertexFormat.Mode.QUADS)
+                      .build()
+    );
+
     public static RenderPipeline BLIT_SCREEN_ROUND_ALPHA = RenderPipelines.register(
         RenderPipeline.builder()
                       .withLocation(ResourceLocation.fromNamespaceAndPath("flashback", "pipeline/flashback_blit_screen_flip"))

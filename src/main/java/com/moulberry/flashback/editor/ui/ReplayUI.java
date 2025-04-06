@@ -465,9 +465,10 @@ public class ReplayUI {
 
         init();
 
+        GlStateManager._disableColorLogicOp(); // Needed on 1.21.5 because vanilla doesn't reset this after rendering
+
         long oldImGuiContext = ImGui.getCurrentContext().ptr;
         ImGui.setCurrentContext(imGuiContext);
-
         try {
             drawOverlayInternal();
         } finally {

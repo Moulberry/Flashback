@@ -1,8 +1,22 @@
 package com.moulberry.flashback;
 
+import com.mojang.blaze3d.ProjectionType;
+import com.mojang.blaze3d.buffers.GpuBuffer;
 import com.mojang.blaze3d.opengl.GlStateManager;
 import com.mojang.blaze3d.opengl.GlTexture;
 import com.mojang.blaze3d.pipeline.RenderTarget;
+import com.mojang.blaze3d.pipeline.TextureTarget;
+import com.mojang.blaze3d.systems.RenderPass;
+import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.textures.GpuTexture;
+import com.mojang.blaze3d.vertex.BufferBuilder;
+import com.mojang.blaze3d.vertex.DefaultVertexFormat;
+import com.mojang.blaze3d.vertex.MeshData;
+import com.mojang.blaze3d.vertex.Tesselator;
+import com.mojang.blaze3d.vertex.VertexFormat;
+import com.moulberry.flashback.visuals.ShaderManager;
+import net.minecraft.client.renderer.RenderPipelines;
+import org.joml.Matrix4f;
 import org.lwjgl.opengl.ARBDirectStateAccess;
 import org.lwjgl.opengl.EXTFramebufferMultisampleBlitScaled;
 import org.lwjgl.opengl.GL;
@@ -12,23 +26,70 @@ import org.lwjgl.opengl.GL30C;
 import org.lwjgl.opengl.GL32;
 import org.lwjgl.opengl.GLCapabilities;
 
+import java.util.OptionalInt;
+
 public class FramebufferUtils {
 
-    private static int dynamicReadFbo = -1;
+    public static void clear(RenderTarget renderTarget, int colour) {
+        int oldReadFbo = GL11.glGetInteger(GL30.GL_READ_FRAMEBUFFER_BINDING);
+        int oldDrawFbo = GL11.glGetInteger(GL30.GL_DRAW_FRAMEBUFFER_BINDING);
 
-    public static int bindColour(RenderTarget renderTarget) {
-        if (dynamicReadFbo == -1) {
-            dynamicReadFbo = GlStateManager.glGenFramebuffers();
+        GpuTexture colourTexture = renderTarget.getColorTexture();
+        GpuTexture depthTexture = renderTarget.getDepthTexture();
+        if (colourTexture != null && !colourTexture.isClosed() && depthTexture != null && !depthTexture.isClosed()) {
+            RenderSystem.getDevice().createCommandEncoder().clearColorAndDepthTextures(colourTexture, colour, depthTexture, 1.0f);
+        } else if (colourTexture != null && !colourTexture.isClosed()) {
+            RenderSystem.getDevice().createCommandEncoder().clearColorTexture(colourTexture, colour);
+        } else if (depthTexture != null && !depthTexture.isClosed()) {
+            RenderSystem.getDevice().createCommandEncoder().clearDepthTexture(depthTexture, 1.0f);
         }
-        int textureId = ((GlTexture)renderTarget.getColorTexture()).glId();
-        GlStateManager._glBindFramebuffer(GL32.GL_READ_FRAMEBUFFER, dynamicReadFbo);
-        GlStateManager._glFramebufferTexture2D(GL32.GL_READ_FRAMEBUFFER, GL32.GL_COLOR_ATTACHMENT0, 3553, textureId, 0);
-        GlStateManager._glFramebufferTexture2D(GL32.GL_READ_FRAMEBUFFER, GL32.GL_DEPTH_ATTACHMENT, 3553, 0, 0);
-        return dynamicReadFbo;
+
+        GlStateManager._glBindFramebuffer(GL32.GL_READ_FRAMEBUFFER, oldReadFbo);
+        GlStateManager._glBindFramebuffer(GL32.GL_DRAW_FRAMEBUFFER, oldDrawFbo);
     }
 
-    private static int blitFunction = -1;
-    private static int filterParameter = -1;
+    public static RenderTarget resizeOrCreateFramebuffer(RenderTarget renderTarget, int width, int height) {
+        if (renderTarget == null) {
+            renderTarget = new TextureTarget(null, width, height, true);
+        } else if (renderTarget.width != width || renderTarget.height != height) {
+            renderTarget.resize(width, height);
+        }
+
+        return renderTarget;
+    }
+
+    private static void blitTo(GpuTexture from, RenderTarget to, int width, int height, float x1, float y1, float x2, float y2) {
+        var modelViewStack = RenderSystem.getModelViewStack();
+        modelViewStack.pushMatrix();
+        modelViewStack.set(new Matrix4f().translation(0.0f, 0.0f, -2000.0f));
+        Matrix4f oldProjectionMatrix = new Matrix4f(RenderSystem.getProjectionMatrix());
+        ProjectionType oldProjectionType = RenderSystem.getProjectionType();
+        RenderSystem.setProjectionMatrix(new Matrix4f().setOrtho(0.0f, width, height, 0.0f, 1000.0f, 3000.0f), ProjectionType.ORTHOGRAPHIC);
+
+        BufferBuilder builder = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX);
+        builder.addVertex(width*x1, height*y2, 0.0f).setUv(0.0f, 0.0f);
+        builder.addVertex(width*x2, height*y2, 0.0f).setUv(1.0f, 0.0f);
+        builder.addVertex(width*x2, height*y1, 0.0f).setUv(1.0f, 1.0f);
+        builder.addVertex(width*x1, height*y1, 0.0f).setUv(0.0f, 1.0f);
+        try (MeshData meshData = builder.buildOrThrow()) {
+            RenderSystem.AutoStorageIndexBuffer autoStorageIndexBuffer = RenderSystem.getSequentialBuffer(VertexFormat.Mode.QUADS);
+            GpuBuffer gpuBuffer = autoStorageIndexBuffer.getBuffer(6);
+            GpuBuffer vertexBuffer = DefaultVertexFormat.POSITION_TEX.uploadImmediateVertexBuffer(meshData.vertexBuffer());
+
+            try (RenderPass renderPass = RenderSystem.getDevice().createCommandEncoder().createRenderPass(to.getColorTexture(), OptionalInt.empty())) {
+                renderPass.setPipeline(ShaderManager.BLIT_SCREEN_WITH_UV);
+                renderPass.setVertexBuffer(0, vertexBuffer);
+                renderPass.setIndexBuffer(gpuBuffer, autoStorageIndexBuffer.type());
+                renderPass.bindSampler("InSampler", from);
+                renderPass.drawIndexed(0, 6);
+            }
+        }
+
+        RenderSystem.setProjectionMatrix(oldProjectionMatrix, oldProjectionType);
+        modelViewStack.popMatrix();
+    }
+
+    private static RenderTarget tempRenderTarget = null;
 
     public static void blitToScreenPartial(RenderTarget renderTarget, int width, int height, float x1, float y1, float x2, float y2) {
         GlStateManager._viewport(0, 0, width, height);
@@ -36,47 +97,12 @@ public class FramebufferUtils {
         int oldReadFbo = GL11.glGetInteger(GL30.GL_READ_FRAMEBUFFER_BINDING);
         int oldDrawFbo = GL11.glGetInteger(GL30.GL_DRAW_FRAMEBUFFER_BINDING);
 
-        int readFbo = FramebufferUtils.bindColour(renderTarget);
+        tempRenderTarget = FramebufferUtils.resizeOrCreateFramebuffer(tempRenderTarget, width, height);
+        FramebufferUtils.clear(tempRenderTarget, 0);
 
-        if (blitFunction == -1) {
-            GLCapabilities cap = GL.createCapabilities();
-            int samples = GL30C.glGetInteger(GL30C.GL_SAMPLE_BUFFERS);
-            Flashback.LOGGER.info("Read framebuffer has sample count {}", samples);
-            if (cap.GL_ARB_direct_state_access) {
-                blitFunction = 1;
-                Flashback.LOGGER.info("Using blit function glBlitNamedFramebuffer");
-            } else {
-                blitFunction = 0;
-                Flashback.LOGGER.info("Using blit function glBlitFrameBuffer");
-            }
-            if (samples > 0 && cap.GL_EXT_framebuffer_multisample_blit_scaled) {
-                filterParameter = EXTFramebufferMultisampleBlitScaled.GL_SCALED_RESOLVE_FASTEST_EXT;
-                Flashback.LOGGER.info("Using filter parameter SCALED_RESOLVE_FASTEST_EXT");
-            } else {
-                filterParameter = GL11.GL_LINEAR;
-                Flashback.LOGGER.info("Using filter parameter GL_LINEAR");
-            }
-        }
+        blitTo(renderTarget.getColorTexture(), tempRenderTarget, width, height, x1, y1, x2, y2);
 
-        int x = (int)(width*x1);
-        int y = (int)(height*y1);
-        int w = (int)(width*x2 - width*x1 + 1);
-        int h = (int)(height*y2 - height*y1 + 1);
-        if (Math.abs(renderTarget.width - w) <= 1) {
-            w = renderTarget.width;
-        }
-        if (Math.abs(renderTarget.height - h) <= 1) {
-            h = renderTarget.height;
-        }
-
-        if (blitFunction == 0) {
-            GlStateManager._glBindFramebuffer(GL32.GL_DRAW_FRAMEBUFFER, 0);
-            GlStateManager._glBlitFrameBuffer(0, 0, renderTarget.width, renderTarget.height,
-                x, height - (y+h), x+w, height - y, GL11.GL_COLOR_BUFFER_BIT, filterParameter);
-        } else if (blitFunction == 1) {
-            ARBDirectStateAccess.glBlitNamedFramebuffer(readFbo, 0, 0, 0, renderTarget.width, renderTarget.height,
-                x, height - (y+h), x+w, height - y, GL11.GL_COLOR_BUFFER_BIT, filterParameter);
-        }
+        tempRenderTarget.blitToScreen();
 
         GlStateManager._glBindFramebuffer(GL32.GL_READ_FRAMEBUFFER, oldReadFbo);
         GlStateManager._glBindFramebuffer(GL32.GL_DRAW_FRAMEBUFFER, oldDrawFbo);

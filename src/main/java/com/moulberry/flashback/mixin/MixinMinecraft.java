@@ -196,15 +196,6 @@ public abstract class MixinMinecraft implements MinecraftExt {
         ReplayUI.drawOverlay();
     }
 
-    @Inject(method = "runTick", at=@At(value = "INVOKE", target = "Lcom/mojang/blaze3d/systems/CommandEncoder;clearColorAndDepthTextures(Lcom/mojang/blaze3d/textures/GpuTexture;ILcom/mojang/blaze3d/textures/GpuTexture;D)V", remap = false, shift = At.Shift.AFTER))
-    public void afterClearMain(boolean bl, CallbackInfo ci) {
-        if (!RenderSystem.isOnRenderThread()) return;
-        if (ReplayUI.isActive()) {
-            GL11.glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-            GL11.glClear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT);
-        }
-    }
-
     @Unique
     private boolean inReplayLast = false;
 
