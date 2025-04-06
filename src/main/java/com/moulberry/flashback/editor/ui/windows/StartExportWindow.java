@@ -19,6 +19,7 @@ import com.moulberry.flashback.exporting.AsyncFileDialogs;
 import com.moulberry.flashback.exporting.ExportJob;
 import com.moulberry.flashback.exporting.ExportSettings;
 import com.moulberry.flashback.playback.ReplayServer;
+import com.moulberry.flashback.state.KeyframeTrack;
 import imgui.ImGui;
 import imgui.flag.ImGuiWindowFlags;
 import imgui.type.ImString;
@@ -44,7 +45,7 @@ public class StartExportWindow {
     private static final int[] lastFramebufferSize = new int[]{0, 0};
     private static AspectRatio lastCustomAspectRatio = null;
 
-    private static final int[] startEndTick = new int[]{0, 100};
+    private static final int[] startEndTick = new int[]{-1, -1};
 
     private static VideoContainer[] supportedContainers = null;
     private static VideoContainer[] supportedContainersWithTransparency = null;
@@ -151,11 +152,13 @@ public class StartExportWindow {
             if (config.resolution[0] % 2 != 0) config.resolution[0] += 1;
             if (config.resolution[1] % 2 != 0) config.resolution[1] += 1;
 
-            if (ImGuiHelper.inputInt("Start/end tick", startEndTick)) {
-                ReplayServer replayServer = Flashback.getReplayServer();
-                if (editorState != null && replayServer != null) {
-                    editorState.currentScene().setExportTicks(startEndTick[0], startEndTick[1], replayServer.getTotalReplayTicks());
-                    editorState.markDirty();
+            if (startEndTick[0] >= 0 && startEndTick[1] >= 0) {
+                if (ImGuiHelper.inputInt("Start/end tick", startEndTick)) {
+                    ReplayServer replayServer = Flashback.getReplayServer();
+                    if (editorState != null && replayServer != null) {
+                        editorState.currentScene().setExportTicks(startEndTick[0], startEndTick[1], replayServer.getTotalReplayTicks());
+                        editorState.markDirty();
+                    }
                 }
             }
             ImGuiHelper.inputFloat("Framerate", config.framerate);
@@ -357,19 +360,55 @@ public class StartExportWindow {
 
         Function<String, ExportSettings> callback = pathStr -> {
             if (pathStr != null) {
-                int start = Math.max(0, startEndTick[0]);
-                int end = Math.max(start, startEndTick[1]);
+                EditorState editorState = EditorStateManager.getCurrent();
+                if (editorState == null) {
+                    return null;
+                }
+
+                int start, end;
+                if (startEndTick[0] >= 0 && startEndTick[1] >= 0) {
+                    start = Math.max(0, startEndTick[0]);
+                    end = Math.max(start, startEndTick[1]);
+                } else {
+                    start = -1;
+                    end = -1;
+
+                    for (KeyframeTrack keyframeTrack : editorState.currentScene().keyframeTracks) {
+                        if (keyframeTrack.keyframesByTick.isEmpty()) {
+                            continue;
+                        }
+                        int min = keyframeTrack.keyframesByTick.firstKey();
+                        int max = keyframeTrack.keyframesByTick.lastKey();
+                        if (start == -1) {
+                            start = min;
+                        } else {
+                            start = Math.min(start, min);
+                        }
+                        if (end == -1) {
+                            end = max;
+                        } else {
+                            end = Math.max(end, max);
+                        }
+                    }
+
+                    if (start == -1) {
+                        start = 0;
+                    }
+                    if (end == -1) {
+                        ReplayServer replayServer = Flashback.getReplayServer();
+                        if (replayServer != null) {
+                            end = replayServer.getTotalReplayTicks();
+                        } else {
+                            end = start+100;
+                        }
+                    }
+                }
 
                 ReplayServer replayServer = Flashback.getReplayServer();
                 if (replayServer != null) {
                     int totalTicks = replayServer.getTotalReplayTicks();
                     start = Math.min(start, totalTicks);
                     end = Math.min(end, totalTicks);
-                }
-
-                EditorState editorState = EditorStateManager.getCurrent();
-                if (editorState == null) {
-                    return null;
                 }
 
                 LocalPlayer player = Minecraft.getInstance().player;
@@ -494,19 +533,24 @@ public class StartExportWindow {
         EditorState editorState = EditorStateManager.getCurrent();
         EditorScene editorScene = editorState == null ? null : editorState.currentScene();
 
-        if (editorScene != null && editorScene.exportStartTicks >= 0) {
-            startEndTick[0] = editorScene.exportStartTicks;
-        } else {
-            startEndTick[0] = 0;
-        }
-        if (editorScene != null && editorScene.exportEndTicks >= 0) {
-            startEndTick[1] = editorScene.exportEndTicks;
-        } else {
-            ReplayServer replayServer = Flashback.getReplayServer();
-            if (replayServer == null) {
-                startEndTick[1] = startEndTick[0] + 100;
+        startEndTick[0] = -1;
+        startEndTick[1] = -1;
+
+        if (editorScene != null && (editorScene.exportStartTicks >= 0 || editorScene.exportEndTicks >= 0)) {
+            if (editorScene.exportStartTicks >= 0) {
+                startEndTick[0] = editorScene.exportStartTicks;
             } else {
-                startEndTick[1] = replayServer.getTotalReplayTicks();
+                startEndTick[0] = 0;
+            }
+            if (editorScene.exportEndTicks >= 0) {
+                startEndTick[1] = editorScene.exportEndTicks;
+            } else {
+                ReplayServer replayServer = Flashback.getReplayServer();
+                if (replayServer == null) {
+                    startEndTick[1] = startEndTick[0] + 100;
+                } else {
+                    startEndTick[1] = replayServer.getTotalReplayTicks();
+                }
             }
         }
     }
