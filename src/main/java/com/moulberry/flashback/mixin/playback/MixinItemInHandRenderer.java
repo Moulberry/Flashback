@@ -109,8 +109,8 @@ public abstract class MixinItemInHandRenderer implements ItemInHandRendererExt {
         if (clientPlayer instanceof RemotePlayerExt remotePlayerExt) {
             float xBob = remotePlayerExt.flashback$getXBob(partialTick);
             float yBob = remotePlayerExt.flashback$getYBob(partialTick);
-            poseStack.mulPose(Axis.XP.rotationDegrees((clientPlayer.getViewXRot(partialTick) - xBob) * 0.1f));
-            poseStack.mulPose(Axis.YP.rotationDegrees((clientPlayer.getViewYRot(partialTick) - yBob) * 0.1f));
+            poseStack.mulPose(Axis.XP.rotationDegrees(Mth.wrapDegrees(clientPlayer.getViewXRot(partialTick) - xBob) * 0.1f));
+            poseStack.mulPose(Axis.YP.rotationDegrees(Mth.wrapDegrees(clientPlayer.getViewYRot(partialTick) - yBob) * 0.1f));
         }
         if ((handRenderSelection & RENDER_MAIN_HAND) != 0) {
             l = interactionHand == InteractionHand.MAIN_HAND ? g : 0.0f;
