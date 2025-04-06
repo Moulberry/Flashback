@@ -374,7 +374,7 @@ public class StartExportWindow {
                     end = -1;
 
                     for (KeyframeTrack keyframeTrack : editorState.currentScene().keyframeTracks) {
-                        if (keyframeTrack.keyframesByTick.isEmpty()) {
+                        if (!keyframeTrack.enabled || keyframeTrack.keyframesByTick.isEmpty()) {
                             continue;
                         }
                         int min = keyframeTrack.keyframesByTick.firstKey();
