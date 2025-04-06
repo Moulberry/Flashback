@@ -380,6 +380,8 @@ public class TimelineWindow {
             int controlSize = ReplayUI.scaleUi(24);
             int controlsY = (int) y + middleY/2 - controlSize/2;
 
+            float manualTickRate = replayServer.getDesiredTickRate(true);
+
             // Skip backwards
             int skipBackwardsX = (int) x + middleX/6 - controlSize/2;
             drawList.addTriangleFilled(skipBackwardsX + controlSize/3f, controlsY + controlSize/2f,
@@ -390,12 +392,13 @@ public class TimelineWindow {
 
             // Slow down
             int slowDownX = (int) x + middleX*2/6 - controlSize/2;
+            int slowDownColor = manualTickRate < 20 ? 0xFF8080FF : -1;
             drawList.addTriangleFilled(slowDownX, controlsY + controlSize/2f,
                 slowDownX + controlSize/2f, controlsY,
-                slowDownX + controlSize/2f, controlsY+controlSize, -1);
+                slowDownX + controlSize/2f, controlsY+controlSize, slowDownColor);
             drawList.addTriangleFilled(slowDownX + controlSize/2f, controlsY + controlSize/2f,
                 slowDownX + controlSize, controlsY,
-                slowDownX + controlSize, controlsY + controlSize, -1);
+                slowDownX + controlSize, controlsY + controlSize, slowDownColor);
 
             int pauseX = (int) x + middleX/2 - controlSize/2;
             if (replayServer.replayPaused) {
@@ -414,12 +417,13 @@ public class TimelineWindow {
 
             // Fast-forward
             int fastForwardsX = (int) x + middleX*4/6 - controlSize/2;
+            int fastForwardsColor = manualTickRate > 20 ? 0xFF80FF80 : -1;
             drawList.addTriangleFilled(fastForwardsX, controlsY,
                 fastForwardsX + controlSize/2f, controlsY + controlSize/2f,
-                fastForwardsX, controlsY+controlSize, -1);
+                fastForwardsX, controlsY+controlSize, fastForwardsColor);
             drawList.addTriangleFilled(fastForwardsX + controlSize/2f, controlsY,
                 fastForwardsX + controlSize, controlsY + controlSize/2f,
-                fastForwardsX + controlSize/2f, controlsY + controlSize, -1);
+                fastForwardsX + controlSize/2f, controlsY + controlSize, fastForwardsColor);
 
             // Skip forward
             int skipForwardsX = (int) x + middleX*5/6 - controlSize/2;
