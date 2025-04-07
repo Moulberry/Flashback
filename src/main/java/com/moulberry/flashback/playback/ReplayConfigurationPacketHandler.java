@@ -1,9 +1,11 @@
 package com.moulberry.flashback.playback;
 
 import com.google.common.collect.ImmutableMap;
+import com.mojang.serialization.Lifecycle;
 import com.moulberry.flashback.exception.UnsupportedPacketException;
 import com.moulberry.flashback.registry.RegistryHelper;
 import net.minecraft.core.*;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.network.DisconnectionDetails;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.common.*;
@@ -16,6 +18,7 @@ import net.minecraft.network.protocol.configuration.ClientboundUpdateEnabledFeat
 import net.minecraft.network.protocol.cookie.ClientboundCookieRequestPacket;
 import net.minecraft.resources.RegistryDataLoader;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.RegistryLayer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -31,14 +34,12 @@ import net.minecraft.tags.TagLoader;
 import net.minecraft.tags.TagNetworkSerialization;
 import net.minecraft.world.flag.FeatureFlagSet;
 import net.minecraft.world.flag.FeatureFlags;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.biome.Biome;
+import net.minecraft.world.level.biome.Biomes;
+import net.minecraft.world.level.dimension.LevelStem;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 public class ReplayConfigurationPacketHandler implements ClientConfigurationPacketListener {
 
@@ -129,6 +130,36 @@ public class ReplayConfigurationPacketHandler implements ClientConfigurationPack
                             registries.add(overriden.get());
                             replacedPartOfLayer = true;
                         } else {
+                            if (registryEntry.key() == Registries.LEVEL_STEM) {
+                                try {
+                                    var dimensionsOpt = synchronizedRegistries.registry(Registries.DIMENSION_TYPE);
+                                    var biomesOpt = synchronizedRegistries.registry(Registries.BIOME);
+                                    if (dimensionsOpt.isPresent()) {
+                                        var dimensions = dimensionsOpt.get();
+
+                                        Holder.Reference<Biome> plains;
+                                        if (biomesOpt.isPresent()) {
+                                            plains = biomesOpt.get().getHolderOrThrow(Biomes.PLAINS);
+                                        } else {
+                                            plains = this.replayServer.registryAccess().lookupOrThrow(Registries.BIOME).getOrThrow(Biomes.PLAINS);
+                                        }
+
+                                        var mapped = new MappedRegistry<>(Registries.LEVEL_STEM, Lifecycle.stable());
+                                        for (var key : dimensions.registryKeySet()) {
+                                            var stemKey = ResourceKey.create(Registries.LEVEL_STEM, key.location());
+                                            var stem = new LevelStem(dimensions.getHolderOrThrow(key), new EmptyLevelSource(plains));
+                                            mapped.register(stemKey, stem, RegistrationInfo.BUILT_IN);
+                                        }
+
+                                        replacedPartOfLayer = true;
+                                        registries.add(mapped.freeze());
+                                        continue;
+                                    }
+                                } catch (Exception ignored) {
+                                    registries.add(registryEntry.value());
+                                }
+                            }
+
                             registries.add(registryEntry.value());
                         }
                     }
