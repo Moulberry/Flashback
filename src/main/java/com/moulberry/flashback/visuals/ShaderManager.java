@@ -2,6 +2,7 @@ package com.moulberry.flashback.visuals;
 
 import com.mojang.blaze3d.pipeline.RenderPipeline;
 import com.mojang.blaze3d.platform.DepthTestFunction;
+import com.mojang.blaze3d.shaders.UniformType;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.renderer.RenderPipelines;
@@ -24,15 +25,18 @@ public class ShaderManager {
 
     public static final RenderPipeline BLIT_SCREEN_WITH_UV = RenderPipelines.register(
         RenderPipeline.builder()
-                      .withLocation(ResourceLocation.fromNamespaceAndPath("flashback", "pipeline/blit_screen_with_uv"))
-                      .withVertexShader(ResourceLocation.fromNamespaceAndPath("flashback", "core/blit_screen_old"))
-                      .withFragmentShader(ResourceLocation.fromNamespaceAndPath("flashback", "core/blit_screen_old"))
-                      .withSampler("InSampler")
-                      .withDepthWrite(false)
-                      .withCull(false)
-                      .withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST)
-                      .withVertexFormat(DefaultVertexFormat.POSITION_TEX, VertexFormat.Mode.QUADS)
-                      .build()
+                .withLocation(ResourceLocation.fromNamespaceAndPath("flashback", "pipeline/blit_screen_with_uv"))
+                .withVertexShader(ResourceLocation.fromNamespaceAndPath("flashback", "core/blit_screen_old"))
+                .withFragmentShader(ResourceLocation.fromNamespaceAndPath("flashback", "core/blit_screen_old"))
+                .withSampler("InSampler")
+                .withDepthWrite(false)
+                .withCull(false)
+                .withUniform("ColorModulator", UniformType.VEC4)
+                .withUniform("ModelViewMat", UniformType.MATRIX4X4)
+                .withUniform("ProjMat", UniformType.MATRIX4X4)
+                .withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST)
+                .withVertexFormat(DefaultVertexFormat.POSITION_TEX, VertexFormat.Mode.QUADS)
+                .build()
     );
 
     public static RenderPipeline BLIT_SCREEN_ROUND_ALPHA = RenderPipelines.register(

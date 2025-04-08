@@ -5,9 +5,7 @@ import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.pipeline.TextureTarget;
 import com.mojang.blaze3d.platform.Window;
 import com.mojang.blaze3d.systems.RenderSystem;
-import com.moulberry.flashback.Flashback;
-import com.moulberry.flashback.FreezeSlowdownFormula;
-import com.moulberry.flashback.Utils;
+import com.moulberry.flashback.*;
 import com.moulberry.flashback.combo_options.VideoContainer;
 import com.moulberry.flashback.editor.ui.ReplayUI;
 import com.moulberry.flashback.exporting.taskbar.TaskbarManager;
@@ -266,7 +264,9 @@ public class ExportJob {
                 Minecraft.getInstance().gameRenderer.render(Minecraft.getInstance().deltaTracker, true);
 
                 this.shouldChangeFramebufferSize = false;
-                renderTarget.blitToScreen();
+                if (!Minecraft.getInstance().getWindow().isMinimized()) {
+                    renderTarget.blitToScreen();
+                }
                 window.updateDisplay(null);
                 this.shouldChangeFramebufferSize = true;
 
@@ -591,8 +591,8 @@ public class ExportJob {
                 }
             }
 
-            double mouseX = ReplayUI.imguiGlfw.rawMouseX / window.getWidth() * scaledWidth;
-            double mouseY = ReplayUI.imguiGlfw.rawMouseY / window.getHeight() * scaledHeight;
+            double mouseX = ReplayUI.imguiGlfw.rawMouseX / window.getScreenWidth() * scaledWidth;
+            double mouseY = ReplayUI.imguiGlfw.rawMouseY / window.getScreenHeight() * scaledHeight;
 
             y += font.lineHeight / 2 + 1;
 
@@ -618,8 +618,13 @@ public class ExportJob {
 
             bufferSource.endBatch();
 
-            framebuffer.blitToScreen();
-            Minecraft.getInstance().getWindow().updateDisplay(null);
+            if (!window.isMinimized()) {
+                int windowFramebufferWidth = WindowSizeTracker.getWidth(window);
+                int windowFramebufferHeight = WindowSizeTracker.getHeight(window);
+
+                FramebufferUtils.blitToScreenPartial(framebuffer, windowFramebufferWidth, windowFramebufferHeight, 0, 0, 1, 1);
+            }
+            window.updateDisplay(null);
         }
 
         return cancel;
