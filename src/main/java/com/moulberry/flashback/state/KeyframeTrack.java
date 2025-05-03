@@ -91,12 +91,12 @@ public class KeyframeTrack {
         if (leftInterpolation == SidedInterpolationType.SMOOTH ||
                 rightInterpolation == SidedInterpolationType.SMOOTH) {
             Map.Entry<Integer, Keyframe> beforeEntry = keyframeTimes.floorEntry(lowerEntry.getKey() - 1);
-            if (beforeEntry == null) {
+            if (beforeEntry == null || beforeEntry.getValue().interpolationType() == InterpolationType.HOLD) { // don't include the right-side of the hold keyframe
                 beforeEntry = lowerEntry;
             }
 
             Map.Entry<Integer, Keyframe> afterAfterEntry = keyframeTimes.ceilingEntry(ceilEntry.getKey() + 1);
-            if (afterAfterEntry == null) {
+            if (afterAfterEntry == null || ceilEntry.getValue().interpolationType() == InterpolationType.HOLD) { // ceil is to the left of afterAfter
                 afterAfterEntry = ceilEntry;
             }
 
