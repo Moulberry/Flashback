@@ -295,6 +295,14 @@ public class ExportJob {
 
             this.updateClientFreeze(frozen);
 
+            DeltaTracker.Timer timer = Minecraft.getInstance().timer;
+            timer.updateFrozenState(frozen);
+            timer.updatePauseState(false);
+            timer.deltaTicks = deltaTicksFloat;
+            timer.realtimeDeltaTicks = deltaTicksFloat;
+            timer.deltaTickResidual = (float) partialClientTick;
+            timer.pausedDeltaTickResidual = (float) partialClientTick;
+
             KeyframeHandler keyframeHandler = new MinecraftKeyframeHandler(Minecraft.getInstance());
             this.settings.editorState().applyKeyframes(keyframeHandler, (float)(this.settings.startTick() + currentTickDouble));
 
@@ -308,14 +316,6 @@ public class ExportJob {
             PerfectFrames.waitUntilFrameReady();
             RenderSystem.setShaderFog(FogParameters.NO_FOG);
             RenderSystem.enableCull();
-
-            DeltaTracker.Timer timer = Minecraft.getInstance().deltaTracker;
-            timer.updateFrozenState(frozen);
-            timer.updatePauseState(false);
-            timer.deltaTicks = deltaTicksFloat;
-            timer.realtimeDeltaTicks = deltaTicksFloat;
-            timer.deltaTickResidual = (float) partialClientTick;
-            timer.pausedDeltaTickResidual = (float) partialClientTick;
 
             start = System.nanoTime();
             Minecraft.getInstance().gameRenderer.render(timer, true);

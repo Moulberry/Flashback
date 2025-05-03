@@ -7,10 +7,6 @@ import com.moulberry.flashback.keyframe.Keyframe;
 import com.moulberry.flashback.keyframe.KeyframeType;
 import com.moulberry.flashback.keyframe.change.KeyframeChange;
 import com.moulberry.flashback.keyframe.change.KeyframeChangeTickrate;
-import com.moulberry.flashback.keyframe.handler.KeyframeHandler;
-import com.moulberry.flashback.keyframe.handler.MinecraftKeyframeHandler;
-import com.moulberry.flashback.keyframe.handler.ReplayServerKeyframeHandler;
-import com.moulberry.flashback.keyframe.impl.CameraKeyframe;
 import com.moulberry.flashback.keyframe.impl.TimelapseKeyframe;
 import com.moulberry.flashback.keyframe.interpolation.InterpolationType;
 import com.moulberry.flashback.keyframe.interpolation.SidedInterpolationType;
@@ -18,8 +14,6 @@ import com.moulberry.flashback.keyframe.types.TimelapseKeyframeType;
 import imgui.type.ImString;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -174,7 +168,7 @@ public class KeyframeTrack {
 
             if (adjustedAmount != 0.0) {
                 KeyframeChange keyframeChangeCeil = ceilEntry.getValue().createChange();
-                keyframeChange = keyframeChange.interpolate(keyframeChangeCeil, (float) adjustedAmount);
+                keyframeChange = KeyframeChange.interpolateSafe(keyframeChange, keyframeChangeCeil, (float) adjustedAmount);
             }
 
             if (leftChange == null) {
@@ -185,15 +179,7 @@ public class KeyframeTrack {
             }
         }
 
-        if (leftChange == rightChange) {
-            return leftChange;
-        } else if (leftChange == null) {
-            return rightChange;
-        } else if (rightChange == null) {
-            return leftChange;
-        } else {
-            return leftChange.interpolate(rightChange, amount);
-        }
+        return KeyframeChange.interpolateSafe(leftChange, rightChange, amount);
     }
 
     @Nullable
