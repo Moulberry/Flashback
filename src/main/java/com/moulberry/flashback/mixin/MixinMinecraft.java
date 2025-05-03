@@ -20,6 +20,7 @@ import com.moulberry.flashback.exporting.PerfectFrames;
 import com.moulberry.flashback.playback.ReplayServer;
 import com.moulberry.flashback.ext.MinecraftExt;
 import com.moulberry.flashback.editor.ui.ReplayUI;
+import com.moulberry.flashback.visuals.AccurateEntityPositionHandler;
 import it.unimi.dsi.fastutil.floats.FloatUnaryOperator;
 import net.minecraft.ChatFormatting;
 import net.minecraft.CrashReport;
@@ -377,6 +378,16 @@ public abstract class MixinMinecraft implements MinecraftExt {
         if (replayServer == null) {
             return;
         }
+
+        LocalPlayer player = this.player;
+        DeltaTracker deltaTracker = this.timer;
+
+        if (Flashback.RECORDER != null && player != null) {
+            float partialTick = deltaTracker.getGameTimeDeltaPartialTick(true);
+            Flashback.RECORDER.trackPartialPosition(player, partialTick);
+        }
+
+        AccurateEntityPositionHandler.apply(this.level, deltaTracker);
 
         boolean forceApplyKeyframes = this.applyKeyframes.compareAndSet(true, false);
         if (!replayServer.replayPaused || forceApplyKeyframes) {
