@@ -63,11 +63,6 @@ public record MinecraftKeyframeHandler(Minecraft minecraft) implements KeyframeH
 
     @Override
     public void applyTimeOfDay(int timeOfDay) {
-        timeOfDay = timeOfDay % 24000;
-        if (timeOfDay < 0) {
-            timeOfDay += 24000;
-        }
-
         EditorState editorState = EditorStateManager.getCurrent();
         if (editorState != null) {
             editorState.replayVisuals.overrideTimeOfDay = timeOfDay;
