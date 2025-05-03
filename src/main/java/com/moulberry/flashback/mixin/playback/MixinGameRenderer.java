@@ -60,18 +60,6 @@ public abstract class MixinGameRenderer {
     @Final
     Minecraft minecraft;
 
-    @Inject(method = "render", at = @At("HEAD"))
-    public void renderHead(DeltaTracker deltaTracker, boolean bl, CallbackInfo ci) {
-        LocalPlayer player = Minecraft.getInstance().player;
-
-        if (Flashback.RECORDER != null && player != null) {
-            float partialTick = deltaTracker.getGameTimeDeltaPartialTick(true);
-            Flashback.RECORDER.trackPartialPosition(player, partialTick);
-        }
-
-        AccurateEntityPositionHandler.apply(Minecraft.getInstance().level, deltaTracker);
-    }
-
     @Inject(method = "render", at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/systems/RenderSystem;clear(IZ)V", remap = false, ordinal = 0), cancellable = true)
     public void render_noGui(DeltaTracker deltaTracker, boolean bl, CallbackInfo ci) {
         if (Flashback.isExporting() && Flashback.EXPORT_JOB.getSettings().noGui()) {
