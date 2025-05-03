@@ -10,6 +10,7 @@ import com.moulberry.flashback.configuration.FlashbackConfig;
 import com.moulberry.flashback.ext.ConnectionExt;
 import com.moulberry.flashback.ext.LevelChunkExt;
 import com.moulberry.flashback.TempFolderProvider;
+import com.moulberry.flashback.ext.ServerTickRateManagerExt;
 import com.moulberry.flashback.keyframe.handler.ReplayServerKeyframeHandler;
 import com.moulberry.flashback.packet.FlashbackAccurateEntityPosition;
 import com.moulberry.flashback.packet.FlashbackClearEntities;
@@ -886,6 +887,8 @@ public class ReplayServer extends IntegratedServer {
             this.replayPaused = true;
         }
 
+        ServerTickRateManager tickRateManager = this.tickRateManager();
+        ((ServerTickRateManagerExt)tickRateManager).flashback$setSuppressClientUpdates(true);
         if (Flashback.EXPORT_JOB != null || this.targetTick == this.currentTick || normalPlayback || this.isFrozen) {
             this.runUpdates(booleanSupplier);
         } else {
@@ -916,6 +919,7 @@ public class ReplayServer extends IntegratedServer {
                 this.fastForwarding = false;
             }
         }
+        ((ServerTickRateManagerExt)tickRateManager).flashback$setSuppressClientUpdates(false);
 
         if (this.forceApplyKeyframes.compareAndSet(true, false)) {
             ((MinecraftExt)Minecraft.getInstance()).flashback$applyKeyframes();
@@ -1174,10 +1178,12 @@ public class ReplayServer extends IntegratedServer {
                     if (tickRateManager.isFrozen()) {
                         tickRateManager.setFrozen(false);
                     }
+                    ((ServerTickRateManagerExt)tickRateManager).flashback$setSuppressClientUpdates(false);
                     for (ReplayPlayer replayViewer : this.replayViewers) {
                         ServerPlayNetworking.send(replayViewer, FlashbackForceClientTick.INSTANCE);
                     }
                     tickRateManager.setFrozen(true);
+                    ((ServerTickRateManagerExt)tickRateManager).flashback$setSuppressClientUpdates(true);
                 } else if (!tickRateManager.isFrozen()) {
                     tickRateManager.setFrozen(true);
                 }
