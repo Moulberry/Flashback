@@ -12,5 +12,6 @@ public interface MinecraftExt {
     void flashback$applyKeyframes();
     void flashback$startReplayServer(LevelStorageSource.LevelStorageAccess levelStorageAccess, PackRepository packRepository, WorldStem stem, UUID playbackUUID, Path path);
     float flashback$getLocalPlayerPartialTick(float originalPartialTick);
+    boolean flashback$overridingLocalPlayerTimer();
 
 }
