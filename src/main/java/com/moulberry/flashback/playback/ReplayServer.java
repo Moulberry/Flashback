@@ -68,6 +68,7 @@ import net.minecraft.server.network.CommonListenerCookie;
 import net.minecraft.server.network.ConfigurationTask;
 import net.minecraft.server.packs.repository.PackRepository;
 import net.minecraft.server.players.PlayerList;
+import net.minecraft.stats.ServerStatsCounter;
 import net.minecraft.util.Mth;
 import net.minecraft.world.BossEvent;
 import net.minecraft.world.entity.Entity;
@@ -80,10 +81,12 @@ import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.WorldDataConfiguration;
 import net.minecraft.world.level.chunk.LevelChunk;
+import net.minecraft.world.level.storage.LevelResource;
 import net.minecraft.world.level.storage.LevelStorageSource;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.FileSystem;
@@ -405,6 +408,13 @@ public class ReplayServer extends IntegratedServer {
                         player.connection.disconnect(shutdownReason);
                     }
                 }
+            }
+
+            @Override
+            public ServerStatsCounter getPlayerStats(Player player) {
+                File statsDir = this.getServer().getWorldPath(LevelResource.PLAYER_STATS_DIR).toFile();
+                File statsFile = new File(statsDir, player.getUUID() + ".json");
+                return new ServerStatsCounter(this.getServer(), statsFile);
             }
         });
 
