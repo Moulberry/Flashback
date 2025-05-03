@@ -90,16 +90,6 @@ public abstract class MixinLevelRenderer {
         }
     }
 
-    @Inject(method = "renderBlockDestroyAnimation", at = @At("HEAD"), cancellable = true, require = 0)
-    public void renderBlockDestroyAnimation(CallbackInfo ci) {
-        EditorState editorState = EditorStateManager.getCurrent();
-        if (editorState != null) {
-            if (!editorState.replayVisuals.renderBlocks) {
-                ci.cancel();
-            }
-        }
-    }
-
     @Inject(method = "renderSectionLayer", at = @At("HEAD"), cancellable = true, require = 0)
     public void renderSectionLayer(RenderType renderType, double d, double e, double f, Matrix4f matrix4f, Matrix4f matrix4f2, CallbackInfo ci) {
         EditorState editorState = EditorStateManager.getCurrent();
