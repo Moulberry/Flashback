@@ -148,6 +148,9 @@ public abstract class MixinMinecraft implements MinecraftExt {
 
     @Shadow @Final public LevelRenderer levelRenderer;
 
+    @Shadow
+    protected abstract float getTickTargetMillis(float f);
+
     @Inject(method = "pauseGame", at = @At("HEAD"), cancellable = true)
     public void pauseGame(boolean bl, CallbackInfo ci) {
         if (Flashback.EXPORT_JOB != null) {
@@ -287,7 +290,8 @@ public abstract class MixinMinecraft implements MinecraftExt {
 
                 TickRateManager tickRateManager = this.level.tickRateManager();
                 if (tickRateManager.runsNormally()) {
-                    cir.setReturnValue(1000f / Math.max(1f, capture.tickrate));
+                    float manualMultiplier = replayServer.getDesiredTickRate(true) / 20.0f;
+                    cir.setReturnValue(1000f / Math.max(1f, capture.tickrate * manualMultiplier));
                 }
             } else {
                 TickRateManager tickRateManager = this.level.tickRateManager();
@@ -298,9 +302,6 @@ public abstract class MixinMinecraft implements MinecraftExt {
 
         }
     }
-
-    @Unique
-    private final DeltaTracker.Timer localPlayerTimer = new DeltaTracker.Timer(20.0f, 0, FloatUnaryOperator.identity());
 
     @Inject(method = "disconnect(Lnet/minecraft/client/gui/screens/Screen;Z)V", at = @At("HEAD"))
     public void disconnectHead(Screen screen, boolean isTransferring, CallbackInfo ci) {
@@ -317,6 +318,9 @@ public abstract class MixinMinecraft implements MinecraftExt {
     public void disconnectReturn(Screen screen, boolean bl, CallbackInfo ci) {
         Flashback.updateIsInReplay();
     }
+
+    @Unique
+    private final DeltaTracker.Timer localPlayerTimer = new DeltaTracker.Timer(20.0f, 0, FloatUnaryOperator.identity());
 
     @Inject(method = "runTick", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/Minecraft;runAllTasks()V", shift = At.Shift.AFTER))
     public void runTick_runAllTasks(boolean runTick, CallbackInfo ci) {
@@ -340,8 +344,8 @@ public abstract class MixinMinecraft implements MinecraftExt {
         }
 
         if (Flashback.isInReplay()) {
-            int localPlayerTicks = localPlayerTimer.advanceTime(Util.getMillis(), runTick);
-            if (this.level != null && this.player != null && !this.player.isPassenger() && !this.player.isRemoved()) {
+            int localPlayerTicks = this.localPlayerTimer.advanceTime(Util.getMillis(), runTick);
+            if (this.flashback$overridingLocalPlayerTimer()) {
                 localPlayerTicks = Math.min(10, localPlayerTicks);
                 for (int i = 0; i < localPlayerTicks; i++) {
                     this.level.guardEntityTick(this.level::tickNonPassenger, this.player);
@@ -351,8 +355,13 @@ public abstract class MixinMinecraft implements MinecraftExt {
     }
 
     @Override
+    public boolean flashback$overridingLocalPlayerTimer() {
+        return !Flashback.isExporting() && this.level != null && this.player != null && !this.player.isPassenger() && !this.player.isRemoved() && Math.round(this.getTickTargetMillis(50)) != 50;
+    }
+
+    @Override
     public float flashback$getLocalPlayerPartialTick(float originalPartialTick) {
-        if (Flashback.isExporting() || this.cameraEntity != this.player) {
+        if (this.cameraEntity != this.player || !this.flashback$overridingLocalPlayerTimer()) {
             return originalPartialTick;
         }
         return this.localPlayerTimer.getGameTimeDeltaPartialTick(true);

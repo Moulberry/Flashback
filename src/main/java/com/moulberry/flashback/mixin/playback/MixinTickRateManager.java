@@ -2,6 +2,7 @@ package com.moulberry.flashback.mixin.playback;
 
 import com.llamalad7.mixinextras.injector.ModifyReturnValue;
 import com.moulberry.flashback.Flashback;
+import com.moulberry.flashback.ext.MinecraftExt;
 import com.moulberry.flashback.playback.ReplayPlayer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.server.ServerTickRateManager;
@@ -41,9 +42,7 @@ public abstract class MixinTickRateManager {
             if (this.isServerTickRateManager) {
                 cir.setReturnValue(!(entity instanceof ReplayPlayer));
             } else if (entity == Minecraft.getInstance().player) {
-                // When in an export job, the client must always tick
-                // When not in an export job, the player entity is ticked manually, so it must always be frozen
-                cir.setReturnValue(Flashback.EXPORT_JOB == null);
+                cir.setReturnValue(((MinecraftExt)Minecraft.getInstance()).flashback$overridingLocalPlayerTimer());
             } else {
                 cir.setReturnValue(!this.runsNormally());
             }
