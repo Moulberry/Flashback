@@ -385,7 +385,7 @@ public abstract class MixinMinecraft implements MinecraftExt {
         }
 
         LocalPlayer player = this.player;
-        DeltaTracker deltaTracker = this.timer;
+        DeltaTracker deltaTracker = this.deltaTracker;
 
         if (Flashback.RECORDER != null && player != null) {
             float partialTick = deltaTracker.getGameTimeDeltaPartialTick(true);
