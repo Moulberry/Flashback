@@ -81,6 +81,7 @@
     "playback.MixinMinecraftServer",
     "playback.MixinPlayerChunkSender",
     "playback.MixinScoreboard",
+    "playback.MixinServerTickRateManager",
     "playback.MixinTickRateManager",
     "record.MixinConnection",
     "record.MixinFFmpegFrameRecorder",
