@@ -230,7 +230,7 @@ public abstract class MixinMinecraft implements MinecraftExt {
         FlashbackConfig config = Flashback.getConfig();
         if (inReplay && !config.disableThirdPersonCancel) {
             // Force camera type to first person
-            if (this.player != null && this.cameraEntity == this.player && this.options.getCameraType() != CameraType.FIRST_PERSON) {
+            if (ReplayUI.isActive() && this.player != null && this.cameraEntity == this.player && this.options.getCameraType() != CameraType.FIRST_PERSON) {
                 this.options.setCameraType(CameraType.FIRST_PERSON);
                 this.levelRenderer.needsUpdate();
 
