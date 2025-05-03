@@ -287,7 +287,7 @@ public class ExportJob {
 
             this.updateClientFreeze(frozen);
 
-            DeltaTracker.Timer timer = Minecraft.getInstance().timer;
+            DeltaTracker.Timer timer = Minecraft.getInstance().deltaTracker;
             timer.updateFrozenState(frozen);
             timer.updatePauseState(false);
             timer.deltaTicks = deltaTicksFloat;
