@@ -1,5 +1,6 @@
 package com.moulberry.flashback.keyframe.impl;
 
+import com.google.common.collect.Maps;
 import com.google.gson.JsonDeserializationContext;
 import com.google.gson.JsonDeserializer;
 import com.google.gson.JsonElement;
@@ -15,6 +16,8 @@ import com.moulberry.flashback.keyframe.change.KeyframeChange;
 import com.moulberry.flashback.keyframe.change.KeyframeChangeTrackEntity;
 import com.moulberry.flashback.keyframe.interpolation.InterpolationType;
 import com.moulberry.flashback.keyframe.types.TrackEntityKeyframeType;
+import com.moulberry.flashback.spline.CatmullRom;
+import com.moulberry.flashback.spline.Hermite;
 import imgui.ImGui;
 import imgui.type.ImString;
 import net.minecraft.client.Minecraft;
@@ -57,7 +60,8 @@ public class TrackEntityKeyframe extends Keyframe {
 
     @Override
     public Keyframe copy() {
-        return new TrackEntityKeyframe(this.target, this.trackingBodyPart, this.yawOffset, this.pitchOffset, new Vector3d(this.positionOffset), new Vector3d(this.viewOffset));
+        return new TrackEntityKeyframe(this.target, this.trackingBodyPart, this.yawOffset, this.pitchOffset,
+            new Vector3d(this.positionOffset), new Vector3d(this.viewOffset), this.interpolationType());
     }
 
     @Override
@@ -128,38 +132,52 @@ public class TrackEntityKeyframe extends Keyframe {
 
     @Override
     public KeyframeChange createSmoothInterpolatedChange(Keyframe p1, Keyframe p2, Keyframe p3, float t0, float t1, float t2, float t3, float amount) {
-        return p1.createChange();
-//        float time1 = t1 - t0;
-//        float time2 = t2 - t0;
-//        float time3 = t3 - t0;
-//
-//        Vector3d position = CatmullRom.position(this.center,
-//                ((CameraTrackKeyframe)p1).center, ((CameraTrackKeyframe)p2).center,
-//                ((CameraTrackKeyframe)p3).center, time1, time2, time3, amount);
-//
-//        float distance = CatmullRom.value(this.distance, ((CameraTrackKeyframe)p1).distance, ((CameraTrackKeyframe)p2).distance,
-//                ((CameraTrackKeyframe)p3).distance, time1, time2, time3, amount);
-//
-//        // Note: we don't use CatmullRom#degrees because we want to allow multiple rotations in a single orbit
-//        float yaw = CatmullRom.value(this.yaw, ((CameraTrackKeyframe)p1).yaw, ((CameraTrackKeyframe)p2).yaw,
-//                ((CameraTrackKeyframe)p3).yaw, time1, time2, time3, amount);
-//        float pitch = CatmullRom.value(this.pitch, ((CameraTrackKeyframe)p1).pitch, ((CameraTrackKeyframe)p2).pitch,
-//                ((CameraTrackKeyframe)p3).pitch, time1, time2, time3, amount);
-//
-//        return createChangeFrom(position, distance, yaw, pitch);
+        float time1 = t1 - t0;
+        float time2 = t2 - t0;
+        float time3 = t3 - t0;
+
+        UUID target = amount < 0.5 ? ((TrackEntityKeyframe)p1).target : ((TrackEntityKeyframe)p2).target;
+        TrackingBodyPart trackingBodyPart = amount < 0.5 ? ((TrackEntityKeyframe)p1).trackingBodyPart : ((TrackEntityKeyframe)p2).trackingBodyPart;
+
+        // Note: we don't use CatmullRom#degrees because we want to allow multiple rotations in a single orbit
+        float yawOffset = CatmullRom.value(this.yawOffset, ((TrackEntityKeyframe)p1).yawOffset, ((TrackEntityKeyframe)p2).yawOffset,
+            ((TrackEntityKeyframe)p3).yawOffset, time1, time2, time3, amount);
+        float pitchOffset = CatmullRom.value(this.pitchOffset, ((TrackEntityKeyframe)p1).pitchOffset, ((TrackEntityKeyframe)p2).pitchOffset,
+            ((TrackEntityKeyframe)p3).pitchOffset, time1, time2, time3, amount);
+
+        Vector3d positionOffset = CatmullRom.position(this.positionOffset,
+            ((TrackEntityKeyframe)p1).positionOffset, ((TrackEntityKeyframe)p2).positionOffset,
+            ((TrackEntityKeyframe)p3).positionOffset, time1, time2, time3, amount);
+        Vector3d viewOffset = CatmullRom.position(this.viewOffset,
+            ((TrackEntityKeyframe)p1).viewOffset, ((TrackEntityKeyframe)p2).viewOffset,
+            ((TrackEntityKeyframe)p3).viewOffset, time1, time2, time3, amount);
+
+        return new KeyframeChangeTrackEntity(target, trackingBodyPart, yawOffset, pitchOffset, positionOffset, viewOffset);
     }
 
     @Override
     public KeyframeChange createHermiteInterpolatedChange(Map<Integer, Keyframe> keyframes, float amount) {
-        throw new UnsupportedOperationException();
-//        Vector3d position = Hermite.position(Maps.transformValues(keyframes, k -> ((CameraTrackKeyframe)k).center), amount);
-//        double distance = Hermite.value(Maps.transformValues(keyframes, k -> (double) ((CameraTrackKeyframe)k).distance), amount);
-//
-//        // Note: we don't use Hermite#degrees because we want to allow multiple rotations in a single orbit
-//        double yaw = Hermite.value(Maps.transformValues(keyframes, k -> (double) ((CameraTrackKeyframe)k).yaw), amount);
-//        double pitch = Hermite.value(Maps.transformValues(keyframes, k -> (double) ((CameraTrackKeyframe)k).pitch), amount);
-//
-//        return createChangeFrom(position, (float) distance, (float) yaw, (float) pitch);
+        float lowestTickDelta = Float.MAX_VALUE;
+        UUID target = null;
+        TrackingBodyPart trackingBodyPart = null;
+        for (Map.Entry<Integer, Keyframe> entry : keyframes.entrySet()) {
+            float tickDelta = Math.abs(entry.getKey() - amount);
+            if (tickDelta < lowestTickDelta) {
+                lowestTickDelta = tickDelta;
+                target = ((TrackEntityKeyframe)entry.getValue()).target;
+                trackingBodyPart = ((TrackEntityKeyframe)entry.getValue()).trackingBodyPart;
+            }
+        }
+
+
+        // Note: we don't use Hermite#degrees because we want to allow multiple rotations in a single orbit
+        float yawOffset = (float) Hermite.value(Maps.transformValues(keyframes, k -> (double) ((TrackEntityKeyframe)k).yawOffset), amount);
+        float pitchOffset = (float) Hermite.value(Maps.transformValues(keyframes, k -> (double) ((TrackEntityKeyframe)k).pitchOffset), amount);
+
+        Vector3d positionOffset = Hermite.position(Maps.transformValues(keyframes, k -> ((TrackEntityKeyframe)k).positionOffset), amount);
+        Vector3d viewOffset = Hermite.position(Maps.transformValues(keyframes, k -> ((TrackEntityKeyframe)k).viewOffset), amount);
+
+        return new KeyframeChangeTrackEntity(target, trackingBodyPart, yawOffset, pitchOffset, positionOffset, viewOffset);
     }
 
     public static class TypeAdapter implements JsonSerializer<TrackEntityKeyframe>, JsonDeserializer<TrackEntityKeyframe> {
