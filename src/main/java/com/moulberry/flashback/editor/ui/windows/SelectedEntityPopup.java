@@ -2,11 +2,13 @@ package com.moulberry.flashback.editor.ui.windows;
 
 import com.mojang.authlib.GameProfile;
 import com.mojang.authlib.yggdrasil.ProfileResult;
+import com.mojang.blaze3d.platform.Window;
 import com.moulberry.flashback.FilePlayerSkin;
 import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.Utils;
 import com.moulberry.flashback.combo_options.GlowingOverride;
 import com.moulberry.flashback.editor.ui.ImGuiHelper;
+import com.moulberry.flashback.editor.ui.ReplayUI;
 import com.moulberry.flashback.exporting.AsyncFileDialogs;
 import com.moulberry.flashback.state.EditorState;
 import imgui.ImGui;
@@ -21,6 +23,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.scores.PlayerTeam;
 import net.minecraft.world.scores.Team;
+import org.lwjgl.glfw.GLFW;
 
 import java.nio.file.Path;
 import java.util.UUID;
@@ -62,6 +65,12 @@ public class SelectedEntityPopup {
         ImGui.sameLine();
         if (ImGui.button("Spectate")) {
             Minecraft.getInstance().player.connection.sendUnsignedCommand("spectate " + entity.getUUID());
+            ImGui.closeCurrentPopup();
+        }
+        ImGui.sameLine();
+        if (ImGui.button("Copy UUID")) {
+            GLFW.glfwSetClipboardString(Minecraft.getInstance().getWindow().getWindow(), entity.getUUID().toString());
+            ReplayUI.setInfoOverlay("Copied '" + entity.getUUID() + "'");
             ImGui.closeCurrentPopup();
         }
         if (uuid.equals(editorState.audioSourceEntity)) {
