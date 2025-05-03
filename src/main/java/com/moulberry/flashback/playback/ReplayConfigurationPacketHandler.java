@@ -134,14 +134,14 @@ public class ReplayConfigurationPacketHandler implements ClientConfigurationPack
                         } else {
                             if (registryEntry.key() == Registries.LEVEL_STEM) {
                                 try {
-                                    var dimensionsOpt = synchronizedRegistries.registry(Registries.DIMENSION_TYPE);
-                                    var biomesOpt = synchronizedRegistries.registry(Registries.BIOME);
+                                    var dimensionsOpt = synchronizedRegistries.lookup(Registries.DIMENSION_TYPE);
+                                    var biomesOpt = synchronizedRegistries.lookup(Registries.BIOME);
                                     if (dimensionsOpt.isPresent()) {
                                         var dimensions = dimensionsOpt.get();
 
                                         Holder.Reference<Biome> plains;
                                         if (biomesOpt.isPresent()) {
-                                            plains = biomesOpt.get().getHolderOrThrow(Biomes.PLAINS);
+                                            plains = biomesOpt.get().getOrThrow(Biomes.PLAINS);
                                         } else {
                                             plains = this.replayServer.registryAccess().lookupOrThrow(Registries.BIOME).getOrThrow(Biomes.PLAINS);
                                         }
@@ -149,7 +149,7 @@ public class ReplayConfigurationPacketHandler implements ClientConfigurationPack
                                         var mapped = new MappedRegistry<>(Registries.LEVEL_STEM, Lifecycle.stable());
                                         for (var key : dimensions.registryKeySet()) {
                                             var stemKey = ResourceKey.create(Registries.LEVEL_STEM, key.location());
-                                            var stem = new LevelStem(dimensions.getHolderOrThrow(key), new EmptyLevelSource(plains));
+                                            var stem = new LevelStem(dimensions.getOrThrow(key), new EmptyLevelSource(plains));
                                             mapped.register(stemKey, stem, RegistrationInfo.BUILT_IN);
                                         }
 
