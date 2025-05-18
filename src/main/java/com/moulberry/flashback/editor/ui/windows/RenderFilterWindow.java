@@ -55,7 +55,7 @@ public class RenderFilterWindow {
             if (!config.signedRenderFilter) {
                 String name = Minecraft.getInstance().getGameProfile().getName();
                 ImGui.pushTextWrapPos(300);
-                ImGui.textWrapped("I, " + name + ", do solemnly swear that I will not toggle something off in the 'Render Filter' menu and then later ask in Flashback support why the entity is not being rendered.");
+                ImGui.textWrapped("I, " + name + ", do solemnly swear (or affirm) that I will not toggle something off in the 'Render Filter' menu and then later ask in Flashback support why the entity is not being rendered.");
                 if (ImGui.checkbox("Signed, " + name + ".", false)) {
                     config.signedRenderFilter = true;
                     config.delayedSaveToDefaultFolder();
