@@ -68,7 +68,7 @@ public abstract class MixinLevelChunk extends ChunkAccess implements LevelChunkE
     }
 
     @Inject(method = "setBlockState", at = @At("RETURN"))
-    public void setBlockState(BlockPos blockPos, BlockState blockState, int i, CallbackInfoReturnable<BlockState> cir) {
+    public void setBlockState(BlockPos blockPos, BlockState blockState, boolean bl, CallbackInfoReturnable<BlockState> cir) {
         ReplayServer replayServer = Flashback.getReplayServer();
         if (replayServer == null) {
             return;
