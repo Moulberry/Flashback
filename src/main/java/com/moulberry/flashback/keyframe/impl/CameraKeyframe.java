@@ -26,10 +26,10 @@ import java.util.function.Consumer;
 
 public class CameraKeyframe extends Keyframe {
 
-    private final Vector3d position;
-    private float yaw;
-    private float pitch;
-    private float roll;
+    public final Vector3d position;
+    public float yaw;
+    public float pitch;
+    public float roll;
 
     private static float getDefaultRoll() {
         EditorState editorState = EditorStateManager.getCurrent();
@@ -143,7 +143,7 @@ public class CameraKeyframe extends Keyframe {
     }
 
     @Override
-    public KeyframeChange createHermiteInterpolatedChange(Map<Integer, Keyframe> keyframes, float amount) {
+    public KeyframeChange createHermiteInterpolatedChange(Map<Float, Keyframe> keyframes, float amount) {
         Vector3d position = Hermite.position(Maps.transformValues(keyframes, k -> ((CameraKeyframe)k).position), amount);
         double yaw = Hermite.degrees(Maps.transformValues(keyframes, k -> (double) ((CameraKeyframe)k).yaw), amount);
         double pitch = Hermite.degrees(Maps.transformValues(keyframes, k -> (double) ((CameraKeyframe)k).pitch), amount);

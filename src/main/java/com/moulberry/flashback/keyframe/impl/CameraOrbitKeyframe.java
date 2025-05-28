@@ -25,7 +25,7 @@ import java.util.function.Consumer;
 
 public class CameraOrbitKeyframe extends Keyframe {
 
-    public final Vector3d center;
+    public Vector3d center;
     public float distance;
     public float yaw;
     public float pitch;
@@ -118,7 +118,7 @@ public class CameraOrbitKeyframe extends Keyframe {
     }
 
     @Override
-    public KeyframeChange createHermiteInterpolatedChange(Map<Integer, Keyframe> keyframes, float amount) {
+    public KeyframeChange createHermiteInterpolatedChange(Map<Float, Keyframe> keyframes, float amount) {
         Vector3d position = Hermite.position(Maps.transformValues(keyframes, k -> ((CameraOrbitKeyframe)k).center), amount);
         double distance = Hermite.value(Maps.transformValues(keyframes, k -> (double) ((CameraOrbitKeyframe)k).distance), amount);
 

@@ -60,7 +60,14 @@ public class CameraPath {
         int replayTick = TimelineWindow.getCursorTick();
 
         if (lastEditorStateModCount != state.modCount || lastCursorTick != replayTick) {
-            CameraPathArgs cameraPathArgs = createCameraPathArgs(state.currentScene(), replayTick);
+            CameraPathArgs cameraPathArgs;
+
+            long stamp = state.acquireRead();
+            try {
+                cameraPathArgs = createCameraPathArgs(state.getCurrentScene(stamp), replayTick);
+            } finally {
+                state.release(stamp);
+            }
 
             if (lastEditorStateModCount != state.modCount || !cameraPathArgs.equals(lastCameraPathArgs)) {
                 lastCameraPathArgs = cameraPathArgs;

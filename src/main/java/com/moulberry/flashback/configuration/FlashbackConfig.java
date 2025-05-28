@@ -82,9 +82,11 @@ public class FlashbackConfig {
     public List<String> recentReplays = new ArrayList<>();
     public String defaultExportFilename = "%date%T%time%";
     public InterpolationType defaultInterpolationType = InterpolationType.SMOOTH;
+    public boolean useRealtimeInterpolation = true;
 
     public boolean disableIncreasedFirstPersonUpdates = false;
     public boolean disableThirdPersonCancel = false;
+    public int[] exportRenderDummyFrames = new int[]{0};
 
     public ReplaySorting replaySorting = ReplaySorting.CREATED_DATE;
     public boolean sortDescending = true;

@@ -36,8 +36,12 @@ public abstract class MixinGui {
     @Unique
     private GameType cameraGameType = GameType.DEFAULT_MODE;
 
+    @Unique
+    private boolean shouldHideElements = false;
+
     @Inject(method = "render", at = @At("HEAD"))
     public void render_updateCameraGameType(GuiGraphics guiGraphics, DeltaTracker deltaTracker, CallbackInfo ci) {
+        this.shouldHideElements = false;
         if (Flashback.isInReplay()) {
             Player player = this.getCameraPlayer();
             if (player != null) {
@@ -51,46 +55,57 @@ public abstract class MixinGui {
                 }
             }
             this.cameraGameType = Minecraft.getInstance().gameMode.getPlayerMode();
+            this.shouldHideElements = ReplayUI.isActive();
         }
     }
 
     @Inject(method = "renderChat", at = @At("HEAD"), cancellable = true, require = 0)
     public void renderChat(GuiGraphics guiGraphics, DeltaTracker deltaTracker, CallbackInfo ci) {
-        EditorState editorState = EditorStateManager.getCurrent();
-        if (editorState != null && !editorState.replayVisuals.showChat) {
-            ci.cancel();
+        if (this.shouldHideElements) {
+            EditorState editorState = EditorStateManager.getCurrent();
+            if (editorState != null && !editorState.replayVisuals.showChat) {
+                ci.cancel();
+            }
         }
     }
 
     @Inject(method = "renderTitle", at = @At("HEAD"), cancellable = true, require = 0)
     public void renderTitle(GuiGraphics guiGraphics, DeltaTracker deltaTracker, CallbackInfo ci) {
-        EditorState editorState = EditorStateManager.getCurrent();
-        if (editorState != null && !editorState.replayVisuals.showTitleText) {
-            ci.cancel();
+        if (this.shouldHideElements) {
+            EditorState editorState = EditorStateManager.getCurrent();
+            if (editorState != null && !editorState.replayVisuals.showTitleText) {
+                ci.cancel();
+            }
         }
     }
 
     @Inject(method = "renderScoreboardSidebar", at = @At("HEAD"), cancellable = true, require = 0)
     public void renderScoreboardSidebar(GuiGraphics guiGraphics, DeltaTracker deltaTracker, CallbackInfo ci) {
-        EditorState editorState = EditorStateManager.getCurrent();
-        if (editorState != null && !editorState.replayVisuals.showScoreboard) {
-            ci.cancel();
+        if (this.shouldHideElements) {
+            EditorState editorState = EditorStateManager.getCurrent();
+            if (editorState != null && !editorState.replayVisuals.showScoreboard) {
+                ci.cancel();
+            }
         }
     }
 
     @Inject(method = "renderOverlayMessage", at = @At("HEAD"), cancellable = true, require = 0)
     public void renderOverlayMessage(GuiGraphics guiGraphics, DeltaTracker deltaTracker, CallbackInfo ci) {
-        EditorState editorState = EditorStateManager.getCurrent();
-        if (editorState != null && !editorState.replayVisuals.showActionBar) {
-            ci.cancel();
+        if (this.shouldHideElements) {
+            EditorState editorState = EditorStateManager.getCurrent();
+            if (editorState != null && !editorState.replayVisuals.showActionBar) {
+                ci.cancel();
+            }
         }
     }
 
     @Inject(method = "renderHotbarAndDecorations", at = @At("HEAD"), cancellable = true, require = 0)
     public void renderHotbarAndDecorations(GuiGraphics guiGraphics, DeltaTracker deltaTracker, CallbackInfo ci) {
-        EditorState editorState = EditorStateManager.getCurrent();
-        if (editorState != null && !editorState.replayVisuals.showHotbar) {
-            ci.cancel();
+        if (this.shouldHideElements) {
+            EditorState editorState = EditorStateManager.getCurrent();
+            if (editorState != null && !editorState.replayVisuals.showHotbar) {
+                ci.cancel();
+            }
         }
     }
 

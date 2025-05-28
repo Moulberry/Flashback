@@ -79,6 +79,8 @@ public class ExportJob {
     private long downloadTimeNanos = 0;
     private boolean patreonLinkClicked = false;
 
+    private int extraDummyFrames = 0;
+
     public int progressCount = 0;
     public int progressOutOf = 0;
 
@@ -147,6 +149,8 @@ public class ExportJob {
         TextureTarget infoRenderTarget = null;
 
         int oldGuiScale = Minecraft.getInstance().options.guiScale().get();
+
+        this.extraDummyFrames = Flashback.getConfig().exportRenderDummyFrames[0];
 
         try {
             Files.createDirectories(exportTempFolder);
@@ -263,37 +267,6 @@ public class ExportJob {
                 clientTickCount += 1;
             }
 
-            long pauseScreenStart = System.currentTimeMillis();
-            while (Minecraft.getInstance().getOverlay() != null || Minecraft.getInstance().screen != null) {
-                this.runClientTick(frozen);
-
-                Window window = Minecraft.getInstance().getWindow();
-                RenderTarget renderTarget = Minecraft.getInstance().mainRenderTarget;
-                renderTarget.bindWrite(true);
-                RenderSystem.clear(16640);
-                Minecraft.getInstance().gameRenderer.render(Minecraft.getInstance().deltaTracker, true);
-                renderTarget.unbindWrite();
-
-                this.shouldChangeFramebufferSize = false;
-                renderTarget.blitToScreen(window.getWidth(), window.getHeight());
-                window.updateDisplay(null);
-                this.shouldChangeFramebufferSize = true;
-
-                LockSupport.parkNanos("waiting for pause overlay to disappear", 50_000_000L);
-
-                // Force remove screens/overlays after 5s/15s respectively
-                long currentTime = System.currentTimeMillis();
-                if (pauseScreenStart > currentTime) {
-                    pauseScreenStart = currentTime;
-                }
-                if (currentTime - pauseScreenStart > 5000) {
-                    Minecraft.getInstance().setScreen(null);
-                }
-                if (currentTime - pauseScreenStart > 15000) {
-                    Minecraft.getInstance().setOverlay(null);
-                }
-            }
-
             this.updateClientFreeze(frozen);
 
             DeltaTracker.Timer timer = Minecraft.getInstance().deltaTracker;
@@ -308,6 +281,56 @@ public class ExportJob {
 
             KeyframeHandler keyframeHandler = new MinecraftKeyframeHandler(Minecraft.getInstance());
             this.settings.editorState().applyKeyframes(keyframeHandler, (float)(this.settings.startTick() + currentTickDouble));
+
+            long pauseScreenStart = System.currentTimeMillis();
+            int additionalDummyFrames = this.extraDummyFrames;
+            while (Minecraft.getInstance().getOverlay() != null || Minecraft.getInstance().screen != null || additionalDummyFrames > 0) {
+                if (Minecraft.getInstance().getOverlay() != null || Minecraft.getInstance().screen != null) {
+                    this.runClientTick(frozen);
+                }
+                if (additionalDummyFrames > 0) {
+                    additionalDummyFrames -= 1;
+                }
+
+                Window window = Minecraft.getInstance().getWindow();
+                RenderTarget renderTarget = Minecraft.getInstance().mainRenderTarget;
+                renderTarget.bindWrite(true);
+                RenderSystem.clear(16640);
+                Minecraft.getInstance().gameRenderer.render(Minecraft.getInstance().deltaTracker, true);
+                renderTarget.unbindWrite();
+
+                this.shouldChangeFramebufferSize = false;
+                if (!Minecraft.getInstance().getWindow().isMinimized()) {
+                    renderTarget.blitToScreen(window.getWidth(), window.getHeight());
+                }
+                window.updateDisplay(null);
+                this.shouldChangeFramebufferSize = true;
+
+                if (Minecraft.getInstance().getOverlay() != null || Minecraft.getInstance().screen != null) {
+                    LockSupport.parkNanos("waiting for pause overlay to disappear", 50_000_000L);
+
+                    // Force remove screens/overlays after 5s/15s respectively
+                    long currentTime = System.currentTimeMillis();
+                    if (pauseScreenStart > currentTime) {
+                        pauseScreenStart = currentTime;
+                    }
+                    if (currentTime - pauseScreenStart > 5000) {
+                        Minecraft.getInstance().setScreen(null);
+                    }
+                    if (currentTime - pauseScreenStart > 15000) {
+                        Minecraft.getInstance().setOverlay(null);
+                    }
+                }
+
+                this.updateClientFreeze(frozen);
+
+                timer.updateFrozenState(frozen);
+                timer.updatePauseState(false);
+                timer.deltaTicks = deltaTicksFloat;
+                timer.realtimeDeltaTicks = deltaTicksFloat;
+                timer.deltaTickResidual = (float) partialClientTick;
+                timer.pausedDeltaTickResidual = (float) partialClientTick;
+            }
 
             SaveableFramebuffer saveable = downloader.take();
             RenderTarget renderTarget = Minecraft.getInstance().mainRenderTarget;
