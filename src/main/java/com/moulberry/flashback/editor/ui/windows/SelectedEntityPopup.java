@@ -16,12 +16,17 @@ import imgui.type.ImString;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.PlayerInfo;
+import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.commands.arguments.EntityAnchorArgument;
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.player.PlayerModelPart;
+import net.minecraft.world.scores.DisplaySlot;
+import net.minecraft.world.scores.Objective;
 import net.minecraft.world.scores.PlayerTeam;
+import net.minecraft.world.scores.Scoreboard;
 import net.minecraft.world.scores.Team;
 import org.lwjgl.glfw.GLFW;
 
@@ -69,7 +74,7 @@ public class SelectedEntityPopup {
         }
         ImGui.sameLine();
         if (ImGui.button("Copy UUID")) {
-            GLFW.glfwSetClipboardString(Minecraft.getInstance().getWindow().getWindow(), entity.getUUID().toString());
+            Minecraft.getInstance().keyboardHandler.setClipboard(entity.getUUID().toString());
             ReplayUI.setInfoOverlay("Copied '" + entity.getUUID() + "'");
             ImGui.closeCurrentPopup();
         }
@@ -93,7 +98,17 @@ public class SelectedEntityPopup {
         }
 
         if (!isHiddenDuringExport) {
-            if (entity instanceof Player player) {
+            if (entity instanceof AbstractClientPlayer player) {
+                if (editorState.hideCape.contains(player.getUUID())) {
+                    if (ImGui.checkbox("Hide Cape", true)) {
+                        editorState.hideCape.remove(player.getUUID());
+                    }
+                } else if (player.isModelPartShown(PlayerModelPart.CAPE) && player.getSkin().capeTexture() != null) {
+                    if (ImGui.checkbox("Hide Cape", false)) {
+                        editorState.hideCape.add(player.getUUID());
+                    }
+                }
+
                 boolean hideNametag = editorState.hideNametags.contains(entity.getUUID());
                 if (ImGui.checkbox("Render Nametag", !hideNametag)) {
                     if (hideNametag) {
@@ -137,6 +152,20 @@ public class SelectedEntityPopup {
                         if (team != null && !Utils.isComponentEmpty(team.getPlayerSuffix())) {
                             if (ImGui.checkbox("Hide Team Suffix", false)) {
                                 editorState.hideTeamSuffix.add(player.getUUID());
+                            }
+                        }
+                    }
+
+                    if (editorState.hideBelowName.contains(player.getUUID())) {
+                        if (ImGui.checkbox("Hide Text Below Name", true)) {
+                            editorState.hideBelowName.remove(player.getUUID());
+                        }
+                    } else {
+                        Scoreboard scoreboard = player.getScoreboard();
+                        Objective objective = scoreboard.getDisplayObjective(DisplaySlot.BELOW_NAME);
+                        if (objective != null) {
+                            if (ImGui.checkbox("Hide Text Below Name", false)) {
+                                editorState.hideBelowName.add(player.getUUID());
                             }
                         }
                     }

@@ -156,11 +156,11 @@ public class TrackEntityKeyframe extends Keyframe {
     }
 
     @Override
-    public KeyframeChange createHermiteInterpolatedChange(Map<Integer, Keyframe> keyframes, float amount) {
+    public KeyframeChange createHermiteInterpolatedChange(Map<Float, Keyframe> keyframes, float amount) {
         float lowestTickDelta = Float.MAX_VALUE;
         UUID target = null;
         TrackingBodyPart trackingBodyPart = null;
-        for (Map.Entry<Integer, Keyframe> entry : keyframes.entrySet()) {
+        for (Map.Entry<Float, Keyframe> entry : keyframes.entrySet()) {
             float tickDelta = Math.abs(entry.getKey() - amount);
             if (tickDelta < lowestTickDelta) {
                 lowestTickDelta = tickDelta;

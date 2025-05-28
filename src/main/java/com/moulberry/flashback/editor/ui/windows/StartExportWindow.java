@@ -1,6 +1,5 @@
 package com.moulberry.flashback.editor.ui.windows;
 
-import com.mojang.blaze3d.platform.Window;
 import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.Utils;
 import com.moulberry.flashback.combo_options.AspectRatio;
@@ -156,8 +155,7 @@ public class StartExportWindow {
                 if (ImGuiHelper.inputInt("Start/end tick", startEndTick)) {
                     ReplayServer replayServer = Flashback.getReplayServer();
                     if (editorState != null && replayServer != null) {
-                        editorState.currentScene().setExportTicks(startEndTick[0], startEndTick[1], replayServer.getTotalReplayTicks());
-                        editorState.markDirty();
+                        editorState.setExportTicks(startEndTick[0], startEndTick[1], replayServer.getTotalReplayTicks());
                     }
                 }
             }
@@ -370,31 +368,14 @@ public class StartExportWindow {
                     start = Math.max(0, startEndTick[0]);
                     end = Math.max(start, startEndTick[1]);
                 } else {
-                    start = -1;
-                    end = -1;
+                    var firstAndLastInTracks = editorState.getFirstAndLastTicksInTracks();
+                    start = firstAndLastInTracks.start();
+                    end = firstAndLastInTracks.end();
 
-                    for (KeyframeTrack keyframeTrack : editorState.currentScene().keyframeTracks) {
-                        if (!keyframeTrack.enabled || keyframeTrack.keyframesByTick.isEmpty()) {
-                            continue;
-                        }
-                        int min = keyframeTrack.keyframesByTick.firstKey();
-                        int max = keyframeTrack.keyframesByTick.lastKey();
-                        if (start == -1) {
-                            start = min;
-                        } else {
-                            start = Math.min(start, min);
-                        }
-                        if (end == -1) {
-                            end = max;
-                        } else {
-                            end = Math.max(end, max);
-                        }
-                    }
-
-                    if (start == -1) {
+                    if (start < 0) {
                         start = 0;
                     }
-                    if (end == -1) {
+                    if (end < 0) {
                         ReplayServer replayServer = Flashback.getReplayServer();
                         if (replayServer != null) {
                             end = replayServer.getTotalReplayTicks();
@@ -531,28 +512,15 @@ public class StartExportWindow {
         open = true;
 
         EditorState editorState = EditorStateManager.getCurrent();
-        EditorScene editorScene = editorState == null ? null : editorState.currentScene();
-
-        startEndTick[0] = -1;
-        startEndTick[1] = -1;
-
-        if (editorScene != null && (editorScene.exportStartTicks >= 0 || editorScene.exportEndTicks >= 0)) {
-            if (editorScene.exportStartTicks >= 0) {
-                startEndTick[0] = editorScene.exportStartTicks;
-            } else {
-                startEndTick[0] = 0;
-            }
-            if (editorScene.exportEndTicks >= 0) {
-                startEndTick[1] = editorScene.exportEndTicks;
-            } else {
-                ReplayServer replayServer = Flashback.getReplayServer();
-                if (replayServer == null) {
-                    startEndTick[1] = startEndTick[0] + 100;
-                } else {
-                    startEndTick[1] = replayServer.getTotalReplayTicks();
-                }
-            }
+        if (editorState == null) {
+            startEndTick[0] = -1;
+            startEndTick[1] = -1;
+            return;
         }
+
+        var startAndEnd = editorState.getExportStartAndEnd();
+        startEndTick[0] = startAndEnd.start();
+        startEndTick[1] = startAndEnd.end();
     }
 
 }

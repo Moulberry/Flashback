@@ -14,9 +14,10 @@ public interface KeyframeType<T extends Keyframe> {
     @Nullable T createDirect();
     @Nullable KeyframeCreatePopup<T> createPopup();
 
-    Class<? extends KeyframeChange> keyframeChangeType();
+    @Nullable Class<? extends KeyframeChange> keyframeChangeType();
     default boolean supportsHandler(KeyframeHandler handler) {
-        return handler.supportsKeyframeChange(this.keyframeChangeType());
+        var clazz = this.keyframeChangeType();
+        return clazz != null && handler.supportsKeyframeChange(clazz);
     }
 
     default boolean allowChangingInterpolationType() {
@@ -27,6 +28,9 @@ public interface KeyframeType<T extends Keyframe> {
     }
     default boolean neverApplyLastKeyframe() {
         return false;
+    }
+    default boolean canBeCreatedNormally() {
+        return true;
     }
 
     interface KeyframeCreatePopup<T extends Keyframe> {

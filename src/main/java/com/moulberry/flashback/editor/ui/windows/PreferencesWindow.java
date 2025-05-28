@@ -65,6 +65,10 @@ public class PreferencesWindow {
             ImGui.setNextItemWidth(ReplayUI.scaleUi(200));
             config.defaultInterpolationType = ImGuiHelper.enumCombo("Default Interpolation", config.defaultInterpolationType);
 
+            if (ImGui.checkbox("Use Realtime Interpolation", config.useRealtimeInterpolation)) {
+                config.useRealtimeInterpolation = !config.useRealtimeInterpolation;
+            }
+
             if (ImGui.collapsingHeader("Advanced")) {
                 ImGui.textWrapped("Don't change any of these unless you know what you're doing!! If you change one of these and then ask for support you will be made fun of!!");
                 if (ImGui.checkbox("Disable increased first-person updates", config.disableIncreasedFirstPersonUpdates)) {
@@ -75,6 +79,9 @@ public class PreferencesWindow {
                     config.disableThirdPersonCancel = !config.disableThirdPersonCancel;
                     config.delayedSaveToDefaultFolder();
                 }
+                ImGui.setNextItemWidth(ReplayUI.scaleUi(200));
+                ImGui.sliderInt("Dummy Render Frames", config.exportRenderDummyFrames, 0, 100);
+                ImGuiHelper.tooltip("This will make the exporter render extra dummy frames before saving a frame.\nThis will DRASTICALLY increase the time it takes to export, but may be necessary when using shaders that rely on temporal accumulation or mods which lack support for FREX Flawless Frames");
             }
 
             ImGuiHelper.endPopupModalCloseable();

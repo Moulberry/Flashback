@@ -75,7 +75,7 @@ public class FOVKeyframe extends Keyframe {
     }
 
     @Override
-    public KeyframeChange createHermiteInterpolatedChange(Map<Integer, Keyframe> keyframes, float amount) {
+    public KeyframeChange createHermiteInterpolatedChange(Map<Float, Keyframe> keyframes, float amount) {
         float focalLength = (float) Hermite.value(Maps.transformValues(keyframes, k -> (double) Utils.fovToFocalLength(((FOVKeyframe)k).fov)), amount);
         return new KeyframeChangeFov(Utils.focalLengthToFov(focalLength));
     }
