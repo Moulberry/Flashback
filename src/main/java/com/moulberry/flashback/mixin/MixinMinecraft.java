@@ -350,7 +350,7 @@ public abstract class MixinMinecraft implements MinecraftExt {
             } finally {
                 PerfectFrames.disable();
                 Flashback.EXPORT_JOB = null;
-                ExportDoneWindow.exportDoneWindowOpen = true;
+                ExportDoneWindow.open();
             }
         }
 

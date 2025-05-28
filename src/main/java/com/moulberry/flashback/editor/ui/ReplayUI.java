@@ -274,6 +274,7 @@ public class ReplayUI {
         builder.addChar('\ueb3b');
         builder.addChar('\ue14a');
         builder.addChar('\ue55f');
+        builder.addChar('\uea44');
         return builder.buildRanges();
     }
 
@@ -458,7 +459,7 @@ public class ReplayUI {
 
         // Recalculate the size of the gameplay window
         Window window = Minecraft.getInstance().getWindow();
-        if (window.getWidth() > 0 && window.getWidth() <= 32768 && window.getHeight() > 0 && window.getHeight() <= 32768) {
+        if (window.getWidth() > 0 && window.getWidth() <= 16384 && window.getHeight() > 0 && window.getHeight() <= 16384) {
             Minecraft.getInstance().resizeDisplay();
         }
         imguiGlfw.ungrab();

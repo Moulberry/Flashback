@@ -15,6 +15,7 @@ import com.moulberry.flashback.keyframe.change.KeyframeChange;
 import com.moulberry.flashback.keyframe.change.KeyframeChangeFreeze;
 import com.moulberry.flashback.keyframe.handler.KeyframeHandler;
 import com.moulberry.flashback.keyframe.interpolation.InterpolationType;
+import com.moulberry.flashback.keyframe.types.FreezeKeyframeType;
 import com.moulberry.flashback.keyframe.types.SpeedKeyframeType;
 import com.moulberry.flashback.spline.CatmullRom;
 import imgui.ImGui;
@@ -40,7 +41,7 @@ public class FreezeKeyframe extends Keyframe {
 
     @Override
     public KeyframeType<?> keyframeType() {
-        return SpeedKeyframeType.INSTANCE;
+        return FreezeKeyframeType.INSTANCE;
     }
 
     @Override
@@ -75,7 +76,7 @@ public class FreezeKeyframe extends Keyframe {
     }
 
     @Override
-    public KeyframeChange createHermiteInterpolatedChange(Map<Integer, Keyframe> keyframes, float amount) {
+    public KeyframeChange createHermiteInterpolatedChange(Map<Float, Keyframe> keyframes, float amount) {
         return this.createChange();
     }
 

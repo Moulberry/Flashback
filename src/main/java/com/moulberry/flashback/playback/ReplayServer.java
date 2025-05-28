@@ -11,7 +11,10 @@ import com.moulberry.flashback.ext.ConnectionExt;
 import com.moulberry.flashback.ext.LevelChunkExt;
 import com.moulberry.flashback.TempFolderProvider;
 import com.moulberry.flashback.ext.ServerTickRateManagerExt;
+import com.moulberry.flashback.keyframe.Keyframe;
 import com.moulberry.flashback.keyframe.handler.ReplayServerKeyframeHandler;
+import com.moulberry.flashback.keyframe.impl.BlockOverrideKeyframe;
+import com.moulberry.flashback.keyframe.types.BlockOverrideKeyframeType;
 import com.moulberry.flashback.packet.FlashbackAccurateEntityPosition;
 import com.moulberry.flashback.packet.FlashbackClearEntities;
 import com.moulberry.flashback.packet.FlashbackClearParticles;
@@ -22,6 +25,7 @@ import com.moulberry.flashback.packet.FlashbackRemoteFoodData;
 import com.moulberry.flashback.packet.FlashbackRemoteSelectHotbarSlot;
 import com.moulberry.flashback.packet.FlashbackRemoteSetSlot;
 import com.moulberry.flashback.packet.FlashbackSetBorderLerpStartTime;
+import com.moulberry.flashback.state.EditorScene;
 import com.moulberry.flashback.state.EditorState;
 import com.moulberry.flashback.state.EditorStateManager;
 import com.moulberry.flashback.ext.MinecraftExt;
@@ -31,6 +35,7 @@ import com.moulberry.flashback.packet.FinishedServerTick;
 import com.moulberry.flashback.record.FlashbackChunkMeta;
 import com.moulberry.flashback.record.FlashbackMeta;
 import com.moulberry.flashback.record.Recorder;
+import com.moulberry.flashback.state.KeyframeTrack;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.DecoderException;
@@ -39,11 +44,15 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
+import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
+import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerWorldEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.server.IntegratedServer;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Registry;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.Connection;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -81,7 +90,9 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.WorldDataConfiguration;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.LevelChunk;
+import net.minecraft.world.level.chunk.PalettedContainer;
 import net.minecraft.world.level.storage.LevelResource;
 import net.minecraft.world.level.storage.LevelStorageSource;
 import net.minecraft.world.phys.Vec3;
@@ -130,6 +141,8 @@ public class ReplayServer extends IntegratedServer {
     private boolean isFrozen = false;
     private int frozenDelay = -1;
 
+    private boolean hasNonSpectatorReplayViewer = false;
+
     private int currentTick = 0;
     private volatile int targetTick = 0;
     private final int totalTicks;
@@ -143,6 +156,9 @@ public class ReplayServer extends IntegratedServer {
     public boolean isProcessingSnapshot = false;
     private boolean processedSnapshot = false;
     public volatile boolean fastForwarding = false;
+
+    private record BlockAtPosition(long pos, BlockState blockState) {}
+    private List<BlockAtPosition> pendingBlockOverrides = new ArrayList<>();
 
     private int printFailedDecodePacketCount = 8;
 
@@ -836,6 +852,7 @@ public class ReplayServer extends IntegratedServer {
 
         // Update list of replay viewers
         this.replayViewers.clear();
+        this.hasNonSpectatorReplayViewer = false;
 
         for (ServerPlayer player : this.getPlayerList().getPlayers()) {
             if (player instanceof ReplayPlayer replayPlayer) {
@@ -853,6 +870,9 @@ public class ReplayServer extends IntegratedServer {
                     } else {
                         replayPlayer.spectatingUuid = null;
                     }
+                }
+                if (!replayPlayer.isSpectator()) {
+                    this.hasNonSpectatorReplayViewer = true;
                 }
                 this.replayViewers.add(replayPlayer);
             }
@@ -1100,6 +1120,9 @@ public class ReplayServer extends IntegratedServer {
         // Tick underlying server
         super.tickServer(booleanSupplier);
 
+        // Apply block changes
+        applyBlockOverridesToTimeline();
+
         // Teleport entities
         if (!this.isFrozen && !this.needsPositionUpdate.isEmpty()) {
             for (Map.Entry<ResourceKey<Level>, IntSet> entry : this.needsPositionUpdate.entrySet()) {
@@ -1182,6 +1205,62 @@ public class ReplayServer extends IntegratedServer {
         }
     }
 
+    private void applyBlockOverridesToTimeline() {
+        if (this.pendingBlockOverrides.isEmpty()) {
+            return;
+        }
+
+        List<BlockAtPosition> pendingBlockOverrides = this.pendingBlockOverrides;
+        this.pendingBlockOverrides = new ArrayList<>();
+
+        EditorState editorState = getEditorState();
+        long stamp = editorState.acquireWrite();
+        try {
+            EditorScene scene = editorState.getCurrentScene(stamp);
+
+            int currentTick = this.currentTick;
+
+            boolean added = false;
+
+            for (KeyframeTrack keyframeTrack : scene.keyframeTracks) {
+                if (keyframeTrack.keyframeType == BlockOverrideKeyframeType.INSTANCE) {
+                    BlockOverrideKeyframe keyframe = (BlockOverrideKeyframe) keyframeTrack.keyframesByTick.get(currentTick);
+                    if (keyframe == null) {
+                        keyframe = new BlockOverrideKeyframe();
+                        keyframeTrack.keyframesByTick.put(currentTick, keyframe);
+                    }
+                    for (BlockAtPosition pendingBlockOverride : pendingBlockOverrides) {
+                        long pos = pendingBlockOverride.pos;
+                        int x = BlockPos.getX(pos);
+                        int y = BlockPos.getY(pos);
+                        int z = BlockPos.getZ(pos);
+                        keyframe.setBlock(x, y, z, pendingBlockOverride.blockState);
+                    }
+                    added = true;
+                    break;
+                }
+            }
+
+            if (!added) {
+                KeyframeTrack keyframeTrack = new KeyframeTrack(BlockOverrideKeyframeType.INSTANCE);
+
+                BlockOverrideKeyframe keyframe = new BlockOverrideKeyframe();
+                keyframeTrack.keyframesByTick.put(currentTick, keyframe);
+                for (BlockAtPosition pendingBlockOverride : pendingBlockOverrides) {
+                    long pos = pendingBlockOverride.pos;
+                    int x = BlockPos.getX(pos);
+                    int y = BlockPos.getY(pos);
+                    int z = BlockPos.getZ(pos);
+                    keyframe.setBlock(x, y, z, pendingBlockOverride.blockState);
+                }
+
+                scene.keyframeTracks.add(keyframeTrack);
+            }
+        } finally {
+            editorState.release(stamp);
+        }
+    }
+
     @Override
     public void synchronizeTime(ServerLevel level) {
     }
@@ -1241,44 +1320,118 @@ public class ReplayServer extends IntegratedServer {
             }
         }
 
-        while (this.currentTick < this.targetTick) {
-            if (!this.currentReplayReader.handleNextAction(this)) {
-                Map.Entry<Integer, PlayableChunk> newEntry = this.playableChunksByStart.floorEntry(this.currentTick);
-                if (newEntry.getValue() == entry.getValue()) {
-                    this.targetTick = this.currentTick;
-                    this.replayPaused = true;
-                    return;
-                }
-                entry = newEntry;
+        EditorState editorState = getEditorState();
+        long stamp = editorState.acquireRead();
+        try {
+            EditorScene scene = editorState.getCurrentScene(stamp);
+            Map<Integer, Keyframe> blockOverrideKeyframes = null;
 
-                if (newEntry.getKey() != this.currentTick) {
-                    Flashback.LOGGER.error("Error processing replay: ran out of entries before expected end of PlayableChunk");
-                    Flashback.LOGGER.error("Current tick: {}", this.currentTick);
-                    Flashback.LOGGER.error("New entry start: {}", newEntry.getKey());
-                    this.stopWithReason(Component.literal("Error processing replay: ran out of entries before expected end of PlayableChunk"));
-                    return;
-                }
-
-                this.currentReplayReader = entry.getValue().getOrLoadReplayReader(this.registryAccess());
-                this.currentReplayReader.resetToStart();
-
-                if (entry.getValue().chunkMeta.forcePlaySnapshot) {
-                    this.processedSnapshot = true;
-                    this.clearDataForPlayingSnapshot();
-                    this.currentReplayReader.handleSnapshot(this);
+            for (KeyframeTrack keyframeTrack : scene.keyframeTracks) {
+                if (keyframeTrack.enabled && keyframeTrack.keyframeType == BlockOverrideKeyframeType.INSTANCE) {
+                    blockOverrideKeyframes = keyframeTrack.keyframesByTick;
+                    break;
                 }
             }
 
-            if (entry.getKey() + entry.getValue().chunkMeta.duration < this.currentTick) {
-                Flashback.LOGGER.error("Error processing replay: actual duration of PlayableChunk inconsistent with recorded duration");
-                Flashback.LOGGER.error("Current tick: {}", this.currentTick);
-                Flashback.LOGGER.error("PlayableChunk tick base: {}", entry.getKey());
-                Flashback.LOGGER.error("PlayableChunk duration: {}", entry.getValue().chunkMeta.duration);
-                this.stopWithReason(Component.literal("Error processing replay: actual duration of PlayableChunk inconsistent with recorded duration"));
+            if (blockOverrideKeyframes == null) {
+                editorState.release(stamp);
+                stamp = 0L;
+            }
+
+            int lastBlockOverrideTick = this.currentTick;
+            while (this.currentTick < this.targetTick) {
+                if (lastBlockOverrideTick != this.currentTick && blockOverrideKeyframes != null) {
+                    applyBlockOverrideKeyframes(blockOverrideKeyframes, lastBlockOverrideTick);
+                    lastBlockOverrideTick = this.currentTick;
+                }
+
+                if (!this.currentReplayReader.handleNextAction(this)) {
+                    Map.Entry<Integer, PlayableChunk> newEntry = this.playableChunksByStart.floorEntry(this.currentTick);
+                    if (newEntry.getValue() == entry.getValue()) {
+                        this.targetTick = this.currentTick;
+                        this.replayPaused = true;
+                        return;
+                    }
+                    entry = newEntry;
+
+                    if (newEntry.getKey() != this.currentTick) {
+                        Flashback.LOGGER.error("Error processing replay: ran out of entries before expected end of PlayableChunk");
+                        Flashback.LOGGER.error("Current tick: {}", this.currentTick);
+                        Flashback.LOGGER.error("New entry start: {}", newEntry.getKey());
+                        this.stopWithReason(Component.literal("Error processing replay: ran out of entries before expected end of PlayableChunk"));
+                        return;
+                    }
+
+                    this.currentReplayReader = entry.getValue().getOrLoadReplayReader(this.registryAccess());
+                    this.currentReplayReader.resetToStart();
+
+                    if (entry.getValue().chunkMeta.forcePlaySnapshot) {
+                        this.processedSnapshot = true;
+                        this.clearDataForPlayingSnapshot();
+                        this.currentReplayReader.handleSnapshot(this);
+                    }
+                }
+
+                if (entry.getKey() + entry.getValue().chunkMeta.duration < this.currentTick) {
+                    Flashback.LOGGER.error("Error processing replay: actual duration of PlayableChunk inconsistent with recorded duration");
+                    Flashback.LOGGER.error("Current tick: {}", this.currentTick);
+                    Flashback.LOGGER.error("PlayableChunk tick base: {}", entry.getKey());
+                    Flashback.LOGGER.error("PlayableChunk duration: {}", entry.getValue().chunkMeta.duration);
+                    this.stopWithReason(Component.literal("Error processing replay: actual duration of PlayableChunk inconsistent with recorded duration"));
+                }
+            }
+
+            if (blockOverrideKeyframes != null) {
+                if (lastBlockOverrideTick != this.currentTick) {
+                    applyBlockOverrideKeyframes(blockOverrideKeyframes, lastBlockOverrideTick);
+                }
+                applyBlockOverrideKeyframes(blockOverrideKeyframes, this.currentTick);
+            }
+        } finally {
+            if (stamp != 0) {
+                editorState.release(stamp);
+            }
+            this.currentReplayReader = null;
+        }
+    }
+
+    private void applyBlockOverrideKeyframes(Map<Integer, Keyframe> blockOverrideKeyframes, int tick) {
+        ServerLevel level = this.gamePacketHandler.level();
+        if (level != null) {
+            BlockOverrideKeyframe keyframe = (BlockOverrideKeyframe) blockOverrideKeyframes.get(tick);
+            if (keyframe != null) {
+                BlockPos.MutableBlockPos mutableBlockPos = new BlockPos.MutableBlockPos();
+                BlockState emptyState = BlockOverrideKeyframe.EMPTY_STATE;
+                for (Long2ObjectMap.Entry<PalettedContainer<BlockState>> chunkEntry : keyframe.blocks.long2ObjectEntrySet()) {
+                    long chunkPos = chunkEntry.getLongKey();
+                    int chunkX = BlockPos.getX(chunkPos);
+                    int chunkY = BlockPos.getY(chunkPos);
+                    int chunkZ = BlockPos.getZ(chunkPos);
+
+                    if (chunkY < level.getMinSectionY() || chunkY > level.getMaxSectionY()) {
+                        continue;
+                    }
+
+                    PalettedContainer<BlockState> container = chunkEntry.getValue();
+
+                    LevelChunk levelChunk = level.getChunk(chunkX, chunkZ);
+                    for (int x = 0; x < 16; x++) {
+                        for (int y = 0; y < 16; y++) {
+                            for (int z = 0; z < 16; z++) {
+                                BlockState blockState = container.get(x, y, z);
+                                if (blockState == emptyState) continue;
+
+                                mutableBlockPos.set((chunkX << 4) + x, (chunkY << 4) + y, (chunkZ << 4) + z);
+                                BlockState old = ((LevelChunkExt)levelChunk).flashback$setBlockStateWithoutUpdates(mutableBlockPos, blockState);
+                                if (old != null) {
+                                    level.sendBlockUpdated(mutableBlockPos, old, blockState, 3);
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
-
-        this.currentReplayReader = null;
     }
 
     private void clearDataForPlayingSnapshot() {
@@ -1288,6 +1441,12 @@ public class ReplayServer extends IntegratedServer {
             }
         }
         this.bossEvents.clear();
+    }
+
+    public void blockChangeOccurred(BlockPos blockPos, BlockState result) {
+        if (this.replayPaused && this.hasNonSpectatorReplayViewer) {
+            this.pendingBlockOverrides.add(new BlockAtPosition(blockPos.asLong(), result));
+        }
     }
 
     private void tryFollowLocalPlayer() {

@@ -23,17 +23,17 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @IfModLoaded("iris")
 @Pseudo
-@Mixin(HandRenderer.class)
+@Mixin(value = HandRenderer.class, remap = false)
 public class MixinIrisHandRenderer {
 
-    @Inject(method = "isHandTranslucent", remap = false, at = @At("HEAD"), cancellable = true, require = 0)
+    @Inject(method = "isHandTranslucent", at = @At("HEAD"), cancellable = true, require = 0)
     public void isHandTransluent(InteractionHand hand, CallbackInfoReturnable<Boolean> cir) {
         if (Flashback.getSpectatingPlayer() != null) {
             cir.setReturnValue(false);
         }
     }
 
-    @WrapOperation(method = "canRender", remap = false, at = @At(value = "INVOKE", target = "Lnet/minecraft/client/multiplayer/MultiPlayerGameMode;getPlayerMode()Lnet/minecraft/world/level/GameType;"), require = 0)
+    @WrapOperation(method = "canRender", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/multiplayer/MultiPlayerGameMode;getPlayerMode()Lnet/minecraft/world/level/GameType;"), require = 0)
     public GameType getPlayerMode(MultiPlayerGameMode instance, Operation<GameType> original) {
         if (Flashback.getSpectatingPlayer() != null) {
             return GameType.SURVIVAL;
@@ -41,7 +41,7 @@ public class MixinIrisHandRenderer {
         return original.call(instance);
     }
 
-    @WrapOperation(method = "renderSolid", remap = false, at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/ItemInHandRenderer;renderHandsWithItems(FLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource$BufferSource;Lnet/minecraft/client/player/LocalPlayer;I)V"), require = 0)
+    @WrapOperation(method = "renderSolid", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/ItemInHandRenderer;renderHandsWithItems(FLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource$BufferSource;Lnet/minecraft/client/player/LocalPlayer;I)V"), require = 0)
     public void renderSolid_renderHandsWithItems(ItemInHandRenderer instance, float f, PoseStack poseStack, MultiBufferSource.BufferSource bufferSource, LocalPlayer localPlayer, int i, Operation<Void> original) {
         AbstractClientPlayer spectatingPlayer = Flashback.getSpectatingPlayer();
         if (spectatingPlayer != null) {
@@ -52,7 +52,7 @@ public class MixinIrisHandRenderer {
         }
     }
 
-    @WrapOperation(method = "renderTranslucent", remap = false, at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/ItemInHandRenderer;renderHandsWithItems(FLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource$BufferSource;Lnet/minecraft/client/player/LocalPlayer;I)V"), require = 0)
+    @WrapOperation(method = "renderTranslucent", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/ItemInHandRenderer;renderHandsWithItems(FLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource$BufferSource;Lnet/minecraft/client/player/LocalPlayer;I)V"), require = 0)
     public void renderTranslucent_renderHandsWithItems(ItemInHandRenderer instance, float f, PoseStack poseStack, MultiBufferSource.BufferSource bufferSource, LocalPlayer localPlayer, int i, Operation<Void> original) {
         AbstractClientPlayer spectatingPlayer = Flashback.getSpectatingPlayer();
         if (spectatingPlayer != null) {

@@ -2,7 +2,6 @@ package com.moulberry.flashback.editor.ui.windows;
 
 import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.Utils;
-import com.moulberry.flashback.combo_options.VideoCodec;
 import com.moulberry.flashback.combo_options.VideoContainer;
 import com.moulberry.flashback.configuration.FlashbackConfig;
 import com.moulberry.flashback.editor.ui.ImGuiHelper;
@@ -85,10 +84,7 @@ public class ExportScreenshotWindow {
                         boolean ssaa = config.ssaa;
                         boolean noGui = config.noGui;
 
-                        EditorState copiedEditorState = editorState.copy();
-                        for (EditorScene scene : copiedEditorState.scenes) {
-                            scene.keyframeTracks.clear();
-                        }
+                        EditorState copiedEditorState = editorState.copyWithoutKeyframes();
 
                         ExportSettings settings = new ExportSettings(null, copiedEditorState,
                             player.position(), player.getYRot(), player.getXRot(),

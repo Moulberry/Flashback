@@ -332,36 +332,41 @@ public class VisualsWindow {
 
     private static void addKeyframe(EditorState editorState, ReplayServer replayServer, Keyframe keyframe) {
         KeyframeType<?> keyframeType = keyframe.keyframeType();
-        EditorScene scene = editorState.currentScene();
+        long stamp = editorState.acquireWrite();
+        try {
+            EditorScene scene = editorState.getCurrentScene(stamp);
 
-        // Try add to existing enabled keyframe track
-        for (int i = 0; i < scene.keyframeTracks.size(); i++) {
-            KeyframeTrack keyframeTrack = scene.keyframeTracks.get(i);
-            if (keyframeTrack.enabled && keyframeTrack.keyframeType == keyframeType) {
-                scene.setKeyframe(i, replayServer.getReplayTick(), keyframe);
-                return;
+            // Try add to existing enabled keyframe track
+            for (int i = 0; i < scene.keyframeTracks.size(); i++) {
+                KeyframeTrack keyframeTrack = scene.keyframeTracks.get(i);
+                if (keyframeTrack.enabled && keyframeTrack.keyframeType == keyframeType) {
+                    scene.setKeyframe(i, replayServer.getReplayTick(), keyframe);
+                    return;
+                }
             }
-        }
 
-        // Try add to any keyframe track
-        for (int i = 0; i < scene.keyframeTracks.size(); i++) {
-            KeyframeTrack keyframeTrack = scene.keyframeTracks.get(i);
-            if (keyframeTrack.keyframeType == keyframeType) {
-                scene.setKeyframe(i, replayServer.getReplayTick(), keyframe);
-                return;
+            // Try add to any keyframe track
+            for (int i = 0; i < scene.keyframeTracks.size(); i++) {
+                KeyframeTrack keyframeTrack = scene.keyframeTracks.get(i);
+                if (keyframeTrack.keyframeType == keyframeType) {
+                    scene.setKeyframe(i, replayServer.getReplayTick(), keyframe);
+                    return;
+                }
             }
-        }
 
-        String description = "Added " + keyframeType.name() + " keyframe";
-        int newKeyframeTrackIndex = scene.keyframeTracks.size();
-        scene.push(new EditorSceneHistoryEntry(
-            List.of(new EditorSceneHistoryAction.RemoveTrack(keyframeType, newKeyframeTrackIndex)),
-            List.of(
-                new EditorSceneHistoryAction.AddTrack(keyframeType, newKeyframeTrackIndex),
-                new EditorSceneHistoryAction.SetKeyframe(keyframeType, newKeyframeTrackIndex, replayServer.getReplayTick(), keyframe)
-            ),
-            description
-        ));
-        editorState.markDirty();
+            String description = "Added " + keyframeType.name() + " keyframe";
+            int newKeyframeTrackIndex = scene.keyframeTracks.size();
+            scene.push(new EditorSceneHistoryEntry(
+                List.of(new EditorSceneHistoryAction.RemoveTrack(keyframeType, newKeyframeTrackIndex)),
+                List.of(
+                    new EditorSceneHistoryAction.AddTrack(keyframeType, newKeyframeTrackIndex),
+                    new EditorSceneHistoryAction.SetKeyframe(keyframeType, newKeyframeTrackIndex, replayServer.getReplayTick(), keyframe)
+                ),
+                description
+            ));
+            editorState.markDirty();
+        } finally {
+            editorState.release(stamp);
+        }
     }
 }

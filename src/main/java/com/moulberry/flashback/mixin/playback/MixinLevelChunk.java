@@ -1,8 +1,11 @@
 package com.moulberry.flashback.mixin.playback;
 
+import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.ext.LevelChunkExt;
+import com.moulberry.flashback.playback.ReplayServer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Registry;
+import net.minecraft.core.SectionPos;
 import net.minecraft.util.profiling.ProfilerFiller;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.ChunkPos;
@@ -25,7 +28,9 @@ import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
+import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(LevelChunk.class)
 public abstract class MixinLevelChunk extends ChunkAccess implements LevelChunkExt {
@@ -60,18 +65,32 @@ public abstract class MixinLevelChunk extends ChunkAccess implements LevelChunkE
         this.cachedChunkId = id;
     }
 
+    @Inject(method = "setBlockState", at = @At("RETURN"))
+    public void setBlockState(BlockPos blockPos, BlockState blockState, int i, CallbackInfoReturnable<BlockState> cir) {
+        ReplayServer replayServer = Flashback.getReplayServer();
+        if (replayServer == null) {
+            return;
+        }
+
+        BlockState old = cir.getReturnValue();
+        if (old != null && old != blockState) {
+            replayServer.blockChangeOccurred(blockPos, blockState);
+            this.cachedChunkId = -1;
+        }
+    }
+
     @Override
-    public void flashback$setBlockStateWithoutUpdates(BlockPos blockPos, BlockState blockState) {
+    public BlockState flashback$setBlockStateWithoutUpdates(BlockPos blockPos, BlockState blockState) {
         int y = blockPos.getY();
         int sectionY = this.getSectionIndex(y);
         if (sectionY < 0 || sectionY >= this.getSectionsCount()) {
-            return;
+            return null;
         }
 
         LevelChunkSection levelChunkSection = this.getSection(sectionY);
         boolean oldHasOnlyAir = levelChunkSection.hasOnlyAir();
         if (oldHasOnlyAir && blockState.isAir()) {
-            return;
+            return null;
         }
 
         // Set block
@@ -80,7 +99,7 @@ public abstract class MixinLevelChunk extends ChunkAccess implements LevelChunkE
         int localZ = blockPos.getZ() & 0xF;
         BlockState oldBlockState = levelChunkSection.setBlockState(localX, localY, localZ, blockState);
         if (oldBlockState == blockState) {
-            return;
+            return null;
         }
 
         this.cachedChunkId = -1;
@@ -95,6 +114,7 @@ public abstract class MixinLevelChunk extends ChunkAccess implements LevelChunkE
         boolean newHasOnlyAir = levelChunkSection.hasOnlyAir();
         if (oldHasOnlyAir != newHasOnlyAir) {
             this.level.getChunkSource().getLightEngine().updateSectionStatus(blockPos, newHasOnlyAir);
+            this.level.getChunkSource().onSectionEmptinessChanged(this.chunkPos.x, SectionPos.blockToSectionCoord(y), this.chunkPos.z, newHasOnlyAir);
         }
 
         // Update light
@@ -111,7 +131,7 @@ public abstract class MixinLevelChunk extends ChunkAccess implements LevelChunkE
             this.removeBlockEntity(blockPos);
         }
         if (!levelChunkSection.getBlockState(localX, localY, localZ).is(block)) {
-            return;
+            return oldBlockState;
         }
         if (blockState.hasBlockEntity()) {
             BlockEntity blockEntity = this.getBlockEntity(blockPos, LevelChunk.EntityCreationType.CHECK);
@@ -127,6 +147,7 @@ public abstract class MixinLevelChunk extends ChunkAccess implements LevelChunkE
         }
 
         this.unsaved = true;
+        return oldBlockState;
     }
 
 }

@@ -152,7 +152,7 @@ public class CameraShakeKeyframe extends Keyframe {
     }
 
     @Override
-    public KeyframeChange createHermiteInterpolatedChange(Map<Integer, Keyframe> keyframes, float amount) {
+    public KeyframeChange createHermiteInterpolatedChange(Map<Float, Keyframe> keyframes, float amount) {
         float frequencyX = (float) Hermite.value(Maps.transformValues(keyframes, k -> (double) ((CameraShakeKeyframe)k).frequencyX), amount);
         float amplitudeX = (float) Hermite.value(Maps.transformValues(keyframes, k -> (double) ((CameraShakeKeyframe)k).amplitudeX), amount);
         float frequencyY = (float) Hermite.value(Maps.transformValues(keyframes, k -> (double) ((CameraShakeKeyframe)k).frequencyY), amount);

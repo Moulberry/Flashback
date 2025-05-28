@@ -5,7 +5,7 @@ import net.minecraft.world.level.block.state.BlockState;
 
 public interface LevelChunkExt {
 
-    void flashback$setBlockStateWithoutUpdates(BlockPos blockPos, BlockState blockState);
+    BlockState flashback$setBlockStateWithoutUpdates(BlockPos blockPos, BlockState blockState);
     int flashback$getCachedChunkId();
     void flashback$setCachedChunkId(int id);
 

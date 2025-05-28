@@ -47,8 +47,11 @@ public class FilePlayerSkin {
         try (InputStream inputStream = Files.newInputStream(path)) {
             NativeImage nativeImage = NativeImage.read(inputStream);
 
+            int w = nativeImage.getWidth();
+            int h = nativeImage.getHeight();
+
             // We determine the type using the alpha of the pixel at 54, 20
-            int argb = nativeImage.getPixelRGBA(54, 20);
+            int argb = nativeImage.getPixelRGBA(54 * w / 64, 20 * h / 64);
             PlayerSkin.Model model = PlayerSkin.Model.WIDE;
             if (((argb >> 24) & 0xFF) < 20) {
                 model = PlayerSkin.Model.SLIM;
@@ -60,7 +63,6 @@ public class FilePlayerSkin {
             Minecraft.getInstance().getTextureManager().register(resourceLocation, dynamicTexture);
             GlobalCleaner.INSTANCE.register(this, new CleanState(resourceLocation));
 
-            // todo: determine skin type (wide or slim)
             this.playerSkin = new PlayerSkin(resourceLocation, null, null, null, model, false);
         } catch (Exception e) {
             Flashback.LOGGER.error("Unable to load skin from file", e);

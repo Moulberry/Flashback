@@ -47,7 +47,8 @@
     "visuals.MixinMouseHandler",
     "visuals.MixinOptions",
     "visuals.MixinParticleEngine",
-    "visuals.MixinPlayer"
+    "visuals.MixinPlayer",
+    "visuals.MixinPlayerRenderer"
   ],
   "injectors": {
     "defaultRequire": 1

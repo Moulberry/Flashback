@@ -191,7 +191,7 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
     }
 
     public ServerLevel level() {
-        return this.replayServer.getLevel(this.currentDimension);
+        return this.currentDimension == null ? null : this.replayServer.getLevel(this.currentDimension);
     }
 
     @Override

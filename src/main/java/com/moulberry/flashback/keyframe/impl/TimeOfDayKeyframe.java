@@ -74,7 +74,7 @@ public class TimeOfDayKeyframe extends Keyframe {
     }
 
     @Override
-    public KeyframeChange createHermiteInterpolatedChange(Map<Integer, Keyframe> keyframes, float amount) {
+    public KeyframeChange createHermiteInterpolatedChange(Map<Float, Keyframe> keyframes, float amount) {
         int timeOfDay = (int) Hermite.value(Maps.transformValues(keyframes, k -> (double) ((TimeOfDayKeyframe)k).time), amount);
         return new KeyframeChangeTimeOfDay(timeOfDay);
     }
