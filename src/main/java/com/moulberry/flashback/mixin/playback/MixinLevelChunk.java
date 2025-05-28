@@ -114,7 +114,6 @@ public abstract class MixinLevelChunk extends ChunkAccess implements LevelChunkE
         boolean newHasOnlyAir = levelChunkSection.hasOnlyAir();
         if (oldHasOnlyAir != newHasOnlyAir) {
             this.level.getChunkSource().getLightEngine().updateSectionStatus(blockPos, newHasOnlyAir);
-            this.level.getChunkSource().onSectionEmptinessChanged(this.chunkPos.x, SectionPos.blockToSectionCoord(y), this.chunkPos.z, newHasOnlyAir);
         }
 
         // Update light

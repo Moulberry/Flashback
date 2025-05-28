@@ -1408,7 +1408,7 @@ public class ReplayServer extends IntegratedServer {
                     int chunkY = BlockPos.getY(chunkPos);
                     int chunkZ = BlockPos.getZ(chunkPos);
 
-                    if (chunkY < level.getMinSectionY() || chunkY > level.getMaxSectionY()) {
+                    if (chunkY < level.getMinSection() || chunkY >= level.getMaxSection()) {
                         continue;
                     }
 
