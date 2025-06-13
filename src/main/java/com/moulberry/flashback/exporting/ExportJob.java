@@ -36,6 +36,7 @@ import net.minecraft.client.renderer.FogParameters;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.network.chat.Component;
 import net.minecraft.sounds.SoundEvents;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.Vec3;
@@ -69,6 +70,7 @@ public class ExportJob {
     private long renderStartTime;
 
     private final Random particleRandom;
+    private long currentClientTickSeed = 0L;
 
     private boolean showingDebug = false;
     private boolean pressedDebugKey = false;
@@ -123,6 +125,10 @@ public class ExportJob {
 
     public Random getParticleRandom() {
         return this.particleRandom;
+    }
+
+    public long getSeedForCurrentClientTick() {
+        return this.currentClientTickSeed;
     }
 
     public ExportSettings getSettings() {
@@ -396,6 +402,7 @@ public class ExportJob {
         long entitySeed = random.nextLong();
         long mathSeed = random.nextLong();
         long particleSeed = random.nextLong();
+        this.currentClientTickSeed = random.nextLong();
 
         if (minecraft.getConnection() != null) {
             minecraft.getConnection().random.setSeed(connectionSeed);
