@@ -16,6 +16,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.RegistryAccess;
@@ -97,7 +98,7 @@ public class AsyncReplaySaver {
         }
     }
 
-    private final Int2ObjectMap<List<CachedChunkPacket>> cachedChunkPackets = new Int2ObjectOpenHashMap<>();
+    private final Long2ObjectOpenHashMap<List<CachedChunkPacket>> cachedChunkPackets = new Long2ObjectOpenHashMap<>();
     private int totalWrittenChunkPackets = 0;
 
     public void writeGamePackets(StreamCodec<ByteBuf, Packet<? super ClientGamePacketListener>> gamePacketCodec,
@@ -114,15 +115,10 @@ public class AsyncReplaySaver {
                     int index = -1;
 
                     CachedChunkPacket cachedChunkPacket = new CachedChunkPacket(levelChunkPacket, -1);
-                    int hashCode = cachedChunkPacket.hashCode();
-
                     boolean add = true;
 
-                    List<CachedChunkPacket> cached = this.cachedChunkPackets.get(hashCode);
-                    if (cached == null) {
-                        cached = new ArrayList<>();
-                        this.cachedChunkPackets.put(hashCode, cached);
-                    } else {
+                    List<CachedChunkPacket> cached = this.cachedChunkPackets.computeIfAbsent(cachedChunkPacket.longHashCode, (l)->new ArrayList<>());
+                    if (!cached.isEmpty()) {
                         for (CachedChunkPacket existingChunkPacket : cached) {
                             if (existingChunkPacket.equals(cachedChunkPacket)) {
                                 add = false;
