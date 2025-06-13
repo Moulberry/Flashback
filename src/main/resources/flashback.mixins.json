@@ -75,6 +75,7 @@
     "compat.voice_chat.MixinVoiceChatSoundManager",
     "millis.MixinWorldBorderMovingBorderExtent",
     "playback.MixinAbstractMinecart",
+    "norandom.MixinEntityNoRandom",
     "playback.MixinAttributeInstance",
     "playback.MixinBoat",
     "playback.MixinChunkHolder",
