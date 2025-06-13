@@ -14,7 +14,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import java.util.Random;
 
 @Mixin(Particle.class)
-public class MixinParticle {
+public class MixinParticleNoRandom {
 
     @Shadow
     @Final
