@@ -62,6 +62,7 @@ public class ExportJob {
 
     private final Random particleRandom;
     private long currentClientTickSeed = 0L;
+    private long currentInitialEntityTickSeed = 0L;
 
     private boolean showingDebug = false;
     private boolean pressedDebugKey = false;
@@ -120,6 +121,11 @@ public class ExportJob {
 
     public long getSeedForCurrentClientTick() {
         return this.currentClientTickSeed;
+    }
+
+    public long getInitialEntitySeedForCurrentClientTick() {
+        this.currentInitialEntityTickSeed += 1;
+        return this.currentInitialEntityTickSeed;
     }
 
     public ExportSettings getSettings() {
@@ -388,6 +394,7 @@ public class ExportJob {
         long mathSeed = random.nextLong();
         long particleSeed = random.nextLong();
         this.currentClientTickSeed = random.nextLong();
+        this.currentInitialEntityTickSeed = random.nextLong();
 
         if (minecraft.getConnection() != null) {
             minecraft.getConnection().random.setSeed(connectionSeed);
