@@ -352,6 +352,14 @@ public class Flashback implements ModInitializer, ClientModInitializer {
             flashback.then(ClientCommandManager.literal("start").executes(this::startRecordingReplay));
             flashback.then(ClientCommandManager.literal("finish").executes(this::finishRecordingReplay));
             flashback.then(ClientCommandManager.literal("end").executes(this::finishRecordingReplay));
+            flashback.then(ClientCommandManager.literal("pause").executes(ctx -> {
+                pauseRecordingReplay(true);
+                return 0;
+            }));
+            flashback.then(ClientCommandManager.literal("unpause").executes(ctx -> {
+                pauseRecordingReplay(false);
+                return 0;
+            }));
             flashback.then(ClientCommandManager.literal("config").executes(this::openFlashbackConfig));
             flashback.then(ClientCommandManager.literal("mark")
                 .executes(command -> {
