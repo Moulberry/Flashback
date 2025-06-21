@@ -34,7 +34,7 @@ public abstract class MixinGui {
     protected abstract Player getCameraPlayer();
 
     @Unique
-    private GameType cameraGameType = GameType.DEFAULT_MODE;
+    private GameType cameraGameType = null;
 
     @Unique
     private boolean shouldHideElements = false;
@@ -42,7 +42,11 @@ public abstract class MixinGui {
     @Inject(method = "render", at = @At("HEAD"))
     public void render_updateCameraGameType(GuiGraphics guiGraphics, DeltaTracker deltaTracker, CallbackInfo ci) {
         this.shouldHideElements = false;
+        this.cameraGameType = null;
         if (Flashback.isInReplay()) {
+            this.shouldHideElements = ReplayUI.isActive() || Flashback.isExporting();
+            this.cameraGameType = Minecraft.getInstance().gameMode.getPlayerMode();
+
             Player player = this.getCameraPlayer();
             if (player != null) {
                 var connection = Minecraft.getInstance().getConnection();
@@ -50,12 +54,9 @@ public abstract class MixinGui {
                     var playerInfo = connection.getPlayerInfo(player.getUUID());
                     if (playerInfo != null) {
                         this.cameraGameType = playerInfo.getGameMode();
-                        return;
                     }
                 }
             }
-            this.cameraGameType = Minecraft.getInstance().gameMode.getPlayerMode();
-            this.shouldHideElements = ReplayUI.isActive() || Flashback.isExporting();
         }
     }
 
@@ -111,7 +112,7 @@ public abstract class MixinGui {
 
     @WrapOperation(method = "renderHotbarAndDecorations", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/multiplayer/MultiPlayerGameMode;getPlayerMode()Lnet/minecraft/world/level/GameType;"), require = 0)
     public GameType renderHotbarAndDecorations_getPlayerMode(MultiPlayerGameMode instance, Operation<GameType> original) {
-        if (Flashback.isInReplay()) {
+        if (this.cameraGameType != null) {
             return this.cameraGameType;
         }
         return original.call(instance);
@@ -119,7 +120,7 @@ public abstract class MixinGui {
 
     @WrapOperation(method = "renderHotbarAndDecorations", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/multiplayer/MultiPlayerGameMode;canHurtPlayer()Z"), require = 0)
     public boolean renderHotbarAndDecorations_canHurtPlayer(MultiPlayerGameMode instance, Operation<Boolean> original) {
-        if (Flashback.isInReplay()) {
+        if (this.cameraGameType != null) {
             return this.cameraGameType.isSurvival();
         }
         return original.call(instance);
@@ -127,7 +128,7 @@ public abstract class MixinGui {
 
     @Inject(method = "isExperienceBarVisible", at = @At("HEAD"), cancellable = true, require = 0)
     public void isExperienceBarVisible(CallbackInfoReturnable<Boolean> cir) {
-        if (Flashback.isInReplay()) {
+        if (this.cameraGameType != null) {
             cir.setReturnValue(this.cameraGameType.isSurvival());
         }
     }
