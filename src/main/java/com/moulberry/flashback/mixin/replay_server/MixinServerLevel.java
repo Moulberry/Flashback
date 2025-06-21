@@ -11,6 +11,7 @@ import net.minecraft.server.level.ServerChunkCache;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.chunk.ChunkGeneratorStructureState;
 import org.jetbrains.annotations.NotNull;
 import org.spongepowered.asm.mixin.Mixin;
@@ -18,6 +19,7 @@ import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(value = ServerLevel.class, priority = 900)
@@ -84,6 +86,13 @@ public abstract class MixinServerLevel implements ServerLevelExt {
     public void ensureStructuresGenerated(ChunkGeneratorStructureState instance, Operation<Void> original) {
         if (instance != null) {
             original.call(instance);
+        }
+    }
+
+    @Inject(method = "waitForChunkAndEntities", at = @At("HEAD"), cancellable = true)
+    public void waitForChunkAndEntities(ChunkPos chunkPos, int i, CallbackInfo ci) {
+        if (this.getServer() instanceof ReplayServer) {
+            ci.cancel();
         }
     }
 

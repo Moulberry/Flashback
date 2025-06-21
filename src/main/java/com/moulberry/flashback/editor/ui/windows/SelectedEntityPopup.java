@@ -69,7 +69,7 @@ public class SelectedEntityPopup {
         }
         ImGui.sameLine();
         if (ImGui.button("Spectate")) {
-            Minecraft.getInstance().player.connection.sendUnsignedCommand("spectate " + entity.getUUID());
+            Minecraft.getInstance().player.connection.sendCommand("spectate " + entity.getUUID());
             ImGui.closeCurrentPopup();
         }
         ImGui.sameLine();

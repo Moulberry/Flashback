@@ -32,7 +32,7 @@ public record MinecraftKeyframeHandler(Minecraft minecraft) implements KeyframeH
         LocalPlayer player = this.minecraft.player;
         if (player != null) {
             if (this.minecraft.cameraEntity != this.minecraft.player) {
-                Minecraft.getInstance().getConnection().sendUnsignedCommand("spectate");
+                Minecraft.getInstance().getConnection().sendCommand("spectate");
             }
 
             player.snapTo(position.x, position.y, position.z, (float) yaw, (float) pitch);

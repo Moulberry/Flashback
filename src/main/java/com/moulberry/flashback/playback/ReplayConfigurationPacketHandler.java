@@ -310,6 +310,14 @@ public class ReplayConfigurationPacketHandler implements ClientConfigurationPack
     }
 
     @Override
+    public void handleClearDialog(ClientboundClearDialogPacket clientboundClearDialogPacket) {
+    }
+
+    @Override
+    public void handleShowDialog(ClientboundShowDialogPacket clientboundShowDialogPacket) {
+    }
+
+    @Override
     public void handleRequestCookie(ClientboundCookieRequestPacket clientboundCookieRequestPacket) {
         throw new UnsupportedPacketException(clientboundCookieRequestPacket);
     }

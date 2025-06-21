@@ -39,6 +39,7 @@
     "visuals.MixinClientLevelData",
     "visuals.MixinEntityRenderDispatcher",
     "visuals.MixinEntityRenderer",
+    "visuals.MixinExperienceBarRenderer",
     "visuals.MixinFogRenderer",
     "visuals.MixinGui",
     "visuals.MixinLevel",

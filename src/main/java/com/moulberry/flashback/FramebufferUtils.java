@@ -2,6 +2,7 @@ package com.moulberry.flashback;
 
 import com.mojang.blaze3d.ProjectionType;
 import com.mojang.blaze3d.buffers.GpuBuffer;
+import com.mojang.blaze3d.buffers.GpuBufferSlice;
 import com.mojang.blaze3d.opengl.GlStateManager;
 import com.mojang.blaze3d.opengl.GlTexture;
 import com.mojang.blaze3d.pipeline.RenderTarget;
@@ -9,14 +10,17 @@ import com.mojang.blaze3d.pipeline.TextureTarget;
 import com.mojang.blaze3d.systems.RenderPass;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.textures.GpuTexture;
+import com.mojang.blaze3d.textures.GpuTextureView;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.MeshData;
 import com.mojang.blaze3d.vertex.Tesselator;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import com.moulberry.flashback.visuals.ShaderManager;
+import net.minecraft.client.renderer.CachedOrthoProjectionMatrixBuffer;
 import net.minecraft.client.renderer.RenderPipelines;
 import org.joml.Matrix4f;
+import org.joml.Vector4f;
 import org.lwjgl.opengl.ARBDirectStateAccess;
 import org.lwjgl.opengl.EXTFramebufferMultisampleBlitScaled;
 import org.lwjgl.opengl.GL;
@@ -58,13 +62,15 @@ public class FramebufferUtils {
         return renderTarget;
     }
 
-    private static void blitTo(GpuTexture from, RenderTarget to, int width, int height, float x1, float y1, float x2, float y2) {
+    private static final CachedOrthoProjectionMatrixBuffer projectionBuffers = new CachedOrthoProjectionMatrixBuffer("flashback blit", 1000.0f, 3000.0f, true);
+
+    private static void blitTo(GpuTextureView from, RenderTarget to, int width, int height, float x1, float y1, float x2, float y2) {
         var modelViewStack = RenderSystem.getModelViewStack();
         modelViewStack.pushMatrix();
         modelViewStack.set(new Matrix4f().translation(0.0f, 0.0f, -2000.0f));
-        Matrix4f oldProjectionMatrix = new Matrix4f(RenderSystem.getProjectionMatrix());
+        var oldProjectionMatrix = RenderSystem.getProjectionMatrixBuffer();
         ProjectionType oldProjectionType = RenderSystem.getProjectionType();
-        RenderSystem.setProjectionMatrix(new Matrix4f().setOrtho(0.0f, width, height, 0.0f, 1000.0f, 3000.0f), ProjectionType.ORTHOGRAPHIC);
+        RenderSystem.setProjectionMatrix(projectionBuffers.getBuffer(width, height), ProjectionType.ORTHOGRAPHIC);
 
         BufferBuilder builder = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX);
         builder.addVertex(width*x1, height*y2, 0.0f).setUv(0.0f, 0.0f);
@@ -76,12 +82,17 @@ public class FramebufferUtils {
             GpuBuffer gpuBuffer = autoStorageIndexBuffer.getBuffer(6);
             GpuBuffer vertexBuffer = DefaultVertexFormat.POSITION_TEX.uploadImmediateVertexBuffer(meshData.vertexBuffer());
 
-            try (RenderPass renderPass = RenderSystem.getDevice().createCommandEncoder().createRenderPass(to.getColorTexture(), OptionalInt.empty())) {
+            GpuBufferSlice gpuBufferSlice = RenderSystem.getDynamicUniforms().writeTransform(RenderSystem.getModelViewMatrix(), new Vector4f(1.0F, 1.0F, 1.0F, 1.0F),
+                RenderSystem.getModelOffset(), RenderSystem.getTextureMatrix(), RenderSystem.getShaderLineWidth());
+
+            try (RenderPass renderPass = RenderSystem.getDevice().createCommandEncoder().createRenderPass(() -> "flashback blit", to.getColorTextureView(), OptionalInt.empty())) {
                 renderPass.setPipeline(ShaderManager.BLIT_SCREEN_WITH_UV);
+                RenderSystem.bindDefaultUniforms(renderPass);
+                renderPass.setUniform("DynamicTransforms", gpuBufferSlice);
                 renderPass.setVertexBuffer(0, vertexBuffer);
                 renderPass.setIndexBuffer(gpuBuffer, autoStorageIndexBuffer.type());
                 renderPass.bindSampler("InSampler", from);
-                renderPass.drawIndexed(0, 6);
+                renderPass.drawIndexed(0, 0, 6, 1);
             }
         }
 
@@ -100,7 +111,7 @@ public class FramebufferUtils {
         tempRenderTarget = FramebufferUtils.resizeOrCreateFramebuffer(tempRenderTarget, width, height);
         FramebufferUtils.clear(tempRenderTarget, 0);
 
-        blitTo(renderTarget.getColorTexture(), tempRenderTarget, width, height, x1, y1, x2, y2);
+        blitTo(renderTarget.getColorTextureView(), tempRenderTarget, width, height, x1, y1, x2, y2);
 
         tempRenderTarget.blitToScreen();
 

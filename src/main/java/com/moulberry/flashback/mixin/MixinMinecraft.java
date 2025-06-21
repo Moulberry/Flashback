@@ -80,9 +80,6 @@ import java.util.concurrent.atomic.AtomicReference;
 public abstract class MixinMinecraft implements MinecraftExt {
 
     @Shadow
-    public abstract void disconnect();
-
-    @Shadow
     @Final
     private AtomicReference<StoringChunkProgressListener> progressListener;
 
@@ -150,6 +147,9 @@ public abstract class MixinMinecraft implements MinecraftExt {
 
     @Shadow
     protected abstract float getTickTargetMillis(float f);
+
+    @Shadow
+    public abstract void disconnectWithProgressScreen();
 
     @Inject(method = "pauseGame", at = @At("HEAD"), cancellable = true)
     public void pauseGame(boolean bl, CallbackInfo ci) {
@@ -407,7 +407,7 @@ public abstract class MixinMinecraft implements MinecraftExt {
     @Override
     public void flashback$startReplayServer(LevelStorageSource.LevelStorageAccess levelStorageAccess, PackRepository packRepository, WorldStem stem,
                                             UUID playbackUUID, Path path) {
-        this.disconnect();
+        this.disconnectWithProgressScreen();
         this.progressListener.set(null);
         Instant instant = Instant.now();
         try {

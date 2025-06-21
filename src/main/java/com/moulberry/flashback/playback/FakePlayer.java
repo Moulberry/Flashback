@@ -23,7 +23,7 @@ public class FakePlayer extends ServerPlayer {
     public void remove(RemovalReason removalReason) {
         if (removalReason == RemovalReason.DISCARDED && !this.hasDisconnected()) {
             this.disconnect();
-            this.server.getPlayerList().remove(this);
+            this.getServer().getPlayerList().remove(this);
         } else {
             super.remove(removalReason);
         }

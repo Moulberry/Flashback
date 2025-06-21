@@ -150,7 +150,7 @@ public class Recorder {
         this.configurationPacketCodec = ConfigurationProtocols.CLIENTBOUND.codec();
         this.gamePacketCodec = GameProtocols.CLIENTBOUND_TEMPLATE.bind(RegistryFriendlyByteBuf.decorator(registryAccess)).codec();
 
-        this.metadata.dataVersion = SharedConstants.getCurrentVersion().getDataVersion().getVersion();
+        this.metadata.dataVersion = SharedConstants.getCurrentVersion().dataVersion().version();
         this.metadata.protocolVersion = SharedConstants.getProtocolVersion();
         this.metadata.versionString = SharedConstants.VERSION_STRING;
 

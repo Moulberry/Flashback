@@ -31,8 +31,8 @@ public abstract class MixinAbstractClientPlayer extends Player {
     @Unique
     private @Nullable PlayerInfo fallbackPlayerInfo;
 
-    public MixinAbstractClientPlayer(Level level, BlockPos blockPos, float f, GameProfile gameProfile) {
-        super(level, blockPos, f, gameProfile);
+    public MixinAbstractClientPlayer(Level level, GameProfile gameProfile) {
+        super(level, gameProfile);
     }
 
     @Inject(method = "<init>", at = @At("RETURN"))

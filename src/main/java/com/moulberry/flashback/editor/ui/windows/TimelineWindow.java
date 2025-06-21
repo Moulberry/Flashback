@@ -1889,7 +1889,7 @@ public class TimelineWindow {
 
                     if (keyframeType instanceof CameraKeyframeType && Minecraft.getInstance().player != Minecraft.getInstance().cameraEntity) {
                         ReplayUI.setInfoOverlay("Camera keyframes aren't needed for spectating a player!");
-                        Minecraft.getInstance().getConnection().sendUnsignedCommand("spectate");
+                        Minecraft.getInstance().getConnection().sendCommand("spectate");
                     }
                 }
                 drawList.addText(buttonX - 2, buttonY, -1, "\ue148");

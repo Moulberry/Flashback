@@ -288,28 +288,26 @@ public class ReplayServer extends IntegratedServer {
         this.replayViewers.clear();
     }
 
+    private final AtomicInteger newPlayerIds = new AtomicInteger(REPLAY_VIEWER_IDS_START);
+    public ReplayPlayer createPlayer(ServerLevel level, GameProfile gameProfile, ClientInformation clientInformation) {
+        if (spawnLevel != null) {
+            ServerLevel serverLevel = ReplayServer.this.getLevel(spawnLevel);
+            if (serverLevel != null) {
+                level = serverLevel;
+            }
+        }
+
+        ReplayPlayer player = new ReplayPlayer(ReplayServer.this, level, gameProfile, clientInformation);
+        player.setId(newPlayerIds.getAndDecrement());
+        player.followLocalPlayerNextTick = true;
+        return player;
+    }
+
     @Override
     public boolean initServer() {
         Entity.ENTITY_COUNTER.set(1000000);
 
-        AtomicInteger newPlayerIds = new AtomicInteger(REPLAY_VIEWER_IDS_START);
         this.setPlayerList(new PlayerList(this, this.registries(), this.playerDataStorage, 1) {
-            @Override
-            public ServerPlayer getPlayerForLogin(GameProfile gameProfile, ClientInformation clientInformation) {
-                ServerLevel level = ReplayServer.this.overworld();
-                if (spawnLevel != null) {
-                    ServerLevel serverLevel = ReplayServer.this.getLevel(spawnLevel);
-                    if (serverLevel != null) {
-                        level = serverLevel;
-                    }
-                }
-
-                ReplayPlayer player = new ReplayPlayer(ReplayServer.this, level, gameProfile, clientInformation);
-                player.setId(newPlayerIds.getAndDecrement());
-                player.followLocalPlayerNextTick = true;
-                return player;
-            }
-
             @Override
             public void placeNewPlayer(Connection connection, ServerPlayer serverPlayer, CommonListenerCookie commonListenerCookie) {
                 if (Flashback.getConfig().filterUnnecessaryPackets) {
@@ -369,7 +367,7 @@ public class ReplayServer extends IntegratedServer {
                         Vec3 source = replayViewer.position();
 
                         if (audioSourceEntity != null) {
-                            Entity entity = replayViewer.serverLevel().getEntity(audioSourceEntity);
+                            Entity entity = replayViewer.level().getEntity(audioSourceEntity);
                             if (entity != null) {
                                 source = entity.position();
                             }
@@ -952,7 +950,7 @@ public class ReplayServer extends IntegratedServer {
             if (replayViewer.spectatingUuid != null) {
                 Entity camera = replayViewer.getCamera();
                 if (replayViewer.forceRespectateTickCount > 0 || camera == null || camera == replayViewer || camera.isRemoved()) {
-                    Entity targetEntity = replayViewer.serverLevel().getEntity(replayViewer.spectatingUuid);
+                    Entity targetEntity = replayViewer.level().getEntity(replayViewer.spectatingUuid);
                     if (targetEntity != null && !targetEntity.isRemoved()) {
                         replayViewer.setCamera(null);
                         replayViewer.setCamera(targetEntity);

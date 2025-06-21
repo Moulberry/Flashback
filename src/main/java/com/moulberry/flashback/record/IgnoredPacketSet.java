@@ -26,7 +26,10 @@ public class IgnoredPacketSet {
         ClientboundRecipeBookSettingsPacket.class,
         ClientboundUpdateRecipesPacket.class,
         ClientboundTransferPacket.class,
-        ClientboundUpdateAdvancementsPacket.class
+        ClientboundUpdateAdvancementsPacket.class,
+        ClientboundClearDialogPacket.class,
+        ClientboundShowDialogPacket.class,
+        ClientboundTrackedWaypointPacket.class
     );
 
     private static final Set<Class<?>> IGNORED = Set.of(
@@ -44,6 +47,8 @@ public class IgnoredPacketSet {
         ClientboundPingPacket.class,
         ClientboundKeepAlivePacket.class,
         ClientboundTransferPacket.class,
+        ClientboundClearDialogPacket.class,
+        ClientboundShowDialogPacket.class,
 
         // Configuration
         ClientboundFinishConfigurationPacket.class,
@@ -100,7 +105,8 @@ public class IgnoredPacketSet {
         ClientboundChunkBatchFinishedPacket.class,
         ClientboundDebugSamplePacket.class,
         ClientboundPongResponsePacket.class,
-        ClientboundTestInstanceBlockStatus.class
+        ClientboundTestInstanceBlockStatus.class,
+        ClientboundTrackedWaypointPacket.class
     );
 
 }

@@ -11,6 +11,7 @@ import com.moulberry.flashback.packet.FlashbackRemoteExperience;
 import com.moulberry.flashback.packet.FlashbackRemoteFoodData;
 import com.moulberry.flashback.packet.FlashbackRemoteSelectHotbarSlot;
 import com.moulberry.flashback.packet.FlashbackRemoteSetSlot;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.embedded.EmbeddedChannel;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
@@ -44,6 +45,7 @@ import net.minecraft.server.level.ThreadedLevelLightEngine;
 import net.minecraft.server.network.CommonListenerCookie;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.tags.BlockTags;
+import net.minecraft.util.ProblemReporter;
 import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.*;
@@ -75,6 +77,7 @@ import net.minecraft.world.level.saveddata.maps.MapItemSavedData;
 import net.minecraft.world.level.storage.DerivedLevelData;
 import net.minecraft.world.level.storage.PrimaryLevelData;
 import net.minecraft.world.level.storage.ServerLevelData;
+import net.minecraft.world.level.storage.TagValueInput;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
@@ -235,7 +238,8 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
 
         Connection connection = new Connection(PacketFlow.SERVERBOUND) {
             @Override
-            public void send(Packet<?> packet, @Nullable PacketSendListener packetSendListener, boolean bl) {}
+            public void send(Packet<?> packet, @Nullable ChannelFutureListener channelFutureListener, boolean bl) {
+            }
         };
         EmbeddedChannel embeddedChannel = new EmbeddedChannel(connection);
         serverPlayer.recreateFromPacket(addEntityPacket);
@@ -322,8 +326,10 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
     public void handleBlockEntityData(ClientboundBlockEntityDataPacket clientboundBlockEntityDataPacket) {
         BlockPos blockPos = clientboundBlockEntityDataPacket.getPos();
         this.level().getBlockEntity(blockPos, clientboundBlockEntityDataPacket.getType()).ifPresent(blockEntity -> {
-            // Update data
-            blockEntity.loadWithComponents(clientboundBlockEntityDataPacket.getTag(), this.replayServer.registryAccess());
+            try (ProblemReporter.ScopedCollector scopedCollector = new ProblemReporter.ScopedCollector(blockEntity.problemPath(), Flashback.LOGGER)) {
+                // Update data
+                blockEntity.loadWithComponents(TagValueInput.create(scopedCollector, this.replayServer.registryAccess(), clientboundBlockEntityDataPacket.getTag()));
+            }
 
             // Sync
             blockEntity.setChanged();
@@ -1294,8 +1300,8 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
 
     @Override
     public void handleChangeDifficulty(ClientboundChangeDifficultyPacket clientboundChangeDifficultyPacket) {
-        this.replayServer.setDifficultyLocked(clientboundChangeDifficultyPacket.isLocked());
-        this.replayServer.setDifficulty(clientboundChangeDifficultyPacket.getDifficulty(), true);
+        this.replayServer.setDifficultyLocked(clientboundChangeDifficultyPacket.locked());
+        this.replayServer.setDifficulty(clientboundChangeDifficultyPacket.difficulty(), true);
     }
 
     @Override
@@ -1638,6 +1644,14 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
     }
 
     @Override
+    public void handleClearDialog(ClientboundClearDialogPacket clientboundClearDialogPacket) {
+    }
+
+    @Override
+    public void handleShowDialog(ClientboundShowDialogPacket clientboundShowDialogPacket) {
+    }
+
+    @Override
     public void handleRequestCookie(ClientboundCookieRequestPacket clientboundCookieRequestPacket) {
         throw new UnsupportedPacketException(clientboundCookieRequestPacket);
     }
@@ -1650,6 +1664,10 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
     @Override
     public void handleTestInstanceBlockStatus(ClientboundTestInstanceBlockStatus clientboundTestInstanceBlockStatus) {
         throw new UnsupportedPacketException(clientboundTestInstanceBlockStatus);
+    }
+
+    @Override
+    public void handleWaypoint(ClientboundTrackedWaypointPacket clientboundTrackedWaypointPacket) {
     }
 
     @Override

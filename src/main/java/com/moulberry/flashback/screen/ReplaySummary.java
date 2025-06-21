@@ -44,7 +44,7 @@ public class ReplaySummary implements Comparable<ReplaySummary> {
                 this.hoverInfo = Component.literal("Unable to open replay\nReplay was created with protocol version " + metadata.protocolVersion +
                     " and is incompatible with " + SharedConstants.getProtocolVersion());
             }
-        } else if (metadata.dataVersion != 0 && metadata.dataVersion != SharedConstants.getCurrentVersion().getDataVersion().getVersion()) {
+        } else if (metadata.dataVersion != 0 && metadata.dataVersion != SharedConstants.getCurrentVersion().dataVersion().version()) {
             this.hasWarning = true;
 
             if (metadata.versionString != null && !metadata.versionString.equals(SharedConstants.VERSION_STRING)) {
@@ -52,7 +52,7 @@ public class ReplaySummary implements Comparable<ReplaySummary> {
                     " and may fail to load in " + SharedConstants.VERSION_STRING);
             } else {
                 this.hoverInfo = Component.literal("Important Warning\nReplay was created with data version " + metadata.dataVersion +
-                    " and may fail to load with " + SharedConstants.getCurrentVersion().getDataVersion().getVersion());
+                    " and may fail to load with " + SharedConstants.getCurrentVersion().dataVersion().version());
             }
         }
     }

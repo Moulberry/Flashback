@@ -1,6 +1,5 @@
 package com.moulberry.flashback.visuals;
 
-import com.mojang.blaze3d.buffers.BufferUsage;
 import com.mojang.blaze3d.buffers.GpuBuffer;
 import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.platform.Window;
@@ -25,9 +24,9 @@ import com.moulberry.flashback.state.EditorStateManager;
 import com.moulberry.flashback.state.KeyframeTrack;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.FogParameters;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.fog.FogRenderer;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Matrix4f;
 import org.joml.Quaterniond;
@@ -80,7 +79,7 @@ public class CameraPath {
                 MeshData meshData = bufferBuilder.build();
                 if (meshData != null) {
                     CameraPath.basePosition = basePosition;
-                    cameraPathVertexBuffer = new FlashbackDrawBuffer(BufferUsage.STATIC_WRITE);
+                    cameraPathVertexBuffer = new FlashbackDrawBuffer(GpuBuffer.USAGE_MAP_WRITE);
                     cameraPathVertexBuffer.upload(meshData);
                 }
             }
@@ -94,8 +93,7 @@ public class CameraPath {
         }
 
         var oldFog = RenderSystem.getShaderFog();
-        RenderSystem.setShaderFog(FogParameters.NO_FOG);
-        RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
+        RenderSystem.setShaderFog(Minecraft.getInstance().gameRenderer.fogRenderer.getBuffer(FogRenderer.FogMode.NONE));
 
         poseStack.pushPose();
         poseStack.translate(basePosition.x-camera.getPosition().x,

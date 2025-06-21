@@ -7,6 +7,7 @@ import com.moulberry.flashback.screen.select_replay.SelectReplayScreen;
 import imgui.ImGui;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.TitleScreen;
+import net.minecraft.network.chat.Component;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -69,9 +70,9 @@ public class MainMenuBar {
             if (ImGui.menuItem("Exit Replay")) {
                 Minecraft minecraft = Minecraft.getInstance();
                 if (minecraft.level != null) {
-                    minecraft.level.disconnect();
+                    minecraft.level.disconnect(Component.empty());
                 }
-                minecraft.disconnect();
+                minecraft.disconnectWithProgressScreen();
                 minecraft.setScreen(new SelectReplayScreen(new TitleScreen(), Flashback.getReplayFolder()));
             }
             ImGui.endMenu();

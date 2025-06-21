@@ -130,7 +130,6 @@ accessible field com/mojang/blaze3d/platform/Window height I
 # Visuals
 accessible field net/minecraft/client/Camera eyeHeight F
 accessible method net/minecraft/client/multiplayer/ClientLevel getEntities ()Lnet/minecraft/world/level/entity/LevelEntityGetter;
-accessible field net/minecraft/client/renderer/FogRenderer targetBiomeFog I
 
 # Exporting
 accessible field net/minecraft/client/Minecraft clientTickCount J
@@ -162,3 +161,6 @@ accessible field net/minecraft/client/sounds/SoundEngineExecutor thread Ljava/la
 accessible class net/minecraft/world/level/border/WorldBorder$MovingBorderExtent
 accessible field net/minecraft/world/entity/player/Player DATA_PLAYER_MODE_CUSTOMISATION Lnet/minecraft/network/syncher/EntityDataAccessor;
 accessible field net/minecraft/world/entity/player/Player DATA_PLAYER_MAIN_HAND Lnet/minecraft/network/syncher/EntityDataAccessor;
+
+accessible class net/minecraft/client/gui/Gui$ContextualInfo
+accessible field net/minecraft/client/renderer/GameRenderer fogRenderer Lnet/minecraft/client/renderer/fog/FogRenderer;

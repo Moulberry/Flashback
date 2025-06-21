@@ -1,6 +1,7 @@
 package com.moulberry.flashback.mixin.visuals;
 
 import com.llamalad7.mixinextras.sugar.Local;
+import com.mojang.blaze3d.buffers.GpuBufferSlice;
 import com.mojang.blaze3d.framegraph.FrameGraphBuilder;
 import com.mojang.blaze3d.framegraph.FramePass;
 import com.mojang.blaze3d.pipeline.RenderTarget;
@@ -11,8 +12,11 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.visuals.WorldRenderHook;
 import net.minecraft.client.Camera;
+import net.minecraft.client.DeltaTracker;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.*;
 import org.joml.Matrix4f;
+import org.joml.Vector4f;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -34,8 +38,8 @@ public class MixinLevelRenderer {
         target = "Lnet/minecraft/client/Options;getCloudsType()Lnet/minecraft/client/CloudStatus;",
         shift = At.Shift.BEFORE
     ))
-    public void renderLevelPost(GraphicsResourceAllocator graphicsResourceAllocator, net.minecraft.client.DeltaTracker deltaTracker, boolean renderBlockOutline, Camera camera, GameRenderer gameRenderer,
-                                Matrix4f matrix4f, Matrix4f projection, CallbackInfo ci, @Local FrameGraphBuilder frameGraphBuilder) {
+    public void renderLevelPost(GraphicsResourceAllocator graphicsResourceAllocator, DeltaTracker deltaTracker, boolean renderBlockOutline, Camera camera, Matrix4f matrix4f, Matrix4f projection,
+            GpuBufferSlice gpuBufferSlice, Vector4f vector4f, boolean bl2, CallbackInfo ci, @Local FrameGraphBuilder frameGraphBuilder) {
         if (!Flashback.isInReplay()) {
             return;
         }
@@ -63,7 +67,7 @@ public class MixinLevelRenderer {
             modelViewStack.identity();
 
             float tickDelta = deltaTracker.getGameTimeDeltaPartialTick(true);
-            WorldRenderHook.renderHook(poseStack, tickDelta, renderBlockOutline, camera, gameRenderer, projection);
+            WorldRenderHook.renderHook(poseStack, tickDelta, renderBlockOutline, camera, Minecraft.getInstance().gameRenderer, projection);
 
             this.renderBuffers.bufferSource().endBatch();
 

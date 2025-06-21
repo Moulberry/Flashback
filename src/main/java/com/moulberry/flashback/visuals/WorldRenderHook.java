@@ -33,7 +33,7 @@ public class WorldRenderHook {
             var multiBufferSource = Minecraft.getInstance().renderBuffers().bufferSource();
             multiBufferSource.endBatch();
 
-            var bufferBuilder = multiBufferSource.getBuffer(RenderType.guiTextured(ResourceLocation.parse("flashback:world_marker_circle.png")));
+            var bufferBuilder = multiBufferSource.getBuffer(RenderType.entityTranslucentEmissive(ResourceLocation.parse("flashback:world_marker_circle.png")));
 
             String dimension = Minecraft.getInstance().level.dimension().toString();
 

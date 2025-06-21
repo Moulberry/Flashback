@@ -23,7 +23,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.player.LocalPlayer;
-import net.minecraft.client.renderer.FogParameters;
+import net.minecraft.client.renderer.CachedOrthoProjectionMatrixBuffer;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.network.chat.Component;
 import net.minecraft.sounds.SoundEvents;
@@ -298,7 +298,6 @@ public class ExportJob {
                 Window window = Minecraft.getInstance().getWindow();
                 RenderTarget renderTarget = Minecraft.getInstance().mainRenderTarget;
                 RenderSystem.getDevice().createCommandEncoder().clearColorAndDepthTextures(renderTarget.getColorTexture(), 0, renderTarget.getDepthTexture(), 1.0);
-                RenderSystem.setShaderFog(FogParameters.NO_FOG);
                 Minecraft.getInstance().gameRenderer.render(Minecraft.getInstance().deltaTracker, true);
 
                 this.shouldChangeFramebufferSize = false;
@@ -340,7 +339,6 @@ public class ExportJob {
             // Perform rendering
             PerfectFrames.waitUntilFrameReady();
             RenderSystem.getDevice().createCommandEncoder().clearColorAndDepthTextures(renderTarget.getColorTexture(), 0, renderTarget.getDepthTexture(), 1.0);
-            RenderSystem.setShaderFog(FogParameters.NO_FOG);
 
             start = System.nanoTime();
             Minecraft.getInstance().gameRenderer.render(timer, true);
@@ -530,6 +528,8 @@ public class ExportJob {
         }
     }
 
+    private static final CachedOrthoProjectionMatrixBuffer projectionBuffers = new CachedOrthoProjectionMatrixBuffer("flashback export", 1000.0f, 21000.0f, true);
+
     private boolean finishFrame(RenderTarget framebuffer, int currentFrame, int totalFrames) {
         boolean cancel = false;
 
@@ -553,8 +553,7 @@ public class ExportJob {
             int scaledWidth = (int) Math.ceil(framebuffer.width / guiScale);
             int scaledHeight = (int) Math.ceil(framebuffer.height / guiScale);
 
-            Matrix4f matrix4f = new Matrix4f().setOrtho(0.0f, scaledWidth, scaledHeight, 0.0f, 1000.0f, 21000.0f);
-            RenderSystem.setProjectionMatrix(matrix4f, ProjectionType.ORTHOGRAPHIC);
+            RenderSystem.setProjectionMatrix(projectionBuffers.getBuffer(scaledWidth, scaledHeight), ProjectionType.ORTHOGRAPHIC);
 
             Matrix4f matrix = new Matrix4f();
             matrix.translate(0.0f, 0.0f, -1001.0f);

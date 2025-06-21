@@ -99,6 +99,13 @@ public abstract class MixinGui {
         }
     }
 
+    @Inject(method = "nextContextualInfoState", at = @At("HEAD"), cancellable = true)
+    public void nextContextualInfoState(CallbackInfoReturnable<Gui.ContextualInfo> cir) {
+        if (Flashback.isInReplay()) {
+            cir.setReturnValue(this.cameraGameType.isSurvival() ? Gui.ContextualInfo.EXPERIENCE : Gui.ContextualInfo.EMPTY);
+        }
+    }
+
     @Inject(method = "renderHotbarAndDecorations", at = @At("HEAD"), cancellable = true, require = 0)
     public void renderHotbarAndDecorations(GuiGraphics guiGraphics, DeltaTracker deltaTracker, CallbackInfo ci) {
         if (this.shouldHideElements) {
@@ -125,30 +132,20 @@ public abstract class MixinGui {
         return original.call(instance);
     }
 
-    @Inject(method = "isExperienceBarVisible", at = @At("HEAD"), cancellable = true, require = 0)
-    public void isExperienceBarVisible(CallbackInfoReturnable<Boolean> cir) {
+    @WrapOperation(method = "renderHotbarAndDecorations", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/multiplayer/MultiPlayerGameMode;hasExperience()Z"), require = 0)
+    public boolean renderHotbarAndDecorations_hasExperience(MultiPlayerGameMode instance, Operation<Boolean> original) {
         if (Flashback.isInReplay()) {
-            cir.setReturnValue(this.cameraGameType.isSurvival());
-        }
-    }
-
-    @WrapOperation(method = "renderExperienceBar", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/player/LocalPlayer;getXpNeededForNextLevel()I"), require = 0)
-    public int renderExperienceBar_getXpNeededForNextLevel(LocalPlayer instance, Operation<Integer> original) {
-        if (Flashback.isInReplay()) {
-            Player player = this.getCameraPlayer();
-            if (player != null) {
-                return player.getXpNeededForNextLevel();
-            }
+            return this.cameraGameType.isSurvival();
         }
         return original.call(instance);
     }
 
-    @WrapOperation(method = "renderExperienceBar", at = @At(value = "FIELD", target = "Lnet/minecraft/client/player/LocalPlayer;experienceProgress:F"), require = 0)
-    public float renderExperienceBar_experienceProgress(LocalPlayer instance, Operation<Float> original) {
+    @WrapOperation(method = "renderHotbarAndDecorations", at = @At(value = "FIELD", target = "Lnet/minecraft/client/player/LocalPlayer;experienceLevel:I"), require = 0)
+    public int renderExperienceLevel_experienceLevel(LocalPlayer instance, Operation<Integer> original) {
         if (Flashback.isInReplay()) {
             Player player = this.getCameraPlayer();
             if (player != null) {
-                return player.experienceProgress;
+                return player.experienceLevel;
             }
         }
         return original.call(instance);
@@ -171,17 +168,6 @@ public abstract class MixinGui {
             Player player = this.getCameraPlayer();
             if (player != null) {
                 return player.getCurrentItemAttackStrengthDelay();
-            }
-        }
-        return original.call(instance);
-    }
-
-    @WrapOperation(method = "renderExperienceLevel", at = @At(value = "FIELD", target = "Lnet/minecraft/client/player/LocalPlayer;experienceLevel:I"), require = 0)
-    public int renderExperienceLevel_experienceLevel(LocalPlayer instance, Operation<Integer> original) {
-        if (Flashback.isInReplay()) {
-            Player player = this.getCameraPlayer();
-            if (player != null) {
-                return player.experienceLevel;
             }
         }
         return original.call(instance);

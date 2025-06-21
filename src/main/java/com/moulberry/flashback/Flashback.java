@@ -921,9 +921,9 @@ public class Flashback implements ModInitializer, ClientModInitializer {
         // Disconnect
         Minecraft minecraft = Minecraft.getInstance();
         if (minecraft.level != null) {
-            minecraft.level.disconnect();
+            minecraft.level.disconnect(Component.empty());
         }
-        minecraft.disconnect();
+        minecraft.disconnectWithProgressScreen();
         minecraft.setScreen(new TitleScreen());
 
         // Add as recent

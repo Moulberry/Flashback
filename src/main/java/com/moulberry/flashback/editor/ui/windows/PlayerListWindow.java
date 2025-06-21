@@ -139,7 +139,7 @@ public class PlayerListWindow {
                 ImGui.text(profile.getName());
                 ImGui.sameLine();
                 if (ImGui.smallButton("TP")) {
-                    Minecraft.getInstance().getConnection().sendUnsignedCommand("teleport " + profile.getId());
+                    Minecraft.getInstance().getConnection().sendCommand("teleport " + profile.getId());
                     lastUpdate = currentTime;
                 }
                 if (editorState != null) {
@@ -156,7 +156,7 @@ public class PlayerListWindow {
                 }
                 ImGui.sameLine();
                 if (ImGui.smallButton("Spectate")) {
-                    Minecraft.getInstance().getConnection().sendUnsignedCommand("spectate " + profile.getId());
+                    Minecraft.getInstance().getConnection().sendCommand("spectate " + profile.getId());
                     lastUpdate = currentTime;
                 }
                 ImGui.popID();

@@ -1,6 +1,7 @@
 package com.moulberry.flashback.exporting;
 
 import com.mojang.blaze3d.buffers.GpuBuffer;
+import com.mojang.blaze3d.buffers.GpuBufferSlice;
 import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.pipeline.TextureTarget;
 import com.mojang.blaze3d.opengl.GlStateManager;
@@ -10,6 +11,7 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.textures.AddressMode;
 import com.mojang.blaze3d.textures.FilterMode;
 import com.mojang.blaze3d.textures.GpuTexture;
+import com.mojang.blaze3d.textures.GpuTextureView;
 import com.mojang.blaze3d.textures.TextureFormat;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
@@ -17,6 +19,7 @@ import com.mojang.blaze3d.vertex.VertexFormat;
 import com.moulberry.flashback.visuals.ShaderManager;
 import net.minecraft.client.renderer.RenderPipelines;
 import org.jetbrains.annotations.Nullable;
+import org.joml.Vector4f;
 
 import java.nio.FloatBuffer;
 import java.util.ArrayList;
@@ -35,13 +38,15 @@ public class SaveableFramebufferQueue implements AutoCloseable {
     private final List<SaveableFramebuffer> waiting = new ArrayList<>();
 
     private final GpuTexture flipBuffer;
+    private final GpuTextureView flipBufferView;
 
     public SaveableFramebufferQueue(int width, int height) {
         this.width = width;
         this.height = height;
 
-        this.flipBuffer = RenderSystem.getDevice().createTexture(() -> "flip buffer", TextureFormat.RGBA8, width, height, 1);
+        this.flipBuffer = RenderSystem.getDevice().createTexture(() -> "flip buffer", 0, TextureFormat.RGBA8, width, height, 1, 1);
         this.flipBuffer.setAddressMode(AddressMode.CLAMP_TO_EDGE);
+        this.flipBufferView = RenderSystem.getDevice().createTextureView(this.flipBuffer);
 
         for (int i = 0; i < CAPACITY; i++) {
             this.available.add(new SaveableFramebuffer());
@@ -65,12 +70,17 @@ public class SaveableFramebufferQueue implements AutoCloseable {
         GpuBuffer indexBuffer = autoStorageIndexBuffer.getBuffer(6);
         GpuBuffer vertexBuffer = RenderSystem.getQuadVertexBuffer();
 
-        try (RenderPass renderPass = RenderSystem.getDevice().createCommandEncoder().createRenderPass(this.flipBuffer, OptionalInt.empty())) {
+        GpuBufferSlice gpuBufferSlice = RenderSystem.getDynamicUniforms().writeTransform(RenderSystem.getModelViewMatrix(), new Vector4f(1.0F, 1.0F, 1.0F, 1.0F),
+            RenderSystem.getModelOffset(), RenderSystem.getTextureMatrix(), RenderSystem.getShaderLineWidth());
+
+        try (RenderPass renderPass = RenderSystem.getDevice().createCommandEncoder().createRenderPass(() -> "flashback flip pass", this.flipBufferView, OptionalInt.empty())) {
             renderPass.setPipeline(ShaderManager.BLIT_SCREEN_FLIP);
+            RenderSystem.bindDefaultUniforms(renderPass);
+            renderPass.setUniform("DynamicTransforms", gpuBufferSlice);
             renderPass.setVertexBuffer(0, vertexBuffer);
             renderPass.setIndexBuffer(indexBuffer, autoStorageIndexBuffer.type());
-            renderPass.bindSampler("InSampler", src.getColorTexture());
-            renderPass.drawIndexed(0, 6);
+            renderPass.bindSampler("InSampler", src.getColorTextureView());
+            renderPass.drawIndexed(0, 0, 6, 1);
         }
 
         // todo nobuild

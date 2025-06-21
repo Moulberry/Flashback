@@ -18,6 +18,7 @@ import net.minecraft.client.gui.screens.FaviconTexture;
 import net.minecraft.client.gui.screens.GenericMessageScreen;
 import net.minecraft.client.gui.screens.LoadingDotsText;
 import net.minecraft.client.gui.screens.ProgressScreen;
+import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.resources.language.I18n;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
@@ -67,7 +68,7 @@ public abstract class ReplaySelectionEntry extends ObjectSelectionList.Entry<Rep
 
         @Override
         public void render(GuiGraphics guiGraphics, int index, int y, int x, int width, int height, int mouseX, int mouseY, boolean hovered, float partialTick) {
-            guiGraphics.blitSprite(RenderType::guiTextured, SPRITES.get(true, hovered), x + 4, y + 2, width - 8, height - 4);
+            guiGraphics.blitSprite(RenderPipelines.GUI_TEXTURED, SPRITES.get(true, hovered), x + 4, y + 2, width - 8, height - 4);
 
             int p = (this.minecraft.screen.width - this.minecraft.font.width(LOAD_REPLAY_LABEL)) / 2;
             int q = y + (height - this.minecraft.font.lineHeight) / 2 + 1;
@@ -147,7 +148,7 @@ public abstract class ReplaySelectionEntry extends ObjectSelectionList.Entry<Rep
 
             guiGraphics.drawString(this.minecraft.font, "Replays: " + this.replayCount, x + ICON_WIDTH + 3, textY + 3, 0xFF808080, false);
 
-            guiGraphics.blitSprite(RenderType::guiTextured, FOLDER_SPRITE, x, y, ICON_WIDTH, ICON_HEIGHT);
+            guiGraphics.blitSprite(RenderPipelines.GUI_TEXTURED, FOLDER_SPRITE, x, y, ICON_WIDTH, ICON_HEIGHT);
 
             if (this.minecraft.options.touchscreen().get() || hovered) {
                 guiGraphics.fill(x, y, x + ICON_WIDTH, y + ICON_HEIGHT, -1601138544);
@@ -155,7 +156,7 @@ public abstract class ReplaySelectionEntry extends ObjectSelectionList.Entry<Rep
                 boolean hoveredIcon = q < 32;
 
                 ResourceLocation iconOverlay = hoveredIcon ? JOIN_HIGHLIGHTED_SPRITE : JOIN_SPRITE;
-                guiGraphics.blitSprite(RenderType::guiTextured, iconOverlay, x, y, ICON_WIDTH, ICON_HEIGHT);
+                guiGraphics.blitSprite(RenderPipelines.GUI_TEXTURED, iconOverlay, x, y, ICON_WIDTH, ICON_HEIGHT);
             }
         }
 
@@ -210,14 +211,15 @@ public abstract class ReplaySelectionEntry extends ObjectSelectionList.Entry<Rep
             }
             Component info = this.summary.getInfo();
 
-            int titleColour = 0xFFFFFF;
+            int titleColour = 0xFFFFFFFF;
             if (!this.summary.canOpen()) {
-                titleColour = 0xFF5555;
+                titleColour = 0xFFFF5555;
             } else if (this.summary.hasWarning()) {
-                titleColour = 0xFFAA55;
+                titleColour = 0xFFFFAA55;
             }
 
-            int titleEnd = guiGraphics.drawString(this.minecraft.font, title, x + ICON_WIDTH + 3, y + 1, titleColour, false);
+            guiGraphics.drawString(this.minecraft.font, title, x + ICON_WIDTH + 3, y + 1, titleColour, false);
+            int titleEnd = x + ICON_WIDTH + 3 + this.minecraft.font.width(title);
 
             String worldName = this.summary.getWorldName();
             if (worldName != null) {
@@ -227,7 +229,7 @@ public abstract class ReplaySelectionEntry extends ObjectSelectionList.Entry<Rep
             guiGraphics.drawString(this.minecraft.font, fileAndTime, x + ICON_WIDTH + 3, y + this.minecraft.font.lineHeight + 3, 0xFF808080, false);
             guiGraphics.drawString(this.minecraft.font, info, x + ICON_WIDTH + 3, y + this.minecraft.font.lineHeight + this.minecraft.font.lineHeight + 3, 0xFF808080, false);
 
-            guiGraphics.blit(RenderType::guiTextured, this.icon.textureLocation(), x, y, 0.0f, 0.0f, 32, 32, 32, 32);
+            guiGraphics.blit(RenderPipelines.GUI_TEXTURED, this.icon.textureLocation(), x, y, 0.0f, 0.0f, 32, 32, 32, 32);
 
             if (this.minecraft.options.touchscreen().get() || hovered) {
                 guiGraphics.fill(x, y, x + ICON_WIDTH, y + ICON_HEIGHT, -1601138544);
@@ -235,7 +237,7 @@ public abstract class ReplaySelectionEntry extends ObjectSelectionList.Entry<Rep
                 boolean hoveredIcon = q < 32;
 
                 if (hovered && this.summary.getHoverInfo() != null) {
-                    guiGraphics.renderTooltip(this.minecraft.font, this.minecraft.font.split(this.summary.getHoverInfo(), 240), mouseX, mouseY);
+                    guiGraphics.setTooltipForNextFrame(this.minecraft.font, this.minecraft.font.split(this.summary.getHoverInfo(), 240), mouseX, mouseY);
                 }
 
                 ResourceLocation iconOverlay;
@@ -246,7 +248,7 @@ public abstract class ReplaySelectionEntry extends ObjectSelectionList.Entry<Rep
                 } else {
                     iconOverlay = hoveredIcon ? JOIN_HIGHLIGHTED_SPRITE : JOIN_SPRITE;
                 }
-                guiGraphics.blitSprite(RenderType::guiTextured, iconOverlay, x, y, ICON_WIDTH, ICON_HEIGHT);
+                guiGraphics.blitSprite(RenderPipelines.GUI_TEXTURED, iconOverlay, x, y, ICON_WIDTH, ICON_HEIGHT);
             }
         }
 
