@@ -845,6 +845,7 @@ public class ReplayServer extends IntegratedServer {
             // Play initial snapshot
             ReplayReader replayReader = this.playableChunksByStart.get(0).getOrLoadReplayReader(this.registryAccess());
             replayReader.handleSnapshot(this);
+            this.gamePacketHandler.flushPendingEntities();
         }
 
         this.lastReplayTick = this.targetTick;
@@ -1300,6 +1301,7 @@ public class ReplayServer extends IntegratedServer {
             Map.Entry<Integer, PlayableChunk> entry = this.playableChunksByStart.floorEntry(this.targetTick);
             ReplayReader replayReader = entry.getValue().getOrLoadReplayReader(this.registryAccess());
             replayReader.handleSnapshot(this);
+            this.gamePacketHandler.flushPendingEntities();
             entry.getValue().getOrLoadReplayReader(this.registryAccess()).resetToStart();
             this.currentTick = entry.getKey();
         }
@@ -1317,6 +1319,7 @@ public class ReplayServer extends IntegratedServer {
                 this.processedSnapshot = true;
                 this.clearDataForPlayingSnapshot();
                 this.currentReplayReader.handleSnapshot(this);
+                this.gamePacketHandler.flushPendingEntities();
             }
         }
 
@@ -1369,6 +1372,7 @@ public class ReplayServer extends IntegratedServer {
                         this.processedSnapshot = true;
                         this.clearDataForPlayingSnapshot();
                         this.currentReplayReader.handleSnapshot(this);
+                        this.gamePacketHandler.flushPendingEntities();
                     }
                 }
 
