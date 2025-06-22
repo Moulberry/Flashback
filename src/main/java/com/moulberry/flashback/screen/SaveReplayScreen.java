@@ -51,6 +51,10 @@ public class SaveReplayScreen extends Screen {
     }
 
     @Override
+    protected void setInitialFocus() {
+    }
+
+    @Override
     protected void init() {
         super.init();
 
@@ -103,7 +107,7 @@ public class SaveReplayScreen extends Screen {
         FrameLayout.alignInRectangle(gridLayout, 0, 0, this.width, this.height, 0.5f, 0.5f);
         gridLayout.visitWidgets(this::addRenderableWidget);
 
-        this.setFocused(replayNameEditBox);
+        this.setInitialFocus(replayNameEditBox);
     }
 
     @Override
