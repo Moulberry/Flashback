@@ -30,11 +30,11 @@ public class EditReplayScreen extends Screen {
     @Nullable
     private final Screen lastScreen;
 
-    private FlashbackMeta metadata;
+    private final FlashbackMeta metadata;
     private String changedReplayName;
     private Button saveChangesButton;
 
-    private Path replayPath;
+    private final Path replayPath;
 
     public EditReplayScreen(@Nullable Screen lastScreen, ReplaySummary summary) {
         super(Component.literal("Edit Replay"));
@@ -42,6 +42,10 @@ public class EditReplayScreen extends Screen {
         this.metadata = summary.getReplayMetadata();
         this.changedReplayName = summary.getReplayName();
         this.replayPath = summary.getPath();
+    }
+
+    @Override
+    protected void setInitialFocus() {
     }
 
     @Override
@@ -80,6 +84,7 @@ public class EditReplayScreen extends Screen {
         gridLayout.visitWidgets(this::addRenderableWidget);
 
         this.updateSaveChangesActive();
+        this.setInitialFocus(replayNameEditBox);
     }
 
     private void applyChanges() {

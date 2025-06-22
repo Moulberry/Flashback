@@ -81,6 +81,10 @@ public class CombineReplayScreen extends Screen {
     }
 
     @Override
+    protected void setInitialFocus() {
+    }
+
+    @Override
     protected void init() {
         super.init();
 
@@ -189,6 +193,8 @@ public class CombineReplayScreen extends Screen {
         gridLayout.arrangeElements();
         FrameLayout.alignInRectangle(gridLayout, 0, 0, this.width, this.height, 0.5f, 0.5f);
         gridLayout.visitWidgets(this::addRenderableWidget);
+
+        this.setInitialFocus(replayNameEditBox);
     }
 
     @Override
