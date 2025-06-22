@@ -44,7 +44,7 @@ public class SaveableFramebufferQueue implements AutoCloseable {
         this.width = width;
         this.height = height;
 
-        this.flipBuffer = RenderSystem.getDevice().createTexture(() -> "flip buffer", 0, TextureFormat.RGBA8, width, height, 1, 1);
+        this.flipBuffer = RenderSystem.getDevice().createTexture(() -> "flip buffer", GpuTexture.USAGE_COPY_DST | GpuTexture.USAGE_RENDER_ATTACHMENT, TextureFormat.RGBA8, width, height, 1, 1);
         this.flipBuffer.setAddressMode(AddressMode.CLAMP_TO_EDGE);
         this.flipBufferView = RenderSystem.getDevice().createTextureView(this.flipBuffer);
 

@@ -528,7 +528,7 @@ public class ExportJob {
         }
     }
 
-    private static final CachedOrthoProjectionMatrixBuffer projectionBuffers = new CachedOrthoProjectionMatrixBuffer("flashback export", 1000.0f, 21000.0f, true);
+    private static CachedOrthoProjectionMatrixBuffer projectionBuffers = null;
 
     private boolean finishFrame(RenderTarget framebuffer, int currentFrame, int totalFrames) {
         boolean cancel = false;
@@ -552,6 +552,10 @@ public class ExportJob {
             float guiScale = 4f;
             int scaledWidth = (int) Math.ceil(framebuffer.width / guiScale);
             int scaledHeight = (int) Math.ceil(framebuffer.height / guiScale);
+
+            if (projectionBuffers == null) {
+                projectionBuffers = new CachedOrthoProjectionMatrixBuffer("flashback export", 1000.0f, 21000.0f, true);
+            }
 
             RenderSystem.setProjectionMatrix(projectionBuffers.getBuffer(scaledWidth, scaledHeight), ProjectionType.ORTHOGRAPHIC);
 

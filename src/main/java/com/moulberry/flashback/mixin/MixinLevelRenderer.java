@@ -127,12 +127,12 @@ public abstract class MixinLevelRenderer {
             RenderTarget main = Minecraft.getInstance().mainRenderTarget;
 
             if (this.roundAlphaBuffer == null) {
-                this.roundAlphaBuffer = RenderSystem.getDevice().createTexture(() -> "flashback round alpha buffer", 0, TextureFormat.RGBA8, main.width, main.height, 1, 1);
+                this.roundAlphaBuffer = RenderSystem.getDevice().createTexture(() -> "flashback round alpha buffer", GpuTexture.USAGE_RENDER_ATTACHMENT, TextureFormat.RGBA8, main.width, main.height, 1, 1);
                 this.roundAlphaBufferView = RenderSystem.getDevice().createTextureView(this.roundAlphaBuffer);
             } else if (this.roundAlphaBuffer.getWidth(0) != main.width || this.roundAlphaBuffer.getHeight(0) != main.height) {
                 this.roundAlphaBuffer.close();
                 this.roundAlphaBufferView.close();
-                this.roundAlphaBuffer = RenderSystem.getDevice().createTexture(() -> "flashback round alpha buffer", 0, TextureFormat.RGBA8, main.width, main.height, 1, 1);
+                this.roundAlphaBuffer = RenderSystem.getDevice().createTexture(() -> "flashback round alpha buffer", GpuTexture.USAGE_RENDER_ATTACHMENT, TextureFormat.RGBA8, main.width, main.height, 1, 1);
                 this.roundAlphaBufferView = RenderSystem.getDevice().createTextureView(this.roundAlphaBuffer);
             }
 
