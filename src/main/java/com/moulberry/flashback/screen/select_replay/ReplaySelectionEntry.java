@@ -71,7 +71,7 @@ public abstract class ReplaySelectionEntry extends ObjectSelectionList.Entry<Rep
 
             int p = (this.minecraft.screen.width - this.minecraft.font.width(LOAD_REPLAY_LABEL)) / 2;
             int q = y + (height - this.minecraft.font.lineHeight) / 2 + 1;
-            guiGraphics.drawString(this.minecraft.font, LOAD_REPLAY_LABEL, p, q, 0xFFFFFF, true);
+            guiGraphics.drawString(this.minecraft.font, LOAD_REPLAY_LABEL, p, q, 0xFFFFFFFF, true);
         }
 
         @Override
@@ -92,7 +92,7 @@ public abstract class ReplaySelectionEntry extends ObjectSelectionList.Entry<Rep
         public void render(GuiGraphics guiGraphics, int i, int j, int k, int l, int m, int n, int o, boolean bl, float f) {
             int p = (this.minecraft.screen.width - this.minecraft.font.width(LOADING_LABEL)) / 2;
             int q = j + (m - this.minecraft.font.lineHeight) / 2;
-            guiGraphics.drawString(this.minecraft.font, LOADING_LABEL, p, q, 0xFFFFFF, false);
+            guiGraphics.drawString(this.minecraft.font, LOADING_LABEL, p, q, 0xFFFFFFFF, false);
             String string = LoadingDotsText.get(Util.getMillis());
             int r = (this.minecraft.screen.width - this.minecraft.font.width(string)) / 2;
             int s = q + this.minecraft.font.lineHeight;
@@ -152,7 +152,7 @@ public abstract class ReplaySelectionEntry extends ObjectSelectionList.Entry<Rep
             RenderSystem.disableBlend();
 
             if (this.minecraft.options.touchscreen().get() || hovered) {
-                guiGraphics.fill(x, y, x + ICON_WIDTH, y + ICON_HEIGHT, -1601138544);
+                guiGraphics.fill(x, y, x + ICON_WIDTH, y + ICON_HEIGHT, 0xa0909090);
                 int q = mouseX - x;
                 boolean hoveredIcon = q < 32;
 
@@ -234,7 +234,7 @@ public abstract class ReplaySelectionEntry extends ObjectSelectionList.Entry<Rep
             RenderSystem.disableBlend();
 
             if (this.minecraft.options.touchscreen().get() || hovered) {
-                guiGraphics.fill(x, y, x + ICON_WIDTH, y + ICON_HEIGHT, -1601138544);
+                guiGraphics.fill(x, y, x + ICON_WIDTH, y + ICON_HEIGHT, 0xa0909090);
                 int q = mouseX - x;
                 boolean hoveredIcon = q < 32;
 
