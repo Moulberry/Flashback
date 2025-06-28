@@ -63,7 +63,7 @@ public class UnsupportedLoaderScreen extends Screen {
     @Override
     public void render(GuiGraphics guiGraphics, int i, int j, float f) {
         super.render(guiGraphics, i, j, f);
-        guiGraphics.drawCenteredString(this.font, this.title, this.width / 2, 70, 0xFFFFFF);
+        guiGraphics.drawCenteredString(this.font, this.title, this.width / 2, 70, 0xFFFFFFFF);
         this.message.renderCentered(guiGraphics, this.width / 2, 90);
 
         if (this.countdown > 0 && System.currentTimeMillis() - this.lastInitTime > 1000) {
