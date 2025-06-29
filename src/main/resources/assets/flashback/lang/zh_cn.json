@@ -1,0 +1,32 @@
+{
+  "modmenu.descriptionTranslation.flashback": "录制你的游戏过程，查看录像并导出电影镜头",
+  "flashback.select_replay": "选择回放",
+  "flashback.select_replay.open": "打开回放",
+  "flashback.select_replay.loading_replays": "加载回放",
+  "flashback.select_replay.load_replay_from_file": "从文件加载回放...",
+  "flashback.select_replay.replay": "回放",
+  "flashback.select_replay.data_read": "正在读取回放数据...",
+  "flashback.select_replay.delete_question": "你确定要删除这个回放吗？",
+  "flashback.select_replay.duration": "时长: %s",
+
+  "flashback.option.per_second": "%s/s",
+
+  "flashback.option.automatically_start": "自动开始",
+  "flashback.option.automatically_start.description": "加入世界/服务器时自动开始回放录制",
+  "flashback.option.automatically_finish": "自动完成",
+  "flashback.option.automatically_finish.description": "退出世界/服务器时自动完成回放录制",
+  "flashback.option.show_recording_toasts": "显示录制提示",
+  "flashback.option.show_recording_toasts.description": "在开始/停止回放录制时在右上角显示提示",
+  "flashback.option.quicksave": "快速保存",
+  "flashback.option.quicksave.description": "使用默认值保存回放，而不是打开保存回放屏幕",
+  "flashback.option.hide_pause_menu_controls": "隐藏暂停控制",
+  "flashback.option.hide_pause_menu_controls.description": "隐藏用于开始/完成回放的暂停（ESC）菜单控制。命令仍然可以使用",
+  "flashback.option.mark_dimension_changes": "标记维度变化",
+  "flashback.option.mark_dimension_changes.description": "在切换维度时自动在回放中添加标记",
+  "flashback.option.record_hotbar": "录制快捷键",
+  "flashback.option.record_hotbar.description": "将第一人称快捷键信息添加到回放中",
+  "flashback.option.local_player_updates_per_second": "第一人称更新",
+  "flashback.option.local_player_updates_per_second.description": "第一人称玩家位置/角度的每秒更新率",
+  "flashback.option.record_voice_chat": "录制语音聊天（SimpleVoiceChat）",
+  "flashback.option.record_voice_chat.description": "将 SimpleVoiceChat 中的语音聊天添加到回放中"
+}
