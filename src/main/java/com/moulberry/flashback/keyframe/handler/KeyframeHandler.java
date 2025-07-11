@@ -27,6 +27,9 @@ public interface KeyframeHandler {
     default void applyFov(float fov) {
     }
 
+    default void applyGamma(float gamma) {
+    }
+
     default void applyTickrate(float tickrate) {
     }
 

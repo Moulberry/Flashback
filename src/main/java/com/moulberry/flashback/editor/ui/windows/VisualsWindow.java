@@ -5,6 +5,7 @@ import com.moulberry.flashback.keyframe.Keyframe;
 import com.moulberry.flashback.keyframe.KeyframeType;
 import com.moulberry.flashback.keyframe.impl.CameraShakeKeyframe;
 import com.moulberry.flashback.keyframe.impl.FOVKeyframe;
+import com.moulberry.flashback.keyframe.impl.GammaKeyframe;
 import com.moulberry.flashback.keyframe.impl.TimeOfDayKeyframe;
 import com.moulberry.flashback.playback.ReplayServer;
 import com.moulberry.flashback.record.FlashbackMeta;
@@ -171,6 +172,30 @@ public class VisualsWindow {
                 floatBuffer[0] = visuals.overrideFovAmount;
                 if (ImGui.sliderFloat("FOV", floatBuffer, 1.0f, 110.0f, "%.1f")) {
                     visuals.setFov(floatBuffer[0]);
+                    editorState.markDirty();
+                }
+            }
+
+            // Gamma
+            if (ImGui.checkbox("Override Gamma", visuals.overrideGamma)) {
+                visuals.overrideGamma = !visuals.overrideGamma;
+                Minecraft.getInstance().levelRenderer.needsUpdate();
+                editorState.markDirty();
+            }
+            if (visuals.overrideGamma) {
+                if (visuals.overrideGammaAmount < 0) {
+                    visuals.overrideGammaAmount = Flashback.getConfig().defaultOverrideGamma;
+                }
+
+                ImGui.sameLine();
+                if (ImGui.smallButton("+")) {
+                    addKeyframe(editorState, replayServer, new GammaKeyframe(visuals.overrideGammaAmount));
+                }
+                ImGuiHelper.tooltip("Add Gamma keyframe");
+
+                floatBuffer[0] = visuals.overrideGammaAmount;
+                if (ImGui.sliderFloat("Gamma", floatBuffer, 0.0f, 1.0f)) {
+                    visuals.setGamma(floatBuffer[0]);
                     editorState.markDirty();
                 }
             }

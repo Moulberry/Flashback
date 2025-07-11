@@ -13,6 +13,7 @@ import com.moulberry.flashback.keyframe.impl.CameraShakeKeyframe;
 import com.moulberry.flashback.keyframe.impl.TrackEntityKeyframe;
 import com.moulberry.flashback.keyframe.impl.FOVKeyframe;
 import com.moulberry.flashback.keyframe.impl.FreezeKeyframe;
+import com.moulberry.flashback.keyframe.impl.GammaKeyframe;
 import com.moulberry.flashback.keyframe.impl.TickrateKeyframe;
 import com.moulberry.flashback.keyframe.impl.TimeOfDayKeyframe;
 import com.moulberry.flashback.keyframe.impl.TimelapseKeyframe;
@@ -44,6 +45,7 @@ public class FlashbackGson {
             .registerTypeAdapter(CameraOrbitKeyframe.class, new CameraOrbitKeyframe.TypeAdapter())
             .registerTypeAdapter(TrackEntityKeyframe.class, new TrackEntityKeyframe.TypeAdapter())
             .registerTypeAdapter(FOVKeyframe.class, new FOVKeyframe.TypeAdapter())
+            .registerTypeAdapter(GammaKeyframe.class, new GammaKeyframe.TypeAdapter())
             .registerTypeAdapter(CameraShakeKeyframe.class, new CameraShakeKeyframe.TypeAdapter())
             .registerTypeAdapter(TickrateKeyframe.class, new TickrateKeyframe.TypeAdapter())
             .registerTypeAdapter(TimelapseKeyframe.class, new TimelapseKeyframe.TypeAdapter())

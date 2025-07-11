@@ -250,6 +250,7 @@ public class ReplayUI {
 
     private static short[] buildMaterialIconRanges() {
         ImFontGlyphRangesBuilder builder = new ImFontGlyphRangesBuilder();
+        builder.addChar('\ue0f0');
         builder.addChar('\ue04b');
         builder.addChar('\ue577');
         builder.addChar('\uefeb');

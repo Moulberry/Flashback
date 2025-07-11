@@ -4,4 +4,6 @@ public interface OptionsExt {
 
     int flashback$getOriginalFov();
 
+    double flashback$getOriginalGamma();
+
 }

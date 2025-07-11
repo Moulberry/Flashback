@@ -34,6 +34,11 @@ public record ReplayServerKeyframeHandler(ReplayServer replayServer) implements 
     }
 
     @Override
+    public void applyGamma(float gamma) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
     public void applyTickrate(float tickrate) {
         this.replayServer.setDesiredTickRate(tickrate, false);
     }
