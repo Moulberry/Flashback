@@ -11,11 +11,21 @@ import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.renderer.GameRenderer;
+import net.minecraft.client.renderer.RenderPipelines;
+import net.minecraft.client.renderer.RenderStateShard;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.TriState;
 import org.joml.Matrix4f;
 
 public class WorldRenderHook {
+
+    private static final RenderType MARKER_CIRCLE_RENDER_TYPE = RenderType.create("flashback:marker_circle",
+        1536, RenderPipelines.GUI_TEXTURED,
+        RenderType.CompositeState.builder()
+                                 .setTextureState(new RenderStateShard.TextureStateShard(ResourceLocation.parse("flashback:world_marker_circle.png"), true))
+                                 .createCompositeState(false)
+    );
 
     public static void renderHook(PoseStack poseStack, float partialTick, boolean renderBlockOutline, Camera camera, GameRenderer gameRenderer, Matrix4f projection) {
         ReplayServer replayServer = Flashback.getReplayServer();
@@ -33,7 +43,7 @@ public class WorldRenderHook {
             var multiBufferSource = Minecraft.getInstance().renderBuffers().bufferSource();
             multiBufferSource.endBatch();
 
-            var bufferBuilder = multiBufferSource.getBuffer(RenderType.entityTranslucentEmissive(ResourceLocation.parse("flashback:world_marker_circle.png")));
+            var bufferBuilder = multiBufferSource.getBuffer(MARKER_CIRCLE_RENDER_TYPE);
 
             String dimension = Minecraft.getInstance().level.dimension().toString();
 
