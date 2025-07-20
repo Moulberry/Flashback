@@ -80,9 +80,23 @@ public abstract class MixinLevelRenderer {
 
     @Inject(method = "renderLevel", at = @At("HEAD"))
     public void renderLevel(GraphicsResourceAllocator graphicsResourceAllocator, DeltaTracker deltaTracker, boolean bl, Camera camera,
-            Matrix4f matrix4f, Matrix4f projection, GpuBufferSlice gpuBufferSlice, Vector4f vector4f, boolean bl2, CallbackInfo ci) {
+            Matrix4f matrix4f, Matrix4f projection, GpuBufferSlice gpuBufferSlice, Vector4f clearColour, boolean bl2, CallbackInfo ci) {
         ReplayUI.lastProjectionMatrix = projection;
         ReplayUI.lastViewQuaternion = camera.rotation();
+
+        EditorState editorState = EditorStateManager.getCurrent();
+        if (editorState != null) {
+            ReplayVisuals visuals = editorState.replayVisuals;
+
+            if (!visuals.renderSky) {
+                if (Flashback.isExporting() && Flashback.EXPORT_JOB.getSettings().transparent()) {
+                    clearColour.set(0f, 0f, 0f, 0f);
+                } else {
+                    float[] skyColour = visuals.skyColour;
+                    clearColour.set(skyColour[0], skyColour[1], skyColour[2], 1f);
+                }
+            }
+        }
     }
 
     @Unique
