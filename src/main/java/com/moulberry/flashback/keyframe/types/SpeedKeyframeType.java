@@ -13,6 +13,7 @@ import com.moulberry.flashback.state.EditorState;
 import com.moulberry.flashback.state.EditorStateManager;
 import imgui.ImGui;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.resources.language.I18n;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.function.Supplier;
@@ -36,7 +37,7 @@ public class SpeedKeyframeType implements KeyframeType<TickrateKeyframe> {
 
     @Override
     public String name() {
-        return "Speed";
+        return I18n.get("flashback.keyframe.speed");
     }
 
     @Override
@@ -58,12 +59,12 @@ public class SpeedKeyframeType implements KeyframeType<TickrateKeyframe> {
         }
 
         return () -> {
-            ImGui.sliderFloat("Speed", speedKeyframeInput, 0.1f, 10f);
-            if (ImGui.button("Add")) {
+            ImGui.sliderFloat(I18n.get("flashback.keyframe.speed"), speedKeyframeInput, 0.1f, 10f);
+            if (ImGui.button(I18n.get("flashback.add"))) {
                 return new TickrateKeyframe(speedKeyframeInput[0] * 20.0f);
             }
             ImGui.sameLine();
-            if (ImGui.button("Cancel")) {
+            if (ImGui.button(I18n.get("gui.cancel"))) {
                 ImGui.closeCurrentPopup();
             }
             return null;

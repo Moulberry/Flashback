@@ -16,6 +16,7 @@ import com.moulberry.flashback.spline.CatmullRom;
 import com.moulberry.flashback.spline.Hermite;
 import imgui.ImGui;
 import imgui.type.ImInt;
+import net.minecraft.client.resources.language.I18n;
 
 import java.lang.reflect.Type;
 import java.util.Map;
@@ -48,7 +49,7 @@ public class TimeOfDayKeyframe extends Keyframe {
     public void renderEditKeyframe(Consumer<Consumer<Keyframe>> update) {
         ImGui.setNextItemWidth(160);
         int[] input = new int[]{this.time};
-        if (ImGuiHelper.inputInt("Time", input)) {
+        if (ImGuiHelper.inputInt(I18n.get("flashback.time"), input)) {
             if (this.time != input[0]) {
                 update.accept(keyframe -> ((TimeOfDayKeyframe)keyframe).time = input[0]);
             }

@@ -16,6 +16,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.client.multiplayer.PlayerInfo;
+import net.minecraft.client.resources.language.I18n;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 
@@ -107,9 +108,11 @@ public class PlayerListWindow {
         }
 
         ImGui.setNextWindowSizeConstraints(250, 50, 5000, 5000);
-        if (ImGui.begin("Player List###PlayerList", open, ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoFocusOnAppearing)) {
-            ImGui.setNextItemWidth(ImGui.getContentRegionAvailX() - ImGuiHelper.calcTextWidth("Search") - 32);
-            if (ImGui.inputText("Search", search)) {
+        String title = I18n.get("flashback.player_list");
+        if (ImGui.begin(title + "###PlayerList", open, ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoFocusOnAppearing)) {
+            String searchStr = I18n.get("flashback.search");
+            ImGui.setNextItemWidth(ImGui.getContentRegionAvailX() - ImGuiHelper.calcTextWidth(searchStr) - 32);
+            if (ImGui.inputText(searchStr, search)) {
                 lastSearch = null;
             }
 
@@ -121,7 +124,7 @@ public class PlayerListWindow {
             }
 
             if (hasNpcs || includeNpcs) {
-                if (ImGui.checkbox("Include NPCs", includeNpcs)) {
+                if (ImGui.checkbox(I18n.get("flashback.include_npcs"), includeNpcs)) {
                     includeNpcs = !includeNpcs;
                     lastSearch = null;
                 }
@@ -138,24 +141,24 @@ public class PlayerListWindow {
 
                 ImGui.text(profile.getName());
                 ImGui.sameLine();
-                if (ImGui.smallButton("TP")) {
+                if (ImGui.smallButton(I18n.get("flashback.tp"))) {
                     Minecraft.getInstance().getConnection().sendCommand("teleport " + profile.getId());
                     lastUpdate = currentTime;
                 }
                 if (editorState != null) {
                     ImGui.sameLine();
                     if (editorState.hideDuringExport.contains(profile.getId())) {
-                        if (ImGui.smallButton("Show")) {
+                        if (ImGui.smallButton(I18n.get("flashback.show"))) {
                             editorState.hideDuringExport.remove(profile.getId());
                             lastUpdate = currentTime;
                         }
-                    } else if (ImGui.smallButton("Hide")) {
+                    } else if (ImGui.smallButton(I18n.get("flashback.hide"))) {
                         editorState.hideDuringExport.add(profile.getId());
                         lastUpdate = currentTime;
                     }
                 }
                 ImGui.sameLine();
-                if (ImGui.smallButton("Spectate")) {
+                if (ImGui.smallButton(I18n.get("flashback.spectate"))) {
                     Minecraft.getInstance().getConnection().sendCommand("spectate " + profile.getId());
                     lastUpdate = currentTime;
                 }
@@ -165,12 +168,12 @@ public class PlayerListWindow {
             ImGui.separator();
 
             if (editorState != null) {
-                if (ImGui.button("Hide All")) {
+                if (ImGui.button(I18n.get("flashback.hide_all"))) {
                     changeVisibilityOfAll(editorState, false);
                     lastUpdate = currentTime;
                 }
                 ImGui.sameLine();
-                if (ImGui.button("Show All")) {
+                if (ImGui.button(I18n.get("flashback.show_all"))) {
                     changeVisibilityOfAll(editorState, true);
                     lastUpdate = currentTime;
                 }

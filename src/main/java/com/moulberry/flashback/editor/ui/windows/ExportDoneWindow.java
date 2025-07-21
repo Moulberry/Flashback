@@ -10,6 +10,7 @@ import imgui.flag.ImGuiCond;
 import imgui.flag.ImGuiWindowFlags;
 import imgui.type.ImBoolean;
 import net.minecraft.Util;
+import net.minecraft.client.resources.language.I18n;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -50,8 +51,8 @@ public class ExportDoneWindow {
 
         ImGui.openPopup("###ExportDone");
         if (ImGui.beginPopupModal("Export Finished###ExportDone", open, flags)) {
-            ImGui.text("Export has successfully finished");
-            if (exportPath != null && ImGui.button("Open Folder")) {
+            ImGui.text(I18n.get("flashback.export_done"));
+            if (exportPath != null && ImGui.button(I18n.get("flashback.open_folder"))) {
                 Util.getPlatform().openFile(exportPath.toFile());
             }
             ImGui.endPopup();

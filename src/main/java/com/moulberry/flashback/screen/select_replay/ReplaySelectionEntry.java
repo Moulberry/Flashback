@@ -290,7 +290,7 @@ public abstract class ReplaySelectionEntry extends ObjectSelectionList.Entry<Rep
                         }
                     };
                     Component message = RegistryMetaHelper.createMismatchWarning(this.replaySelectionList.currentNamespacesForRegistries, this.summary.getReplayMetadata().namespacesForRegistries);
-                    this.minecraft.setScreen(new ConfirmScreen(afterWarning, Component.literal("WARNING: REGISTRY MISMATCH"), message,
+                    this.minecraft.setScreen(new ConfirmScreen(afterWarning, Component.translatable("flashback.screen_registry_mismatch"), message,
                         Component.translatable("selectWorld.backupJoinSkipButton"), CommonComponents.GUI_CANCEL));
                 } else {
                     this.minecraft.forceSetScreen(new GenericMessageScreen(Component.translatable("flashback.select_replay.data_read")));

@@ -12,6 +12,7 @@ import com.moulberry.flashback.playback.ReplayServer;
 import com.moulberry.flashback.state.EditorState;
 import com.moulberry.flashback.state.EditorStateManager;
 import imgui.ImGui;
+import net.minecraft.client.resources.language.I18n;
 import org.jetbrains.annotations.Nullable;
 
 public class CameraShakeKeyframeType implements KeyframeType<CameraShakeKeyframe> {
@@ -33,7 +34,7 @@ public class CameraShakeKeyframeType implements KeyframeType<CameraShakeKeyframe
 
     @Override
     public String name() {
-        return "Camera Shake";
+        return I18n.get("flashback.keyframe.camera_shake");
     }
 
     @Override
@@ -64,7 +65,7 @@ public class CameraShakeKeyframeType implements KeyframeType<CameraShakeKeyframe
         }
 
         return () -> {
-            if (ImGui.checkbox("Split Y/X", cameraShakeSplitXYKeyframeInput[0])) {
+            if (ImGui.checkbox(I18n.get("flashback.split_yx"), cameraShakeSplitXYKeyframeInput[0])) {
                 cameraShakeSplitXYKeyframeInput[0] = !cameraShakeSplitXYKeyframeInput[0];
                 if (!cameraShakeSplitXYKeyframeInput[0]) {
                     cameraShakeFrequencyYKeyframeInput[0] = cameraShakeFrequencyXKeyframeInput[0];
@@ -73,16 +74,16 @@ public class CameraShakeKeyframeType implements KeyframeType<CameraShakeKeyframe
             }
 
             if (cameraShakeSplitXYKeyframeInput[0]) {
-                ImGui.sliderFloat("Frequency X", cameraShakeFrequencyXKeyframeInput, 0.1f, 10.0f, "%.1f");
-                ImGui.sliderFloat("Amplitude X", cameraShakeAmplitudeXKeyframeInput, 0.0f, 10.0f, "%.1f");
-                ImGui.sliderFloat("Frequency Y", cameraShakeFrequencyYKeyframeInput, 0.1f, 10.0f, "%.1f");
-                ImGui.sliderFloat("Amplitude Y", cameraShakeAmplitudeYKeyframeInput, 0.0f, 10.0f, "%.1f");
+                ImGui.sliderFloat(I18n.get("flashback.frequency_x"), cameraShakeFrequencyXKeyframeInput, 0.1f, 10.0f, "%.1f");
+                ImGui.sliderFloat(I18n.get("flashback.amplitude_x"), cameraShakeAmplitudeXKeyframeInput, 0.0f, 10.0f, "%.1f");
+                ImGui.sliderFloat(I18n.get("flashback.frequency_y"), cameraShakeFrequencyYKeyframeInput, 0.1f, 10.0f, "%.1f");
+                ImGui.sliderFloat(I18n.get("flashback.amplitude_y"), cameraShakeAmplitudeYKeyframeInput, 0.0f, 10.0f, "%.1f");
             } else {
-                ImGui.sliderFloat("Frequency", cameraShakeFrequencyXKeyframeInput, 0.1f, 10.0f, "%.1f");
-                ImGui.sliderFloat("Amplitude", cameraShakeAmplitudeXKeyframeInput, 0.0f, 10.0f, "%.1f");
+                ImGui.sliderFloat(I18n.get("flashback.frequency"), cameraShakeFrequencyXKeyframeInput, 0.1f, 10.0f, "%.1f");
+                ImGui.sliderFloat(I18n.get("flashback.amplitude"), cameraShakeAmplitudeXKeyframeInput, 0.0f, 10.0f, "%.1f");
             }
 
-            if (ImGui.button("Add")) {
+            if (ImGui.button(I18n.get("flashback.add"))) {
                 if (cameraShakeSplitXYKeyframeInput[0]) {
                     return new CameraShakeKeyframe(cameraShakeFrequencyXKeyframeInput[0], cameraShakeAmplitudeXKeyframeInput[0],
                         cameraShakeFrequencyYKeyframeInput[0], cameraShakeAmplitudeYKeyframeInput[0], true);
@@ -92,7 +93,7 @@ public class CameraShakeKeyframeType implements KeyframeType<CameraShakeKeyframe
                 }
             }
             ImGui.sameLine();
-            if (ImGui.button("Cancel")) {
+            if (ImGui.button(I18n.get("gui.cancel"))) {
                 ImGui.closeCurrentPopup();
             }
             return null;

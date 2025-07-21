@@ -7,6 +7,7 @@ import com.moulberry.flashback.screen.select_replay.SelectReplayScreen;
 import imgui.ImGui;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.TitleScreen;
+import net.minecraft.client.resources.language.I18n;
 import net.minecraft.network.chat.Component;
 
 import java.nio.file.Files;
@@ -24,25 +25,25 @@ public class MainMenuBar {
     public static void renderInner() {
         FlashbackConfig config = Flashback.getConfig();
 
-        if (ImGui.beginMenu("File")) {
-            if (ImGui.menuItem("Export Video")) {
+        if (ImGui.beginMenu(I18n.get("flashback.menu.file") + "##File")) {
+            if (ImGui.menuItem(I18n.get("flashback.menu.file.export_video") + "##ExportVideo")) {
                 StartExportWindow.open();
             }
             if (!ExportJobQueue.queuedJobs.isEmpty()) {
-                String name = "Export Queue (" + ExportJobQueue.count() + ")";
+                String name = I18n.get("flashback.menu.file.export_queue", ExportJobQueue.count());
                 if (ImGui.menuItem(name + "###QueuedJobs")) {
                     ExportQueueWindow.open();
                 }
             }
-            if (ImGui.menuItem("Export Screenshot")) {
+            if (ImGui.menuItem(I18n.get("flashback.export_screenshot") + "##ExportScreenshot")) {
                 ExportScreenshotWindow.open();
             }
             ImGui.separator();
-            if (ImGui.menuItem("Open Replay")) {
+            if (ImGui.menuItem(I18n.get("flashback.select_replay.open") + "##Open")) {
                 Flashback.openReplayFromFileBrowser();
             }
             if (!config.recentReplays.isEmpty()) {
-                if (ImGui.beginMenu("Open Recent")) {
+                if (ImGui.beginMenu(I18n.get("flashback.open_recent_replay") + "##OpenRecentReplay")) {
                     Path replayFolder = Flashback.getReplayFolder();
                     for (String recentReplay : config.recentReplays) {
                         Path path = Path.of(recentReplay);
@@ -67,7 +68,7 @@ public class MainMenuBar {
                     ImGui.endMenu();
                 }
             }
-            if (ImGui.menuItem("Exit Replay")) {
+            if (ImGui.menuItem(I18n.get("flashback.exit_replay") + "##ExitReplay")) {
                 Minecraft minecraft = Minecraft.getInstance();
                 if (minecraft.level != null) {
                     minecraft.level.disconnect(Component.empty());
@@ -77,25 +78,25 @@ public class MainMenuBar {
             }
             ImGui.endMenu();
         }
-        if (ImGui.menuItem("Preferences")) {
+        if (ImGui.menuItem(I18n.get("flashback.preferences") + "##Preferences")) {
             PreferencesWindow.open();
         }
 
         ImGui.separator();
 
-        if (ImGui.menuItem("Player List")) {
+        if (ImGui.menuItem(I18n.get("flashback.player_list") + "##PlayerList")) {
             toggleWindow("player_list");
         }
-        if (ImGui.menuItem("Movement")) {
+        if (ImGui.menuItem(I18n.get("flashback.movement") + "##Movement")) {
             toggleWindow("movement");
         }
-        if (ImGui.menuItem("Render Filter")) {
+        if (ImGui.menuItem(I18n.get("flashback.render_filter") + "##RenderFilter")) {
             toggleWindow("render_filter");
         }
 
         ImGui.separator();
 
-        if (ImGui.menuItem("Hide (F1)")) {
+        if (ImGui.menuItem(I18n.get("flashback.hide_replay_ui") + "##HideReplayUI")) {
             Minecraft.getInstance().options.hideGui = true;
         }
     }

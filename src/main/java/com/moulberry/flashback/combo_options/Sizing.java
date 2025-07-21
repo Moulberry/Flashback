@@ -1,11 +1,13 @@
 package com.moulberry.flashback.combo_options;
 
+import net.minecraft.client.resources.language.I18n;
+
 public enum Sizing implements ComboOption {
 
-    KEEP_ASPECT_RATIO("Keep Aspect Ratio"),
-    CHANGE_ASPECT_RATIO("Change Aspect Ratio"),
-    FILL("Fill"),
-    UNDERLAY("Underlay");
+    KEEP_ASPECT_RATIO("flashback.sizing.keep_aspect_ratio"),
+    CHANGE_ASPECT_RATIO("flashback.sizing.change_aspect_ratio"),
+    FILL("flashback.sizing.fill"),
+    UNDERLAY("flashback.sizing.underlay");
 
     private final String text;
 
@@ -15,7 +17,7 @@ public enum Sizing implements ComboOption {
 
     @Override
     public String text() {
-        return this.text;
+        return I18n.get(this.text);
     }
 
 }

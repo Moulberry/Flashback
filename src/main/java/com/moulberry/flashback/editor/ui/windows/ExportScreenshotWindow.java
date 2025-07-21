@@ -15,6 +15,7 @@ import imgui.ImGui;
 import imgui.flag.ImGuiWindowFlags;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.client.resources.language.I18n;
 
 import java.nio.file.Path;
 
@@ -29,7 +30,8 @@ public class ExportScreenshotWindow {
             ImGui.openPopup("###ExportScreenshot");
         }
 
-        if (ImGuiHelper.beginPopupModalCloseable("Export screenshot###ExportScreenshot", ImGuiWindowFlags.AlwaysAutoResize)) {
+        String title = I18n.get("flashback.export_screenshot");
+        if (ImGuiHelper.beginPopupModalCloseable(title + "###ExportScreenshot", ImGuiWindowFlags.AlwaysAutoResize)) {
             if (close) {
                 close = false;
                 ImGui.closeCurrentPopup();
@@ -44,31 +46,31 @@ public class ExportScreenshotWindow {
                 config.resolution = new int[]{1920, 1080};
             }
 
-            ImGuiHelper.inputInt("Resolution", config.resolution);
+            ImGuiHelper.inputInt(I18n.get("flashback.resolution"), config.resolution);
             config.resolution[0] = Math.max(1, config.resolution[0]);
             config.resolution[1] = Math.max(1, config.resolution[1]);
 
             EditorState editorState = EditorStateManager.getCurrent();
 
-            if (ImGui.checkbox("SSAA", config.ssaa)) {
+            if (ImGui.checkbox(I18n.get("flashback.ssaa"), config.ssaa)) {
                 config.ssaa = !config.ssaa;
             }
-            ImGuiHelper.tooltip("Supersampling Anti-Aliasing: Remove jagged edges by rendering the game at double resolution and downscaling");
+            ImGuiHelper.tooltip(I18n.get("flashback.ssaa_tooltip"));
 
             ImGui.sameLine();
 
-            if (ImGui.checkbox("No GUI", config.noGui)) {
+            if (ImGui.checkbox(I18n.get("flashback.no_gui"), config.noGui)) {
                 config.noGui = !config.noGui;
             }
-            ImGuiHelper.tooltip("Removes all UI from the screen, rendering only the world");
+            ImGuiHelper.tooltip(I18n.get("flashback.no_gui_tooltip"));
 
             if (editorState != null && !editorState.replayVisuals.renderSky) {
-                if (ImGui.checkbox("Transparent Sky", config.transparentBackground)) {
+                if (ImGui.checkbox(I18n.get("flashback.transparent_sky"), config.transparentBackground)) {
                     config.transparentBackground = !config.transparentBackground;
                 }
             }
 
-            if (editorState != null && ImGui.button("Take Screenshot")) {
+            if (editorState != null && ImGui.button(I18n.get("flashback.take_screenshot"))) {
                 String defaultName = StartExportWindow.getDefaultFilename(null, "png", config);
                 String defaultExportPathString = config.defaultExportPath;
 

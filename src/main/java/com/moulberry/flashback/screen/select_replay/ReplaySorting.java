@@ -8,27 +8,27 @@ import java.util.Comparator;
 public enum ReplaySorting {
 
     CREATED_DATE(
-        Component.literal("Created Date"),
+        Component.translatable("flashback.replay_sorting.created_date"),
         Comparator.comparingLong(ReplaySummary::getLastModified).reversed(),
         Comparator.comparingLong(ReplaySummary::getLastModified)
     ),
     REPLAY_NAME(
-        Component.literal("Replay Name"),
+        Component.translatable("flashback.replay_sorting.replay_name"),
         Comparator.comparing(ReplaySummary::getReplayName, NaturalOrderComparator.INSTANCE),
         Comparator.comparing(ReplaySummary::getReplayName, NaturalOrderComparator.INSTANCE.reversed())
     ),
     WORLD_NAME(
-        Component.literal("World Name"),
+        Component.translatable("flashback.replay_sorting.world_name"),
         Comparator.comparing(ReplaySummary::getWorldName, Comparator.nullsLast(NaturalOrderComparator.INSTANCE)),
         Comparator.comparing(ReplaySummary::getWorldName, Comparator.nullsLast(NaturalOrderComparator.INSTANCE.reversed()))
     ),
     DURATION(
-        Component.literal("Duration"),
+        Component.translatable("flashback.replay_sorting.duration"),
         Comparator.<ReplaySummary>comparingLong(replay -> replay.getReplayMetadata().totalTicks).reversed(),
         Comparator.comparingLong(replay -> replay.getReplayMetadata().totalTicks)
     ),
     FILESIZE(
-        Component.literal("Filesize"),
+        Component.translatable("flashback.replay_sorting.filesize"),
         Comparator.comparingLong(ReplaySummary::getFilesize).reversed(),
         Comparator.comparingLong(ReplaySummary::getFilesize)
     );

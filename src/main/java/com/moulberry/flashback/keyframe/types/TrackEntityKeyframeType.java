@@ -10,6 +10,7 @@ import imgui.ImGui;
 import imgui.type.ImString;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.client.resources.language.I18n;
 import net.minecraft.world.entity.Entity;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3d;
@@ -35,7 +36,7 @@ public class TrackEntityKeyframeType implements KeyframeType<TrackEntityKeyframe
 
     @Override
     public String name() {
-        return "Track Entity";
+        return I18n.get("flashback.keyframe.track_entity");
     }
 
     @Override
@@ -64,7 +65,7 @@ public class TrackEntityKeyframeType implements KeyframeType<TrackEntityKeyframe
         CameraTrackTargetData data = new CameraTrackTargetData();
 
         return () -> {
-            if (ImGui.inputText("Entity UUID", data.cameraTrackTarget)) {
+            if (ImGui.inputText(I18n.get("flashback.entity_uuid"), data.cameraTrackTarget)) {
                 data.validEntityTarget = null;
                 try {
                     String uuidStr = ImGuiHelper.getString(data.cameraTrackTarget);
@@ -79,15 +80,15 @@ public class TrackEntityKeyframeType implements KeyframeType<TrackEntityKeyframe
                     }
                 } catch (Exception ignored) {}
             }
-            data.trackingBodyPart = ImGuiHelper.enumCombo("Body Part", data.trackingBodyPart);
-            ImGuiHelper.inputFloat("Yaw Offset", data.cameraTrackYaw);
-            ImGuiHelper.inputFloat("Pitch Offset", data.cameraTrackPitch);
-            ImGuiHelper.inputFloat("Position Offset", data.positionOffset);
-            ImGuiHelper.inputFloat("View Offset", data.viewOffset);
-            ImGuiHelper.inputFloat("Roll", data.roll);
+            data.trackingBodyPart = ImGuiHelper.enumCombo(I18n.get("flashback.body_part"), data.trackingBodyPart);
+            ImGuiHelper.inputFloat(I18n.get("flashback.yaw_offset"), data.cameraTrackYaw);
+            ImGuiHelper.inputFloat(I18n.get("flashback.pitch_offset"), data.cameraTrackPitch);
+            ImGuiHelper.inputFloat(I18n.get("flashback.position_offset"), data.positionOffset);
+            ImGuiHelper.inputFloat(I18n.get("flashback.view_offset"), data.viewOffset);
+            ImGuiHelper.inputFloat(I18n.get("flashback.roll"), data.roll);
 
             if (data.validEntityTarget == null) ImGui.beginDisabled();
-            if (ImGui.button("Add")) {
+            if (ImGui.button(I18n.get("flashback.add"))) {
                 Vector3d positionOffset = new Vector3d(data.positionOffset[0], data.positionOffset[1], data.positionOffset[2]);
                 Vector3d viewOffset = new Vector3d(data.viewOffset[0], data.viewOffset[1], data.viewOffset[2]);
                 return new TrackEntityKeyframe(data.validEntityTarget, data.trackingBodyPart, data.cameraTrackYaw[0],
@@ -95,7 +96,7 @@ public class TrackEntityKeyframeType implements KeyframeType<TrackEntityKeyframe
             }
             if (data.validEntityTarget == null) ImGui.endDisabled();
             ImGui.sameLine();
-            if (ImGui.button("Cancel")) {
+            if (ImGui.button(I18n.get("gui.cancel"))) {
                 ImGui.closeCurrentPopup();
             }
             return null;
