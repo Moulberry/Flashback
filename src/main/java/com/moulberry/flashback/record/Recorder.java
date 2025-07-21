@@ -7,6 +7,7 @@ import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.datafixers.util.Pair;
 import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.PacketHelper;
+import com.moulberry.flashback.RegistryMetaHelper;
 import com.moulberry.flashback.action.*;
 import com.moulberry.flashback.compat.DistantHorizonsSupport;
 import com.moulberry.flashback.io.AsyncReplaySaver;
@@ -163,6 +164,8 @@ public class Recorder {
         if (Flashback.supportsDistantHorizons) {
             this.metadata.distantHorizonPaths.putAll(DistantHorizonsSupport.getDimensionPaths());
         }
+
+        this.metadata.namespacesForRegistries = RegistryMetaHelper.calculateNamespacesForRegistries();
 
         String worldName = null;
         ServerData serverData = Minecraft.getInstance().getCurrentServer();

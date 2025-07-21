@@ -872,6 +872,12 @@ public class Flashback implements ModInitializer, ClientModInitializer {
         if (Flashback.getConfig().quicksave) {
             Path replayDir = getReplayFolder();
 
+            if (!Files.exists(replayDir)) {
+                try {
+                    Files.createDirectories(replayDir);
+                } catch (IOException ignored) {}
+            }
+
             String filename;
             try {
                 LocalDateTime dateTime = LocalDateTime.now();
