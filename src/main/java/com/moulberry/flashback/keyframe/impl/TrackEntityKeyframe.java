@@ -22,6 +22,7 @@ import imgui.ImGui;
 import imgui.type.ImString;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.client.resources.language.I18n;
 import net.minecraft.world.entity.Entity;
 import org.joml.Vector3d;
 
@@ -70,7 +71,7 @@ public class TrackEntityKeyframe extends Keyframe {
     public void renderEditKeyframe(Consumer<Consumer<Keyframe>> update) {
         ImString target = new ImString(this.target.toString());
         target.inputData.isResizable = true;
-        if (ImGui.inputText("Entity UUID", target)) {
+        if (ImGui.inputText(I18n.get("flashback.entity_uuid"), target)) {
             try {
                 String uuidStr = ImGuiHelper.getString(target);
                 UUID uuid = UUID.fromString(uuidStr);
@@ -85,24 +86,24 @@ public class TrackEntityKeyframe extends Keyframe {
             } catch (Exception ignored) {}
         }
 
-        TrackingBodyPart trackingBodyPart = ImGuiHelper.enumCombo("Body Part", this.trackingBodyPart);
+        TrackingBodyPart trackingBodyPart = ImGuiHelper.enumCombo(I18n.get("flashback.body_part"), this.trackingBodyPart);
         if (trackingBodyPart != this.trackingBodyPart) {
             update.accept(keyframe -> ((TrackEntityKeyframe)keyframe).trackingBodyPart = trackingBodyPart);
         }
         float[] input = new float[]{this.yawOffset};
-        if (ImGuiHelper.inputFloat("Yaw Offset", input)) {
+        if (ImGuiHelper.inputFloat(I18n.get("flashback.yaw_offset"), input)) {
             if (input[0] != this.yawOffset) {
                 update.accept(keyframe -> ((TrackEntityKeyframe)keyframe).yawOffset = input[0]);
             }
         }
         input[0] = this.pitchOffset;
-        if (ImGuiHelper.inputFloat("Pitch Offset", input)) {
+        if (ImGuiHelper.inputFloat(I18n.get("flashback.pitch_offset"), input)) {
             if (input[0] != this.pitchOffset) {
                 update.accept(keyframe -> ((TrackEntityKeyframe)keyframe).pitchOffset = input[0]);
             }
         }
         float[] positionOffset = new float[]{(float) this.positionOffset.x, (float) this.positionOffset.y, (float) this.positionOffset.z};
-        if (ImGuiHelper.inputFloat("Position Offset", positionOffset)) {
+        if (ImGuiHelper.inputFloat(I18n.get("flashback.position_offset"), positionOffset)) {
             if (positionOffset[0] != this.positionOffset.x) {
                 update.accept(keyframe -> ((TrackEntityKeyframe)keyframe).positionOffset.x = positionOffset[0]);
             }
@@ -114,7 +115,7 @@ public class TrackEntityKeyframe extends Keyframe {
             }
         }
         float[] viewOffset = new float[]{(float) this.viewOffset.x, (float) this.viewOffset.y, (float) this.viewOffset.z};
-        if (ImGuiHelper.inputFloat("View Offset", viewOffset)) {
+        if (ImGuiHelper.inputFloat(I18n.get("flashback.view_offset"), viewOffset)) {
             if (viewOffset[0] != this.viewOffset.x) {
                 update.accept(keyframe -> ((TrackEntityKeyframe)keyframe).viewOffset.x = viewOffset[0]);
             }
@@ -126,7 +127,7 @@ public class TrackEntityKeyframe extends Keyframe {
             }
         }
         input[0] = this.roll;
-        if (ImGuiHelper.inputFloat("Roll", input)) {
+        if (ImGuiHelper.inputFloat(I18n.get("flashback.roll"), input)) {
             if (input[0] != this.roll) {
                 update.accept(keyframe -> ((TrackEntityKeyframe)keyframe).roll = input[0]);
             }

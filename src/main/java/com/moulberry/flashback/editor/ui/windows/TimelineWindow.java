@@ -46,6 +46,7 @@ import it.unimi.dsi.fastutil.ints.*;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.client.resources.language.I18n;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector2f;
 import org.joml.Vector3d;
@@ -155,7 +156,8 @@ public class TimelineWindow {
         if (hoveredBody) {
             flags |= ImGuiWindowFlags.NoMove;
         }
-        boolean timelineVisible = ImGui.begin("Timeline (" + timestamp + "/" + cursorTicks + ")###Timeline", flags);
+        String timelineTitle = I18n.get("flashback.timeline_window", timestamp, cursorTicks);
+        boolean timelineVisible = ImGui.begin(timelineTitle + "###Timeline", flags);
         ImGuiHelper.popStyleVar();
 
         cursorTicks = replayServer.getReplayTick();
@@ -290,8 +292,8 @@ public class TimelineWindow {
                 editorState.applyKeyframes(new MinecraftKeyframeHandler(Minecraft.getInstance()), cursorTicks);
             }
             if (!isCtrlDown && !isShiftDown) {
-                ImGuiHelper.drawTooltip("Hold CTRL to apply keyframes");
-                ImGuiHelper.drawTooltip("Hold SHIFT to snap to keyframes");
+                ImGuiHelper.drawTooltip(I18n.get("flashback.hold_ctrl_to_apply_keyframes"));
+                ImGuiHelper.drawTooltip(I18n.get("flashback.hold_shift_to_snap_to_keyframes"));
             }
         }
 
@@ -468,19 +470,19 @@ public class TimelineWindow {
 
         if (!grabbedPlayback) {
             if (hoveredSkipBackwards) {
-                ImGuiHelper.drawTooltip("Skip backwards");
+                ImGuiHelper.drawTooltip(I18n.get("flashback.skip_backwards"));
             } else if (hoveredSlowDown) {
-                ImGuiHelper.drawTooltip("Slow down\n(Current speed: " + (currentTickRate/20f) + "x)");
+                ImGuiHelper.drawTooltip(I18n.get("flashback.slow_down_with_current_speed", currentTickRate/20f));
             } else if (hoveredPause) {
                 if (replayServer.replayPaused) {
-                    ImGuiHelper.drawTooltip("Start replay");
+                    ImGuiHelper.drawTooltip(I18n.get("flashback.start_replay"));
                 } else {
-                    ImGuiHelper.drawTooltip("Pause replay");
+                    ImGuiHelper.drawTooltip(I18n.get("flashback.pause_replay"));
                 }
             } else if (hoveredFastForwards) {
-                ImGuiHelper.drawTooltip("Fast-forwards\n(Current speed: " + (currentTickRate/20f) + "x)");
+                ImGuiHelper.drawTooltip(I18n.get("flashback.fast_forwards_with_current_speed", currentTickRate/20f));
             } else if (hoveredSkipForwards) {
-                ImGuiHelper.drawTooltip("Skip forwards");
+                ImGuiHelper.drawTooltip(I18n.get("flashback.skip_forwards"));
             }
         }
 
@@ -822,7 +824,7 @@ public class TimelineWindow {
                     }
 
                     if (count > 0) {
-                        ReplayUI.setInfoOverlay("Pasted " + count + " keyframe(s) from clipboard");
+                        ReplayUI.setInfoOverlay(I18n.get("flashback.pasted_n_keyframes_from_clipboard", count));
                         editorState.markDirty();
                     }
                 }
@@ -867,7 +869,7 @@ public class TimelineWindow {
         String serialized = FlashbackGson.COMPRESSED.toJson(copiedKeyframes);
         Minecraft.getInstance().keyboardHandler.setClipboard(serialized);
 
-        ReplayUI.setInfoOverlay("Copied " + keyframeCount + " keyframe(s) to clipboard");
+        ReplayUI.setInfoOverlay(I18n.get("flashback.copied_n_keyframes_to_clipboard", keyframeCount));
     }
 
     private static void removeAllSelectedKeyframes() {
@@ -889,7 +891,7 @@ public class TimelineWindow {
         selectedKeyframesList.clear();
         editingKeyframeTrack = -1;
         editingKeyframeTick = -1;
-        editorScene.push(new EditorSceneHistoryEntry(undo, redo, "Deleted " + undo.size() + " keyframe(s)"));
+        editorScene.push(new EditorSceneHistoryEntry(undo, redo, I18n.get("flashback.deleted_n_keyframes", undo.size())));
         editorState.markDirty();
     }
 
@@ -1181,7 +1183,7 @@ public class TimelineWindow {
             }
 
             if (modified > 0) {
-                editorScene.push(new EditorSceneHistoryEntry(undo, redo, "Modified " + modified + " keyframe(s)"));
+                editorScene.push(new EditorSceneHistoryEntry(undo, redo, I18n.get("flashback.modified_n_keyframes", modified)));
                 editorState.markDirty();
             }
         });
@@ -1189,7 +1191,7 @@ public class TimelineWindow {
         if (editingKeyframe.keyframeType().allowChangingInterpolationType()) {
             int[] type = new int[]{editingKeyframe.interpolationType().ordinal()};
             ImGui.setNextItemWidth(160);
-            if (ImGuiHelper.combo("Type", type, InterpolationType.NAMES)) {
+            if (ImGuiHelper.combo(I18n.get("flashback.type"), type, InterpolationType.NAMES)) {
                 upgradeToSceneWrite();
 
                 InterpolationType interpolationType = InterpolationType.INTERPOLATION_TYPES[type[0]];
@@ -1212,14 +1214,14 @@ public class TimelineWindow {
                     }
                 }
 
-                editorScene.push(new EditorSceneHistoryEntry(undo, redo, "Changed interpolation type to " + interpolationType));
+                editorScene.push(new EditorSceneHistoryEntry(undo, redo, I18n.get("flashback.changed_interpolation_type_to", interpolationType.text())));
                 editorState.markDirty();
             }
         }
         if (editingKeyframe.keyframeType().allowChangingTimelineTick()) {
             int[] intWrapper = new int[]{editingKeyframeTick};
             ImGui.setNextItemWidth(160);
-            ImGuiHelper.inputInt("Tick", intWrapper);
+            ImGuiHelper.inputInt(I18n.get("flashback.tick"), intWrapper);
             int newEditingKeyframeTick = intWrapper[0];
 
             if (ImGui.isItemDeactivatedAfterEdit() && newEditingKeyframeTick != editingKeyframeTick) {
@@ -1239,7 +1241,7 @@ public class TimelineWindow {
                             new EditorSceneHistoryAction.SetKeyframe(track.keyframeType, selectedKeyframes.trackIndex(), newEditingKeyframeTick, editingKeyframe.copy())
                         );
 
-                        editorScene.push(new EditorSceneHistoryEntry(undo, redo, "Moved 1 keyframe(s)"));
+                        editorScene.push(new EditorSceneHistoryEntry(undo, redo, I18n.get("flashback.moved_n_keyframes", 1)));
                         editorState.markDirty();
                         selectedKeyframes.keyframeTicks().remove(editingKeyframeTick);
                         selectedKeyframes.keyframeTicks().add(newEditingKeyframeTick);
@@ -1252,33 +1254,33 @@ public class TimelineWindow {
 
         boolean multiple = selectedKeyframesList.size() >= 2 || selectedKeyframesList.getFirst().keyframeTicks().size() >= 2;
 
-        if (ImGui.button(multiple ? "Remove All" : "Remove")) {
+        if (ImGui.button((multiple ? I18n.get("flashback.remove_all") : I18n.get("flashback.remove")) + "##RemoveButton")) {
             ImGui.closeCurrentPopup();
             removeAllSelectedKeyframes();
         }
 
         if (!multiple && editingKeyframe instanceof CameraKeyframe cameraKeyframe) {
             ImGui.sameLine();
-            if (ImGui.button("Apply")) {
+            if (ImGui.button(I18n.get("flashback.apply"))) {
                 cameraKeyframe.createChange().apply(new MinecraftKeyframeHandler(Minecraft.getInstance()));
             }
         }
 
         if (editingKeyframe instanceof CameraKeyframe || editingKeyframe instanceof CameraOrbitKeyframe) {
-            if (ImGui.button("Copy Relative...")) {
+            if (ImGui.button(I18n.get("flashback.copy_relative") + "##CopyRelative")) {
                 ImGui.openPopup("##CopyOptions");
             }
             if (ImGui.beginPopup("##CopyOptions")) {
-                if (ImGui.checkbox("Copy Relative To Position", copyRelativeToPosition)) {
+                if (ImGui.checkbox(I18n.get("flashback.copy_relative_to_position") + "##CopyRelativeToPos", copyRelativeToPosition)) {
                     copyRelativeToPosition = !copyRelativeToPosition;
                 }
-                if (ImGui.checkbox("Copy Relative To Yaw", copyRelativeToYaw)) {
+                if (ImGui.checkbox(I18n.get("flashback.copy_relative_to_yaw") + "##CopyRelativeToYaw", copyRelativeToYaw)) {
                     copyRelativeToYaw = !copyRelativeToYaw;
                 }
-                if (ImGui.checkbox("Copy Relative To Pitch", copyRelativeToPitch)) {
+                if (ImGui.checkbox(I18n.get("flashback.copy_relative_to_pitch") + "##CopyRelativeToPitch", copyRelativeToPitch)) {
                     copyRelativeToPitch = !copyRelativeToPitch;
                 }
-                if (ImGui.button("Copy Relative")) {
+                if (ImGui.button(I18n.get("flashback.do_copy_relative") + "##DoCopyRelative")) {
                     performCopy(totalTicks, copyRelativeToPosition, copyRelativeToYaw, copyRelativeToPitch);
                     ImGui.closeCurrentPopup();
                 }
@@ -1433,7 +1435,7 @@ public class TimelineWindow {
                     }
                 }
 
-                editorScene.push(new EditorSceneHistoryEntry(undo, redo, "Moved " + movedKeyframes + " keyframe(s)"));
+                editorScene.push(new EditorSceneHistoryEntry(undo, redo, I18n.get("flashback.moved_n_keyframes", movedKeyframes)));
                 editorState.markDirty();
             }
 
@@ -1468,7 +1470,7 @@ public class TimelineWindow {
             }
 
             if (minTick == maxTick) {
-                ImGuiHelper.drawTooltip("Scale: 100%");
+                ImGuiHelper.drawTooltip(I18n.get("flashback.scale_percentage_label", 100));
             } else {
                 if (minTick == grabbedKeyframeTick || minTick == timelineXToReplayTick(grabbedKeyframeMouseX - x)) {
                     grabbedScalePivotTick = maxTick;
@@ -1483,7 +1485,7 @@ public class TimelineWindow {
                     grabbedScaleFactor = 1f;
                 }
 
-                ImGuiHelper.drawTooltip("Scale: " + Math.round(grabbedScaleFactor*100) + "%");
+                ImGuiHelper.drawTooltip(I18n.get("flashback.scale_percentage_label", Math.round(grabbedScaleFactor*100)));
             }
 
             return new GrabMovementInfo(0, grabbedScalePivotTick, grabbedScaleFactor);
@@ -1522,16 +1524,16 @@ public class TimelineWindow {
                 }
             }
 
-            String tooltip = "Tick: " + (grabbedKeyframeTick + grabbedDelta);
+            String tooltip = I18n.get("flashback.tick_label", grabbedKeyframeTick + grabbedDelta);
 
             if (grabbedDelta >= 0) {
-                tooltip += " (+" + grabbedDelta + " ticks)";
+                tooltip += I18n.get("flashback.tick_offset", "+" + grabbedDelta);
             } else {
-                tooltip += " (" + grabbedDelta + " ticks)";
+                tooltip += I18n.get("flashback.tick_offset", grabbedDelta);
             }
 
             if (!isShiftDown && editorScene.keyframeTracks.size() > 1) {
-                tooltip += "\nHold SHIFT to snap";
+                tooltip += "\n" + I18n.get("flashback.hold_shift_to_snap");
             }
 
             ImGuiHelper.drawTooltip(tooltip);
@@ -1604,7 +1606,7 @@ public class TimelineWindow {
                             colour = 0xFF155FFF;
 
                             if (Math.abs(mouseX - midX) < keyframeSize && Math.abs(mouseY - midY) < keyframeSize) {
-                                ImGuiHelper.drawTooltip("Timelapse requires two keyframes");
+                                ImGuiHelper.drawTooltip(I18n.get("flashback.timelapse_requires_two_keyframes"));
                             }
                         } else {
                             var floorEntry = keyframeTrack.keyframesByTick.floorEntry(tick - 1);
@@ -1613,7 +1615,7 @@ public class TimelineWindow {
                                     colour = 0xFF155FFF;
 
                                     if (Math.abs(mouseX - midX) < keyframeSize && Math.abs(mouseY - midY) < keyframeSize) {
-                                        ImGuiHelper.drawTooltip("This keyframe's Time must be greater than the Time on the left.\nThe left keyframe must be set to the base time, e.g. 0s and the right keyframe must be set to the duration of the timelapse e.g. 10s");
+                                        ImGuiHelper.drawTooltip(I18n.get("flashback.timelapse_explanation"));
                                     }
                                 }
                             }
@@ -1640,7 +1642,7 @@ public class TimelineWindow {
                         String message;
                         int textColour = -1;
                         if (tickDelta <= 0) {
-                            message = "INVALID";
+                            message = I18n.get("flashback.invalid").toUpperCase(Locale.ROOT);
                             textColour = 0xFF155FFF;
                         } else {
                             message = Utils.timeToString(tickDelta);
@@ -1649,10 +1651,11 @@ public class TimelineWindow {
                         float textY = midY - lineHeight*0.3f;
                         float midX = (leftX + rightX)/2f;
 
-                        float textWidth = ImGuiHelper.calcTextWidth("Duration: " + message);
+                        String durationMessage = I18n.get("flashback.select_replay.duration", message);
+                        float textWidth = ImGuiHelper.calcTextWidth(durationMessage);
                         if (textWidth <= rightX - leftX) {
                             ImGui.getWindowDrawList().addText(x + midX - textWidth/2, textY,
-                                textColour, "Duration: " + message);
+                                textColour, durationMessage);
                         } else {
                             textWidth = ImGuiHelper.calcTextWidth(message);
                             if (textWidth <= rightX - leftX) {
@@ -1753,7 +1756,7 @@ public class TimelineWindow {
             }
 
             if (ImGui.beginPopup("##CreateKeyframeAtTickPopup")) {
-                if (ImGui.menuItem("Create Keyframe at " + createKeyframeAtTick)) {
+                if (ImGui.menuItem(I18n.get("flashback.create_keyframe_at_n", createKeyframeAtTick) + "##CreateKeyframeAtN")) {
                     ImGui.closeCurrentPopup();
                     ImGui.endPopup();
 
@@ -1854,7 +1857,7 @@ public class TimelineWindow {
                 ImGui.openPopup("##TrackPopup");
             }
             drawList.addText(buttonX - 2, buttonY, -1, "\ue5d2");
-            ImGuiHelper.tooltip("Open track options");
+            ImGuiHelper.tooltip(I18n.get("flashback.open_track_options"));
 
             ImGui.sameLine();
 
@@ -1874,10 +1877,10 @@ public class TimelineWindow {
             }
             if (keyframeTrack.enabled) {
                 drawList.addText(buttonX - 2, buttonY, -1, "\ue8f4");
-                ImGuiHelper.tooltip("Disable keyframe track");
+                ImGuiHelper.tooltip(I18n.get("flashback.disable_keyframe_track"));
             } else {
                 drawList.addText(buttonX - 2, buttonY, -1, "\ue8f5");
-                ImGuiHelper.tooltip("Enable keyframe track");
+                ImGuiHelper.tooltip(I18n.get("flashback.enable_keyframe_track"));
             }
 
             if (keyframeTrack.keyframeType.canBeCreatedNormally()) {
@@ -1888,12 +1891,12 @@ public class TimelineWindow {
                     createNewKeyframe(trackIndex, cursorTicks, keyframeType, keyframeTrack);
 
                     if (keyframeType instanceof CameraKeyframeType && Minecraft.getInstance().player != Minecraft.getInstance().cameraEntity) {
-                        ReplayUI.setInfoOverlay("Camera keyframes aren't needed for spectating a player!");
+                        ReplayUI.setInfoOverlay(I18n.get("flashback.camera_keyframes_not_needed"));
                         Minecraft.getInstance().getConnection().sendUnsignedCommand("spectate");
                     }
                 }
                 drawList.addText(buttonX - 2, buttonY, -1, "\ue148");
-                ImGuiHelper.tooltip("Add keyframe");
+                ImGuiHelper.tooltip(I18n.get("flashback.add_keyframe"));
             }
 
             if (ImGui.beginPopup("##CreateKeyframe")) {
@@ -1915,17 +1918,17 @@ public class TimelineWindow {
             boolean openTrackColourPopup = false;
 
             if (ImGui.beginPopup("##TrackPopup")) {
-                if (ImGui.menuItem("\ue3c9 Rename")) {
+                if (ImGui.menuItem("\ue3c9 " + I18n.get("flashback.rename"))) {
                     keyframeTrack.nameEditField = ImGuiHelper.createResizableImString(name);
                     keyframeTrack.forceFocusTrack = true;
                 }
-                if (ImGui.menuItem("\ue40a Set Colour")) {
+                if (ImGui.menuItem("\ue40a " + I18n.get("flashback.set_colour"))) {
                     openTrackColourPopup = true;
                 }
-                if (ImGui.menuItem("\ue872 Delete track")) {
+                if (ImGui.menuItem("\ue872 " + I18n.get("flashback.delete_track"))) {
                     keyframeTrackToDelete = trackIndex;
                 }
-                if (ImGui.menuItem("\ue14a Clear Keyframes")) {
+                if (ImGui.menuItem("\ue14a " + I18n.get("flashback.clear_keyframes"))) {
                     keyframeTrackToClear = trackIndex;
                 }
                 ImGui.endPopup();
@@ -1935,7 +1938,7 @@ public class TimelineWindow {
                 ImGui.openPopup("##SetTrackColour");
             }
             if (ImGui.beginPopup("##SetTrackColour")) {
-                if (ImGui.button("Reset to Default")) {
+                if (ImGui.button(I18n.get("flashback.reset_to_default") + "##ResetToDefault")) {
                     keyframeTrack.customColour = 0;
                     ImGui.closeCurrentPopup();
                 } else {
@@ -1946,7 +1949,7 @@ public class TimelineWindow {
                     ImVec4 imVec4 = new ImVec4();
                     ImGui.colorConvertU32ToFloat4(colour, imVec4);
                     float[] colourArray = new float[]{imVec4.x, imVec4.y, imVec4.z};
-                    if (ImGui.colorPicker3("Track Colour", colourArray)) {
+                    if (ImGui.colorPicker3(I18n.get("flashback.track_colour"), colourArray)) {
                         keyframeTrack.customColour = ImGui.colorConvertFloat4ToU32(colourArray[0], colourArray[1], colourArray[2], 1.0f);
                     }
                 }
@@ -1982,7 +1985,7 @@ public class TimelineWindow {
 
                 redo.add(new EditorSceneHistoryAction.RemoveTrack(keyframeTrack.keyframeType, keyframeTrackToDelete));
 
-                editorScene.push(new EditorSceneHistoryEntry(undo, redo, "Delete " + keyframeTrack.keyframeType.name() + " track"));
+                editorScene.push(new EditorSceneHistoryEntry(undo, redo, I18n.get("flashback.delete_named_track", keyframeTrack.keyframeType.name())));
                 editorState.markDirty();
                 selectedKeyframesList.clear();
             }
@@ -2000,14 +2003,14 @@ public class TimelineWindow {
                     redo.add(new EditorSceneHistoryAction.RemoveKeyframe(keyframeTrack.keyframeType, keyframeTrackToClear, entry.getKey()));
                 }
 
-                editorScene.push(new EditorSceneHistoryEntry(undo, redo, "Clear " + keyframeTrack.keyframeType.name() + " track"));
+                editorScene.push(new EditorSceneHistoryEntry(undo, redo, I18n.get("flashback.clear_named_track", keyframeTrack.keyframeType.name())));
                 editorState.markDirty();
                 selectedKeyframesList.clear();
             }
         }
 
         ImGui.setCursorPosX(8);
-        if (ImGui.smallButton("Add Element")) {
+        if (ImGui.smallButton(I18n.get("flashback.add_element") + "##AddElement")) {
             ImGui.openPopup("##AddKeyframeElement");
         }
 
@@ -2022,13 +2025,13 @@ public class TimelineWindow {
         ImGui.setNextItemWidth(middleX - ImGui.getCursorPosX() - spacingX);
         ImGui.pushStyleVar(ImGuiStyleVar.FramePadding, 4, 0);
         if (ImGui.beginCombo("##SceneSwitcher", editorScene.name, ImGuiComboFlags.HeightLargest)) {
-            if (ImGui.menuItem("\ue148 New Scene")) {
+            if (ImGui.menuItem("\ue148 " + I18n.get("flashback.new_scene"))) {
                 openNewScenePopup = true;
             }
-            if (ImGui.menuItem("\ue3c9 Rename")) {
+            if (ImGui.menuItem("\ue3c9 " + I18n.get("flashback.rename"))) {
                 openRenameScenePopup = true;
             }
-            if (scenes.size() > 1 && editorScene.keyframeTracks.isEmpty() && ImGui.menuItem("\ue92b Delete Forever")) {
+            if (scenes.size() > 1 && editorScene.keyframeTracks.isEmpty() && ImGui.menuItem("\ue92b " + I18n.get("flashback.delete_forever"))) {
                 openDeleteScenePopup = true;
             }
 
@@ -2056,12 +2059,12 @@ public class TimelineWindow {
 
         if (openNewScenePopup) {
             ImGui.openPopup("##NewScene");
-            sceneNameString = ImGuiHelper.createResizableImString("Scene " + (scenes.size() + 1));
+            sceneNameString = ImGuiHelper.createResizableImString(I18n.get("flashback.default_scene_name", scenes.size() + 1));
         }
         if (ImGui.beginPopup("##NewScene")) {
-            ImGui.inputText("Name", sceneNameString);
+            ImGui.inputText(I18n.get("flashback.name"), sceneNameString);
 
-            if (ImGui.button("Create")) {
+            if (ImGui.button(I18n.get("flashback.create"))) {
                 String sceneName = ImGuiHelper.getString(sceneNameString).trim();
                 if (!sceneName.isEmpty()) {
                     upgradeToSceneWrite();
@@ -2072,7 +2075,7 @@ public class TimelineWindow {
                 }
             }
             ImGui.sameLine();
-            if (ImGui.button("Cancel")) {
+            if (ImGui.button(I18n.get("gui.cancel"))) {
                 ImGui.closeCurrentPopup();
             }
 
@@ -2084,9 +2087,9 @@ public class TimelineWindow {
             sceneNameString = ImGuiHelper.createResizableImString(editorScene.name);
         }
         if (ImGui.beginPopup("##RenameScene")) {
-            ImGui.inputText("Name", sceneNameString);
+            ImGui.inputText(I18n.get("flashback.name"), sceneNameString);
 
-            if (ImGui.button("Rename")) {
+            if (ImGui.button(I18n.get("flashback.rename"))) {
                 String sceneName = ImGuiHelper.getString(sceneNameString).trim();
                 if (!sceneName.isEmpty()) {
                     upgradeToSceneWrite();
@@ -2096,7 +2099,7 @@ public class TimelineWindow {
                 }
             }
             ImGui.sameLine();
-            if (ImGui.button("Cancel")) {
+            if (ImGui.button(I18n.get("gui.cancel"))) {
                 ImGui.closeCurrentPopup();
             }
 
@@ -2108,11 +2111,11 @@ public class TimelineWindow {
         }
         if (ImGui.beginPopup("##DeleteScene")) {
             if (scenes.size() > 1 && editorScene.keyframeTracks.isEmpty()) {
-                ImGui.text("Are you sure you want to delete this scene?");
-                ImGui.text("This action is PERMANENT");
-                ImGui.text("You will not be able to undo this action");
+                ImGui.text(I18n.get("flashback.delete_scene_confirm1"));
+                ImGui.text(I18n.get("flashback.delete_scene_confirm2"));
+                ImGui.text(I18n.get("flashback.delete_scene_confirm3"));
 
-                if (ImGui.button("Delete Forever")) {
+                if (ImGui.button(I18n.get("flashback.delete_forever"))) {
                     upgradeToSceneWrite();
                     int sceneIndex = editorState.getSceneIndex();
                     scenes.remove(sceneIndex);
@@ -2123,7 +2126,7 @@ public class TimelineWindow {
                     ImGui.closeCurrentPopup();
                 }
                 ImGui.sameLine();
-                if (ImGui.button("Cancel")) {
+                if (ImGui.button(I18n.get("gui.cancel"))) {
                     ImGui.closeCurrentPopup();
                 }
             } else {
@@ -2147,7 +2150,7 @@ public class TimelineWindow {
                     undo.add(new EditorSceneHistoryAction.RemoveTrack(type, index));
                     redo.add(new EditorSceneHistoryAction.AddTrack(type, index));
 
-                    editorScene.push(new EditorSceneHistoryEntry(undo, redo, "Create " + type.name() + " track"));
+                    editorScene.push(new EditorSceneHistoryEntry(undo, redo, I18n.get("flashback.create_named_track", type.name())));
                     editorState.markDirty();
                     ImGui.closeCurrentPopup();
                 }

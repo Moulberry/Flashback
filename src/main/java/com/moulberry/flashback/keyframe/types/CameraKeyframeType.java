@@ -7,6 +7,7 @@ import com.moulberry.flashback.keyframe.handler.KeyframeHandler;
 import com.moulberry.flashback.keyframe.impl.CameraKeyframe;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.client.resources.language.I18n;
 import net.minecraft.world.entity.Entity;
 import org.jetbrains.annotations.Nullable;
 
@@ -29,7 +30,7 @@ public class CameraKeyframeType implements KeyframeType<CameraKeyframe> {
 
     @Override
     public String name() {
-        return "Camera";
+        return I18n.get("flashback.keyframe.camera");
     }
 
     @Override

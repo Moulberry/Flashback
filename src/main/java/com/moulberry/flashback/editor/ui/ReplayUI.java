@@ -31,6 +31,9 @@ import net.minecraft.client.gui.screens.ProgressScreen;
 import net.minecraft.client.gui.screens.ReceivingLevelScreen;
 import net.minecraft.client.multiplayer.MultiPlayerGameMode;
 import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.client.resources.language.ClientLanguage;
+import net.minecraft.client.resources.language.I18n;
+import net.minecraft.locale.Language;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
@@ -126,8 +129,16 @@ public class ReplayUI {
         } else {
             try {
                 String imguiIni = Files.readString(path);
+                boolean modified = false;
                 if (imguiIni.contains("[Window][Timeline]")) {
                     imguiIni = imguiIni.replace("[Window][Timeline]", "[Window][###Timeline]");
+                    modified = true;
+                }
+                if (imguiIni.contains("[Window][Visuals]")) {
+                    imguiIni = imguiIni.replace("[Window][Visuals]", "[Window][###Visuals]");
+                    modified = true;
+                }
+                if (modified) {
                     Files.writeString(path, imguiIni);
                 }
             } catch (IOException ignored) {}
@@ -179,13 +190,27 @@ public class ReplayUI {
         rangesBuilder.addRanges(fonts.getGlyphRangesDefault());
 
         if (languageCode.startsWith("uk") || languageCode.startsWith("ru") || languageCode.startsWith("bg")) {
-            rangesBuilder.addRanges(fonts.getGlyphRangesCyrillic());
+            addRanges(rangesBuilder, fonts.getGlyphRangesCyrillic());
         } else if (languageCode.startsWith("tr")) {
             rangesBuilder.addText("ÇçĞğİıÖöŞşÜü");
         } else if (languageCode.startsWith("pl")) {
-            rangesBuilder.addRanges(new short[]{0x0100, 0x017F, 0});
+            addRanges(rangesBuilder, new short[]{0x0100, 0x017F, 0});
         } else if (languageCode.startsWith("cs")) {
             rangesBuilder.addText("ÁáČčĎďÉéĚěÍíŇňÓóŘřŠšŤťÚúŮůÝýŽž");
+        } else if (languageCode.startsWith("he")) {
+            addRanges(rangesBuilder, new short[]{(short)'\u0590', (short)'\u05FF', (short)'\uFB1D', (short)'\uFB4F', 0});
+        } else if (languageCode.startsWith("ja")) {
+            addRanges(rangesBuilder, fonts.getGlyphRangesJapanese());
+        } else if (languageCode.startsWith("zh")) {
+            addRanges(rangesBuilder, fonts.getGlyphRangesChineseFull());
+        } else if (languageCode.startsWith("ko")) {
+            addRanges(rangesBuilder, fonts.getGlyphRangesKorean());
+        }
+
+        if (Language.getInstance() instanceof ClientLanguage clientLanguage) {
+            for (String value : clientLanguage.storage.values()) {
+                rangesBuilder.addText(value);
+            }
         }
 
         rangesBuilder.addChar('\u2318'); // Mac CMD
@@ -236,13 +261,16 @@ public class ReplayUI {
             short[] hebrewRanges = new short[]{(short)'\u0590', (short)'\u05FF', (short)'\uFB1D', (short)'\uFB4F', 0};
             io.getFonts().addFontFromMemoryTTF(loadFont("heebo-medium.ttf"), size, fontConfig, hebrewRanges);
         } else if (languageCode.startsWith("ja")) {
-            io.getFonts().addFontFromMemoryTTF(loadFont("notosansjp-medium.ttf"), size,
-                fontConfig, GlyphRanges.getJapaneseRanges());
+            io.getFonts().addFontFromMemoryTTF(loadFont("notosansjp-medium.ttf"), size*5/4,
+                fontConfig, glyphRanges);
         } else if (languageCode.startsWith("zh")) {
-            io.getFonts().addFontFromMemoryTTF(loadFont("notosanssc-medium.otf"), size,
-                fontConfig, GlyphRanges.getChineseFullRanges());
-            io.getFonts().addFontFromMemoryTTF(loadFont("notosanstc-medium.otf"), size,
-                fontConfig, GlyphRanges.getChineseFullRanges());
+            io.getFonts().addFontFromMemoryTTF(loadFont("notosanstc-medium.ttf"), size*5/4,
+                fontConfig, glyphRanges);
+            io.getFonts().addFontFromMemoryTTF(loadFont("notosanssc-medium.ttf"), size*5/4,
+                fontConfig, glyphRanges);
+        } else if (languageCode.startsWith("ko")) {
+            io.getFonts().addFontFromMemoryTTF(loadFont("notosanskr-medium.ttf"), size*5/4,
+                fontConfig, glyphRanges);
         }
         fontConfig.setMergeMode(false);
 
@@ -251,6 +279,16 @@ public class ReplayUI {
 
         fontConfig.destroy();
         fonts.clearTexData();
+    }
+
+    private static void addRanges(ImFontGlyphRangesBuilder builder, short[] ranges) {
+        for(int i = 0; i < ranges.length && ranges[i] != 0; i += 2) {
+            int from = ranges[i] & 0xFFFF;
+            int to = ranges[i + 1] & 0xFFFF;
+            for(int k = from; k <= to; ++k) {
+                builder.addChar((char)k);
+            }
+        }
     }
 
     private static short[] buildMaterialIconRanges() {
@@ -740,7 +778,7 @@ public class ReplayUI {
                 } else {
                     ImGuiViewport viewport = ImGui.getMainViewport();
                     ImGui.setNextWindowPos(viewport.getCenterX(), viewport.getCenterY(), ImGuiCond.Appearing, 0.5f, 0.5f);
-                    if (ImGui.begin("Tip of the day", ImGuiWindowFlags.NoSavedSettings | ImGuiWindowFlags.AlwaysAutoResize)) {
+                    if (ImGui.begin(I18n.get("flashback.tip_of_the_day"), ImGuiWindowFlags.NoSavedSettings | ImGuiWindowFlags.AlwaysAutoResize)) {
                         float oldPositionY = ImGui.getCursorPosY();
 
                         ImGui.pushTextWrapPos(scaleUi(375));
@@ -753,13 +791,13 @@ public class ReplayUI {
                             ImGui.setCursorPosY(ImGui.getCursorPosY() + minimumVerticalSize - verticalSize);
                         }
 
-                        if (ImGui.checkbox("Don't show tips on startup", dontShowTipsOnStartupCheckbox)) {
+                        if (ImGui.checkbox(I18n.get("flashback.replayui.dont_show_tips"), dontShowTipsOnStartupCheckbox)) {
                             dontShowTipsOnStartupCheckbox = !dontShowTipsOnStartupCheckbox;
                         }
                         ImGui.sameLine();
                         ImGui.dummy(scaleUi(20), 0);
                         ImGui.sameLine();
-                        if (ImGui.button("Close")) {
+                        if (ImGui.button(I18n.get("flashback.close"))) {
                             if (dontShowTipsOnStartupCheckbox) {
                                 FlashbackConfig config = Flashback.getConfig();
                                 config.showTipOfTheDay = false;
@@ -770,7 +808,7 @@ public class ReplayUI {
                         ImGui.sameLine();
                         boolean canShowPrev = displayingTip > 1;
                         if (!canShowPrev) ImGui.beginDisabled();
-                        if (ImGui.button("Back") && canShowPrev) {
+                        if (ImGui.button(I18n.get("gui.back")) && canShowPrev) {
                             FlashbackConfig config = Flashback.getConfig();
                             displayingTip -= 1;
                             config.viewedTipsOfTheDay |= 1 << (displayingTip - 1);
@@ -780,7 +818,7 @@ public class ReplayUI {
                         ImGui.sameLine();
                         boolean canShowNext = displayingTip < DailyTips.TIPS.length;
                         if (!canShowNext) ImGui.beginDisabled();
-                        if (ImGui.button("Next") && canShowNext) {
+                        if (ImGui.button(I18n.get("flashback.next")) && canShowNext) {
                             FlashbackConfig config = Flashback.getConfig();
                             displayingTip += 1;
                             config.viewedTipsOfTheDay |= 1 << (displayingTip - 1);
@@ -834,7 +872,7 @@ public class ReplayUI {
                                 final float defaultFlyingSpeed = 0.05f;
                                 float flyingSpeed = Mth.clamp(player.getAbilities().getFlyingSpeed() + (float)wheelY * defaultFlyingSpeed / 10f,
                                     defaultFlyingSpeed / 10f, defaultFlyingSpeed * 10.0f);
-                                setInfoOverlay(String.format("Flying Speed: %.1f", flyingSpeed / defaultFlyingSpeed));
+                                setInfoOverlay(I18n.get("flashback.flying_speed", flyingSpeed / defaultFlyingSpeed));
                                 player.getAbilities().setFlyingSpeed(flyingSpeed);
                             }
                         }

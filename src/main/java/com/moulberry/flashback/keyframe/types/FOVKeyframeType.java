@@ -12,6 +12,7 @@ import com.moulberry.flashback.state.EditorStateManager;
 import imgui.ImGui;
 import imgui.type.ImFloat;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.resources.language.I18n;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
@@ -36,7 +37,7 @@ public class FOVKeyframeType implements KeyframeType<FOVKeyframe> {
 
     @Override
     public String name() {
-        return "FOV";
+        return I18n.get("flashback.keyframe.fov");
     }
 
     @Override
@@ -58,12 +59,12 @@ public class FOVKeyframeType implements KeyframeType<FOVKeyframe> {
         }
 
         return () -> {
-            ImGui.sliderFloat("FOV", fovKeyframeInput, 1f, 110f);
-            if (ImGui.button("Add")) {
+            ImGui.sliderFloat(I18n.get("flashback.fov"), fovKeyframeInput, 1f, 110f);
+            if (ImGui.button(I18n.get("flashback.add"))) {
                 return new FOVKeyframe(fovKeyframeInput[0]);
             }
             ImGui.sameLine();
-            if (ImGui.button("Cancel")) {
+            if (ImGui.button(I18n.get("gui.cancel"))) {
                 ImGui.closeCurrentPopup();
             }
             return null;

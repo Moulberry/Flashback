@@ -1,10 +1,12 @@
 package com.moulberry.flashback.combo_options;
 
+import net.minecraft.client.resources.language.I18n;
+
 public enum TrackingBodyPart implements ComboOption {
 
-    HEAD("Head"),
-    BODY("Body"),
-    ROOT("Root");
+    HEAD("flashback.tracking_body_part.head"),
+    BODY("flashback.tracking_body_part.body"),
+    ROOT("flashback.tracking_body_part.root");
 
     private final String text;
 
@@ -14,7 +16,7 @@ public enum TrackingBodyPart implements ComboOption {
 
     @Override
     public String text() {
-        return this.text;
+        return I18n.get(this.text);
     }
 
 }

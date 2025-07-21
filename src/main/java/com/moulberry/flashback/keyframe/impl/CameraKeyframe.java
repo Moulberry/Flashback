@@ -15,6 +15,7 @@ import com.moulberry.flashback.spline.CatmullRom;
 import com.moulberry.flashback.spline.Hermite;
 import com.moulberry.flashback.state.EditorState;
 import com.moulberry.flashback.state.EditorStateManager;
+import net.minecraft.client.resources.language.I18n;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import org.apache.commons.math3.analysis.interpolation.HermiteInterpolator;
@@ -81,7 +82,7 @@ public class CameraKeyframe extends Keyframe {
     @Override
     public void renderEditKeyframe(Consumer<Consumer<Keyframe>> update) {
         float[] center = new float[]{(float) this.position.x, (float) this.position.y, (float) this.position.z};
-        if (ImGuiHelper.inputFloat("Position", center)) {
+        if (ImGuiHelper.inputFloat(I18n.get("flashback.position"), center)) {
             if (center[0] != this.position.x) {
                 update.accept(keyframe -> ((CameraKeyframe)keyframe).position.x = center[0]);
             }
@@ -93,19 +94,19 @@ public class CameraKeyframe extends Keyframe {
             }
         }
         float[] input = new float[]{this.yaw};
-        if (ImGuiHelper.inputFloat("Yaw", input)) {
+        if (ImGuiHelper.inputFloat(I18n.get("flashback.yaw"), input)) {
             if (input[0] != this.yaw) {
                 update.accept(keyframe -> ((CameraKeyframe)keyframe).yaw = input[0]);
             }
         }
         input[0] = this.pitch;
-        if (ImGuiHelper.inputFloat("Pitch", input)) {
+        if (ImGuiHelper.inputFloat(I18n.get("flashback.pitch"), input)) {
             if (input[0] != this.pitch) {
                 update.accept(keyframe -> ((CameraKeyframe)keyframe).pitch = input[0]);
             }
         }
         input[0] = this.roll;
-        if (ImGuiHelper.inputFloat("Roll", input)) {
+        if (ImGuiHelper.inputFloat(I18n.get("flashback.roll"), input)) {
             if (input[0] != this.roll) {
                 update.accept(keyframe -> ((CameraKeyframe)keyframe).roll = input[0]);
             }

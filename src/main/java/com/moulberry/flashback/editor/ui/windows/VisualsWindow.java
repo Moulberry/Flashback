@@ -20,6 +20,7 @@ import com.moulberry.flashback.editor.ui.ImGuiHelper;
 import imgui.ImGui;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.FogRenderer;
+import net.minecraft.client.resources.language.I18n;
 
 import java.util.List;
 
@@ -38,104 +39,104 @@ public class VisualsWindow {
         EditorState editorState = EditorStateManager.get(metadata.replayIdentifier);
         ReplayVisuals visuals = editorState.replayVisuals;
 
-        if (ImGui.begin("Visuals")) {
-            ImGuiHelper.separatorWithText("GUI");
+        if (ImGui.begin(I18n.get("flashback.visuals") + "###Visuals")) {
+            ImGuiHelper.separatorWithText(I18n.get("flashback.visuals.gui"));
 
-            if (ImGui.checkbox("Chat", visuals.showChat)) {
+            if (ImGui.checkbox(I18n.get("flashback.visuals.gui.chat"), visuals.showChat)) {
                 visuals.showChat = !visuals.showChat;
                 editorState.markDirty();
             }
-            if (ImGui.checkbox("Boss Bar", visuals.showBossBar)) {
+            if (ImGui.checkbox(I18n.get("flashback.visuals.gui.boss_bar"), visuals.showBossBar)) {
                 visuals.showBossBar = !visuals.showBossBar;
                 editorState.markDirty();
             }
-            if (ImGui.checkbox("Title Text", visuals.showTitleText)) {
+            if (ImGui.checkbox(I18n.get("flashback.visuals.gui.title_text"), visuals.showTitleText)) {
                 visuals.showTitleText = !visuals.showTitleText;
                 editorState.markDirty();
             }
-            if (ImGui.checkbox("Scoreboard", visuals.showScoreboard)) {
+            if (ImGui.checkbox(I18n.get("flashback.visuals.gui.scoreboard"), visuals.showScoreboard)) {
                 visuals.showScoreboard = !visuals.showScoreboard;
                 editorState.markDirty();
             }
-            if (ImGui.checkbox("Action Bar", visuals.showActionBar)) {
+            if (ImGui.checkbox(I18n.get("flashback.visuals.gui.action_bar"), visuals.showActionBar)) {
                 visuals.showActionBar = !visuals.showActionBar;
                 editorState.markDirty();
             }
 
             if (Minecraft.getInstance().cameraEntity != null && Minecraft.getInstance().cameraEntity != Minecraft.getInstance().player) {
-                if (ImGui.checkbox("Hotbar", visuals.showHotbar)) {
+                if (ImGui.checkbox(I18n.get("flashback.visuals.gui.hotbar"), visuals.showHotbar)) {
                     visuals.showHotbar = !visuals.showHotbar;
                     editorState.markDirty();
                 }
             }
 
-            ImGuiHelper.separatorWithText("World");
+            ImGuiHelper.separatorWithText(I18n.get("flashback.visuals.world"));
 
-            if (ImGui.checkbox("Render Blocks", visuals.renderBlocks)) {
+            if (ImGui.checkbox(I18n.get("flashback.visuals.world.render_blocks"), visuals.renderBlocks)) {
                 visuals.renderBlocks = !visuals.renderBlocks;
                 editorState.markDirty();
             }
 
-            if (ImGui.checkbox("Render Entities", visuals.renderEntities)) {
+            if (ImGui.checkbox(I18n.get("flashback.visuals.world.render_entities"), visuals.renderEntities)) {
                 visuals.renderEntities = !visuals.renderEntities;
                 editorState.markDirty();
             }
 
-            if (ImGui.checkbox("Render Players", visuals.renderPlayers)) {
+            if (ImGui.checkbox(I18n.get("flashback.visuals.world.render_players"), visuals.renderPlayers)) {
                 visuals.renderPlayers = !visuals.renderPlayers;
                 editorState.markDirty();
             }
 
-            if (ImGui.checkbox("Render Particles", visuals.renderParticles)) {
+            if (ImGui.checkbox(I18n.get("flashback.visuals.world.render_particles"), visuals.renderParticles)) {
                 visuals.renderParticles = !visuals.renderParticles;
                 editorState.markDirty();
             }
 
-            if (ImGui.checkbox("Render Sky", visuals.renderSky)) {
+            if (ImGui.checkbox(I18n.get("flashback.visuals.world.render_sky"), visuals.renderSky)) {
                 visuals.renderSky = !visuals.renderSky;
                 editorState.markDirty();
             }
 
             if (!visuals.renderSky) {
-                if (ImGui.colorButton("Sky Colour", visuals.skyColour)) {
+                if (ImGui.colorButton(I18n.get("flashback.visuals.world.sky_colour"), visuals.skyColour)) {
                     ImGui.openPopup("##EditSkyColour");
                 }
                 ImGui.sameLine();
-                ImGui.text("Sky Colour");
+                ImGui.text(I18n.get("flashback.visuals.world.sky_colour"));
 
                 if (ImGui.beginPopup("##EditSkyColour")) {
-                    ImGui.colorPicker3("Sky Colour", visuals.skyColour);
+                    ImGui.colorPicker3(I18n.get("flashback.visuals.world.sky_colour"), visuals.skyColour);
                     ImGui.endPopup();
                 }
             }
 
-            if (ImGui.checkbox("Render Nametags", visuals.renderNametags)) {
+            if (ImGui.checkbox(I18n.get("flashback.visuals.world.render_nametags"), visuals.renderNametags)) {
                 visuals.renderNametags = !visuals.renderNametags;
                 editorState.markDirty();
             }
 
-            ImGuiHelper.separatorWithText("Overrides");
+            ImGuiHelper.separatorWithText(I18n.get("flashback.visuals.overrides"));
 
             // Fog distance
-            if (ImGui.checkbox("Override Fog", visuals.overrideFog)) {
+            if (ImGui.checkbox(I18n.get("flashback.visuals.overrides.override_fog"), visuals.overrideFog)) {
                 visuals.overrideFog = !visuals.overrideFog;
                 editorState.markDirty();
             }
             if (visuals.overrideFog) {
                 floatBuffer[0] = visuals.overrideFogStart;
-                if (ImGui.sliderFloat("Start", floatBuffer, 0.0f, 512.0f)) {
+                if (ImGui.sliderFloat(I18n.get("flashback.fog_start"), floatBuffer, 0.0f, 512.0f)) {
                     visuals.overrideFogStart = floatBuffer[0];
                     editorState.markDirty();
                 }
 
                 floatBuffer[0] = visuals.overrideFogEnd;
-                if (ImGui.sliderFloat("End", floatBuffer, 0.0f, 512.0f)) {
+                if (ImGui.sliderFloat(I18n.get("flashback.fog_end"), floatBuffer, 0.0f, 512.0f)) {
                     visuals.overrideFogEnd = floatBuffer[0];
                     editorState.markDirty();
                 }
             }
 
-            if (ImGui.checkbox("Override Fog Colour", visuals.overrideFogColour)) {
+            if (ImGui.checkbox(I18n.get("flashback.visuals.overrides.override_fog_colour"), visuals.overrideFogColour)) {
                 visuals.overrideFogColour = !visuals.overrideFogColour;
                 if (visuals.overrideFogColour) {
                     visuals.fogColour[0] = FogRenderer.fogRed;
@@ -145,20 +146,20 @@ public class VisualsWindow {
                 editorState.markDirty();
             }
             if (visuals.overrideFogColour) {
-                if (ImGui.colorButton("Fog Colour", visuals.fogColour)) {
+                if (ImGui.colorButton(I18n.get("flashback.visuals.overrides.fog_colour"), visuals.fogColour)) {
                     ImGui.openPopup("##EditFogColour");
                 }
                 ImGui.sameLine();
-                ImGui.text("Fog Colour");
+                ImGui.text(I18n.get("flashback.visuals.overrides.fog_colour"));
 
                 if (ImGui.beginPopup("##EditFogColour")) {
-                    ImGui.colorPicker3("Fog Colour", visuals.fogColour);
+                    ImGui.colorPicker3(I18n.get("flashback.visuals.overrides.fog_colour"), visuals.fogColour);
                     ImGui.endPopup();
                 }
             }
 
             // FOV
-            if (ImGui.checkbox("Override FOV", visuals.overrideFov)) {
+            if (ImGui.checkbox(I18n.get("flashback.visuals.overrides.override_fov"), visuals.overrideFov)) {
                 visuals.overrideFov = !visuals.overrideFov;
                 Minecraft.getInstance().levelRenderer.needsUpdate();
                 editorState.markDirty();
@@ -172,17 +173,17 @@ public class VisualsWindow {
                 if (ImGui.smallButton("+")) {
                     addKeyframe(editorState, replayServer, new FOVKeyframe(visuals.overrideFovAmount));
                 }
-                ImGuiHelper.tooltip("Add FOV keyframe");
+                ImGuiHelper.tooltip(I18n.get("flashback.add_fov_keyframe"));
 
                 floatBuffer[0] = visuals.overrideFovAmount;
-                if (ImGui.sliderFloat("FOV", floatBuffer, 1.0f, 110.0f, "%.1f")) {
+                if (ImGui.sliderFloat(I18n.get("flashback.fov"), floatBuffer, 1.0f, 110.0f, "%.1f")) {
                     visuals.setFov(floatBuffer[0]);
                     editorState.markDirty();
                 }
             }
 
             // Time
-            if (ImGui.checkbox("Override Time", visuals.overrideTimeOfDay >= 0)) {
+            if (ImGui.checkbox(I18n.get("flashback.visuals.overrides.override_time"), visuals.overrideTimeOfDay >= 0)) {
                 if (visuals.overrideTimeOfDay >= 0) {
                     visuals.overrideTimeOfDay = -1;
                 } else {
@@ -195,22 +196,22 @@ public class VisualsWindow {
                 if (ImGui.smallButton("+")) {
                     addKeyframe(editorState, replayServer, new TimeOfDayKeyframe((int) visuals.overrideTimeOfDay));
                 }
-                ImGuiHelper.tooltip("Add Time keyframe");
+                ImGuiHelper.tooltip(I18n.get("flashback.add_time_keyframe"));
 
                 intBuffer[0] = (int) visuals.overrideTimeOfDay;
-                if (ImGui.sliderInt("Time", intBuffer, 0, 24000)) {
+                if (ImGui.sliderInt(I18n.get("flashback.time"), intBuffer, 0, 24000)) {
                     visuals.overrideTimeOfDay = intBuffer[0];
                     editorState.markDirty();
                 }
             }
 
             // Night vision
-            if (ImGui.checkbox("Night Vision", visuals.overrideNightVision)) {
+            if (ImGui.checkbox(I18n.get("flashback.visuals.overrides.night_vision"), visuals.overrideNightVision)) {
                 visuals.overrideNightVision = !visuals.overrideNightVision;
             }
 
             // Camera shake
-            if (ImGui.checkbox("Camera Shake", visuals.overrideCameraShake)) {
+            if (ImGui.checkbox(I18n.get("flashback.visuals.overrides.camera_shake"), visuals.overrideCameraShake)) {
                 visuals.overrideCameraShake = !visuals.overrideCameraShake;
                 editorState.markDirty();
             }
@@ -226,9 +227,9 @@ public class VisualsWindow {
                         addKeyframe(editorState, replayServer, new CameraShakeKeyframe(frequency, amplitude, frequency, amplitude, false));
                     }
                 }
-                ImGuiHelper.tooltip("Add Camera Shake keyframe");
+                ImGuiHelper.tooltip(I18n.get("flashback.add_camera_shake_keyframe"));
 
-                if (ImGui.checkbox("Split Y/X", visuals.cameraShakeSplitParams)) {
+                if (ImGui.checkbox(I18n.get("flashback.split_yx"), visuals.cameraShakeSplitParams)) {
                     visuals.cameraShakeSplitParams = !visuals.cameraShakeSplitParams;
                     editorState.markDirty();
                 }
@@ -236,35 +237,35 @@ public class VisualsWindow {
                 if (visuals.cameraShakeSplitParams) {
                     ImGui.setNextItemWidth(100);
                     floatBuffer[0] = visuals.cameraShakeXFrequency;
-                    if (ImGui.sliderFloat("Frequency X", floatBuffer, 0.1f, 10.0f, "%.1f")) {
+                    if (ImGui.sliderFloat(I18n.get("flashback.frequency_x"), floatBuffer, 0.1f, 10.0f, "%.1f")) {
                         visuals.cameraShakeXFrequency = floatBuffer[0];
                         editorState.markDirty();
                     }
 
                     ImGui.setNextItemWidth(100);
                     floatBuffer[0] = visuals.cameraShakeXAmplitude;
-                    if (ImGui.sliderFloat("Amplitude X", floatBuffer, 0.0f, 10.0f, "%.1f")) {
+                    if (ImGui.sliderFloat(I18n.get("flashback.amplitude_x"), floatBuffer, 0.0f, 10.0f, "%.1f")) {
                         visuals.cameraShakeXAmplitude = floatBuffer[0];
                         editorState.markDirty();
                     }
 
                     ImGui.setNextItemWidth(100);
                     floatBuffer[0] = visuals.cameraShakeYFrequency;
-                    if (ImGui.sliderFloat("Frequency Y", floatBuffer, 0.1f, 10.0f, "%.1f")) {
+                    if (ImGui.sliderFloat(I18n.get("flashback.frequency_y"), floatBuffer, 0.1f, 10.0f, "%.1f")) {
                         visuals.cameraShakeYFrequency = floatBuffer[0];
                         editorState.markDirty();
                     }
 
                     ImGui.setNextItemWidth(100);
                     floatBuffer[0] = visuals.cameraShakeYAmplitude;
-                    if (ImGui.sliderFloat("Amplitude Y", floatBuffer, 0.0f, 10.0f, "%.1f")) {
+                    if (ImGui.sliderFloat(I18n.get("flashback.amplitude_y"), floatBuffer, 0.0f, 10.0f, "%.1f")) {
                         visuals.cameraShakeYAmplitude = floatBuffer[0];
                         editorState.markDirty();
                     }
                 } else {
                     ImGui.setNextItemWidth(100);
                     floatBuffer[0] = (visuals.cameraShakeXFrequency + visuals.cameraShakeYFrequency)/2.0f;
-                    if (ImGui.sliderFloat("Frequency", floatBuffer, 0.1f, 10.0f, "%.1f")) {
+                    if (ImGui.sliderFloat(I18n.get("flashback.frequency"), floatBuffer, 0.1f, 10.0f, "%.1f")) {
                         visuals.cameraShakeXFrequency = floatBuffer[0];
                         visuals.cameraShakeYFrequency = floatBuffer[0];
                         editorState.markDirty();
@@ -272,7 +273,7 @@ public class VisualsWindow {
 
                     ImGui.setNextItemWidth(100);
                     floatBuffer[0] = (visuals.cameraShakeXAmplitude + visuals.cameraShakeYAmplitude)/2.0f;
-                    if (ImGui.sliderFloat("Amplitude", floatBuffer, 0.0f, 10.0f, "%.1f")) {
+                    if (ImGui.sliderFloat(I18n.get("flashback.amplitude"), floatBuffer, 0.0f, 10.0f, "%.1f")) {
                         visuals.cameraShakeXAmplitude = floatBuffer[0];
                         visuals.cameraShakeYAmplitude = floatBuffer[0];
                         editorState.markDirty();
@@ -281,47 +282,47 @@ public class VisualsWindow {
             }
 
             // Camera Roll
-            if (ImGui.checkbox("Camera Roll", visuals.overrideRoll)) {
+            if (ImGui.checkbox(I18n.get("flashback.camera_roll"), visuals.overrideRoll)) {
                 visuals.overrideRoll = !visuals.overrideRoll;
                 Minecraft.getInstance().levelRenderer.needsUpdate();
                 editorState.markDirty();
             }
             if (visuals.overrideRoll) {
                 floatBuffer[0] = visuals.overrideRollAmount;
-                if (ImGui.sliderFloat("Roll", floatBuffer, -180.0f, 180.0f, "%.1f")) {
+                if (ImGui.sliderFloat(I18n.get("flashback.roll"), floatBuffer, -180.0f, 180.0f, "%.1f")) {
                     visuals.overrideRollAmount = floatBuffer[0];
                     Minecraft.getInstance().levelRenderer.needsUpdate();
                     editorState.markDirty();
                 }
             }
 
-            visuals.overrideWeatherMode = ImGuiHelper.enumCombo("Weather", visuals.overrideWeatherMode);
+            visuals.overrideWeatherMode = ImGuiHelper.enumCombo(I18n.get("flashback.weather"), visuals.overrideWeatherMode);
 
-            ImGuiHelper.separatorWithText("Other");
+            ImGuiHelper.separatorWithText(I18n.get("flashback.other"));
 
-            if (ImGui.checkbox("Rule of Thirds Guide", visuals.ruleOfThirdsGuide)) {
+            if (ImGui.checkbox(I18n.get("flashback.rule_of_thirds_guide"), visuals.ruleOfThirdsGuide)) {
                 visuals.ruleOfThirdsGuide = !visuals.ruleOfThirdsGuide;
                 editorState.markDirty();
             }
 
-            if (ImGui.checkbox("Center Guide", visuals.centerGuide)) {
+            if (ImGui.checkbox(I18n.get("flashback.center_guide"), visuals.centerGuide)) {
                 visuals.centerGuide = !visuals.centerGuide;
                 editorState.markDirty();
             }
 
-            if (ImGui.checkbox("Camera Path", visuals.cameraPath)) {
+            if (ImGui.checkbox(I18n.get("flashback.camera_path"), visuals.cameraPath)) {
                 visuals.cameraPath = !visuals.cameraPath;
                 editorState.markDirty();
             }
 
-            visuals.sizing = ImGuiHelper.enumCombo("Sizing", visuals.sizing);
+            visuals.sizing = ImGuiHelper.enumCombo(I18n.get("flashback.sizing"), visuals.sizing);
             if (visuals.sizing == Sizing.CHANGE_ASPECT_RATIO) {
-                visuals.changeAspectRatio = ImGuiHelper.enumCombo("Aspect", visuals.changeAspectRatio);
+                visuals.changeAspectRatio = ImGuiHelper.enumCombo(I18n.get("flashback.aspect"), visuals.changeAspectRatio);
                 editorState.markDirty();
             }
 
             if (!editorState.hideDuringExport.isEmpty()) {
-                if (ImGui.button("Unhide All Entities")) {
+                if (ImGui.button(I18n.get("flashback.unhide_all_entities"))) {
                     editorState.hideDuringExport.clear();
                     editorState.markDirty();
                 }
@@ -354,7 +355,7 @@ public class VisualsWindow {
                 }
             }
 
-            String description = "Added " + keyframeType.name() + " keyframe";
+            String description = I18n.get("flashback.added_named_keyframe", keyframeType.name());
             int newKeyframeTrackIndex = scene.keyframeTracks.size();
             scene.push(new EditorSceneHistoryEntry(
                 List.of(new EditorSceneHistoryAction.RemoveTrack(keyframeType, newKeyframeTrackIndex)),

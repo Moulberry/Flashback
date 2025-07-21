@@ -51,7 +51,7 @@ public class SelectReplayScreen extends Screen {
         this.addRenderableWidget(CycleButton.builder(ReplaySorting::component)
             .withValues(ReplaySorting.values())
             .withInitialValue(config.replaySorting)
-            .create(this.width / 2 + 2, 22, 125, 20, Component.literal("Sort"), (button, sorting) -> {
+            .create(this.width / 2 + 2, 22, 125, 20, Component.translatable("flashback.sort"), (button, sorting) -> {
                 FlashbackConfig configuration = Flashback.getConfig();
                 configuration.replaySorting = sorting;
                 configuration.delayedSaveToDefaultFolder();
@@ -59,7 +59,7 @@ public class SelectReplayScreen extends Screen {
             })
         );
 
-        this.addRenderableWidget(new SortDirectionButton(this.width / 2 + 131, 22, 20, 20, Component.literal("Sort Direction"),
+        this.addRenderableWidget(new SortDirectionButton(this.width / 2 + 131, 22, 20, 20, Component.translatable("flashback.sort_direction"),
             sortDescending -> {
                 FlashbackConfig configuration = Flashback.getConfig();
                 configuration.sortDescending = sortDescending;
@@ -80,7 +80,7 @@ public class SelectReplayScreen extends Screen {
                                                            .bounds(this.width / 2 + 53, this.height - 28, 98, 20).build());
 
         if (this.width/2 > 154 + 128) {
-            this.addRenderableWidget(Button.builder(Component.literal("Flashback Settings"), btn -> Minecraft.getInstance().setScreen(new ConfigScreen(this)))
+            this.addRenderableWidget(Button.builder(Component.translatable("flashback.flashback_options"), btn -> Minecraft.getInstance().setScreen(new ConfigScreen(this)))
                                            .bounds(this.width - 120 - 8, this.height - 28, 120, 20).build());
         }
         this.updateButtonStatus(null);

@@ -4,6 +4,7 @@ import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.llamalad7.mixinextras.sugar.Local;
 import com.moulberry.flashback.Flashback;
+import com.moulberry.flashback.FlashbackTextComponents;
 import com.moulberry.flashback.screen.BottomTextWidget;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.Button;
@@ -23,31 +24,31 @@ public class MixinPauseScreen {
     @Inject(method = "createPauseMenu", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/layouts/GridLayout;arrangeElements()V", shift = At.Shift.BEFORE))
     public void createPauseMenu(CallbackInfo ci, @Local GridLayout.RowHelper rowHelper) {
         if (!Flashback.isInReplay() && !Flashback.getConfig().hidePauseMenuControls) {
-            rowHelper.addChild(new BottomTextWidget(204, 30, Component.literal("Flashback"), Minecraft.getInstance().font), 2);
+            rowHelper.addChild(new BottomTextWidget(204, 30, FlashbackTextComponents.FLASHBACK, Minecraft.getInstance().font), 2);
             if (Flashback.RECORDER == null) {
-                rowHelper.addChild(Button.builder(Component.literal("Start Recording"), (button) -> {
+                rowHelper.addChild(Button.builder(Component.translatable("flashback.recording_controls.start"), (button) -> {
                     Flashback.startRecordingReplay();
                     Minecraft.getInstance().setScreen(null);
                 }).width(204).build(), 2);
             } else {
-                rowHelper.addChild(Button.builder(Component.literal("Finish Recording"), (button) -> {
+                rowHelper.addChild(Button.builder(Component.translatable("flashback.recording_controls.finish"), (button) -> {
                     Flashback.finishRecordingReplay();
                     Minecraft.getInstance().setScreen(null);
                 }).width(204).build(), 2);
 
                 if (Flashback.RECORDER.isPaused()) {
-                    rowHelper.addChild(Button.builder(Component.literal("Unpause Recording"), (button) -> {
+                    rowHelper.addChild(Button.builder(Component.translatable("flashback.recording_controls.unpause"), (button) -> {
                         Flashback.pauseRecordingReplay(false);
                         Minecraft.getInstance().setScreen(null);
                     }).width(98).build());
                 } else {
-                    rowHelper.addChild(Button.builder(Component.literal("Pause Recording"), (button) -> {
+                    rowHelper.addChild(Button.builder(Component.translatable("flashback.recording_controls.pause"), (button) -> {
                         Flashback.pauseRecordingReplay(true);
                         Minecraft.getInstance().setScreen(null);
                     }).width(98).build());
                 }
 
-                rowHelper.addChild(Button.builder(Component.literal("Cancel Recording"), (button) -> {
+                rowHelper.addChild(Button.builder(Component.translatable("flashback.recording_controls.cancel"), (button) -> {
                     Minecraft.getInstance().setScreen(new ConfirmScreen(value -> {
                         if (value) {
                             Flashback.cancelRecordingReplay();
@@ -55,8 +56,7 @@ public class MixinPauseScreen {
                         } else {
                             Minecraft.getInstance().setScreen(new PauseScreen(true));
                         }
-                    }, Component.literal("Confirm Cancel Recording"),
-                            Component.literal("Are you sure you want to cancel the recording? You won't be able to recover it")));
+                    }, Component.translatable("flashback.confirm_cancel_recording"), Component.translatable("flashback.confirm_cancel_recording_description")));
                 }).width(98).build());
             }
         }

@@ -18,6 +18,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.client.multiplayer.PlayerInfo;
+import net.minecraft.client.resources.language.I18n;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 
@@ -41,15 +42,16 @@ public class MovementWindow {
         if (!wasDocked) {
             flags |= ImGuiWindowFlags.AlwaysAutoResize;
         }
-        if (ImGui.begin("Movement###Movement", open, flags)) {
+        String title = I18n.get("flashback.movement");
+        if (ImGui.begin(title + "###Movement", open, flags)) {
             wasDocked = ImGui.isWindowDocked();
 
             FlashbackConfig config = Flashback.getConfig();
             int[] direction = new int[]{config.flightCameraDirection ? 1 : 0};
 
-            ImGuiHelper.combo("Direction", direction, new String[]{
-                "Horizontal",
-                "Camera"
+            ImGuiHelper.combo(I18n.get("flashback.movement_direction"), direction, new String[]{
+                I18n.get("flashback.movement_direction.horizontal"),
+                I18n.get("flashback.movement_direction.camera")
             });
             boolean flightCameraDirection = direction[0] == 1;
             if (config.flightCameraDirection != flightCameraDirection) {
@@ -58,33 +60,33 @@ public class MovementWindow {
             }
 
             float[] momentum = new float[]{config.flightMomentum};
-            ImGui.sliderFloat("Momentum", momentum, 0.0f, 1.0f);
+            ImGui.sliderFloat(I18n.get("flashback.momentum"), momentum, 0.0f, 1.0f);
             if (config.flightMomentum != momentum[0]) {
                 config.flightMomentum = momentum[0];
                 config.delayedSaveToDefaultFolder();
             }
 
-            if (ImGui.checkbox("Lock X", config.flightLockX)) {
+            if (ImGui.checkbox(I18n.get("flashback.lock_x"), config.flightLockX)) {
                 config.flightLockX = !config.flightLockX;
                 config.delayedSaveToDefaultFolder();
             }
             ImGui.sameLine();
-            if (ImGui.checkbox("Lock Y", config.flightLockY)) {
+            if (ImGui.checkbox(I18n.get("flashback.lock_y"), config.flightLockY)) {
                 config.flightLockY = !config.flightLockY;
                 config.delayedSaveToDefaultFolder();
             }
             ImGui.sameLine();
-            if (ImGui.checkbox("Lock Z", config.flightLockZ)) {
+            if (ImGui.checkbox(I18n.get("flashback.lock_z"), config.flightLockZ)) {
                 config.flightLockZ = !config.flightLockZ;
                 config.delayedSaveToDefaultFolder();
             }
 
-            if (ImGui.checkbox("Lock Yaw", config.flightLockYaw)) {
+            if (ImGui.checkbox(I18n.get("flashback.lock_yaw"), config.flightLockYaw)) {
                 config.flightLockYaw = !config.flightLockYaw;
                 config.delayedSaveToDefaultFolder();
             }
             ImGui.sameLine();
-            if (ImGui.checkbox("Lock Pitch", config.flightLockPitch)) {
+            if (ImGui.checkbox(I18n.get("flashback.lock_pitch"), config.flightLockPitch)) {
                 config.flightLockPitch = !config.flightLockPitch;
                 config.delayedSaveToDefaultFolder();
             }

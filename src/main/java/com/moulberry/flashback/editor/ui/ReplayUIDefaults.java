@@ -16,7 +16,7 @@ public class ReplayUIDefaults {
             Collapsed=0
             DockId=0x00000002,0
 
-            [Window][Visuals]
+            [Window][###Visuals]
             Pos=1670,0
             Size=250,830
             Collapsed=0

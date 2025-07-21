@@ -9,7 +9,7 @@ import net.minecraft.network.chat.Component;
 public class ConfigScreen extends OptionsSubScreen {
 
     public ConfigScreen(Screen previous) {
-        super(previous, Minecraft.getInstance().options, Component.literal("Flashback Options"));
+        super(previous, Minecraft.getInstance().options, Component.translatable("flashback.flashback_options"));
     }
 
     protected void addOptions() {
