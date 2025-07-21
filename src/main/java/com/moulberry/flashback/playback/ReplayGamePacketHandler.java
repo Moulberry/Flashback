@@ -82,6 +82,7 @@ import java.util.*;
 
 public class ReplayGamePacketHandler implements ClientGamePacketListener {
 
+    private final BlockState FALLBACK_BLOCK_STATE = Blocks.VOID_AIR.defaultBlockState();
     private final ReplayServer replayServer;
     private final Map<UUID, PlayerInfo> playerInfoMap = new HashMap<>();
     private Int2ObjectMap<Entity> pendingEntities = new Int2ObjectOpenHashMap<>();
@@ -109,6 +110,9 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
     }
 
     private void setBlockState(ServerLevel level, BlockPos blockPos, BlockState blockState) {
+        if (blockState == null) {
+            blockState = FALLBACK_BLOCK_STATE;
+        }
         LevelChunk levelChunk = level.getChunkAt(blockPos);
         ((LevelChunkExt)levelChunk).flashback$setBlockStateWithoutUpdates(blockPos, blockState);
     }
@@ -380,8 +384,8 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
 
     @Override
     public void handleBlockUpdate(ClientboundBlockUpdatePacket clientboundBlockUpdatePacket) {
-        this.setBlockState(this.level(), clientboundBlockUpdatePacket.getPos(),
-            clientboundBlockUpdatePacket.getBlockState());
+        BlockState blockState = clientboundBlockUpdatePacket.getBlockState();
+        this.setBlockState(this.level(), clientboundBlockUpdatePacket.getPos(), blockState);
         forward(clientboundBlockUpdatePacket);
     }
 
