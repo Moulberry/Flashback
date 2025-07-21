@@ -141,6 +141,9 @@ public class ReplayServer extends IntegratedServer {
     private boolean isFrozen = false;
     private int frozenDelay = -1;
 
+    public volatile boolean failedToLoadRegistryDataWarning = false;
+    public volatile boolean failedToSpawnPlayerWarning = false;
+
     private boolean hasNonSpectatorReplayViewer = false;
 
     private int currentTick = 0;

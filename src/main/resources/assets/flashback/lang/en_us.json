@@ -377,5 +377,9 @@
   "flashback.yaw_offset": "Yaw Offset",
   "flashback.pitch_offset": "Pitch Offset",
   "flashback.position_offset": "Position Offset",
-  "flashback.view_offset": "View Offset"
+  "flashback.view_offset": "View Offset",
+  "flashback.registry_warning": "CRITICAL ERROR: REGISTRY DATA",
+  "flashback.registry_warning_description": "An error occured while loading registry data, replay is probably broken... see logs for stacktrace",
+  "flashback.player_spawn_warning": "CRITICAL ERROR: FAILED TO SPAWN PLAYER",
+  "flashback.player_spawn_warning_description": "An error occurred while trying to spawn a player. Most likely this is caused by a mod incompatibility... see logs for stacktrace"
 }

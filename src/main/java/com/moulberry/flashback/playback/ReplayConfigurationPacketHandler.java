@@ -169,6 +169,7 @@ public class ReplayConfigurationPacketHandler implements ClientConfigurationPack
             synchronizedRegistries = RegistryDataLoader.load(entries, resourceProvider, accessForLoading,
                 RegistryDataLoader.SYNCHRONIZED_REGISTRIES);
         } catch (Exception e) {
+            this.replayServer.failedToLoadRegistryDataWarning = true;
             Flashback.LOGGER.error("Error while trying to load registry data. Skipping... this might cause other issues", e);
             return false;
         } finally {
