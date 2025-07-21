@@ -38,9 +38,11 @@ public class ReplaySelectionList extends ObjectSelectionList<ReplaySelectionEntr
     private boolean sortDescending;
     private final ReplaySelectionEntry.LoadingHeader loadingHeader;
     private final ReplaySelectionEntry.LoadFromDeviceHeader loadFromDeviceHeader;
+    public final LinkedHashMap<String, LinkedHashSet<String>> currentNamespacesForRegistries;
 
     public ReplaySelectionList(SelectReplayScreen selectReplayScreen, Minecraft minecraft, int i, int j, int k, int l,
             String filter, ReplaySorting replaySorting, boolean sortDescending,
+            LinkedHashMap<String, LinkedHashSet<String>> currentNamespacesForRegistries,
             @Nullable ReplaySelectionList replaySelectionList) {
         super(minecraft, i, j, k, l);
         this.screen = selectReplayScreen;
@@ -49,6 +51,7 @@ public class ReplaySelectionList extends ObjectSelectionList<ReplaySelectionEntr
         this.filter = filter;
         this.replaySorting = replaySorting;
         this.sortDescending = sortDescending;
+        this.currentNamespacesForRegistries = currentNamespacesForRegistries;
         this.pendingReplays = replaySelectionList != null ? replaySelectionList.pendingReplays : this.loadReplays();
         this.fillLoadingReplays();
     }
@@ -191,7 +194,7 @@ public class ReplaySelectionList extends ObjectSelectionList<ReplaySelectionEntr
                         JsonObject metadataJson = new Gson().fromJson(metadataString, JsonObject.class);
                         FlashbackMeta metadata = FlashbackMeta.fromJson(metadataJson);
                         if (metadata != null) {
-                            ReplaySummary summary = new ReplaySummary(path, metadata, fileName, lastModified, filesize, iconBytes);
+                            ReplaySummary summary = new ReplaySummary(path, metadata, this.currentNamespacesForRegistries, fileName, lastModified, filesize, iconBytes);
                             return new PendingSelectionEntry.Replay(summary);
                         }
                     } catch (IOException e) {

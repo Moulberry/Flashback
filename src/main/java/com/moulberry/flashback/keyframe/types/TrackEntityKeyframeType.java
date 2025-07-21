@@ -53,6 +53,7 @@ public class TrackEntityKeyframeType implements KeyframeType<TrackEntityKeyframe
         float[] viewOffset = new float[]{0.0f, 0.0f, 3.0f};
         float[] cameraTrackYaw = new float[]{0.0f};
         float[] cameraTrackPitch = new float[]{0.0f};
+        float[] roll = new float[]{0.0f};
         TrackingBodyPart trackingBodyPart = TrackingBodyPart.HEAD;
         ImString cameraTrackTarget = new ImString();
         UUID validEntityTarget = null;
@@ -83,13 +84,14 @@ public class TrackEntityKeyframeType implements KeyframeType<TrackEntityKeyframe
             ImGuiHelper.inputFloat("Pitch Offset", data.cameraTrackPitch);
             ImGuiHelper.inputFloat("Position Offset", data.positionOffset);
             ImGuiHelper.inputFloat("View Offset", data.viewOffset);
+            ImGuiHelper.inputFloat("Roll", data.roll);
 
             if (data.validEntityTarget == null) ImGui.beginDisabled();
             if (ImGui.button("Add")) {
                 Vector3d positionOffset = new Vector3d(data.positionOffset[0], data.positionOffset[1], data.positionOffset[2]);
                 Vector3d viewOffset = new Vector3d(data.viewOffset[0], data.viewOffset[1], data.viewOffset[2]);
                 return new TrackEntityKeyframe(data.validEntityTarget, data.trackingBodyPart, data.cameraTrackYaw[0],
-                    data.cameraTrackPitch[0], positionOffset, viewOffset);
+                    data.cameraTrackPitch[0], positionOffset, viewOffset, data.roll[0]);
             }
             if (data.validEntityTarget == null) ImGui.endDisabled();
             ImGui.sameLine();

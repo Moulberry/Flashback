@@ -15,7 +15,7 @@ import org.joml.Vector3d;
 import java.util.UUID;
 
 public record KeyframeChangeTrackEntity(UUID target, TrackingBodyPart trackingBodyPart, float yawOffset, float pitchOffset,
-                                        Vector3d positionOffset, Vector3d viewOffset) implements KeyframeChange {
+                                        Vector3d positionOffset, Vector3d viewOffset, float roll) implements KeyframeChange {
 
     @Override
     public void apply(KeyframeHandler keyframeHandler) {
@@ -96,7 +96,8 @@ public record KeyframeChangeTrackEntity(UUID target, TrackingBodyPart trackingBo
             (float) Interpolation.linear(this.yawOffset, other.yawOffset, amount),
             (float) Interpolation.linear(this.pitchOffset, other.pitchOffset, amount),
             this.positionOffset.lerp(other.positionOffset, amount, new Vector3d()),
-            this.viewOffset.lerp(other.viewOffset, amount, new Vector3d())
+            this.viewOffset.lerp(other.viewOffset, amount, new Vector3d()),
+            (float) Interpolation.linearAngle(this.roll, other.roll, amount)
         );
     }
 }

@@ -1,6 +1,7 @@
 package com.moulberry.flashback.screen.select_replay;
 
 import com.moulberry.flashback.Flashback;
+import com.moulberry.flashback.RegistryMetaHelper;
 import com.moulberry.flashback.configuration.FlashbackConfig;
 import com.moulberry.flashback.screen.ConfigScreen;
 import com.moulberry.flashback.screen.ReplaySummary;
@@ -15,6 +16,8 @@ import net.minecraft.network.chat.Component;
 import org.jetbrains.annotations.Nullable;
 
 import java.nio.file.Path;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 
 public class SelectReplayScreen extends Screen {
 
@@ -25,11 +28,13 @@ public class SelectReplayScreen extends Screen {
     private Button deleteButton;
     protected EditBox searchBox;
     private ReplaySelectionList list;
+    private LinkedHashMap<String, LinkedHashSet<String>> currentNamespacesForRegistries;
 
     public SelectReplayScreen(Screen screen, Path path) {
         super(Component.translatable("flashback.select_replay"));
         this.lastScreen = screen;
         this.path = path;
+        this.currentNamespacesForRegistries = RegistryMetaHelper.calculateNamespacesForRegistries();
     }
 
     @Override
@@ -63,7 +68,8 @@ public class SelectReplayScreen extends Screen {
             }, config.sortDescending));
 
         this.list = this.addRenderableWidget(new ReplaySelectionList(this, this.minecraft,
-                 this.width, this.height - 112, 48, 36, this.searchBox.getValue(), config.replaySorting, config.sortDescending, this.list));
+                 this.width, this.height - 112, 48, 36, this.searchBox.getValue(), config.replaySorting, config.sortDescending,
+                 this.currentNamespacesForRegistries, this.list));
         this.selectButton = this.addRenderableWidget(Button.builder(Component.translatable("flashback.select_replay.open"), this::tryOpenReplay)
                 .bounds(this.width / 2 - 151, this.height - 52, 302, 20).build());
         this.editButton = this.addRenderableWidget(Button.builder(Component.translatable("selectWorld.edit"), this::tryEditReplay)
