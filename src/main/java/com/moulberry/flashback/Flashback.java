@@ -12,6 +12,7 @@ import com.moulberry.flashback.command.BetterColorArgument;
 import com.moulberry.flashback.compat.DistantHorizonsSupport;
 import com.moulberry.flashback.compat.simple_voice_chat.SimpleVoiceChatPlayback;
 import com.moulberry.flashback.configuration.FlashbackConfig;
+import com.moulberry.flashback.editor.ui.ReplayUI;
 import com.moulberry.flashback.exporting.AsyncFileDialogs;
 import com.moulberry.flashback.exporting.ExportJob;
 import com.moulberry.flashback.exporting.taskbar.TaskbarManager;
@@ -920,6 +921,9 @@ public class Flashback implements ModInitializer, ClientModInitializer {
         }
         minecraft.disconnectWithProgressScreen();
         minecraft.setScreen(new TitleScreen());
+
+        ReplayUI.shownRegistryErrorWarning = false;
+        ReplayUI.shownPlayerSpawnErrorWarning = false;
 
         // Add as recent
         String pathStr = path.toString();

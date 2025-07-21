@@ -1798,7 +1798,7 @@ public class TimelineWindow {
 
             ImGui.pushStyleVar(ImGuiStyleVar.ItemSpacing, 0, 0);
             if (repositioningKeyframeTrack == trackIndex) {
-                ImGui.text("\ue945");
+                ImGui.textUnformatted("\ue945");
             } else {
                 ImGui.textDisabled("\ue945");
                 if (ImGui.isItemClicked(ImGuiMouseButton.Left)) {
@@ -1812,7 +1812,7 @@ public class TimelineWindow {
                 ImGui.pushStyleVar(ImGuiStyleVar.ItemSpacing, 0, 0);
                 ImGui.pushStyleVar(ImGuiStyleVar.FramePadding, 0, 0);
                 if (icon != null) {
-                    ImGui.text(icon + " ");
+                    ImGui.textUnformatted(icon + " ");
                     ImGui.sameLine();
                 }
                 ImGui.setNextItemWidth(120);
@@ -1834,7 +1834,7 @@ public class TimelineWindow {
                     if (keyframeTrack.customColour != 0) {
                         ImGui.textColored(keyframeTrack.customColour, nameWithIcon);
                     } else {
-                        ImGui.text(nameWithIcon);
+                        ImGui.textUnformatted(nameWithIcon);
                     }
                 } else {
                     ImGui.textDisabled(nameWithIcon);
@@ -2111,9 +2111,9 @@ public class TimelineWindow {
         }
         if (ImGui.beginPopup("##DeleteScene")) {
             if (scenes.size() > 1 && editorScene.keyframeTracks.isEmpty()) {
-                ImGui.text(I18n.get("flashback.delete_scene_confirm1"));
-                ImGui.text(I18n.get("flashback.delete_scene_confirm2"));
-                ImGui.text(I18n.get("flashback.delete_scene_confirm3"));
+                ImGui.textUnformatted(I18n.get("flashback.delete_scene_confirm1"));
+                ImGui.textUnformatted(I18n.get("flashback.delete_scene_confirm2"));
+                ImGui.textUnformatted(I18n.get("flashback.delete_scene_confirm3"));
 
                 if (ImGui.button(I18n.get("flashback.delete_forever"))) {
                     upgradeToSceneWrite();

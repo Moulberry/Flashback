@@ -250,12 +250,14 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
         try {
             this.replayServer.getPlayerList().placeNewPlayer(connection, serverPlayer, commonListenerCookie);
         } catch (Exception e) {
+            this.replayServer.failedToSpawnPlayerWarning = true;
             Flashback.LOGGER.error("Failed to spawn player", e);
             return null;
         }
         serverPlayer.setGameMode(gameType);
 
         if (serverPlayer.isRemoved()) {
+            this.replayServer.failedToSpawnPlayerWarning = true;
             Flashback.LOGGER.error("ServerPlayer {} was removed while spawning. Incompatible mod?", serverPlayer.getUUID());
             return null;
         }

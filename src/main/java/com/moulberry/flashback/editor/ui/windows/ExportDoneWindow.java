@@ -51,7 +51,7 @@ public class ExportDoneWindow {
 
         ImGui.openPopup("###ExportDone");
         if (ImGui.beginPopupModal("Export Finished###ExportDone", open, flags)) {
-            ImGui.text(I18n.get("flashback.export_done"));
+            ImGui.textUnformatted(I18n.get("flashback.export_done"));
             if (exportPath != null && ImGui.button(I18n.get("flashback.open_folder"))) {
                 Util.getPlatform().openFile(exportPath.toFile());
             }
