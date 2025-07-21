@@ -17,6 +17,7 @@ import com.moulberry.flashback.keyframe.interpolation.InterpolationType;
 import com.moulberry.flashback.keyframe.types.CameraOrbitKeyframeType;
 import com.moulberry.flashback.spline.CatmullRom;
 import com.moulberry.flashback.spline.Hermite;
+import net.minecraft.client.resources.language.I18n;
 import org.joml.Vector3d;
 
 import java.lang.reflect.Type;
@@ -55,7 +56,7 @@ public class CameraOrbitKeyframe extends Keyframe {
     @Override
     public void renderEditKeyframe(Consumer<Consumer<Keyframe>> update) {
         float[] center = new float[]{(float) this.center.x, (float) this.center.y, (float) this.center.z};
-        if (ImGuiHelper.inputFloat("Position", center)) {
+        if (ImGuiHelper.inputFloat(I18n.get("flashback.position"), center)) {
             if (center[0] != this.center.x) {
                 update.accept(keyframe -> ((CameraOrbitKeyframe)keyframe).center.x = center[0]);
             }
@@ -67,19 +68,19 @@ public class CameraOrbitKeyframe extends Keyframe {
             }
         }
         float[] input = new float[]{this.distance};
-        if (ImGuiHelper.inputFloat("Distance", input)) {
+        if (ImGuiHelper.inputFloat(I18n.get("flashback.distance"), input)) {
             if (input[0] != this.distance) {
                 update.accept(keyframe -> ((CameraOrbitKeyframe)keyframe).distance = input[0]);
             }
         }
         input[0] = this.yaw;
-        if (ImGuiHelper.inputFloat("Yaw", input)) {
+        if (ImGuiHelper.inputFloat(I18n.get("flashback.yaw"), input)) {
             if (input[0] != this.yaw) {
                 update.accept(keyframe -> ((CameraOrbitKeyframe)keyframe).yaw = input[0]);
             }
         }
         input[0] = this.pitch;
-        if (ImGuiHelper.inputFloat("Pitch", input)) {
+        if (ImGuiHelper.inputFloat(I18n.get("flashback.pitch"), input)) {
             if (input[0] != this.pitch) {
                 update.accept(keyframe -> ((CameraOrbitKeyframe)keyframe).pitch = input[0]);
             }

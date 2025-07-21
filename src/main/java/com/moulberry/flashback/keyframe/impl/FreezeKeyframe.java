@@ -19,6 +19,7 @@ import com.moulberry.flashback.keyframe.types.FreezeKeyframeType;
 import com.moulberry.flashback.keyframe.types.SpeedKeyframeType;
 import com.moulberry.flashback.spline.CatmullRom;
 import imgui.ImGui;
+import net.minecraft.client.resources.language.I18n;
 
 import java.lang.reflect.Type;
 import java.util.Map;
@@ -52,17 +53,17 @@ public class FreezeKeyframe extends Keyframe {
     @Override
     public void renderEditKeyframe(Consumer<Consumer<Keyframe>> update) {
         ImGui.setNextItemWidth(160);
-        if (ImGui.checkbox("Frozen", this.frozen)) {
+        if (ImGui.checkbox(I18n.get("flashback.frozen"), this.frozen)) {
             boolean newFrozen = !this.frozen;
             update.accept(keyframe -> ((FreezeKeyframe)keyframe).frozen = newFrozen);
         }
         int[] delay = new int[]{this.frozenDelay};
         ImGui.setNextItemWidth(160);
-        if (ImGui.sliderInt("Delay", delay, 0, 10)) {
+        if (ImGui.sliderInt(I18n.get("flashback.delay"), delay, 0, 10)) {
             delay[0] = Math.max(0, Math.min(10, delay[0]));
             update.accept(keyframe -> ((FreezeKeyframe)keyframe).frozenDelay = delay[0]);
         }
-        ImGuiHelper.tooltip("Smooth freeze delay (in ticks)\nSetting this will make the game gradually slow down over the specified delay until it comes to a freeze");
+        ImGuiHelper.tooltip(I18n.get("flashback.freeze_delay_tooltip"));
     }
 
     @Override

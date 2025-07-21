@@ -9,6 +9,7 @@ import com.moulberry.flashback.keyframe.handler.KeyframeHandler;
 import com.moulberry.flashback.keyframe.impl.FreezeKeyframe;
 import imgui.ImGui;
 import imgui.type.ImBoolean;
+import net.minecraft.client.resources.language.I18n;
 import org.jetbrains.annotations.Nullable;
 
 public class FreezeKeyframeType implements KeyframeType<FreezeKeyframe> {
@@ -30,7 +31,7 @@ public class FreezeKeyframeType implements KeyframeType<FreezeKeyframe> {
 
     @Override
     public String name() {
-        return "Freeze";
+        return I18n.get("flashback.keyframe.freeze");
     }
 
     @Override
@@ -49,17 +50,17 @@ public class FreezeKeyframeType implements KeyframeType<FreezeKeyframe> {
         int[] delay = new int[]{0};
 
         return () -> {
-            ImGui.checkbox("Frozen", frozen);
-            ImGui.sliderInt("Delay", delay, 0, 10);
-            ImGuiHelper.tooltip("Smooth freeze delay (in ticks)\nSetting this will make the game gradually slow down over the specified delay until it comes to a freeze");
+            ImGui.checkbox(I18n.get("flashback.frozen"), frozen);
+            ImGui.sliderInt(I18n.get("flashback.delay"), delay, 0, 10);
+            ImGuiHelper.tooltip(I18n.get("flashback.freeze_delay_tooltip"));
 
             delay[0] = Math.max(0, Math.min(10, delay[0]));
 
-            if (ImGui.button("Add")) {
+            if (ImGui.button(I18n.get("flashback.add"))) {
                 return new FreezeKeyframe(frozen.get(), delay[0]);
             }
             ImGui.sameLine();
-            if (ImGui.button("Cancel")) {
+            if (ImGui.button(I18n.get("gui.cancel"))) {
                 ImGui.closeCurrentPopup();
             }
             return null;

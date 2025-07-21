@@ -1,10 +1,12 @@
 package com.moulberry.flashback.combo_options;
 
+import net.minecraft.client.resources.language.I18n;
+
 public enum GlowingOverride implements ComboOption {
 
-    DEFAULT("Default"),
-    FORCE_GLOW("Force Glow"),
-    FORCE_NO_GLOW("Force No Glow");
+    DEFAULT("flashback.glowing_override.default"),
+    FORCE_GLOW("flashback.glowing_override.force_glow"),
+    FORCE_NO_GLOW("flashback.glowing_override.force_no_glow");
 
     private final String text;
 
@@ -14,7 +16,7 @@ public enum GlowingOverride implements ComboOption {
 
     @Override
     public String text() {
-        return this.text;
+        return I18n.get(this.text);
     }
 
 }

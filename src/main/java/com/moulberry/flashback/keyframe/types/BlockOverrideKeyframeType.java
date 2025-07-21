@@ -8,6 +8,7 @@ import com.moulberry.flashback.keyframe.impl.BlockOverrideKeyframe;
 import com.moulberry.flashback.keyframe.impl.FreezeKeyframe;
 import imgui.ImGui;
 import imgui.type.ImBoolean;
+import net.minecraft.client.resources.language.I18n;
 import org.jetbrains.annotations.Nullable;
 
 public class BlockOverrideKeyframeType implements KeyframeType<BlockOverrideKeyframe> {
@@ -29,7 +30,7 @@ public class BlockOverrideKeyframeType implements KeyframeType<BlockOverrideKeyf
 
     @Override
     public String name() {
-        return "Block Override";
+        return I18n.get("flashback.keyframe.block_override");
     }
 
     @Override

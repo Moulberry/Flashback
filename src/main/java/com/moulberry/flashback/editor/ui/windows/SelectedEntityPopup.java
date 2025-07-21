@@ -17,6 +17,7 @@ import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.PlayerInfo;
 import net.minecraft.client.player.AbstractClientPlayer;
+import net.minecraft.client.resources.language.I18n;
 import net.minecraft.commands.arguments.EntityAnchorArgument;
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
@@ -60,35 +61,35 @@ public class SelectedEntityPopup {
 
     public static void render(Entity entity, EditorState editorState) {
         UUID uuid = entity.getUUID();
-        ImGui.text("Entity: " + uuid);
+        ImGui.text(I18n.get("flashback.entity_label", uuid));
 
         ImGui.separator();
 
-        if (ImGui.button("Look At")) {
+        if (ImGui.button(I18n.get("flashback.look_at"))) {
             Minecraft.getInstance().cameraEntity.lookAt(EntityAnchorArgument.Anchor.EYES, entity.getEyePosition());
         }
         ImGui.sameLine();
-        if (ImGui.button("Spectate")) {
+        if (ImGui.button(I18n.get("flashback.spectate"))) {
             Minecraft.getInstance().player.connection.sendUnsignedCommand("spectate " + entity.getUUID());
             ImGui.closeCurrentPopup();
         }
         ImGui.sameLine();
-        if (ImGui.button("Copy UUID")) {
+        if (ImGui.button(I18n.get("flashback.copy_uuid"))) {
             Minecraft.getInstance().keyboardHandler.setClipboard(entity.getUUID().toString());
             ReplayUI.setInfoOverlay("Copied '" + entity.getUUID() + "'");
             ImGui.closeCurrentPopup();
         }
         if (uuid.equals(editorState.audioSourceEntity)) {
-            if (ImGui.button("Unset Audio Source")) {
+            if (ImGui.button(I18n.get("flashback.unset_audio_source"))) {
                 editorState.audioSourceEntity = null;
                 editorState.markDirty();
             }
-        } else if (ImGui.button("Set Audio Source")) {
+        } else if (ImGui.button(I18n.get("flashback.set_audio_source"))) {
             editorState.audioSourceEntity = entity.getUUID();
             editorState.markDirty();
         }
         boolean isHiddenDuringExport = editorState.hideDuringExport.contains(entity.getUUID());
-        if (ImGui.checkbox("Hide During Export", isHiddenDuringExport)) {
+        if (ImGui.checkbox(I18n.get("flashback.hide_during_export"), isHiddenDuringExport)) {
             if (isHiddenDuringExport) {
                 editorState.hideDuringExport.remove(entity.getUUID());
             } else {
@@ -100,17 +101,17 @@ public class SelectedEntityPopup {
         if (!isHiddenDuringExport) {
             if (entity instanceof AbstractClientPlayer player) {
                 if (editorState.hideCape.contains(player.getUUID())) {
-                    if (ImGui.checkbox("Hide Cape", true)) {
+                    if (ImGui.checkbox(I18n.get("flashback.hide_cape"), true)) {
                         editorState.hideCape.remove(player.getUUID());
                     }
                 } else if (player.isModelPartShown(PlayerModelPart.CAPE) && player.getSkin().capeTexture() != null) {
-                    if (ImGui.checkbox("Hide Cape", false)) {
+                    if (ImGui.checkbox(I18n.get("flashback.hide_cape"), false)) {
                         editorState.hideCape.add(player.getUUID());
                     }
                 }
 
                 boolean hideNametag = editorState.hideNametags.contains(entity.getUUID());
-                if (ImGui.checkbox("Render Nametag", !hideNametag)) {
+                if (ImGui.checkbox(I18n.get("flashback.render_nametag"), !hideNametag)) {
                     if (hideNametag) {
                         editorState.hideNametags.remove(entity.getUUID());
                     } else {
@@ -119,7 +120,8 @@ public class SelectedEntityPopup {
                 }
 
                 if (!hideNametag) {
-                    boolean changedName = ImGui.inputTextWithHint("Name##SetNameInput", player.getScoreboardName(), changeNameInput);
+                    String nameTitle = I18n.get("flashback.name");
+                    boolean changedName = ImGui.inputTextWithHint(nameTitle+"##SetNameInput", player.getScoreboardName(), changeNameInput);
 
                     if (changedName) {
                         String string = ImGuiHelper.getString(changeNameInput);
@@ -131,40 +133,40 @@ public class SelectedEntityPopup {
                     }
 
                     if (editorState.hideTeamPrefix.contains(player.getUUID())) {
-                        if (ImGui.checkbox("Hide Team Prefix", true)) {
+                        if (ImGui.checkbox(I18n.get("flashback.hide_team_prefix"), true)) {
                             editorState.hideTeamPrefix.remove(player.getUUID());
                         }
                     } else {
                         PlayerTeam team = player.getTeam();
                         if (team != null && !Utils.isComponentEmpty(team.getPlayerPrefix())) {
-                            if (ImGui.checkbox("Hide Team Prefix", false)) {
+                            if (ImGui.checkbox(I18n.get("flashback.hide_team_prefix"), false)) {
                                 editorState.hideTeamPrefix.add(player.getUUID());
                             }
                         }
                     }
 
                     if (editorState.hideTeamSuffix.contains(player.getUUID())) {
-                        if (ImGui.checkbox("Hide Team Suffix", true)) {
+                        if (ImGui.checkbox(I18n.get("flashback.hide_team_suffix"), true)) {
                             editorState.hideTeamSuffix.remove(player.getUUID());
                         }
                     } else {
                         PlayerTeam team = player.getTeam();
                         if (team != null && !Utils.isComponentEmpty(team.getPlayerSuffix())) {
-                            if (ImGui.checkbox("Hide Team Suffix", false)) {
+                            if (ImGui.checkbox(I18n.get("flashback.hide_team_suffix"), false)) {
                                 editorState.hideTeamSuffix.add(player.getUUID());
                             }
                         }
                     }
 
                     if (editorState.hideBelowName.contains(player.getUUID())) {
-                        if (ImGui.checkbox("Hide Text Below Name", true)) {
+                        if (ImGui.checkbox(I18n.get("flashback.hide_text_below_name"), true)) {
                             editorState.hideBelowName.remove(player.getUUID());
                         }
                     } else {
                         Scoreboard scoreboard = player.getScoreboard();
                         Objective objective = scoreboard.getDisplayObjective(DisplaySlot.BELOW_NAME);
                         if (objective != null) {
-                            if (ImGui.checkbox("Hide Text Below Name", false)) {
+                            if (ImGui.checkbox(I18n.get("flashback.hide_text_below_name"), false)) {
                                 editorState.hideBelowName.add(player.getUUID());
                             }
                         }
@@ -173,7 +175,7 @@ public class SelectedEntityPopup {
 
                 showGlowingDropdown(entity, editorState);
 
-                ImGuiHelper.separatorWithText("Change Skin & Cape (UUID)");
+                ImGuiHelper.separatorWithText(I18n.get("flashback.change_skin_and_cape"));
                 ImGui.setNextItemWidth(320);
                 ImGui.inputTextWithHint("##SetSkinInput", "e.g. d0e05de7-6067-454d-beae-c6d19d886191", changeSkinInput);
 
@@ -181,7 +183,7 @@ public class SelectedEntityPopup {
                     String string = ImGuiHelper.getString(changeSkinInput);
                     try {
                         UUID changeSkinUuid = UUID.fromString(string);
-                        if (ImGui.button("Apply Skin from UUID")) {
+                        if (ImGui.button(I18n.get("flashback.apply_skin_from_uuid"))) {
                             ProfileResult profile = Minecraft.getInstance().getMinecraftSessionService().fetchProfile(changeSkinUuid, true);
                             editorState.skinOverride.put(entity.getUUID(), profile.profile());
                             editorState.skinOverrideFromFile.remove(entity.getUUID());
@@ -189,7 +191,7 @@ public class SelectedEntityPopup {
                     } catch (Exception ignored) {}
                 }
 
-                if (ImGui.button("Upload Skin from File")) {
+                if (ImGui.button(I18n.get("flashback.upload_skin_from_file"))) {
                     Path gameDir = FabricLoader.getInstance().getGameDir();
                     CompletableFuture<String> future = AsyncFileDialogs.openFileDialog(gameDir.toString(),
                         "Skin Texture", "png");
@@ -202,7 +204,7 @@ public class SelectedEntityPopup {
                 }
 
                 if (editorState.skinOverride.containsKey(entity.getUUID()) || editorState.skinOverrideFromFile.containsKey(entity.getUUID())) {
-                    if (ImGui.button("Reset Skin")) {
+                    if (ImGui.button(I18n.get("flashback.reset_skin"))) {
                         editorState.skinOverride.remove(entity.getUUID());
                         editorState.skinOverrideFromFile.remove(entity.getUUID());
                         changeSkinInput.set("");
@@ -212,23 +214,6 @@ public class SelectedEntityPopup {
                 showGlowingDropdown(entity, editorState);
             }
         }
-
-//        ImGui.sameLine();
-//        ImGui.button("Track Entity");
-//
-//        ImGui.checkbox("Force Glowing", false);
-//        ImGui.sameLine();
-//        ImGui.colorButton("Glow Colour", new float[4]);
-//        ImGui.sameLine();
-//        ImGui.text("Glow Colour");
-//
-//        if (entity instanceof LivingEntity) {
-//            ImGui.checkbox("Show Nametag", true);
-//            ImGui.checkbox("Override Nametag", false);
-//        }
-//        if (entity instanceof Player) {
-//            ImGui.checkbox("Override Skin", false);
-//        }
     }
 
     private static void showGlowingDropdown(Entity entity, EditorState editorState) {
@@ -236,7 +221,7 @@ public class SelectedEntityPopup {
         if (editorState.glowingOverride.containsKey(entity.getUUID())) {
             glowingOverride = editorState.glowingOverride.get(entity.getUUID());
         }
-        GlowingOverride newGlowingOverride = ImGuiHelper.enumCombo("Glowing", glowingOverride);
+        GlowingOverride newGlowingOverride = ImGuiHelper.enumCombo(I18n.get("flashback.glowing"), glowingOverride);
         if (newGlowingOverride != glowingOverride) {
             if (newGlowingOverride == GlowingOverride.DEFAULT) {
                 editorState.glowingOverride.remove(entity.getUUID());

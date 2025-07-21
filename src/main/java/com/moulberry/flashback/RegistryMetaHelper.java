@@ -64,11 +64,11 @@ public class RegistryMetaHelper {
     public static Component createMismatchWarning(LinkedHashMap<String, LinkedHashSet<String>> current, LinkedHashMap<String, LinkedHashSet<String>> replay) {
         MutableComponent mutableComponent = Component.empty();
 
-        mutableComponent.append(Component.literal("Mismatch between current registry data and registry data at the time of replay\n").withStyle(ChatFormatting.RED));
-        mutableComponent.append(Component.literal("If mods have been added/removed, the replay may not work!\n").withStyle(ChatFormatting.RED));
-        mutableComponent.append(Component.literal("If you're sure you want to load this replay, click \"I know what I'm doing!\", otherwise go back\n").withStyle(ChatFormatting.RED));
+        mutableComponent.append(Component.translatable("flashback.registry.mismatch1").withStyle(ChatFormatting.RED)).append(FlashbackTextComponents.NEWLINE);
+        mutableComponent.append(Component.translatable("flashback.registry.mismatch2").withStyle(ChatFormatting.RED)).append(FlashbackTextComponents.NEWLINE);
+        mutableComponent.append(Component.translatable("flashback.registry.mismatch3", Component.translatable("selectWorld.backupJoinSkipButton")).withStyle(ChatFormatting.RED)).append(FlashbackTextComponents.NEWLINE);
 
-        mutableComponent.append(Component.literal("\n"));
+        mutableComponent.append(FlashbackTextComponents.NEWLINE);
 
         record MismatchEntry(String registryName, LinkedHashSet<String> mismatchedElements) {}
 

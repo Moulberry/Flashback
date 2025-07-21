@@ -44,25 +44,29 @@ public class ReplaySummary implements Comparable<ReplaySummary> {
             this.canOpen = false;
 
             if (metadata.versionString != null && !metadata.versionString.equals(SharedConstants.VERSION_STRING)) {
-                this.hoverInfo = Component.literal("Unable to open replay\nReplay was created in " + metadata.versionString +
-                    " and is incompatible with " + SharedConstants.VERSION_STRING);
+                this.hoverInfo = Component.translatable("flashback.incompatible_replay_version",
+                    Component.literal(metadata.versionString),
+                    Component.literal(SharedConstants.VERSION_STRING));
             } else {
-                this.hoverInfo = Component.literal("Unable to open replay\nReplay was created with protocol version " + metadata.protocolVersion +
-                    " and is incompatible with " + SharedConstants.getProtocolVersion());
+                this.hoverInfo = Component.translatable("flashback.incompatible_replay_version_protocol",
+                    Component.literal(String.valueOf(metadata.protocolVersion)),
+                    Component.literal(String.valueOf(SharedConstants.getProtocolVersion())));
             }
         } else if (metadata.dataVersion != 0 && metadata.dataVersion != SharedConstants.getCurrentVersion().getDataVersion().getVersion()) {
             this.hasWarning = true;
 
             if (metadata.versionString != null && !metadata.versionString.equals(SharedConstants.VERSION_STRING)) {
-                this.hoverInfo = Component.literal("Important Warning\nReplay was created in " + metadata.versionString +
-                    " and may fail to load in " + SharedConstants.VERSION_STRING);
+                this.hoverInfo = Component.translatable("flashback.maybe_incompatible_replay_version",
+                    Component.literal(metadata.versionString),
+                    Component.literal(SharedConstants.VERSION_STRING));
             } else {
-                this.hoverInfo = Component.literal("Important Warning\nReplay was created with data version " + metadata.dataVersion +
-                    " and may fail to load with " + SharedConstants.getCurrentVersion().getDataVersion().getVersion());
+                this.hoverInfo = Component.translatable("flashback.incompatible_replay_version_data",
+                    Component.literal(String.valueOf(metadata.dataVersion)),
+                    Component.literal(String.valueOf(SharedConstants.getCurrentVersion().getDataVersion().getVersion())));
             }
         } else if (this.hasNamespaceMismatch) {
             this.hasWarning = true;
-            this.hoverInfo = Component.literal("Important Warning\nMismatch between current registry data and registry data at the time of replay\nIf mods have been added/removed, the replay may not work");
+            this.hoverInfo = Component.translatable("flashback.maybe_incompatible_registry_data");
         }
     }
 
