@@ -1547,10 +1547,13 @@ public class ReplayServer extends IntegratedServer {
             Files.walkFileTree(temp, new SimpleFileVisitor<>() {
                 @Override
                 public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-                if (!Files.isDirectory(file)) {
-                    Files.deleteIfExists(file);
-                }
-                return FileVisitResult.CONTINUE;
+                    if (file.getFileName().toString().equals("DistantHorizons.sqlite")) {
+                        return FileVisitResult.CONTINUE;
+                    }
+                    if (!Files.isDirectory(file)) {
+                        Files.deleteIfExists(file);
+                    }
+                    return FileVisitResult.CONTINUE;
                 }
             });
         } catch (IOException e) {

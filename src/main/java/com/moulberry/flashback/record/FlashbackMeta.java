@@ -10,6 +10,7 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -29,6 +30,8 @@ public class FlashbackMeta {
 
     public int totalTicks = -1;
     public LinkedHashMap<String, FlashbackChunkMeta> chunks = new LinkedHashMap<>();
+
+    public LinkedHashMap<String, LinkedHashSet<String>> namespacesForRegistries = null;
 
     public Map<String, File> distantHorizonPaths = new HashMap<>();
 
@@ -72,6 +75,23 @@ public class FlashbackMeta {
                 distantHorizonPaths.addProperty(entry.getKey(), entry.getValue().getPath());
             }
             meta.add("distantHorizonPaths", distantHorizonPaths);
+        }
+
+        // Namespaces
+        if (this.namespacesForRegistries != null) {
+            JsonObject registriesObj = new JsonObject();
+
+            for (Map.Entry<String, LinkedHashSet<String>> entry : this.namespacesForRegistries.entrySet()) {
+                JsonArray namespacesList = new JsonArray();
+
+                for (String namespace : entry.getValue()) {
+                    namespacesList.add(namespace);
+                }
+
+                registriesObj.add(entry.getKey(), namespacesList);
+            }
+
+            meta.add("customNamespacesForRegistries", registriesObj);
         }
 
         JsonObject chunksJson = new JsonObject();
@@ -135,6 +155,23 @@ public class FlashbackMeta {
             JsonObject distantHorizonPaths = meta.getAsJsonObject("distantHorizonPaths");
             for (Map.Entry<String, JsonElement> entry : distantHorizonPaths.entrySet()) {
                 flashbackMeta.distantHorizonPaths.put(entry.getKey(), new File(entry.getValue().getAsString()));
+            }
+        }
+
+        // Namespaces
+        if (meta.has("customNamespacesForRegistries")) {
+            flashbackMeta.namespacesForRegistries = new LinkedHashMap<>();
+
+            JsonObject registriesObj = meta.getAsJsonObject("customNamespacesForRegistries");
+
+            for (String registryName : registriesObj.keySet()) {
+                LinkedHashSet<String> namespaces = new LinkedHashSet<>();
+
+                for (JsonElement jsonElement : registriesObj.get(registryName).getAsJsonArray()) {
+                    namespaces.add(jsonElement.getAsString());
+                }
+
+                flashbackMeta.namespacesForRegistries.put(registryName, namespaces);
             }
         }
 

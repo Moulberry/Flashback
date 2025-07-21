@@ -38,18 +38,20 @@ public class TrackEntityKeyframe extends Keyframe {
     public float pitchOffset;
     public final Vector3d positionOffset;
     public final Vector3d viewOffset;
+    public float roll;
 
-    public TrackEntityKeyframe(UUID target, TrackingBodyPart trackingBodyPart, float yawOffset, float pitchOffset, Vector3d positionOffset, Vector3d viewOffset) {
-        this(target, trackingBodyPart, yawOffset, pitchOffset, positionOffset, viewOffset, InterpolationType.getDefault());
+    public TrackEntityKeyframe(UUID target, TrackingBodyPart trackingBodyPart, float yawOffset, float pitchOffset, Vector3d positionOffset, Vector3d viewOffset, float roll) {
+        this(target, trackingBodyPart, yawOffset, pitchOffset, positionOffset, viewOffset, roll, InterpolationType.getDefault());
     }
 
-    public TrackEntityKeyframe(UUID target, TrackingBodyPart trackingBodyPart, float yawOffset, float pitchOffset, Vector3d positionOffset, Vector3d viewOffset, InterpolationType interpolationType) {
+    public TrackEntityKeyframe(UUID target, TrackingBodyPart trackingBodyPart, float yawOffset, float pitchOffset, Vector3d positionOffset, Vector3d viewOffset, float roll, InterpolationType interpolationType) {
         this.target = target;
         this.trackingBodyPart = trackingBodyPart;
         this.yawOffset = yawOffset;
         this.pitchOffset = pitchOffset;
         this.positionOffset = positionOffset;
         this.viewOffset = viewOffset;
+        this.roll = roll;
         this.interpolationType(interpolationType);
     }
 
@@ -61,7 +63,7 @@ public class TrackEntityKeyframe extends Keyframe {
     @Override
     public Keyframe copy() {
         return new TrackEntityKeyframe(this.target, this.trackingBodyPart, this.yawOffset, this.pitchOffset,
-            new Vector3d(this.positionOffset), new Vector3d(this.viewOffset), this.interpolationType());
+            new Vector3d(this.positionOffset), new Vector3d(this.viewOffset), this.roll, this.interpolationType());
     }
 
     @Override
@@ -123,11 +125,17 @@ public class TrackEntityKeyframe extends Keyframe {
                 update.accept(keyframe -> ((TrackEntityKeyframe)keyframe).viewOffset.z = viewOffset[2]);
             }
         }
+        input[0] = this.roll;
+        if (ImGuiHelper.inputFloat("Roll", input)) {
+            if (input[0] != this.roll) {
+                update.accept(keyframe -> ((TrackEntityKeyframe)keyframe).roll = input[0]);
+            }
+        }
     }
 
     @Override
     public KeyframeChange createChange() {
-        return new KeyframeChangeTrackEntity(this.target, this.trackingBodyPart, this.yawOffset, this.pitchOffset, this.positionOffset, this.viewOffset);
+        return new KeyframeChangeTrackEntity(this.target, this.trackingBodyPart, this.yawOffset, this.pitchOffset, this.positionOffset, this.viewOffset, this.roll);
     }
 
     @Override
@@ -152,7 +160,11 @@ public class TrackEntityKeyframe extends Keyframe {
             ((TrackEntityKeyframe)p1).viewOffset, ((TrackEntityKeyframe)p2).viewOffset,
             ((TrackEntityKeyframe)p3).viewOffset, time1, time2, time3, amount);
 
-        return new KeyframeChangeTrackEntity(target, trackingBodyPart, yawOffset, pitchOffset, positionOffset, viewOffset);
+        float roll = CatmullRom.degrees(this.roll,
+            ((TrackEntityKeyframe)p1).roll, ((TrackEntityKeyframe)p2).roll,
+            ((TrackEntityKeyframe)p3).roll, time1, time2, time3, amount);
+
+        return new KeyframeChangeTrackEntity(target, trackingBodyPart, yawOffset, pitchOffset, positionOffset, viewOffset, roll);
     }
 
     @Override
@@ -177,7 +189,9 @@ public class TrackEntityKeyframe extends Keyframe {
         Vector3d positionOffset = Hermite.position(Maps.transformValues(keyframes, k -> ((TrackEntityKeyframe)k).positionOffset), amount);
         Vector3d viewOffset = Hermite.position(Maps.transformValues(keyframes, k -> ((TrackEntityKeyframe)k).viewOffset), amount);
 
-        return new KeyframeChangeTrackEntity(target, trackingBodyPart, yawOffset, pitchOffset, positionOffset, viewOffset);
+        double roll = Hermite.degrees(Maps.transformValues(keyframes, k -> (double) ((TrackEntityKeyframe)k).roll), amount);
+
+        return new KeyframeChangeTrackEntity(target, trackingBodyPart, yawOffset, pitchOffset, positionOffset, viewOffset, (float) roll);
     }
 
     public static class TypeAdapter implements JsonSerializer<TrackEntityKeyframe>, JsonDeserializer<TrackEntityKeyframe> {
@@ -190,10 +204,14 @@ public class TrackEntityKeyframe extends Keyframe {
             float pitchOffset = jsonObject.get("pitchOffset").getAsFloat();
             Vector3d positionOffset = context.deserialize(jsonObject.get("positionOffset"), Vector3d.class);
             Vector3d viewOffset = context.deserialize(jsonObject.get("viewOffset"), Vector3d.class);
+            float roll = 0.0f;
+            if (jsonObject.has("roll")) {
+                roll = jsonObject.get("roll").getAsFloat();
+            }
             InterpolationType interpolationType = context.deserialize(jsonObject.get("interpolation_type"), InterpolationType.class);
             if (positionOffset == null) positionOffset = new Vector3d();
             if (viewOffset == null) viewOffset = new Vector3d();
-            return new TrackEntityKeyframe(target, bodyPart, yawOffset, pitchOffset, positionOffset, viewOffset, interpolationType);
+            return new TrackEntityKeyframe(target, bodyPart, yawOffset, pitchOffset, positionOffset, viewOffset, roll, interpolationType);
         }
 
         @Override
@@ -206,6 +224,7 @@ public class TrackEntityKeyframe extends Keyframe {
             jsonObject.add("positionOffset", context.serialize(src.positionOffset));
             jsonObject.add("viewOffset", context.serialize(src.viewOffset));
             jsonObject.addProperty("type", "track_entity");
+            jsonObject.addProperty("roll", src.roll);
             jsonObject.add("interpolation_type", context.serialize(src.interpolationType()));
             return jsonObject;
         }

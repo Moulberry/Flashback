@@ -4,8 +4,10 @@ import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.logging.LogUtils;
 import com.moulberry.flashback.Flashback;
+import com.moulberry.flashback.RegistryMetaHelper;
 import com.moulberry.flashback.screen.EditReplayScreen;
 import com.moulberry.flashback.screen.ReplaySummary;
+import it.unimi.dsi.fastutil.booleans.BooleanConsumer;
 import net.minecraft.ChatFormatting;
 import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
@@ -18,6 +20,8 @@ import net.minecraft.client.gui.screens.FaviconTexture;
 import net.minecraft.client.gui.screens.GenericMessageScreen;
 import net.minecraft.client.gui.screens.LoadingDotsText;
 import net.minecraft.client.gui.screens.ProgressScreen;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.resources.language.I18n;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
@@ -27,6 +31,7 @@ import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundEvents;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.math3.analysis.function.Min;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 
@@ -273,11 +278,24 @@ public abstract class ReplaySelectionEntry extends ObjectSelectionList.Entry<Rep
 
         public void openReplay() {
             if (this.summary.canOpen()) {
-                this.minecraft.forceSetScreen(new GenericMessageScreen(Component.translatable("flashback.select_replay.data_read")));
-                Flashback.openReplayWorld(this.summary.getPath());
+                if (this.summary.hasNamespaceMismatch()) {
+                    Screen previousScreen = this.minecraft.screen;
+                    BooleanConsumer afterWarning = doLoad -> {
+                        if (doLoad) {
+                            this.minecraft.forceSetScreen(new GenericMessageScreen(Component.translatable("flashback.select_replay.data_read")));
+                            Flashback.openReplayWorld(this.summary.getPath());
+                        } else {
+                            this.minecraft.setScreen(previousScreen);
+                        }
+                    };
+                    Component message = RegistryMetaHelper.createMismatchWarning(this.replaySelectionList.currentNamespacesForRegistries, this.summary.getReplayMetadata().namespacesForRegistries);
+                    this.minecraft.setScreen(new ConfirmScreen(afterWarning, Component.literal("WARNING: REGISTRY MISMATCH"), message,
+                        Component.translatable("selectWorld.backupJoinSkipButton"), CommonComponents.GUI_CANCEL));
+                } else {
+                    this.minecraft.forceSetScreen(new GenericMessageScreen(Component.translatable("flashback.select_replay.data_read")));
+                    Flashback.openReplayWorld(this.summary.getPath());
+                }
 
-//                setOpenTime(this.summary.getReplayMetadata().replayIdentifier, System.currentTimeMillis());
-//                saveOpenTimeCache();
             }
         }
 

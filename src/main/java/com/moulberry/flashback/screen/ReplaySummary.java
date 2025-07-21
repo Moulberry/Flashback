@@ -12,6 +12,8 @@ import net.minecraft.util.FormattedCharSequence;
 import org.jetbrains.annotations.Nullable;
 
 import java.nio.file.Path;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 
 public class ReplaySummary implements Comparable<ReplaySummary> {
@@ -25,8 +27,9 @@ public class ReplaySummary implements Comparable<ReplaySummary> {
     private Component hoverInfo = null;
     private boolean canOpen = true;
     private boolean hasWarning = false;
+    private boolean hasNamespaceMismatch = false;
 
-    public ReplaySummary(Path path, FlashbackMeta metadata, String replayId, long lastModified, long filesize, @Nullable byte[] iconBytes) {
+    public ReplaySummary(Path path, FlashbackMeta metadata, LinkedHashMap<String, LinkedHashSet<String>> currentNamespacesForRegistries, String replayId, long lastModified, long filesize, @Nullable byte[] iconBytes) {
         this.path = path;
         this.metadata = metadata;
         this.replayId = replayId;
@@ -34,6 +37,9 @@ public class ReplaySummary implements Comparable<ReplaySummary> {
         this.filesize = filesize;
         this.iconBytes = iconBytes;
 
+        if (metadata.namespacesForRegistries != null && !currentNamespacesForRegistries.equals(metadata.namespacesForRegistries)) {
+            this.hasNamespaceMismatch = true;
+        }
         if (metadata.protocolVersion != 0 && metadata.protocolVersion != SharedConstants.getProtocolVersion()) {
             this.canOpen = false;
 
@@ -54,6 +60,9 @@ public class ReplaySummary implements Comparable<ReplaySummary> {
                 this.hoverInfo = Component.literal("Important Warning\nReplay was created with data version " + metadata.dataVersion +
                     " and may fail to load with " + SharedConstants.getCurrentVersion().getDataVersion().getVersion());
             }
+        } else if (this.hasNamespaceMismatch) {
+            this.hasWarning = true;
+            this.hoverInfo = Component.literal("Important Warning\nMismatch between current registry data and registry data at the time of replay\nIf mods have been added/removed, the replay may not work");
         }
     }
 
@@ -132,6 +141,10 @@ public class ReplaySummary implements Comparable<ReplaySummary> {
 
     public boolean hasWarning() {
         return this.hasWarning;
+    }
+
+    public boolean hasNamespaceMismatch() {
+        return this.hasNamespaceMismatch;
     }
 
     public boolean canOpen() {
