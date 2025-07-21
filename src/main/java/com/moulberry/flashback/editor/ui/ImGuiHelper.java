@@ -332,7 +332,7 @@ public class ImGuiHelper {
 
     public static boolean inputInt(String label, int[] value) {
         if (value.length == 0) {
-            ImGui.text(label);
+            ImGui.textUnformatted(label);
             return false;
         }
 
@@ -396,7 +396,7 @@ public class ImGuiHelper {
         String renderedText = label.split("##")[0];
         if (!renderedText.isEmpty()) {
             ImGui.sameLine(0, innerSpacing);
-            ImGui.text(renderedText);
+            ImGui.textUnformatted(renderedText);
         }
 
         ImGui.endGroup();
@@ -406,7 +406,7 @@ public class ImGuiHelper {
 
     public static boolean inputFloat(String label, float[] value) {
         if (value.length == 0) {
-            ImGui.text(label);
+            ImGui.textUnformatted(label);
             return false;
         }
 
@@ -469,7 +469,7 @@ public class ImGuiHelper {
         String renderedText = label.split("##")[0];
         if (!renderedText.isEmpty()) {
             ImGui.sameLine(0, innerSpacing);
-            ImGui.text(renderedText);
+            ImGui.textUnformatted(renderedText);
         }
 
         ImGui.endGroup();
@@ -492,7 +492,7 @@ public class ImGuiHelper {
 
         if (label != null) {
             ImGui.sameLine();
-            ImGui.text(label);
+            ImGui.textUnformatted(label);
         }
 
         if (newItem != -1) {

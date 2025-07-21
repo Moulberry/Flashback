@@ -204,9 +204,9 @@ public class StartExportWindow {
                     }
 
                     if (editorState != null && editorState.audioSourceEntity != null) {
-                        ImGui.text(I18n.get("flashback.audio_source.entity", editorState.audioSourceEntity));
+                        ImGui.textUnformatted(I18n.get("flashback.audio_source.entity", editorState.audioSourceEntity));
                     } else {
-                        ImGui.text(I18n.get("flashback.audio_source.camera"));
+                        ImGui.textUnformatted(I18n.get("flashback.audio_source.camera"));
                     }
                 }
             } else {
@@ -289,7 +289,7 @@ public class StartExportWindow {
         }
 
         if (containers.length == 0) {
-            ImGui.text(I18n.get("flashback.no_supported_containers_found"));
+            ImGui.textUnformatted(I18n.get("flashback.no_supported_containers_found"));
             return;
         }
 
@@ -307,7 +307,7 @@ public class StartExportWindow {
         VideoCodec[] codecs = config.container.getSupportedVideoCodecs(config.transparentBackground);
 
         if (codecs.length == 0) {
-            ImGui.text(I18n.get("flashback.no_supported_codecs_found"));
+            ImGui.textUnformatted(I18n.get("flashback.no_supported_codecs_found"));
             return;
         }
 

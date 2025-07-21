@@ -61,7 +61,7 @@ public class SelectedEntityPopup {
 
     public static void render(Entity entity, EditorState editorState) {
         UUID uuid = entity.getUUID();
-        ImGui.text(I18n.get("flashback.entity_label", uuid));
+        ImGui.textUnformatted(I18n.get("flashback.entity_label", uuid));
 
         ImGui.separator();
 
