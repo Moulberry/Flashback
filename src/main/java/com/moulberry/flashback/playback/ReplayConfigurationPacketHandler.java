@@ -1,7 +1,7 @@
 package com.moulberry.flashback.playback;
 
-import com.google.common.collect.ImmutableMap;
 import com.mojang.serialization.Lifecycle;
+import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.exception.UnsupportedPacketException;
 import com.moulberry.flashback.registry.RegistryHelper;
 import net.minecraft.core.*;
@@ -18,7 +18,6 @@ import net.minecraft.network.protocol.configuration.ClientboundUpdateEnabledFeat
 import net.minecraft.network.protocol.cookie.ClientboundCookieRequestPacket;
 import net.minecraft.resources.RegistryDataLoader;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.RegistryLayer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -30,7 +29,6 @@ import net.minecraft.tags.TagLoader;
 import net.minecraft.tags.TagNetworkSerialization;
 import net.minecraft.world.flag.FeatureFlagSet;
 import net.minecraft.world.flag.FeatureFlags;
-import net.minecraft.world.level.Level;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.biome.Biomes;
 import net.minecraft.world.level.dimension.LevelStem;
@@ -46,6 +44,8 @@ public class ReplayConfigurationPacketHandler implements ClientConfigurationPack
     private boolean pendingResetChat = false;
     private boolean dirty = false;
 
+    public static ThreadLocal<Boolean> LENIENT_REGISTRY_LOADING = new ThreadLocal<>();
+
     public ReplayConfigurationPacketHandler(ReplayServer replayServer) {
         this.replayServer = replayServer;
     }
@@ -60,7 +60,6 @@ public class ReplayConfigurationPacketHandler implements ClientConfigurationPack
 
         List<ConfigurationTask> configurationTasks = new ArrayList<>();
         FeatureFlagSet currentFeatureFlags = this.replayServer.worldData.enabledFeatures();
-        boolean synchronizeRegistries = false;
 
         List<Packet<? super ClientConfigurationPacketListener>> initialPackets = new ArrayList<>();
 
@@ -97,93 +96,10 @@ public class ReplayConfigurationPacketHandler implements ClientConfigurationPack
             this.pendingTags = null;
         }
 
+        boolean synchronizeRegistries = false;
+
         if (this.pendingRegistryMap != null && !this.pendingRegistryMap.isEmpty()) {
-            Map<ResourceKey<? extends Registry<?>>, RegistryDataLoader.NetworkedRegistryData> entries = this.pendingRegistryMap;
-            this.pendingRegistryMap = null;
-
-            ResourceManager resourceManager = this.replayServer.getResourceManager();
-
-            List<HolderLookup.RegistryLookup<?>> updatedLookups = TagLoader.buildUpdatedLookups(this.replayServer.registryAccess(), pendingTags);
-
-            RegistryAccess.Frozen synchronizedRegistries = RegistryDataLoader.load(entries, resourceManager, updatedLookups,
-                RegistryDataLoader.SYNCHRONIZED_REGISTRIES);
-
-            boolean hasRegistriesChanged = !RegistryHelper.equals(this.replayServer.registryAccess(), synchronizedRegistries, RegistryDataLoader.SYNCHRONIZED_REGISTRIES);
-
-            if (hasRegistriesChanged) {
-                var newRegistries = this.replayServer.registries;
-                boolean replacedPreviousLayer = false;
-
-                HashSet<ResourceKey<? extends Registry<?>>> changedRegistries = new HashSet<>();
-                for (RegistryDataLoader.RegistryData<?> synchronizedRegistry : RegistryDataLoader.SYNCHRONIZED_REGISTRIES) {
-                    changedRegistries.add(synchronizedRegistry.key());
-                }
-
-                for (RegistryLayer layer : RegistryLayer.values()) {
-                    RegistryAccess.Frozen registriesForLayer = this.replayServer.registries.getLayer(layer);
-
-                    List<Registry<?>> registries = new ArrayList<>();
-
-                    boolean replacedPartOfLayer = false;
-
-                    for (RegistryAccess.RegistryEntry<?> registryEntry : registriesForLayer.registries().toList()) {
-                        var overriden = synchronizedRegistries.lookup(registryEntry.key());
-                        if (changedRegistries.contains(registryEntry.key()) && overriden.isPresent()) {
-                            registries.add(overriden.get());
-                            replacedPartOfLayer = true;
-                        } else {
-                            if (registryEntry.key() == Registries.LEVEL_STEM) {
-                                try {
-                                    var dimensionsOpt = synchronizedRegistries.lookup(Registries.DIMENSION_TYPE);
-                                    var biomesOpt = synchronizedRegistries.lookup(Registries.BIOME);
-                                    if (dimensionsOpt.isPresent()) {
-                                        var dimensions = dimensionsOpt.get();
-
-                                        Holder.Reference<Biome> plains;
-                                        if (biomesOpt.isPresent()) {
-                                            plains = biomesOpt.get().getOrThrow(Biomes.PLAINS);
-                                        } else {
-                                            plains = this.replayServer.registryAccess().lookupOrThrow(Registries.BIOME).getOrThrow(Biomes.PLAINS);
-                                        }
-
-                                        var mapped = new MappedRegistry<>(Registries.LEVEL_STEM, Lifecycle.stable());
-                                        for (var key : dimensions.registryKeySet()) {
-                                            var stemKey = ResourceKey.create(Registries.LEVEL_STEM, key.location());
-                                            var stem = new LevelStem(dimensions.getOrThrow(key), new EmptyLevelSource(plains));
-                                            mapped.register(stemKey, stem, RegistrationInfo.BUILT_IN);
-                                        }
-
-                                        replacedPartOfLayer = true;
-                                        registries.add(mapped.freeze());
-                                        continue;
-                                    }
-                                } catch (Exception ignored) {
-                                    registries.add(registryEntry.value());
-                                }
-                            }
-
-                            registries.add(registryEntry.value());
-                        }
-                    }
-
-                    if (replacedPartOfLayer) {
-                        replacedPreviousLayer = true;
-                        var finalRegistries = new RegistryAccess.ImmutableRegistryAccess(registries);
-                        newRegistries = newRegistries.replaceFrom(layer, finalRegistries.freeze());
-                    } else if (replacedPreviousLayer) {
-                        newRegistries = newRegistries.replaceFrom(layer, registriesForLayer);
-                    }
-                }
-
-                if (newRegistries != this.replayServer.registries) {
-                    this.replayServer.registries.keys = newRegistries.keys;
-                    this.replayServer.registries.values = newRegistries.values;
-                    ((RegistryAccess.ImmutableRegistryAccess)this.replayServer.registries.composite).registries =
-                        ((RegistryAccess.ImmutableRegistryAccess)newRegistries.composite).registries;
-
-                    synchronizeRegistries = true;
-                }
-            }
+            synchronizeRegistries = tryUpdateRegistries(pendingTags);
         }
 
         if (synchronizeRegistries) {
@@ -213,6 +129,106 @@ public class ReplayConfigurationPacketHandler implements ClientConfigurationPack
 
         // Recreate levels
         this.replayServer.loadLevel();
+    }
+
+    private boolean tryUpdateRegistries(List<Registry.PendingTags<?>> pendingTags) {
+        Map<ResourceKey<? extends Registry<?>>, RegistryDataLoader.NetworkedRegistryData> entries = this.pendingRegistryMap;
+        this.pendingRegistryMap = null;
+
+        ResourceManager resourceManager = this.replayServer.getResourceManager();
+
+        List<HolderLookup.RegistryLookup<?>> updatedLookups = TagLoader.buildUpdatedLookups(this.replayServer.registryAccess(), pendingTags);
+
+        RegistryAccess.Frozen synchronizedRegistries;
+        LENIENT_REGISTRY_LOADING.set(Boolean.TRUE);
+        try {
+            synchronizedRegistries = RegistryDataLoader.load(entries, resourceManager, updatedLookups,
+                RegistryDataLoader.SYNCHRONIZED_REGISTRIES);
+        } catch (Exception e) {
+            Flashback.LOGGER.error("Error while trying to load registry data. Skipping... this might cause other issues", e);
+            return false;
+        } finally {
+            LENIENT_REGISTRY_LOADING.set(Boolean.FALSE);
+        }
+
+        boolean hasRegistriesChanged = !RegistryHelper.equals(this.replayServer.registryAccess(), synchronizedRegistries, RegistryDataLoader.SYNCHRONIZED_REGISTRIES);
+
+        if (hasRegistriesChanged) {
+            var newRegistries = this.replayServer.registries;
+            boolean replacedPreviousLayer = false;
+
+            HashSet<ResourceKey<? extends Registry<?>>> changedRegistries = new HashSet<>();
+            for (RegistryDataLoader.RegistryData<?> synchronizedRegistry : RegistryDataLoader.SYNCHRONIZED_REGISTRIES) {
+                changedRegistries.add(synchronizedRegistry.key());
+            }
+
+            for (RegistryLayer layer : RegistryLayer.values()) {
+                RegistryAccess.Frozen registriesForLayer = this.replayServer.registries.getLayer(layer);
+
+                List<Registry<?>> registries = new ArrayList<>();
+
+                boolean replacedPartOfLayer = false;
+
+                for (RegistryAccess.RegistryEntry<?> registryEntry : registriesForLayer.registries().toList()) {
+                    var overriden = synchronizedRegistries.lookup(registryEntry.key());
+                    if (changedRegistries.contains(registryEntry.key()) && overriden.isPresent()) {
+                        registries.add(overriden.get());
+                        replacedPartOfLayer = true;
+                    } else {
+                        if (registryEntry.key() == Registries.LEVEL_STEM) {
+                            try {
+                                var dimensionsOpt = synchronizedRegistries.lookup(Registries.DIMENSION_TYPE);
+                                var biomesOpt = synchronizedRegistries.lookup(Registries.BIOME);
+                                if (dimensionsOpt.isPresent()) {
+                                    var dimensions = dimensionsOpt.get();
+
+                                    Holder.Reference<Biome> plains;
+                                    if (biomesOpt.isPresent()) {
+                                        plains = biomesOpt.get().getOrThrow(Biomes.PLAINS);
+                                    } else {
+                                        plains = this.replayServer.registryAccess().lookupOrThrow(Registries.BIOME).getOrThrow(Biomes.PLAINS);
+                                    }
+
+                                    var mapped = new MappedRegistry<>(Registries.LEVEL_STEM, Lifecycle.stable());
+                                    for (var key : dimensions.registryKeySet()) {
+                                        var stemKey = ResourceKey.create(Registries.LEVEL_STEM, key.location());
+                                        var stem = new LevelStem(dimensions.getOrThrow(key), new EmptyLevelSource(plains));
+                                        mapped.register(stemKey, stem, RegistrationInfo.BUILT_IN);
+                                    }
+
+                                    replacedPartOfLayer = true;
+                                    registries.add(mapped.freeze());
+                                    continue;
+                                }
+                            } catch (Exception ignored) {
+                                registries.add(registryEntry.value());
+                            }
+                        }
+
+                        registries.add(registryEntry.value());
+                    }
+                }
+
+                if (replacedPartOfLayer) {
+                    replacedPreviousLayer = true;
+                    var finalRegistries = new RegistryAccess.ImmutableRegistryAccess(registries);
+                    newRegistries = newRegistries.replaceFrom(layer, finalRegistries.freeze());
+                } else if (replacedPreviousLayer) {
+                    newRegistries = newRegistries.replaceFrom(layer, registriesForLayer);
+                }
+            }
+
+            if (newRegistries != this.replayServer.registries) {
+                this.replayServer.registries.keys = newRegistries.keys;
+                this.replayServer.registries.values = newRegistries.values;
+                ((RegistryAccess.ImmutableRegistryAccess)this.replayServer.registries.composite).registries =
+                    ((RegistryAccess.ImmutableRegistryAccess)newRegistries.composite).registries;
+
+                return true;
+            }
+        }
+
+        return false;
     }
 
     @Override
