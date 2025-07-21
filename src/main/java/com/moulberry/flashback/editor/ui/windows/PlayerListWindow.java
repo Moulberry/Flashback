@@ -139,7 +139,7 @@ public class PlayerListWindow {
                 PlayerInfo playerInfo = searchedPlayers.get(i);
                 GameProfile profile = playerInfo.getProfile();
 
-                ImGui.text(profile.getName());
+                ImGui.textUnformatted(profile.getName());
                 ImGui.sameLine();
                 if (ImGui.smallButton(I18n.get("flashback.tp"))) {
                     Minecraft.getInstance().getConnection().sendUnsignedCommand("teleport " + profile.getId());

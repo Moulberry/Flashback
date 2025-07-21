@@ -33,7 +33,7 @@ public class ExportQueueWindow {
             boolean canStartJob = !ExportJobQueue.queuedJobs.isEmpty() && Flashback.EXPORT_JOB == null;
             boolean canRemoveJob = !ExportJobQueue.queuedJobs.isEmpty();
 
-            ImGui.text(I18n.get("flashback.export_jobs"));
+            ImGui.textUnformatted(I18n.get("flashback.export_jobs"));
             if (ImGui.beginChild("##Jobs", 300, 150, true)) {
                 if (ImGui.beginTable("##JobTable", 3, ImGuiTableFlags.SizingFixedFit)) {
                     ImGui.tableSetupColumn(I18n.get("flashback.name"), ImGuiTableColumnFlags.WidthStretch);
@@ -46,7 +46,7 @@ public class ExportQueueWindow {
                         String name = queuedJob.name() == null ? I18n.get("flashback.job_n", (i+1)) : queuedJob.name();
 
                         ImGui.tableNextColumn();
-                        ImGui.text(name);
+                        ImGui.textUnformatted(name);
                         ImGui.tableNextColumn();
                         if (ImGui.smallButton(I18n.get("flashback.start"))) {
                             startJob = i;

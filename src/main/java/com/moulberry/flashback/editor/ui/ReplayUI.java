@@ -13,6 +13,7 @@ import com.moulberry.flashback.editor.ui.windows.PlayerListWindow;
 import com.moulberry.flashback.editor.ui.windows.PreferencesWindow;
 import com.moulberry.flashback.editor.ui.windows.SelectedEntityPopup;
 import com.moulberry.flashback.editor.ui.windows.WindowType;
+import com.moulberry.flashback.playback.ReplayServer;
 import com.moulberry.flashback.state.EditorState;
 import com.moulberry.flashback.state.EditorStateManager;
 import com.moulberry.flashback.combo_options.Sizing;
@@ -109,6 +110,9 @@ public class ReplayUI {
 
     private static int displayingTip = -1;
     private static boolean dontShowTipsOnStartupCheckbox = false;
+
+    public static boolean shownRegistryErrorWarning = false;
+    public static boolean shownPlayerSpawnErrorWarning = false;
 
     public static void init() {
         if (initialized) {
@@ -721,7 +725,7 @@ public class ReplayUI {
                     ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoCollapse |
                     ImGuiWindowFlags.NoDocking | ImGuiWindowFlags.NoSavedSettings)) {
 
-                    ImGui.text(showText);
+                    ImGui.textUnformatted(showText);
                 }
                 ImGui.end();
 
@@ -782,7 +786,7 @@ public class ReplayUI {
                         float oldPositionY = ImGui.getCursorPosY();
 
                         ImGui.pushTextWrapPos(scaleUi(375));
-                        ImGui.text(DailyTips.TIPS[tip]);
+                        ImGui.textUnformatted(DailyTips.TIPS[tip]);
                         ImGui.popTextWrapPos();
 
                         float verticalSize = ImGui.getCursorPosY() - oldPositionY;
@@ -895,6 +899,39 @@ public class ReplayUI {
         ExportQueueWindow.render();
 
         WindowType.renderAll();
+
+        ReplayServer replayServer = Flashback.getReplayServer();
+        if (replayServer != null) {
+            if (replayServer.failedToLoadRegistryDataWarning && !shownRegistryErrorWarning) {
+                ImGui.openPopup("###RegistryWarning");
+                if (ImGuiHelper.beginPopupModal(I18n.get("flashback.registry_warning") + "###RegistryWarning", ImGuiWindowFlags.AlwaysAutoResize)) {
+                    ImGui.pushTextWrapPos(scaleUi(375));
+                    ImGui.textWrapped(I18n.get("flashback.registry_warning_description"));
+                    ImGui.popTextWrapPos();
+
+                    if (ImGui.button(I18n.get("gui.ok"))) {
+                        ImGui.closeCurrentPopup();
+                        shownRegistryErrorWarning = true;
+                    }
+                    ImGui.endPopup();
+
+                }
+            } else if (replayServer.failedToSpawnPlayerWarning && !shownPlayerSpawnErrorWarning) {
+                ImGui.openPopup("###PlayerSpawnWarning");
+                if (ImGuiHelper.beginPopupModal(I18n.get("flashback.player_spawn_warning") + "###PlayerSpawnWarning", ImGuiWindowFlags.AlwaysAutoResize)) {
+                    ImGui.pushTextWrapPos(scaleUi(375));
+                    ImGui.textWrapped(I18n.get("flashback.player_spawn_warning_description"));
+                    ImGui.popTextWrapPos();
+
+                    if (ImGui.button(I18n.get("gui.ok"))) {
+                        ImGui.closeCurrentPopup();
+                        shownPlayerSpawnErrorWarning = true;
+                    }
+                    ImGui.endPopup();
+
+                }
+            }
+        }
 
         ExportDoneWindow.render();
 

@@ -3,6 +3,7 @@ package com.moulberry.flashback.editor.ui.windows;
 import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.configuration.FlashbackConfig;
 import com.moulberry.flashback.editor.ui.ImGuiHelper;
+import com.moulberry.flashback.editor.ui.ReplayUI;
 import com.moulberry.flashback.state.EditorState;
 import com.moulberry.flashback.state.EditorStateManager;
 import imgui.ImGui;
@@ -55,7 +56,7 @@ public class RenderFilterWindow {
 
             if (!config.signedRenderFilter) {
                 String name = Minecraft.getInstance().getGameProfile().getName();
-                ImGui.pushTextWrapPos(300);
+                ImGui.pushTextWrapPos(ReplayUI.scaleUi(300));
                 ImGui.textWrapped(I18n.get("flashback.render_filter_affirmation", name));
                 if (ImGui.checkbox(I18n.get("flashback.render_filter_sign", name), false)) {
                     config.signedRenderFilter = true;
@@ -96,7 +97,7 @@ public class RenderFilterWindow {
                     }
 
                     if (searchedEntityTypes.isEmpty()) {
-                        ImGui.text(I18n.get("flashback.no_entities_found"));
+                        ImGui.textUnformatted(I18n.get("flashback.no_entities_found"));
                     } else {
                         if (ImGui.beginChild("##Scroller", 0, 300)) {
                             ImGuiListClipper.forEach(searchedEntityTypes.size(), new ImListClipperCallback() {
@@ -167,7 +168,7 @@ public class RenderFilterWindow {
                     }
 
                     if (searchedParticleTypes.isEmpty()) {
-                        ImGui.text(I18n.get("flashback.no_particles_found"));
+                        ImGui.textUnformatted(I18n.get("flashback.no_particles_found"));
                     } else {
                         if (ImGui.beginChild("##Scroller", 0, 300)) {
                             ImGuiListClipper.forEach(searchedParticleTypes.size(), new ImListClipperCallback() {
@@ -211,7 +212,7 @@ public class RenderFilterWindow {
                         }
                     }
 
-                    ImGui.pushTextWrapPos(300);
+                    ImGui.pushTextWrapPos(ReplayUI.scaleUi(300));
                     ImGui.textWrapped(I18n.get("flashback.particles_note"));
                     ImGui.popTextWrapPos();
 
