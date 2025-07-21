@@ -396,7 +396,7 @@ public class Flashback implements ModInitializer, ClientModInitializer {
             var hideEntity = Commands.literal(hideName).then(Commands.argument("targets", EntityArgument.entities()).executes(command -> {
                 EditorState editorState = EditorStateManager.getCurrent();
                 if (!Flashback.isInReplay() || editorState == null) {
-                    command.getSource().sendFailure(Component.literal("/hide is only available inside a Flashback replay"));
+                    command.getSource().sendFailure(Component.translatable("flashback.command_only_inside_replay", Component.literal("hide")));
                     return 0;
                 }
                 var entities = EntityArgument.getEntities(command, "targets");
@@ -406,7 +406,7 @@ public class Flashback implements ModInitializer, ClientModInitializer {
                 }
 
                 int count = entities.size();
-                command.getSource().sendSuccess(() -> Component.literal(count + " entities are now hidden during export"), false);
+                command.getSource().sendSuccess(() -> Component.translatable("flashback.hide_command.n_entities_hidden", Component.literal(String.valueOf(count))), false);
                 return 0;
             }));
             dispatcher.register(hideEntity);
@@ -418,7 +418,7 @@ public class Flashback implements ModInitializer, ClientModInitializer {
             var showEntity = Commands.literal(showName).then(Commands.argument("targets", EntityArgument.entities()).executes(command -> {
                 EditorState editorState = EditorStateManager.getCurrent();
                 if (!Flashback.isInReplay() || editorState == null) {
-                    command.getSource().sendFailure(Component.literal("/show is only available inside a Flashback replay"));
+                    command.getSource().sendFailure(Component.translatable("flashback.command_only_inside_replay", Component.literal("show")));
                     return 0;
                 }
                 var entities = EntityArgument.getEntities(command, "targets");
@@ -428,7 +428,7 @@ public class Flashback implements ModInitializer, ClientModInitializer {
                 }
 
                 int count = entities.size();
-                command.getSource().sendSuccess(() -> Component.literal(count + " entities are no longer hidden during export"), false);
+                command.getSource().sendSuccess(() -> Component.translatable("flashback.show_command.n_entities_shown", Component.literal(String.valueOf(count))), false);
                 return 0;
             }));
             dispatcher.register(showEntity);
@@ -510,29 +510,22 @@ public class Flashback implements ModInitializer, ClientModInitializer {
             String loaderName = unsupportedLoader.get();
             unsupportedLoader.set(null);
             if (System.currentTimeMillis() > Flashback.getConfig().nextUnsupportedModLoaderWarning) {
-                String warning = String.format("""
-            You are using an unsupported modloader: %s
-
-            Do not report crashes, bugs or other issues to Flashback
-
-            You will not receive support from Flashback
-
-            If you need assistance, please contact %s
-            """, loaderName, loaderName);
+                Component warning = Component.translatable("flashback.unsupported_loader.message", Component.literal(loaderName));
 
                 Minecraft.getInstance().setScreen(new UnsupportedLoaderScreen(Minecraft.getInstance().screen,
-                        Component.literal("Flashback: Unsupported"), Component.literal(warning)));
+                        Component.translatable("flashback.screen_unsupported"), warning));
                 return;
             }
         }
 
         if (!pendingReplayRecovery.isEmpty()) {
-            Component title = Component.literal("Flashback: Recovery");
+            Component nl = FlashbackTextComponents.NEWLINE;
+            Component title = Component.translatable("flashback.screen_recovery");
             Component description = Component.empty()
-                    .append(Component.literal("Flashback has detected ").append(Component.literal("unfinished recordings\n").withStyle(ChatFormatting.YELLOW)))
-                    .append(Component.literal("This is usually because the game closed unexpectedly while recording\n\n"))
-                    .append(Component.literal("Unfortunately, up to 5 minutes of gameplay from the end of the recording may be lost\n\n").withStyle(ChatFormatting.RED)
-                            .append(Component.literal("Would you like to try to recover the recording?").withStyle(ChatFormatting.GREEN)));
+                    .append(Component.translatable("flashback.recovery1", Component.translatable("flashback.recovery2").withStyle(ChatFormatting.YELLOW))).append(nl)
+                    .append(Component.translatable("flashback.recovery3")).append(nl).append(nl)
+                    .append(Component.translatable("flashback.recovery4").withStyle(ChatFormatting.RED)).append(nl).append(nl)
+                    .append(Component.translatable("flashback.recovery5").withStyle(ChatFormatting.GREEN));
             Minecraft.getInstance().setScreen(new RecoverRecordingsScreen(Minecraft.getInstance().screen, title, description, recover -> {
                 switch (recover) {
                     case RECOVER -> {
@@ -563,14 +556,10 @@ public class Flashback implements ModInitializer, ClientModInitializer {
 
         if (pendingUnsupportedModsForRecording != null) {
             String mods = StringUtils.join(pendingUnsupportedModsForRecording, ", ");
-            String description = """
-                                You have mods which are known to cause issues when recording replays
-                                Please remove the following mods in order to be able to record replays:
-
-                                """;
+            Component title = Component.translatable("flashback.incompatible_with_recording");
+            Component description = Component.translatable("flashback.incompatible_with_recording_description").append(Component.literal(mods).withStyle(ChatFormatting.RED));
             Screen screen = Minecraft.getInstance().screen;
-            Minecraft.getInstance().setScreen(new AlertScreen(() -> Minecraft.getInstance().setScreen(screen),
-                    Component.literal("Incompatible Mods"), Component.literal(description).append(Component.literal(mods).withStyle(ChatFormatting.RED))));
+            Minecraft.getInstance().setScreen(new AlertScreen(() -> Minecraft.getInstance().setScreen(screen), title, description));
             pendingUnsupportedModsForRecording = null;
             return;
         }
@@ -613,7 +602,7 @@ public class Flashback implements ModInitializer, ClientModInitializer {
 
     private void addMarker(CommandContext<FabricClientCommandSource> command, @Nullable Integer colour, @Nullable Boolean savePosition, @Nullable String description) {
         if (RECORDER == null) {
-            command.getSource().sendError(Component.literal("Not recording"));
+            command.getSource().sendError(Component.translatable("flashback.mark_command.not_recording"));
             return;
         }
 
@@ -813,7 +802,7 @@ public class Flashback implements ModInitializer, ClientModInitializer {
     public static void startRecordingReplay() {
         if (RECORDER != null) {
             SystemToast.add(Minecraft.getInstance().getToastManager(), FlashbackSystemToasts.RECORDING_TOAST,
-                    Component.literal("Already Recording"), Component.literal("Cannot start new recording when already recording"));
+                    Component.translatable("flashback.toast.already_recording"), Component.translatable("flashback.toast.already_recording_description"));
             return;
         }
 
@@ -826,7 +815,7 @@ public class Flashback implements ModInitializer, ClientModInitializer {
         RECORDER = new Recorder(Minecraft.getInstance().player.registryAccess());
         if (Flashback.getConfig().showRecordingToasts) {
             SystemToast.add(Minecraft.getInstance().getToastManager(), FlashbackSystemToasts.RECORDING_TOAST,
-                    Component.literal("Flashback"), Component.literal("Started recording"));
+                    FlashbackTextComponents.FLASHBACK, Component.translatable("flashback.toast.started_recording"));
         }
     }
 
@@ -835,7 +824,7 @@ public class Flashback implements ModInitializer, ClientModInitializer {
 
         if (Flashback.getConfig().showRecordingToasts) {
             SystemToast.add(Minecraft.getInstance().getToastManager(), FlashbackSystemToasts.RECORDING_TOAST,
-                    Component.literal("Flashback"), Component.literal(pause ? "Paused recording" : "Unpaused recording"));
+                    FlashbackTextComponents.FLASHBACK, Component.translatable(pause ? "flashback.toast.paused_recording" : "flashback.toast.unpaused_recording"));
         }
     }
 
@@ -852,14 +841,14 @@ public class Flashback implements ModInitializer, ClientModInitializer {
 
         if (Flashback.getConfig().showRecordingToasts) {
             SystemToast.add(Minecraft.getInstance().getToastManager(), FlashbackSystemToasts.RECORDING_TOAST,
-                    Component.literal("Flashback"), Component.literal("Cancelled recording"));
+                FlashbackTextComponents.FLASHBACK, Component.translatable("flashback.toast.cancelled_recording"));
         }
     }
 
     public static void finishRecordingReplay() {
         if (RECORDER == null) {
             SystemToast.add(Minecraft.getInstance().getToastManager(), FlashbackSystemToasts.RECORDING_TOAST,
-                    Component.literal("Not Recording"), Component.literal("Cannot finish recording when not recording"));
+                    Component.translatable("flashback.toast.not_recording"), Component.translatable("flashback.toast.cant_finish_when_not_recording"));
             return;
         }
 
@@ -894,7 +883,7 @@ public class Flashback implements ModInitializer, ClientModInitializer {
 
         if (Flashback.getConfig().showRecordingToasts) {
             SystemToast.add(Minecraft.getInstance().getToastManager(), FlashbackSystemToasts.RECORDING_TOAST,
-                    Component.literal("Flashback"), Component.literal("Finished recording"));
+                FlashbackTextComponents.FLASHBACK, Component.translatable("flashback.toast.finished_recording"));
         }
     }
 

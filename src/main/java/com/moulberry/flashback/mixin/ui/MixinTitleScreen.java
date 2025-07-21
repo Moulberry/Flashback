@@ -131,20 +131,16 @@ public class MixinTitleScreen extends Screen {
 
                 if (!overlapsWithExistingButton) {
                     if (this.openSelectReplayScreenButton == null) {
-                        this.openSelectReplayScreenButton = new FlashbackButton(x, y, size, size, Component.literal("Open Replays"), button -> {
+                        this.openSelectReplayScreenButton = new FlashbackButton(x, y, size, size, Component.translatable("flashback.open_replays"), button -> {
                             List<String> incompatibleMods = Screen.hasShiftDown() ? List.of() : Flashback.getReplayIncompatibleMods();
 
                             if (incompatibleMods.isEmpty()) {
                                 this.minecraft.setScreen(new SelectReplayScreen(this, Flashback.getReplayFolder()));
                             } else {
                                 String mods = StringUtils.join(incompatibleMods, ", ");
-                                String description = """
-                                You have mods which are known to cause crashes when loading replays
-                                Please remove the following mods in order to be able to load replays:
-
-                                """;
+                                Component description = Component.translatable("flashback.incompatible_with_viewing_description").append(Component.literal(mods).withStyle(ChatFormatting.RED));
                                 this.minecraft.setScreen(new AlertScreen(() -> Minecraft.getInstance().setScreen(this),
-                                    Component.literal("Incompatible Mods"), Component.literal(description).append(Component.literal(mods).withStyle(ChatFormatting.RED))));
+                                    Component.translatable("flashback.incompatible_with_viewing"), description));
                             }
 
                         });

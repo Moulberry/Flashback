@@ -19,6 +19,7 @@ import imgui.type.ImShort;
 import imgui.type.ImString;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.client.resources.language.I18n;
 
 import java.nio.file.Path;
 
@@ -38,7 +39,8 @@ public class PreferencesWindow {
         ImVec2 center = ImGui.getMainViewport().getCenter();
         ImGui.setNextWindowPos(center.x, center.y, ImGuiCond.Appearing, 0.5f, 0.5f);
         ImGui.setNextWindowSize(ReplayUI.scaleUi(400), 0);
-        if (ImGuiHelper.beginPopupModalCloseable("Preferences###Preferences", ImGuiWindowFlags.NoResize)) {
+        String title = I18n.get("flashback.preferences");
+        if (ImGuiHelper.beginPopupModalCloseable(title + "###Preferences", ImGuiWindowFlags.NoResize)) {
             if (close) {
                 close = false;
                 ImGui.closeCurrentPopup();
@@ -53,35 +55,35 @@ public class PreferencesWindow {
 
             ImString imString = ImGuiHelper.createResizableImString(config.defaultExportFilename);
             ImGui.setNextItemWidth(ReplayUI.scaleUi(200));
-            if (ImGui.inputText("Export Filename", imString)) {
+            if (ImGui.inputText(I18n.get("flashback.export_filename"), imString)) {
                 config.defaultExportFilename = ImGuiHelper.getString(imString);
                 config.delayedSaveToDefaultFolder();
             }
-            ImGuiHelper.tooltip("The default filename when exporting\nVariables:\n\t%date%\tyear-month-day\n\t%time%\thh_mm_ss\n\t%replay%\tReplay name\n\t%seq%\tExport count for this session");
+            ImGuiHelper.tooltip(I18n.get("flashback.export_filename_tooltip"));
 
             // Keyframes
-            ImGuiHelper.separatorWithText("Keyframes");
+            ImGuiHelper.separatorWithText(I18n.get("flashback.keyframes"));
 
             ImGui.setNextItemWidth(ReplayUI.scaleUi(200));
-            config.defaultInterpolationType = ImGuiHelper.enumCombo("Default Interpolation", config.defaultInterpolationType);
+            config.defaultInterpolationType = ImGuiHelper.enumCombo(I18n.get("flashback.default_interpolation"), config.defaultInterpolationType);
 
-            if (ImGui.checkbox("Use Realtime Interpolation", config.useRealtimeInterpolation)) {
+            if (ImGui.checkbox(I18n.get("flashback.use_realtime_interpolation"), config.useRealtimeInterpolation)) {
                 config.useRealtimeInterpolation = !config.useRealtimeInterpolation;
             }
 
-            if (ImGui.collapsingHeader("Advanced")) {
-                ImGui.textWrapped("Don't change any of these unless you know what you're doing!! If you change one of these and then ask for support you will be made fun of!!");
-                if (ImGui.checkbox("Disable increased first-person updates", config.disableIncreasedFirstPersonUpdates)) {
+            if (ImGui.collapsingHeader(I18n.get("flashback.advanced"))) {
+                ImGui.textWrapped(I18n.get("flashback.advanced_description"));
+                if (ImGui.checkbox(I18n.get("flashback.disable_first_person_updates"), config.disableIncreasedFirstPersonUpdates)) {
                     config.disableIncreasedFirstPersonUpdates = !config.disableIncreasedFirstPersonUpdates;
                     config.delayedSaveToDefaultFolder();
                 }
-                if (ImGui.checkbox("Disable third-person cancel", config.disableThirdPersonCancel)) {
+                if (ImGui.checkbox(I18n.get("flashback.disable_third_person_cancel"), config.disableThirdPersonCancel)) {
                     config.disableThirdPersonCancel = !config.disableThirdPersonCancel;
                     config.delayedSaveToDefaultFolder();
                 }
                 ImGui.setNextItemWidth(ReplayUI.scaleUi(200));
-                ImGui.sliderInt("Dummy Render Frames", config.exportRenderDummyFrames, 0, 100);
-                ImGuiHelper.tooltip("This will make the exporter render extra dummy frames before saving a frame.\nThis will DRASTICALLY increase the time it takes to export, but may be necessary when using shaders that rely on temporal accumulation or mods which lack support for FREX Flawless Frames");
+                ImGui.sliderInt(I18n.get("flashback.dummy_render_frames"), config.exportRenderDummyFrames, 0, 100);
+                ImGuiHelper.tooltip(I18n.get("flashback.dummy_render_frames_description"));
             }
 
             ImGuiHelper.endPopupModalCloseable();

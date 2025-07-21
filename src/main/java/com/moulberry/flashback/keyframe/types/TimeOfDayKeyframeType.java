@@ -15,6 +15,7 @@ import com.moulberry.flashback.state.EditorStateManager;
 import imgui.ImGui;
 import imgui.type.ImInt;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.resources.language.I18n;
 import org.jetbrains.annotations.Nullable;
 
 public class TimeOfDayKeyframeType implements KeyframeType<TimeOfDayKeyframe> {
@@ -36,7 +37,7 @@ public class TimeOfDayKeyframeType implements KeyframeType<TimeOfDayKeyframe> {
 
     @Override
     public String name() {
-        return "Time of day";
+        return I18n.get("flashback.keyframe.time_of_day");
     }
 
     @Override
@@ -60,12 +61,12 @@ public class TimeOfDayKeyframeType implements KeyframeType<TimeOfDayKeyframe> {
         }
 
         return () -> {
-            ImGuiHelper.inputInt("Time", timeOfDayKeyframeInput);
-            if (ImGui.button("Add")) {
+            ImGuiHelper.inputInt(I18n.get("flashback.time"), timeOfDayKeyframeInput);
+            if (ImGui.button(I18n.get("flashback.add"))) {
                 return new TimeOfDayKeyframe(timeOfDayKeyframeInput[0]);
             }
             ImGui.sameLine();
-            if (ImGui.button("Cancel")) {
+            if (ImGui.button(I18n.get("gui.cancel"))) {
                 ImGui.closeCurrentPopup();
             }
             return null;
