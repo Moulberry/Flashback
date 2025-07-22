@@ -1,7 +1,7 @@
 package com.moulberry.flashback;
 
-import com.moulberry.flashback.configuration.FlashbackConfig;
-import com.moulberry.flashback.state.EditorState;
+import com.moulberry.flashback.combo_options.MovementDirection;
+import com.moulberry.flashback.configuration.FlashbackConfigV1;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.util.Mth;
@@ -13,8 +13,8 @@ import java.util.function.Consumer;
 
 public class EnhancedFlight {
 
-    public static float getFlightSpeed(LocalPlayer player, FlashbackConfig config) {
-        float momentum = (float) Math.sqrt(config.flightMomentum);
+    public static float getFlightSpeed(LocalPlayer player, FlashbackConfigV1 config) {
+        float momentum = (float) Math.sqrt(config.editorMovement.flightMomentum);
         float sprintMult = Mth.lerp(momentum, 2.5f, 2.0f);
         float baseMult = Mth.lerp(momentum, 10f, 1.0f);
 
@@ -22,8 +22,8 @@ public class EnhancedFlight {
         return player.getAbilities().getFlyingSpeed() * sprintMultiplier * baseMult;
     }
 
-    public static void doFlight(LocalPlayer player, FlashbackConfig config, Vec3 movementInput, float flyingSpeed, Consumer<Vec3> superTravel) {
-        boolean cameraDirection = config.flightCameraDirection;
+    public static void doFlight(LocalPlayer player, FlashbackConfigV1 config, Vec3 movementInput, float flyingSpeed, Consumer<Vec3> superTravel) {
+        boolean cameraDirection = config.editorMovement.flightDirection == MovementDirection.CAMERA;
 
         boolean originalHasNoGravity = player.isNoGravity();
         double oldX = player.getX();
@@ -58,18 +58,18 @@ public class EnhancedFlight {
         double beforeY = player.getDeltaMovement().y;
         superTravel.accept(movementInput);
 
-        double momentum = Math.cbrt(config.flightMomentum);
+        double momentum = Math.cbrt(config.editorMovement.flightMomentum);
         Vector3f deltaMovement = player.getDeltaMovement().toVector3f();
 
-        if (config.flightLockX) {
+        if (config.editorMovement.flightLockX) {
             player.setPos(oldX, player.getY(), player.getZ());
             deltaMovement.x = 0.0f;
         }
-        if (config.flightLockY) {
+        if (config.editorMovement.flightLockY) {
             player.setPos(player.getX(), oldY, player.getZ());
             deltaMovement.y = 0.0f;
         }
-        if (config.flightLockZ) {
+        if (config.editorMovement.flightLockZ) {
             player.setPos(player.getX(), player.getY(), oldZ);
             deltaMovement.z = 0.0f;
         }

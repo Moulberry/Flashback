@@ -1,9 +1,7 @@
 package com.moulberry.flashback.editor.ui.windows;
 
 import com.moulberry.flashback.Flashback;
-import com.moulberry.flashback.configuration.FlashbackConfig;
-import com.moulberry.flashback.state.EditorState;
-import com.moulberry.flashback.state.EditorStateManager;
+import com.moulberry.flashback.configuration.FlashbackConfigV1;
 import imgui.ImGui;
 import imgui.ImGuiViewport;
 import imgui.flag.ImGuiCond;
@@ -24,9 +22,9 @@ public class ExportDoneWindow {
         exportDoneWindowOpen = true;
         exportPath = null;
 
-        FlashbackConfig config = Flashback.getConfig();
-        if (config.defaultExportPath != null) {
-            Path path = Path.of(config.defaultExportPath);
+        FlashbackConfigV1 config = Flashback.getConfig();
+        if (config.internalExport.defaultExportPath != null) {
+            Path path = Path.of(config.internalExport.defaultExportPath);
             if (Files.exists(path)) {
                 while (path != null && !Files.isDirectory(path)) {
                     path = path.getParent();
