@@ -23,7 +23,7 @@ public interface MixinRegistry {
             if (this == BuiltInRegistries.PARTICLE_TYPE) {
                 return DataResult.success(ParticleTypes.ASH);
             } else if (this instanceof DefaultedRegistry<?> defaultedRegistry) {
-                return DataResult.success(defaultedRegistry.getValue(defaultedRegistry.getDefaultKey()));
+                return DataResult.success(defaultedRegistry.get(defaultedRegistry.getDefaultKey()));
             }
         }
         return original;

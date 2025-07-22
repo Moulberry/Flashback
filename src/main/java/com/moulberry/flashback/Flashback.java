@@ -210,7 +210,7 @@ public class Flashback implements ModInitializer, ClientModInitializer {
         configElements = LatticeElements.fromAnnotations(FlashbackTextComponents.FLASHBACK_OPTIONS, config);
 
         if (FabricLoader.getInstance().isDevelopmentEnvironment()) {
-            Minecraft.getInstance().schedule(() -> Lattice.performTest(configElements));
+            // Minecraft.getInstance().schedule(() -> Lattice.performTest(configElements));
         }
 
         TempFolderProvider.tryDeleteStaleFolders(TempFolderProvider.TempFolderType.SERVER);

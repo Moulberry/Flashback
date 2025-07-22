@@ -27,7 +27,7 @@ public class RegistryMetaHelper {
         LinkedHashMap<String, LinkedHashSet<String>> namespacesForRegistries = new LinkedHashMap<>();
 
         for (ResourceLocation registryName : BuiltInRegistries.REGISTRY.keySet()) {
-            Registry<?> registry = BuiltInRegistries.REGISTRY.getValue(registryName);
+            Registry<?> registry = BuiltInRegistries.REGISTRY.get(registryName);
 
             if (registry == null) {
                 continue;
