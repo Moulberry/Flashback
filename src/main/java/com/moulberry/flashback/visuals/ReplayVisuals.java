@@ -54,6 +54,8 @@ public class ReplayVisuals {
     public Sizing sizing = Sizing.KEEP_ASPECT_RATIO;
     public AspectRatio changeAspectRatio = AspectRatio.ASPECT_16_9;
 
+    public boolean disableServerResourcePack = false;
+
     public void setFov(float fov) {
         if (!overrideFov || Math.abs(overrideFovAmount - fov) >= 0.01) {
             Minecraft.getInstance().levelRenderer.needsUpdate();
