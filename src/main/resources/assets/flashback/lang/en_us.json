@@ -405,5 +405,6 @@
   "flashback.recording_controls_location.right": "Right",
   "flashback.recording_controls_location.below": "Below",
   "flashback.recording_controls_location.left": "Left",
-  "flashback.recording_controls_location.hidden": "Hidden"
+  "flashback.recording_controls_location.hidden": "Hidden",
+  "flashback.disable_server_resource_packs": "Disable Server Resource Packs"
 }
