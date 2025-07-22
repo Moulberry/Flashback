@@ -39,7 +39,7 @@ public class FlashbackButton extends Button {
         int x = this.getX() + paddingX;
         int y = this.getY() + paddingY;
 
-        guiGraphics.blit(RenderType::guiTextured, ICON_PIXELATED, x, y, 0f, 0f, size, size, size, size, ((int)(this.alpha * 0xFF) << 24) | 0xFFFFFF);
+        guiGraphics.blit(RenderType::guiTextured, this.icon, x, y, 0f, 0f, size, size, size, size, ((int)(this.alpha * 0xFF) << 24) | 0xFFFFFF);
     }
 
     @Override
