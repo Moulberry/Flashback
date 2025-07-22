@@ -1,10 +1,9 @@
 package com.moulberry.flashback.editor.ui;
 
 import com.mojang.blaze3d.opengl.GlStateManager;
-import com.mojang.blaze3d.platform.TextureUtil;
 import com.mojang.blaze3d.platform.Window;
 import com.moulberry.flashback.Flashback;
-import com.moulberry.flashback.configuration.FlashbackConfig;
+import com.moulberry.flashback.configuration.FlashbackConfigV1;
 import com.moulberry.flashback.editor.ui.windows.ExportDoneWindow;
 import com.moulberry.flashback.editor.ui.windows.ExportQueueWindow;
 import com.moulberry.flashback.editor.ui.windows.ExportScreenshotWindow;
@@ -22,8 +21,6 @@ import com.moulberry.flashback.editor.ui.windows.VisualsWindow;
 import imgui.*;
 import imgui.flag.*;
 import imgui.internal.ImGuiContext;
-import it.unimi.dsi.fastutil.ints.IntArrayList;
-import it.unimi.dsi.fastutil.ints.IntList;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.LoadingOverlay;
@@ -54,8 +51,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Predicate;
 
 public class ReplayUI {
@@ -728,17 +723,17 @@ public class ReplayUI {
             }
 
             if (displayingTip == -1) {
-                FlashbackConfig config = Flashback.getConfig();
-                if (!config.showTipOfTheDay) {
+                FlashbackConfigV1 config = Flashback.getConfig();
+                if (!config.internal.showTipOfTheDay) {
                     displayingTip = 0;
                 } else {
                     long currentTime = System.currentTimeMillis();
-                    if (currentTime >= config.nextTipOfTheDay - TimeUnit.DAYS.toMillis(2) && currentTime <= config.nextTipOfTheDay) {
+                    if (currentTime >= config.internal.nextTipOfTheDay - TimeUnit.DAYS.toMillis(2) && currentTime <= config.internal.nextTipOfTheDay) {
                         displayingTip = 0;
                     } else {
-                        displayingTip = Integer.numberOfTrailingZeros(~config.viewedTipsOfTheDay) + 1;
-                        config.viewedTipsOfTheDay |= 1 << (displayingTip - 1);
-                        config.nextTipOfTheDay = currentTime + TimeUnit.DAYS.toMillis(1);
+                        displayingTip = Integer.numberOfTrailingZeros(~config.internal.viewedTipsOfTheDay) + 1;
+                        config.internal.viewedTipsOfTheDay |= 1 << (displayingTip - 1);
+                        config.internal.nextTipOfTheDay = currentTime + TimeUnit.DAYS.toMillis(1);
                         config.delayedSaveToDefaultFolder();
                     }
                 }
@@ -770,8 +765,8 @@ public class ReplayUI {
                         ImGui.sameLine();
                         if (ImGui.button(I18n.get("flashback.close"))) {
                             if (dontShowTipsOnStartupCheckbox) {
-                                FlashbackConfig config = Flashback.getConfig();
-                                config.showTipOfTheDay = false;
+                                FlashbackConfigV1 config = Flashback.getConfig();
+                                config.internal.showTipOfTheDay = false;
                                 config.delayedSaveToDefaultFolder();
                             }
                             displayingTip = 0;
@@ -780,9 +775,9 @@ public class ReplayUI {
                         boolean canShowPrev = displayingTip > 1;
                         if (!canShowPrev) ImGui.beginDisabled();
                         if (ImGui.button(I18n.get("gui.back")) && canShowPrev) {
-                            FlashbackConfig config = Flashback.getConfig();
+                            FlashbackConfigV1 config = Flashback.getConfig();
                             displayingTip -= 1;
-                            config.viewedTipsOfTheDay |= 1 << (displayingTip - 1);
+                            config.internal.viewedTipsOfTheDay |= 1 << (displayingTip - 1);
                             config.delayedSaveToDefaultFolder();
                         }
                         if (!canShowPrev) ImGui.endDisabled();
@@ -790,9 +785,9 @@ public class ReplayUI {
                         boolean canShowNext = displayingTip < DailyTips.TIPS.length;
                         if (!canShowNext) ImGui.beginDisabled();
                         if (ImGui.button(I18n.get("flashback.next")) && canShowNext) {
-                            FlashbackConfig config = Flashback.getConfig();
+                            FlashbackConfigV1 config = Flashback.getConfig();
                             displayingTip += 1;
-                            config.viewedTipsOfTheDay |= 1 << (displayingTip - 1);
+                            config.internal.viewedTipsOfTheDay |= 1 << (displayingTip - 1);
                             config.delayedSaveToDefaultFolder();
                         }
                         if (!canShowNext) ImGui.endDisabled();

@@ -11,7 +11,7 @@ import com.moulberry.flashback.action.*;
 import com.moulberry.flashback.command.BetterColorArgument;
 import com.moulberry.flashback.compat.DistantHorizonsSupport;
 import com.moulberry.flashback.compat.simple_voice_chat.SimpleVoiceChatPlayback;
-import com.moulberry.flashback.configuration.FlashbackConfig;
+import com.moulberry.flashback.configuration.FlashbackConfigV1;
 import com.moulberry.flashback.editor.ui.ReplayUI;
 import com.moulberry.flashback.exporting.AsyncFileDialogs;
 import com.moulberry.flashback.exporting.ExportJob;
@@ -46,13 +46,14 @@ import com.moulberry.flashback.record.FlashbackMeta;
 import com.moulberry.flashback.record.Recorder;
 import com.moulberry.flashback.record.ReplayExporter;
 import com.moulberry.flashback.record.ReplayMarker;
-import com.moulberry.flashback.screen.ConfigScreen;
 import com.moulberry.flashback.screen.RecoverRecordingsScreen;
 import com.moulberry.flashback.screen.SaveReplayScreen;
 import com.moulberry.flashback.screen.UnsupportedLoaderScreen;
 import com.moulberry.flashback.state.EditorState;
 import com.moulberry.flashback.state.EditorStateManager;
 import com.moulberry.flashback.visuals.AccurateEntityPositionHandler;
+import com.moulberry.lattice.Lattice;
+import com.moulberry.lattice.element.LatticeElements;
 import com.seibel.distanthorizons.api.DhApi;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.api.ModInitializer;
@@ -134,7 +135,8 @@ public class Flashback implements ModInitializer, ClientModInitializer {
     public static final int MAGIC = 0xD780E884;
     public static Recorder RECORDER = null;
     public static ExportJob EXPORT_JOB = null;
-    private static FlashbackConfig config;
+    private static FlashbackConfigV1 config;
+    public static LatticeElements configElements = null;
     private static Path configDirectory = null;
 
     private static int delayedStartRecording = 0;
@@ -203,7 +205,12 @@ public class Flashback implements ModInitializer, ClientModInitializer {
             Flashback.LOGGER.error("Failed to create config folder", e);
         }
 
-        config = FlashbackConfig.tryLoadFromFolder(configFolder);
+        config = FlashbackConfigV1.tryLoadFromFolder(configFolder);
+        configElements = LatticeElements.fromAnnotations(FlashbackTextComponents.FLASHBACK_OPTIONS, config);
+
+        if (FabricLoader.getInstance().isDevelopmentEnvironment()) {
+            Minecraft.getInstance().schedule(() -> Lattice.performTest(configElements));
+        }
 
         TempFolderProvider.tryDeleteStaleFolders(TempFolderProvider.TempFolderType.SERVER);
 
@@ -436,7 +443,7 @@ public class Flashback implements ModInitializer, ClientModInitializer {
         });
 
         ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
-            if (!Flashback.isInReplay() && Flashback.getConfig().automaticallyStart && RECORDER == null) {
+            if (!Flashback.isInReplay() && Flashback.getConfig().recordingControls.automaticallyStart && RECORDER == null) {
                 delayedStartRecording = 20;
             }
             if (FabricLoader.getInstance().isModLoaded("voicechat")) {
@@ -468,14 +475,14 @@ public class Flashback implements ModInitializer, ClientModInitializer {
 
         ClientTickEvents.START_CLIENT_TICK.register(minecraft -> {
             if (canReplaceScreen(Minecraft.getInstance().screen)) {
-                openNewScreen(unsupportedLoader);
+                openNewScreen(unsupportedLoader, Minecraft.getInstance().screen);
             }
 
             if (Minecraft.getInstance().level != null && delayedStartRecording > 0) {
                 IntegratedServer integratedServer = Minecraft.getInstance().getSingleplayerServer();
                 if (integratedServer != null && integratedServer.getClass() != IntegratedServer.class) {
                     delayedStartRecording = 0; // Only allow on actual integrated servers, not replay servers or any other custom server a mod might spin up
-                } else if (Flashback.getConfig().automaticallyStart && RECORDER == null) {
+                } else if (Flashback.getConfig().recordingControls.automaticallyStart && RECORDER == null) {
                     delayedStartRecording -= 1;
                     if (delayedStartRecording == 0) {
                         startRecordingReplay();
@@ -483,13 +490,6 @@ public class Flashback implements ModInitializer, ClientModInitializer {
                 } else {
                     delayedStartRecording = 0;
                 }
-            }
-
-            if (delayedOpenConfig) {
-                if (Minecraft.getInstance().screen == null) {
-                    Minecraft.getInstance().setScreen(new ConfigScreen(null));
-                }
-                delayedOpenConfig = false;
             }
 
             updateIsInReplay();
@@ -506,14 +506,14 @@ public class Flashback implements ModInitializer, ClientModInitializer {
         }
 	}
 
-    private static void openNewScreen(AtomicReference<String> unsupportedLoader) {
+    private static void openNewScreen(AtomicReference<String> unsupportedLoader, Screen currentScreen) {
         if (unsupportedLoader.get() != null) {
             String loaderName = unsupportedLoader.get();
             unsupportedLoader.set(null);
-            if (System.currentTimeMillis() > Flashback.getConfig().nextUnsupportedModLoaderWarning) {
+            if (System.currentTimeMillis() > Flashback.getConfig().internal.nextUnsupportedModLoaderWarning) {
                 Component warning = Component.translatable("flashback.unsupported_loader.message", Component.literal(loaderName));
 
-                Minecraft.getInstance().setScreen(new UnsupportedLoaderScreen(Minecraft.getInstance().screen,
+                Minecraft.getInstance().setScreen(new UnsupportedLoaderScreen(currentScreen,
                         Component.translatable("flashback.screen_unsupported"), warning));
                 return;
             }
@@ -527,7 +527,7 @@ public class Flashback implements ModInitializer, ClientModInitializer {
                     .append(Component.translatable("flashback.recovery3")).append(nl).append(nl)
                     .append(Component.translatable("flashback.recovery4").withStyle(ChatFormatting.RED)).append(nl).append(nl)
                     .append(Component.translatable("flashback.recovery5").withStyle(ChatFormatting.GREEN));
-            Minecraft.getInstance().setScreen(new RecoverRecordingsScreen(Minecraft.getInstance().screen, title, description, recover -> {
+            Minecraft.getInstance().setScreen(new RecoverRecordingsScreen(currentScreen, title, description, recover -> {
                 switch (recover) {
                     case RECOVER -> {
                         pendingReplaySave.addAll(pendingReplayRecovery);
@@ -550,8 +550,7 @@ public class Flashback implements ModInitializer, ClientModInitializer {
 
             LocalDateTime dateTime = LocalDateTime.now();
             dateTime = dateTime.withNano(0);
-            Minecraft.getInstance().setScreen(new SaveReplayScreen(Minecraft.getInstance().screen,
-                    recordFolder, dateTime.toString()));
+            Minecraft.getInstance().setScreen(new SaveReplayScreen(currentScreen, recordFolder, dateTime.toString()));
             return;
         }
 
@@ -559,11 +558,24 @@ public class Flashback implements ModInitializer, ClientModInitializer {
             String mods = StringUtils.join(pendingUnsupportedModsForRecording, ", ");
             Component title = Component.translatable("flashback.incompatible_with_recording");
             Component description = Component.translatable("flashback.incompatible_with_recording_description").append(Component.literal(mods).withStyle(ChatFormatting.RED));
-            Screen screen = Minecraft.getInstance().screen;
-            Minecraft.getInstance().setScreen(new AlertScreen(() -> Minecraft.getInstance().setScreen(screen), title, description));
+            Minecraft.getInstance().setScreen(new AlertScreen(() -> Minecraft.getInstance().setScreen(currentScreen), title, description));
             pendingUnsupportedModsForRecording = null;
             return;
         }
+
+        if (delayedOpenConfig) {
+            openConfigScreen(currentScreen);
+            delayedOpenConfig = false;
+            return;
+        }
+    }
+
+    public static Screen createConfigScreen(Screen oldScreen) {
+        return Lattice.createConfigScreen(configElements, config::saveToDefaultFolder, oldScreen);
+    }
+
+    public static void openConfigScreen(Screen oldScreen) {
+        Minecraft.getInstance().setScreen(createConfigScreen(oldScreen));
     }
 
     public static List<String> getReplayIncompatibleMods() {
@@ -739,7 +751,7 @@ public class Flashback implements ModInitializer, ClientModInitializer {
         }, Util.backgroundExecutor());
     }
 
-    public static FlashbackConfig getConfig() {
+    public static FlashbackConfigV1 getConfig() {
         return config;
     }
 
@@ -814,7 +826,7 @@ public class Flashback implements ModInitializer, ClientModInitializer {
         }
 
         RECORDER = new Recorder(Minecraft.getInstance().player.registryAccess());
-        if (Flashback.getConfig().showRecordingToasts) {
+        if (Flashback.getConfig().recordingControls.showRecordingToasts) {
             SystemToast.add(Minecraft.getInstance().getToastManager(), FlashbackSystemToasts.RECORDING_TOAST,
                     FlashbackTextComponents.FLASHBACK, Component.translatable("flashback.toast.started_recording"));
         }
@@ -823,7 +835,7 @@ public class Flashback implements ModInitializer, ClientModInitializer {
     public static void pauseRecordingReplay(boolean pause) {
         RECORDER.setPaused(pause);
 
-        if (Flashback.getConfig().showRecordingToasts) {
+        if (Flashback.getConfig().recordingControls.showRecordingToasts) {
             SystemToast.add(Minecraft.getInstance().getToastManager(), FlashbackSystemToasts.RECORDING_TOAST,
                     FlashbackTextComponents.FLASHBACK, Component.translatable(pause ? "flashback.toast.paused_recording" : "flashback.toast.unpaused_recording"));
         }
@@ -840,7 +852,7 @@ public class Flashback implements ModInitializer, ClientModInitializer {
             Flashback.LOGGER.error("Exception deleting record folder", e);
         }
 
-        if (Flashback.getConfig().showRecordingToasts) {
+        if (Flashback.getConfig().recordingControls.showRecordingToasts) {
             SystemToast.add(Minecraft.getInstance().getToastManager(), FlashbackSystemToasts.RECORDING_TOAST,
                 FlashbackTextComponents.FLASHBACK, Component.translatable("flashback.toast.cancelled_recording"));
         }
@@ -857,7 +869,7 @@ public class Flashback implements ModInitializer, ClientModInitializer {
         RECORDER = null;
         recorder.endTick(true);
 
-        if (Flashback.getConfig().quicksave) {
+        if (Flashback.getConfig().recordingControls.quicksave) {
             Path replayDir = getReplayFolder();
 
             if (!Files.exists(replayDir)) {
@@ -882,7 +894,7 @@ public class Flashback implements ModInitializer, ClientModInitializer {
             pendingReplaySave.add(recorder.finish());
         }
 
-        if (Flashback.getConfig().showRecordingToasts) {
+        if (Flashback.getConfig().recordingControls.showRecordingToasts) {
             SystemToast.add(Minecraft.getInstance().getToastManager(), FlashbackSystemToasts.RECORDING_TOAST,
                 FlashbackTextComponents.FLASHBACK, Component.translatable("flashback.toast.finished_recording"));
         }
@@ -927,11 +939,11 @@ public class Flashback implements ModInitializer, ClientModInitializer {
 
         // Add as recent
         String pathStr = path.toString();
-        FlashbackConfig config = Flashback.getConfig();
-        config.recentReplays.remove(pathStr);
-        config.recentReplays.add(0, pathStr);
-        if (config.recentReplays.size() > 32) {
-            config.recentReplays.remove(config.recentReplays.size() - 1);
+        FlashbackConfigV1 config = Flashback.getConfig();
+        config.internal.recentReplays.remove(pathStr);
+        config.internal.recentReplays.add(0, pathStr);
+        if (config.internal.recentReplays.size() > 32) {
+            config.internal.recentReplays.remove(config.internal.recentReplays.size() - 1);
         }
         config.delayedSaveToDefaultFolder();
 

@@ -6,7 +6,7 @@ import com.mojang.authlib.GameProfile;
 import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.PacketHelper;
 import com.moulberry.flashback.SneakyThrow;
-import com.moulberry.flashback.configuration.FlashbackConfig;
+import com.moulberry.flashback.configuration.FlashbackConfigV1;
 import com.moulberry.flashback.ext.ConnectionExt;
 import com.moulberry.flashback.ext.LevelChunkExt;
 import com.moulberry.flashback.TempFolderProvider;
@@ -45,7 +45,6 @@ import it.unimi.dsi.fastutil.ints.IntIterator;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
-import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerWorldEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.Util;
@@ -154,6 +153,7 @@ public class ReplayServer extends IntegratedServer {
     public boolean isProcessingSnapshot = false;
     private boolean processedSnapshot = false;
     public volatile boolean fastForwarding = false;
+    public volatile boolean hasServerResourcePack = false;
 
     private record BlockAtPosition(long pos, BlockState blockState) {}
     private List<BlockAtPosition> pendingBlockOverrides = new ArrayList<>();
@@ -313,7 +313,7 @@ public class ReplayServer extends IntegratedServer {
         this.setPlayerList(new PlayerList(this, this.registries(), this.playerDataStorage, 1) {
             @Override
             public void placeNewPlayer(Connection connection, ServerPlayer serverPlayer, CommonListenerCookie commonListenerCookie) {
-                if (Flashback.getConfig().filterUnnecessaryPackets) {
+                if (Flashback.getConfig().internal.filterUnnecessaryPackets) {
                     ((ConnectionExt)connection).flashback$setFilterUnnecessaryPackets();
                 }
                 super.placeNewPlayer(connection, serverPlayer, commonListenerCookie);
@@ -396,9 +396,13 @@ public class ReplayServer extends IntegratedServer {
 
                 // Send all resource packs
                 serverPlayer.connection.send(new ClientboundResourcePackPopPacket(Optional.empty()));
-                for (RemotePack remotePack : remotePacks.values()) {
-                    serverPlayer.connection.send(new ClientboundResourcePackPushPacket(remotePack.id,
-                        remotePack.url, remotePack.hash, true, Optional.empty()));
+
+                EditorState editorState = ReplayServer.this.getEditorState();
+                if (!editorState.replayVisuals.disableServerResourcePack) {
+                    for (RemotePack remotePack : remotePacks.values()) {
+                        serverPlayer.connection.send(new ClientboundResourcePackPushPacket(remotePack.id,
+                            remotePack.url, remotePack.hash, true, Optional.empty()));
+                    }
                 }
 
                 // Send tab list customization
@@ -643,8 +647,8 @@ public class ReplayServer extends IntegratedServer {
     }
 
     public void handleAccuratePlayerPosition(RegistryFriendlyByteBuf friendlyByteBuf) {
-        FlashbackConfig config = Flashback.getConfig();
-        if (config.disableIncreasedFirstPersonUpdates) {
+        FlashbackConfigV1 config = Flashback.getConfig();
+        if (config.advanced.disableIncreasedFirstPersonUpdates) {
             friendlyByteBuf.readerIndex(friendlyByteBuf.writerIndex());
             return;
         }
@@ -858,6 +862,8 @@ public class ReplayServer extends IntegratedServer {
             this.gamePacketHandler.flushPendingEntities();
         }
 
+        EditorState editorState = this.getEditorState();
+
         this.lastReplayTick = this.targetTick;
         this.lastTickTimeNanos = this.nextTickTimeNanos - this.tickRateManager().nanosecondsPerTick();
 
@@ -1032,7 +1038,7 @@ public class ReplayServer extends IntegratedServer {
         }
 
         // Update resourcepacks
-        if (this.remotePacks.isEmpty()) {
+        if (this.remotePacks.isEmpty() || editorState.replayVisuals.disableServerResourcePack) {
             if (!this.oldRemotePacks.isEmpty()) {
                 this.oldRemotePacks.clear();
                 this.getPlayerList().broadcastAll(new ClientboundResourcePackPopPacket(Optional.empty()));
@@ -1060,6 +1066,7 @@ public class ReplayServer extends IntegratedServer {
                 }
             });
         }
+        this.hasServerResourcePack = !this.remotePacks.isEmpty();
 
         if (this.sendFinishedServerTick.compareAndExchange(true, false)) {
             for (ReplayPlayer replayViewer : this.replayViewers) {

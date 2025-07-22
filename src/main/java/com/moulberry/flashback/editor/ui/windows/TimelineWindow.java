@@ -1191,7 +1191,7 @@ public class TimelineWindow {
         if (editingKeyframe.keyframeType().allowChangingInterpolationType()) {
             int[] type = new int[]{editingKeyframe.interpolationType().ordinal()};
             ImGui.setNextItemWidth(160);
-            if (ImGuiHelper.combo(I18n.get("flashback.type"), type, InterpolationType.NAMES)) {
+            if (ImGuiHelper.combo(I18n.get("flashback.type"), type, InterpolationType.getNames())) {
                 upgradeToSceneWrite();
 
                 InterpolationType interpolationType = InterpolationType.INTERPOLATION_TYPES[type[0]];

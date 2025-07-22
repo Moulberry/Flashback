@@ -232,7 +232,7 @@ public class Recorder {
     private int trackAccuratePositionCounter = 10;
 
     public void trackPartialPosition(Entity entity, float partialTick) {
-        int localPlayerUpdatesPerSecond = Flashback.getConfig().localPlayerUpdatesPerSecond;
+        int localPlayerUpdatesPerSecond = Flashback.getConfig().recording.localPlayerUpdatesPerSecond;
         if (localPlayerUpdatesPerSecond <= 20) {
             return;
         }
@@ -268,7 +268,7 @@ public class Recorder {
         boolean isLevelLoaded = !(Minecraft.getInstance().screen instanceof ReceivingLevelScreen);
         boolean changedDimensions = false;
 
-        int localPlayerUpdatesPerSecond = Flashback.getConfig().localPlayerUpdatesPerSecond;
+        int localPlayerUpdatesPerSecond = Flashback.getConfig().recording.localPlayerUpdatesPerSecond;
         boolean trackAccurateFirstPersonPosition = localPlayerUpdatesPerSecond > 20;
         boolean wroteNewTick = false;
 
@@ -327,7 +327,7 @@ public class Recorder {
             int chunkId = this.metadata.chunks.size();
             String chunkName = "c" + chunkId + ".flashback";
 
-            if (changedDimensions && Flashback.getConfig().markDimensionChanges) {
+            if (changedDimensions && Flashback.getConfig().recording.markDimensionChanges) {
                 this.addMarker(new ReplayMarker(0xAA00AA, null, "Changed Dimension"));
             }
 
@@ -479,7 +479,7 @@ public class Recorder {
 
         List<Packet<? super ClientGamePacketListener>> gamePackets = new ArrayList<>();
 
-        if (Flashback.getConfig().recordHotbar) {
+        if (Flashback.getConfig().recording.recordHotbar) {
             if (player.experienceProgress != this.lastExperienceProgress || player.totalExperience != this.lastTotalExperience ||
                     player.experienceLevel != this.lastExperienceLevel) {
                 this.lastExperienceProgress = player.experienceProgress;
@@ -539,7 +539,7 @@ public class Recorder {
             gamePackets.add(new ClientboundSetEquipmentPacket(player.getId(), changedSlots));
         }
 
-        if (Flashback.getConfig().recordHotbar) {
+        if (Flashback.getConfig().recording.recordHotbar) {
             for (int i = 0; i < this.lastHotbarItems.length; i++) {
                 ItemStack hotbarItem = player.getInventory().getItem(i);
 
@@ -1093,7 +1093,7 @@ public class Recorder {
             }
         }
 
-        if (Flashback.getConfig().recordHotbar) {
+        if (Flashback.getConfig().recording.recordHotbar) {
             this.lastExperienceProgress = localPlayer.experienceProgress;
             this.lastTotalExperience = localPlayer.totalExperience;
             this.lastExperienceLevel = localPlayer.experienceLevel;

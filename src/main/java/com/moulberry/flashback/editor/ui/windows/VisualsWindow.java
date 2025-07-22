@@ -160,7 +160,7 @@ public class VisualsWindow {
             }
             if (visuals.overrideFov) {
                 if (visuals.overrideFovAmount < 0) {
-                    visuals.overrideFovAmount = Flashback.getConfig().defaultOverrideFov;
+                    visuals.overrideFovAmount = Flashback.getConfig().internal.defaultOverrideFov;
                 }
 
                 ImGui.sameLine();
@@ -319,6 +319,12 @@ public class VisualsWindow {
                 if (ImGui.button(I18n.get("flashback.unhide_all_entities"))) {
                     editorState.hideDuringExport.clear();
                     editorState.markDirty();
+                }
+            }
+
+            if (replayServer.hasServerResourcePack) {
+                if (ImGui.checkbox(I18n.get("flashback.disable_server_resource_packs"), visuals.disableServerResourcePack)) {
+                    visuals.disableServerResourcePack = !visuals.disableServerResourcePack;
                 }
             }
         }
