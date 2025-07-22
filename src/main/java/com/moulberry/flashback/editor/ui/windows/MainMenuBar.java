@@ -1,7 +1,7 @@
 package com.moulberry.flashback.editor.ui.windows;
 
 import com.moulberry.flashback.Flashback;
-import com.moulberry.flashback.configuration.FlashbackConfig;
+import com.moulberry.flashback.configuration.FlashbackConfigV1;
 import com.moulberry.flashback.exporting.ExportJobQueue;
 import com.moulberry.flashback.screen.select_replay.SelectReplayScreen;
 import imgui.ImGui;
@@ -23,7 +23,7 @@ public class MainMenuBar {
     }
 
     public static void renderInner() {
-        FlashbackConfig config = Flashback.getConfig();
+        FlashbackConfigV1 config = Flashback.getConfig();
 
         if (ImGui.beginMenu(I18n.get("flashback.menu.file") + "##File")) {
             if (ImGui.menuItem(I18n.get("flashback.menu.file.export_video") + "##ExportVideo")) {
@@ -42,10 +42,10 @@ public class MainMenuBar {
             if (ImGui.menuItem(I18n.get("flashback.select_replay.open") + "##Open")) {
                 Flashback.openReplayFromFileBrowser();
             }
-            if (!config.recentReplays.isEmpty()) {
+            if (!config.internal.recentReplays.isEmpty()) {
                 if (ImGui.beginMenu(I18n.get("flashback.open_recent_replay") + "##OpenRecentReplay")) {
                     Path replayFolder = Flashback.getReplayFolder();
-                    for (String recentReplay : config.recentReplays) {
+                    for (String recentReplay : config.internal.recentReplays) {
                         Path path = Path.of(recentReplay);
 
                         if (Files.exists(path)) {
@@ -102,7 +102,7 @@ public class MainMenuBar {
     }
 
     private static void toggleWindow(String windowName) {
-        var openedWindows = Flashback.getConfig().openedWindows;
+        var openedWindows = Flashback.getConfig().internal.openedWindows;
         boolean playerListIsOpen = openedWindows.contains(windowName);
         if (playerListIsOpen) {
             openedWindows.remove(windowName);

@@ -7,10 +7,9 @@ import com.moulberry.flashback.combo_options.AudioCodec;
 import com.moulberry.flashback.combo_options.Sizing;
 import com.moulberry.flashback.combo_options.VideoCodec;
 import com.moulberry.flashback.combo_options.VideoContainer;
-import com.moulberry.flashback.configuration.FlashbackConfig;
+import com.moulberry.flashback.configuration.FlashbackConfigV1;
 import com.moulberry.flashback.editor.ui.ReplayUI;
 import com.moulberry.flashback.exporting.ExportJobQueue;
-import com.moulberry.flashback.state.EditorScene;
 import com.moulberry.flashback.state.EditorState;
 import com.moulberry.flashback.state.EditorStateManager;
 import com.moulberry.flashback.editor.ui.ImGuiHelper;
@@ -18,7 +17,6 @@ import com.moulberry.flashback.exporting.AsyncFileDialogs;
 import com.moulberry.flashback.exporting.ExportJob;
 import com.moulberry.flashback.exporting.ExportSettings;
 import com.moulberry.flashback.playback.ReplayServer;
-import com.moulberry.flashback.state.KeyframeTrack;
 import imgui.ImGui;
 import imgui.flag.ImGuiWindowFlags;
 import imgui.type.ImString;
@@ -79,20 +77,20 @@ public class StartExportWindow {
                 }
             }
 
-            FlashbackConfig config = Flashback.getConfig();
-            config.forceDefaultExportSettings.apply(config);
+            FlashbackConfigV1 config = Flashback.getConfig();
+            config.forceDefaultExportSettings.apply(config.internalExport);
 
-            if (config.resolution == null || config.resolution.length != 2) {
-                config.resolution = new int[]{1920, 1080};
+            if (config.internalExport.resolution == null || config.internalExport.resolution.length != 2) {
+                config.internalExport.resolution = new int[]{1920, 1080};
             }
-            if (config.framerate == null || config.framerate.length != 1) {
-                config.framerate = new float[]{60};
+            if (config.internalExport.framerate == null || config.internalExport.framerate.length != 1) {
+                config.internalExport.framerate = new float[]{60};
             }
-            if (config.selectedVideoEncoder == null || config.selectedVideoEncoder.length != 1) {
-                config.selectedVideoEncoder = new int[]{0};
+            if (config.internalExport.selectedVideoEncoder == null || config.internalExport.selectedVideoEncoder.length != 1) {
+                config.internalExport.selectedVideoEncoder = new int[]{0};
             }
-            if (config.audioCodec == null) {
-                config.audioCodec = AudioCodec.AAC;
+            if (config.internalExport.audioCodec == null) {
+                config.internalExport.audioCodec = AudioCodec.AAC;
             }
 
             ImGui.openPopup("###StartExport");
@@ -102,28 +100,28 @@ public class StartExportWindow {
                 if (aspectRatio != null && aspectRatio != lastCustomAspectRatio) {
                     switch (aspectRatio) {
                         case ASPECT_16_9 -> {
-                            config.resolution[0] = 1920;
-                            config.resolution[1] = 1080;
+                            config.internalExport.resolution[0] = 1920;
+                            config.internalExport.resolution[1] = 1080;
                         }
                         case ASPECT_9_16 -> {
-                            config.resolution[0] = 1080;
-                            config.resolution[1] = 1920;
+                            config.internalExport.resolution[0] = 1080;
+                            config.internalExport.resolution[1] = 1920;
                         }
                         case ASPECT_240_1 -> {
-                            config.resolution[0] = 1920;
-                            config.resolution[1] = 800;
+                            config.internalExport.resolution[0] = 1920;
+                            config.internalExport.resolution[1] = 800;
                         }
                         case ASPECT_1_1 -> {
-                            config.resolution[0] = 1920;
-                            config.resolution[1] = 1920;
+                            config.internalExport.resolution[0] = 1920;
+                            config.internalExport.resolution[1] = 1920;
                         }
                         case ASPECT_4_3 -> {
-                            config.resolution[0] = 1600;
-                            config.resolution[1] = 1200;
+                            config.internalExport.resolution[0] = 1600;
+                            config.internalExport.resolution[1] = 1200;
                         }
                         case ASPECT_3_2 -> {
-                            config.resolution[0] = 2160;
-                            config.resolution[1] = 1440;
+                            config.internalExport.resolution[0] = 2160;
+                            config.internalExport.resolution[1] = 1440;
                         }
                     }
                 }
@@ -141,16 +139,16 @@ public class StartExportWindow {
                 return;
             }
 
-            FlashbackConfig config = Flashback.getConfig();
+            FlashbackConfigV1 config = Flashback.getConfig();
 
             ImGuiHelper.separatorWithText(I18n.get("flashback.capture_options"));
 
-            ImGuiHelper.inputInt(I18n.get("flashback.resolution"), config.resolution);
+            ImGuiHelper.inputInt(I18n.get("flashback.resolution"), config.internalExport.resolution);
 
-            if (config.resolution[0] < 16) config.resolution[0] = 16;
-            if (config.resolution[1] < 16) config.resolution[1] = 16;
-            if (config.resolution[0] % 2 != 0) config.resolution[0] += 1;
-            if (config.resolution[1] % 2 != 0) config.resolution[1] += 1;
+            if (config.internalExport.resolution[0] < 16) config.internalExport.resolution[0] = 16;
+            if (config.internalExport.resolution[1] < 16) config.internalExport.resolution[1] = 16;
+            if (config.internalExport.resolution[0] % 2 != 0) config.internalExport.resolution[0] += 1;
+            if (config.internalExport.resolution[1] % 2 != 0) config.internalExport.resolution[1] += 1;
 
             if (startEndTick[0] >= 0 && startEndTick[1] >= 0) {
                 if (ImGuiHelper.inputInt(I18n.get("flashback.start_end_tick"), startEndTick)) {
@@ -160,24 +158,24 @@ public class StartExportWindow {
                     }
                 }
             }
-            ImGuiHelper.inputFloat(I18n.get("flashback.framerate"), config.framerate);
+            ImGuiHelper.inputFloat(I18n.get("flashback.framerate"), config.internalExport.framerate);
 
-            if (ImGui.checkbox(I18n.get("flashback.reset_rng"), config.resetRng)) {
-                config.resetRng = !config.resetRng;
+            if (ImGui.checkbox(I18n.get("flashback.reset_rng"), config.internalExport.resetRng)) {
+                config.internalExport.resetRng = !config.internalExport.resetRng;
             }
             ImGuiHelper.tooltip(I18n.get("flashback.reset_rng_tooltip"));
 
             ImGui.sameLine();
 
-            if (ImGui.checkbox(I18n.get("flashback.ssaa"), config.ssaa)) {
-                config.ssaa = !config.ssaa;
+            if (ImGui.checkbox(I18n.get("flashback.ssaa"), config.internalExport.ssaa)) {
+                config.internalExport.ssaa = !config.internalExport.ssaa;
             }
             ImGuiHelper.tooltip(I18n.get("flashback.ssaa_tooltip"));
 
             ImGui.sameLine();
 
-            if (ImGui.checkbox(I18n.get("flashback.no_gui"), config.noGui)) {
-                config.noGui = !config.noGui;
+            if (ImGui.checkbox(I18n.get("flashback.no_gui"), config.internalExport.noGui)) {
+                config.internalExport.noGui = !config.internalExport.noGui;
             }
             ImGuiHelper.tooltip(I18n.get("flashback.no_gui_tooltip"));
 
@@ -185,22 +183,22 @@ public class StartExportWindow {
 
             renderVideoOptions(editorState, config);
 
-            AudioCodec[] supportedAudioCodecs = config.container.getSupportedAudioCodecs();
+            AudioCodec[] supportedAudioCodecs = config.internalExport.container.getSupportedAudioCodecs();
             if (supportedAudioCodecs.length > 0) {
                 ImGuiHelper.separatorWithText(I18n.get("flashback.audio_options"));
 
-                if (ImGui.checkbox(I18n.get("flashback.record_audio"), config.recordAudio)) {
-                    config.recordAudio = !config.recordAudio;
+                if (ImGui.checkbox(I18n.get("flashback.record_audio"), config.internalExport.recordAudio)) {
+                    config.internalExport.recordAudio = !config.internalExport.recordAudio;
                 }
 
-                if (config.recordAudio) {
-                    if (ImGui.checkbox(I18n.get("flashback.stereo_audio"), config.stereoAudio)) {
-                        config.stereoAudio = !config.stereoAudio;
+                if (config.internalExport.recordAudio) {
+                    if (ImGui.checkbox(I18n.get("flashback.stereo_audio"), config.internalExport.stereoAudio)) {
+                        config.internalExport.stereoAudio = !config.internalExport.stereoAudio;
                     }
 
-                    AudioCodec newAudioCodec = ImGuiHelper.enumCombo(I18n.get("flashback.audio_codec"), config.audioCodec, supportedAudioCodecs);
-                    if (newAudioCodec != config.audioCodec) {
-                        config.audioCodec = newAudioCodec;
+                    AudioCodec newAudioCodec = ImGuiHelper.enumCombo(I18n.get("flashback.audio_codec"), config.internalExport.audioCodec, supportedAudioCodecs);
+                    if (newAudioCodec != config.internalExport.audioCodec) {
+                        config.internalExport.audioCodec = newAudioCodec;
                     }
 
                     if (editorState != null && editorState.audioSourceEntity != null) {
@@ -210,7 +208,7 @@ public class StartExportWindow {
                     }
                 }
             } else {
-                config.recordAudio = false;
+                config.internalExport.recordAudio = false;
             }
 
             if (installedIncompatibleModsString != null) {
@@ -266,17 +264,17 @@ public class StartExportWindow {
         close = false;
     }
 
-    private static void renderVideoOptions(EditorState editorState, FlashbackConfig config) {
+    private static void renderVideoOptions(EditorState editorState, FlashbackConfigV1 config) {
         if (editorState != null && !editorState.replayVisuals.renderSky) {
-            if (ImGui.checkbox(I18n.get("flashback.transparent_sky"), config.transparentBackground)) {
-                config.transparentBackground = !config.transparentBackground;
+            if (ImGui.checkbox(I18n.get("flashback.transparent_sky"), config.internalExport.transparentBackground)) {
+                config.internalExport.transparentBackground = !config.internalExport.transparentBackground;
             }
         } else {
-            config.transparentBackground = false;
+            config.internalExport.transparentBackground = false;
         }
 
         VideoContainer[] containers;
-        if (config.transparentBackground) {
+        if (config.internalExport.transparentBackground) {
             if (supportedContainersWithTransparency == null) {
                 supportedContainersWithTransparency = VideoContainer.findSupportedContainers(true);
             }
@@ -293,46 +291,46 @@ public class StartExportWindow {
             return;
         }
 
-        if (config.container == null || !Arrays.asList(containers).contains(config.container)) {
-            config.container = containers[0];
+        if (config.internalExport.container == null || !Arrays.asList(containers).contains(config.internalExport.container)) {
+            config.internalExport.container = containers[0];
         }
 
-        config.container = ImGuiHelper.enumCombo(I18n.get("flashback.container"), config.container, containers);
+        config.internalExport.container = ImGuiHelper.enumCombo(I18n.get("flashback.container"), config.internalExport.container, containers);
 
-        if (config.container == VideoContainer.PNG_SEQUENCE) {
+        if (config.internalExport.container == VideoContainer.PNG_SEQUENCE) {
             ImGui.inputText(I18n.get("flashback.filenames"), pngSequenceFormat);
             return;
         }
 
-        VideoCodec[] codecs = config.container.getSupportedVideoCodecs(config.transparentBackground);
+        VideoCodec[] codecs = config.internalExport.container.getSupportedVideoCodecs(config.internalExport.transparentBackground);
 
         if (codecs.length == 0) {
             ImGui.textUnformatted(I18n.get("flashback.no_supported_codecs_found"));
             return;
         }
 
-        if (config.videoCodec == null || !Arrays.asList(codecs).contains(config.videoCodec)) {
-            config.videoCodec = codecs[0];
+        if (config.internalExport.videoCodec == null || !Arrays.asList(codecs).contains(config.internalExport.videoCodec)) {
+            config.internalExport.videoCodec = codecs[0];
         }
 
         if (codecs.length > 1) {
-            VideoCodec newCodec = ImGuiHelper.enumCombo(I18n.get("flashback.codec"), config.videoCodec, codecs);
-            if (newCodec != config.videoCodec) {
-                config.videoCodec = newCodec;
-                config.selectedVideoEncoder[0] = 0;
+            VideoCodec newCodec = ImGuiHelper.enumCombo(I18n.get("flashback.codec"), config.internalExport.videoCodec, codecs);
+            if (newCodec != config.internalExport.videoCodec) {
+                config.internalExport.videoCodec = newCodec;
+                config.internalExport.selectedVideoEncoder[0] = 0;
             }
         }
 
-        String[] encoders = config.videoCodec.getEncoders();
+        String[] encoders = config.internalExport.videoCodec.getEncoders();
         if (encoders.length > 1) {
-            ImGuiHelper.combo(I18n.get("flashback.encoder"), config.selectedVideoEncoder, encoders);
+            ImGuiHelper.combo(I18n.get("flashback.encoder"), config.internalExport.selectedVideoEncoder, encoders);
         }
 
-        if (config.videoCodec != VideoCodec.GIF) {
-            if (ImGui.checkbox(I18n.get("flashback.use_maximum_bitrate"), config.useMaximumBitrate)) {
-                config.useMaximumBitrate = !config.useMaximumBitrate;
+        if (config.internalExport.videoCodec != VideoCodec.GIF) {
+            if (ImGui.checkbox(I18n.get("flashback.use_maximum_bitrate"), config.internalExport.useMaximumBitrate)) {
+                config.internalExport.useMaximumBitrate = !config.internalExport.useMaximumBitrate;
             }
-            if (!config.useMaximumBitrate) {
+            if (!config.internalExport.useMaximumBitrate) {
                 ImGui.inputText(I18n.get("flashback.bitrate"), bitrate);
                 if (ImGui.isItemDeactivatedAfterEdit()) {
                     int numBitrate = stringToBitrate(ImGuiHelper.getString(bitrate));
@@ -346,15 +344,15 @@ public class StartExportWindow {
         }
     }
 
-    private static CompletableFuture<ExportSettings> createExportSettings(@Nullable String name, FlashbackConfig config) {
+    private static CompletableFuture<ExportSettings> createExportSettings(@Nullable String name, FlashbackConfigV1 config) {
         int numBitrate;
-        if (config.useMaximumBitrate) {
+        if (config.internalExport.useMaximumBitrate) {
             numBitrate = 0;
         } else {
             numBitrate = stringToBitrate(ImGuiHelper.getString(bitrate));
         }
 
-        String defaultName = getDefaultFilename(name, config.container.extension(), config);
+        String defaultName = getDefaultFilename(name, config.internalExport.container.extension(), config);
 
         Function<String, ExportSettings> callback = pathStr -> {
             if (pathStr != null) {
@@ -397,14 +395,14 @@ public class StartExportWindow {
                     return null;
                 }
 
-                boolean transparent = config.transparentBackground && !editorState.replayVisuals.renderSky;
-                String encoder = config.videoCodec.getEncoders()[config.selectedVideoEncoder[0]];
+                boolean transparent = config.internalExport.transparentBackground && !editorState.replayVisuals.renderSky;
+                String encoder = config.internalExport.videoCodec.getEncoders()[config.internalExport.selectedVideoEncoder[0]];
 
-                VideoCodec useVideoCodec = config.videoCodec;
-                AudioCodec useAudioCodec = config.audioCodec;
-                boolean shouldRecordAudio = config.recordAudio;
+                VideoCodec useVideoCodec = config.internalExport.videoCodec;
+                AudioCodec useAudioCodec = config.internalExport.audioCodec;
+                boolean shouldRecordAudio = config.internalExport.recordAudio;
 
-                if (config.container == VideoContainer.PNG_SEQUENCE) {
+                if (config.internalExport.container == VideoContainer.PNG_SEQUENCE) {
                     useVideoCodec = null;
                     encoder = null;
                     shouldRecordAudio = false;
@@ -415,36 +413,36 @@ public class StartExportWindow {
                 }
 
                 Path path = Path.of(pathStr);
-                config.defaultExportPath = path.getParent().toString();
+                config.internalExport.defaultExportPath = path.getParent().toString();
                 return new ExportSettings(name, editorState.copy(),
                     player.position(), player.getYRot(), player.getXRot(),
-                    config.resolution[0], config.resolution[1], start, end,
-                    Math.max(1, config.framerate[0]), config.resetRng, config.container, useVideoCodec, encoder, numBitrate, transparent, config.ssaa, config.noGui,
-                    shouldRecordAudio, config.stereoAudio, useAudioCodec,
+                    config.internalExport.resolution[0], config.internalExport.resolution[1], start, end,
+                    Math.max(1, config.internalExport.framerate[0]), config.internalExport.resetRng, config.internalExport.container, useVideoCodec, encoder, numBitrate, transparent, config.internalExport.ssaa, config.internalExport.noGui,
+                    shouldRecordAudio, config.internalExport.stereoAudio, useAudioCodec,
                     path, ImGuiHelper.getString(pngSequenceFormat));
             }
 
             return null;
         };
 
-        String defaultExportPathString = config.defaultExportPath;
-        if (config.container == VideoContainer.PNG_SEQUENCE) {
+        String defaultExportPathString = config.internalExport.defaultExportPath;
+        if (config.internalExport.container == VideoContainer.PNG_SEQUENCE) {
             return AsyncFileDialogs.openFolderDialog(defaultExportPathString).thenApply(callback);
         } else {
             return AsyncFileDialogs.saveFileDialog(defaultExportPathString, defaultName,
-                config.container.extension(), config.container.extension()).thenApply(callback);
+                config.internalExport.container.extension(), config.internalExport.container.extension()).thenApply(callback);
         }
 
     }
 
-    public static @NotNull String getDefaultFilename(@Nullable String name, String extension, FlashbackConfig config) {
+    public static @NotNull String getDefaultFilename(@Nullable String name, String extension, FlashbackConfigV1 config) {
         Path defaultPath = FabricLoader.getInstance().getGameDir();
 
         try {
-            if (config.defaultExportPath == null || config.defaultExportPath.isBlank() || !Files.exists(Path.of(config.defaultExportPath))) {
-                config.defaultExportPath = defaultPath.toString();
+            if (config.internalExport.defaultExportPath == null || config.internalExport.defaultExportPath.isBlank() || !Files.exists(Path.of(config.internalExport.defaultExportPath))) {
+                config.internalExport.defaultExportPath = defaultPath.toString();
             } else {
-                defaultPath = Path.of(config.defaultExportPath);
+                defaultPath = Path.of(config.internalExport.defaultExportPath);
             }
         } catch (Exception ignored) {}
 
@@ -455,13 +453,13 @@ public class StartExportWindow {
             } catch (Exception ignored) {}
         }
         if (defaultName == null) {
-            String desiredName = Utils.resolveFilenameTemplate(Flashback.getConfig().defaultExportFilename);
+            String desiredName = Utils.resolveFilenameTemplate(Flashback.getConfig().exporting.defaultExportFilename);
             try {
                 defaultName = FileUtil.findAvailableName(defaultPath, desiredName, "." + extension);
             } catch (Exception ignored) {}
         }
         if (defaultName == null) {
-            String desiredName = Utils.resolveFilenameTemplate(Flashback.getConfig().defaultExportFilename);
+            String desiredName = Utils.resolveFilenameTemplate(Flashback.getConfig().exporting.defaultExportFilename);
             defaultName = desiredName + "." + extension;
         }
         return defaultName;

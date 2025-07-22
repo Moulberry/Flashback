@@ -1,27 +1,15 @@
 package com.moulberry.flashback.editor.ui.windows;
 
 import com.moulberry.flashback.Flashback;
-import com.moulberry.flashback.combo_options.VideoContainer;
-import com.moulberry.flashback.configuration.FlashbackConfig;
+import com.moulberry.flashback.configuration.FlashbackConfigV1;
 import com.moulberry.flashback.editor.ui.ImGuiHelper;
 import com.moulberry.flashback.editor.ui.ReplayUI;
-import com.moulberry.flashback.exporting.AsyncFileDialogs;
-import com.moulberry.flashback.exporting.ExportJob;
-import com.moulberry.flashback.exporting.ExportSettings;
-import com.moulberry.flashback.keyframe.interpolation.InterpolationType;
-import com.moulberry.flashback.state.EditorState;
-import com.moulberry.flashback.state.EditorStateManager;
 import imgui.ImGui;
 import imgui.ImVec2;
 import imgui.flag.ImGuiCond;
 import imgui.flag.ImGuiWindowFlags;
-import imgui.type.ImShort;
 import imgui.type.ImString;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.resources.language.I18n;
-
-import java.nio.file.Path;
 
 public class PreferencesWindow {
 
@@ -48,15 +36,15 @@ public class PreferencesWindow {
                 return;
             }
 
-            FlashbackConfig config = Flashback.getConfig();
+            FlashbackConfigV1 config = Flashback.getConfig();
 
             // Exporting
             ImGuiHelper.separatorWithText("Exporting");
 
-            ImString imString = ImGuiHelper.createResizableImString(config.defaultExportFilename);
+            ImString imString = ImGuiHelper.createResizableImString(config.exporting.defaultExportFilename);
             ImGui.setNextItemWidth(ReplayUI.scaleUi(200));
             if (ImGui.inputText(I18n.get("flashback.export_filename"), imString)) {
-                config.defaultExportFilename = ImGuiHelper.getString(imString);
+                config.exporting.defaultExportFilename = ImGuiHelper.getString(imString);
                 config.delayedSaveToDefaultFolder();
             }
             ImGuiHelper.tooltip(I18n.get("flashback.export_filename_tooltip"));
@@ -65,24 +53,33 @@ public class PreferencesWindow {
             ImGuiHelper.separatorWithText(I18n.get("flashback.keyframes"));
 
             ImGui.setNextItemWidth(ReplayUI.scaleUi(200));
-            config.defaultInterpolationType = ImGuiHelper.enumCombo(I18n.get("flashback.default_interpolation"), config.defaultInterpolationType);
+            config.keyframes.defaultInterpolationType = ImGuiHelper.enumCombo(I18n.get("flashback.default_interpolation"), config.keyframes.defaultInterpolationType);
+            ImGuiHelper.tooltip(I18n.get("flashback.default_interpolation_description"));
 
-            if (ImGui.checkbox(I18n.get("flashback.use_realtime_interpolation"), config.useRealtimeInterpolation)) {
-                config.useRealtimeInterpolation = !config.useRealtimeInterpolation;
+            if (ImGui.checkbox(I18n.get("flashback.use_realtime_interpolation"), config.keyframes.useRealtimeInterpolation)) {
+                config.keyframes.useRealtimeInterpolation = !config.keyframes.useRealtimeInterpolation;
             }
+            ImGuiHelper.tooltip(I18n.get("flashback.use_realtime_interpolation_description"));
 
             if (ImGui.collapsingHeader(I18n.get("flashback.advanced"))) {
                 ImGui.textWrapped(I18n.get("flashback.advanced_description"));
-                if (ImGui.checkbox(I18n.get("flashback.disable_first_person_updates"), config.disableIncreasedFirstPersonUpdates)) {
-                    config.disableIncreasedFirstPersonUpdates = !config.disableIncreasedFirstPersonUpdates;
+
+                if (ImGui.checkbox(I18n.get("flashback.disable_first_person_updates"), config.advanced.disableIncreasedFirstPersonUpdates)) {
+                    config.advanced.disableIncreasedFirstPersonUpdates = !config.advanced.disableIncreasedFirstPersonUpdates;
                     config.delayedSaveToDefaultFolder();
                 }
-                if (ImGui.checkbox(I18n.get("flashback.disable_third_person_cancel"), config.disableThirdPersonCancel)) {
-                    config.disableThirdPersonCancel = !config.disableThirdPersonCancel;
+
+                if (ImGui.checkbox(I18n.get("flashback.disable_third_person_cancel"), config.advanced.disableThirdPersonCancel)) {
+                    config.advanced.disableThirdPersonCancel = !config.advanced.disableThirdPersonCancel;
                     config.delayedSaveToDefaultFolder();
                 }
+
                 ImGui.setNextItemWidth(ReplayUI.scaleUi(200));
-                ImGui.sliderInt(I18n.get("flashback.dummy_render_frames"), config.exportRenderDummyFrames, 0, 100);
+                int[] value = new int[]{config.exporting.exportRenderDummyFrames};
+                if (ImGui.sliderInt(I18n.get("flashback.dummy_render_frames"), value, 0, 100)) {
+                    config.exporting.exportRenderDummyFrames = value[0];
+                    config.delayedSaveToDefaultFolder();
+                }
                 ImGuiHelper.tooltip(I18n.get("flashback.dummy_render_frames_description"));
             }
 

@@ -26,7 +26,7 @@ public class ForceDefaultExportSettings {
 
     public String defaultExportPath = null;
 
-    public void apply(FlashbackConfig config) {
+    public void apply(FlashbackConfigV1.SubcategoryInternalExport config) {
         if (this.resolution != null) {
             config.resolution = Arrays.copyOf(this.resolution, 2);
         }

@@ -5,12 +5,10 @@ import com.moulberry.flashback.FilePlayerSkin;
 import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.FlashbackGson;
 import com.moulberry.flashback.combo_options.GlowingOverride;
-import com.moulberry.flashback.configuration.FlashbackConfig;
-import com.moulberry.flashback.keyframe.Keyframe;
+import com.moulberry.flashback.configuration.FlashbackConfigV1;
 import com.moulberry.flashback.keyframe.change.KeyframeChange;
 import com.moulberry.flashback.keyframe.change.KeyframeChangeTickrate;
 import com.moulberry.flashback.keyframe.handler.KeyframeHandler;
-import com.moulberry.flashback.keyframe.interpolation.InterpolationType;
 import com.moulberry.flashback.playback.ReplayServer;
 import com.moulberry.flashback.visuals.ReplayVisuals;
 import net.minecraft.client.Camera;
@@ -26,8 +24,6 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.concurrent.locks.ReentrantLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.StampedLock;
 
 public class EditorState {
@@ -64,11 +60,11 @@ public class EditorState {
         this.scenes = new ArrayList<>();
         this.scenes.add(new EditorScene("Scene 1"));
 
-        FlashbackConfig config = Flashback.getConfig();
-        if (config.enableOverrideFovByDefault) {
+        FlashbackConfigV1 config = Flashback.getConfig();
+        if (config.internal.enableOverrideFovByDefault) {
             this.replayVisuals.overrideFov = true;
             if (this.replayVisuals.overrideFovAmount < 0) {
-                this.replayVisuals.overrideFovAmount = config.defaultOverrideFov;
+                this.replayVisuals.overrideFovAmount = config.internal.defaultOverrideFov;
             }
         }
     }
@@ -265,8 +261,8 @@ public class EditorState {
     private void updateRealtimeMappingsIfNeeded() {
         long stamp = this.sceneLock.readLock();
         try {
-            FlashbackConfig config = Flashback.getConfig();
-            if (!config.useRealtimeInterpolation) {
+            FlashbackConfigV1 config = Flashback.getConfig();
+            if (!config.keyframes.useRealtimeInterpolation) {
                 this.sceneLock.unlock(stamp);
                 stamp = this.sceneLock.writeLock();
 
