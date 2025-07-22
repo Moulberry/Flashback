@@ -1,6 +1,6 @@
 {
   "modmenu.nameTranslation.flashback": "Flashback",
-  "modmenu.descriptionTranslation.flashback": "Enregistre ta partie Minecraft, rejoue-la et crée des plans cinématographiques époustouflants",
+  "modmenu.descriptionTranslation.flashback": "Enregistre ta partie Minecraft, rejoue-la et créer des plans cinématographiques époustouflants",
 
   "flashback.select_replay": "Sélectionner un Enregistrement",
   "flashback.select_replay.open": "Ouvrir un Enregistrement",
@@ -12,6 +12,36 @@
   "flashback.select_replay.duration": "Durée: %s",
 
   "flashback.option.per_second": "%s/s",
+
+  "flashback.option.recording_controls": "Boutons de Flashback",
+  "flashback.option.recording_controls.location": "Position des Boutons dans le Menu Pause",
+  "flashback.option.recording_controls.location.description": "Où positionner les boutons Flashback dans le menu pause (ESC)",
+  "flashback.option.recording_controls.automatically_start": "Démarrer Automatiquement",
+  "flashback.option.recording_controls.automatically_start.description": "Démarre automatiquement un enregistrement lors d'une connexion à un monde/serveur",
+  "flashback.option.recording_controls.automatically_finish": "Terminer Automatiquement",
+  "flashback.option.recording_controls.automatically_finish.description": "Termine automatiquement un enregistrement lors d'une sortie du monde/serveur",
+  "flashback.option.recording_controls.show_recording_toasts": "Afficher les Notifications d'Enregistrement",
+  "flashback.option.recording_controls.show_recording_toasts.description": "Affiche les notifications en haut à droite lors du démarrage/de l'arrêt d'un enregistrement",
+  "flashback.option.recording_controls.quicksave": "Sauvegarde Rapide",
+  "flashback.option.recording_controls.quicksave.description": "Sauvegarde l'enregistrement avec des valeurs par défaut au lieu d'ouvrir le menu de sauvegarde de l'enregistrement",
+
+  "flashback.option.recording": "En Enregistrement",
+  "flashback.option.recording.mark_dimension_changes": "Marquer les Changements de Dimension",
+  "flashback.option.recording.mark_dimension_changes.description": "Ajoute automatiquement un marqueur à l'enregistrement lors du changement de dimension",
+  "flashback.option.recording.record_hotbar": "Enregistrer la Barre d'Accès Rapide",
+  "flashback.option.recording.record_hotbar.description": "Ajoute des informations sur la barre d'accès rapide en vue à la première personne dans l'enregistrement",
+  "flashback.option.recording.local_player_updates_per_second": "Mises à Jour en Vue à la Première Personne",
+  "flashback.option.recording.local_player_updates_per_second.description": "Le taux de mise à jour par seconde pour la position/l'angle du joueur en vue à la première personne. Si vous prévoyez d'exporter votre propre perspective en vue à la première personne, vous devez augmenter cela au framerate auquel vous souhaitez exporter",
+  "flashback.option.recording.record_voice_chat": "Enregistrer le Chat Vocal",
+  "flashback.option.recording.record_voice_chat.description": "Ajoute le chat vocal de SimpleVoiceChat dans l'enregistrement",
+
+  "flashback.option.exporting": "Exportation",
+
+  "flashback.option.keyframes": "Images Clés",
+  "flashback.default_interpolation_description": "L'interpolation par défaut à utiliser lors de la création de nouvelles images clés",
+  "flashback.use_realtime_interpolation_description": "Interpole entre les images clés en fonction de la différence en temps réel. Désactivez pour utiliser la différence de tick pour l'interpolation",
+
+  "flashback.option.editor_movement": "Mouvement de l'Éditeur",
 
   "flashback.option.automatically_start": "Démarrer Automatiquement",
   "flashback.option.automatically_start.description": "Démarre automatiquement l'enregistrement lors de la connexion à un monde/serveur",
@@ -27,8 +57,8 @@
   "flashback.option.mark_dimension_changes.description": "Ajoute automatiquement un marqueur à l'enregistrement lors du changement de dimension",
   "flashback.option.record_hotbar": "Enregistrer la barre de raccourcis",
   "flashback.option.record_hotbar.description": "Ajoute des informations sur la barre de raccourcis en vue à la première personne dans l'enregistrement",
-  "flashback.option.local_player_updates_per_second": "Mises à Jour en Vue à la Première Personne",
-  "flashback.option.local_player_updates_per_second.description": "Le taux de mise à jour par seconde pour la position/l'angle du joueur en vue à la première personne",
+  "flashback.option.local_player_updates_per_second": "Fréquence de mise à jour de la Première Personne",
+  "flashback.option.local_player_updates_per_second.description": "La Fréquence de mise à jour par seconde pour la position/l'angle du joueur en vue à la première personne",
   "flashback.option.record_voice_chat": "Enregistrer le Chat Vocal",
   "flashback.option.record_voice_chat.description": "Enregistre le chat vocal du mod SimpleVoiceChat",
   "flashback.replay_sorting.created_date": "Date de Création",
@@ -167,7 +197,7 @@
   "flashback.hide_all": "Tout masquer",
   "flashback.show_all": "Tout afficher",
   "flashback.export_filename": "Nom de fichier d'exportation",
-  "flashback.export_filename_tooltip": "Le nom de fichier par défaut lors de l'exportation\nVariables:\n\t%%date%%\tyear-month-day\n\t%%time%%\thh_mm_ss\n\t%%replay%%\tNom de la lecture\n\t%%seq%%\tNombre d'exportations pour cette session",
+  "flashback.export_filename_tooltip": "Le nom de fichier par défaut lors de l'exportation\nVariables:\n  %%date%% => année-mois-jour\n  %%time%% => hh_mm_ss\n  %%replay%% => Nom de la lecture\n  %%seq%% => Nombre d'exportations pour cette session",
   "flashback.keyframes": "Images clés",
   "flashback.default_interpolation": "Interpolation par défaut",
   "flashback.use_realtime_interpolation": "Utiliser l'interpolation en temps réel",
@@ -176,8 +206,8 @@
   "flashback.disable_first_person_updates": "Désactiver les mises à jour en vue à la première personne",
   "flashback.disable_third_person_cancel": "Désactiver l'annulation en vue à la troisième personne",
   "flashback.dummy_render_frames": "Dummy Render Frames",
-  "flashback.dummy_render_frames_description": "Cela fera en sorte que l'exportateur rende des images clés supplémentaires avant d'enregistrer une image.\nCela augmentera DRASTIQUEMENT le temps nécessaire à l'exportation, mais cela peut être nécessaire lors de l'utilisation de shaders qui dépendent de l'accumulation temporelle ou de mods qui manquent de support pour les images parfaites FREX.",
-  "flashback.render_filter_affirmation": "Je, %s, jure solennellement (ou affirme) que je ne désactiverai rien dans le menu 'Filtre de rendu' et que je ne demanderai pas plus tard dans le support Flashback pourquoi l'entité n'est pas rendue.",
+  "flashback.dummy_render_frames_description": "Cela fera en sorte que l'exportateur rende des images supplémentaires avant d'enregistrer l'image finale.\nCela augmentera DRASTIQUEMENT le temps nécessaire pour exporter, mais ça peut être utile avec certains shaders qui dépendent d'une accumulation temporelle ou des mods qui ne supportent pas des \"FREX Flawless Frames.\"",
+  "flashback.render_filter_affirmation": "Je, %s, jure solennellement (ou affirme) que je ne désactiverai rien dans le menu 'Filtre de rendu' et que je ne demanderai pas plus tard dans le support Flashback pourquoi une entité n'est plus affichée.",
   "flashback.render_filter_sign": "Signé, %s.",
   "flashback.entities": "Entités",
   "flashback.no_entities_found": "Aucune entité trouvée",
@@ -381,5 +411,18 @@
   "flashback.registry_warning": "ERREUR CRITIQUE : DONNÉES DE REGISTRE",
   "flashback.registry_warning_description": "Une erreur s'est produite lors du chargement des données du registre, la lecture est probablement cassée... voir les journaux pour la trace de la pile",
   "flashback.player_spawn_warning": "ERREUR CRITIQUE : ÉCHEC DE LA FAÇON DE JOUER",
-  "flashback.player_spawn_warning_description": "Une erreur s'est produite lors de la tentative de faire apparaître un joueur. La plupart du temps, cela est causé par une incompatibilité de mod... voir les journaux pour la trace de la pile"
+  "flashback.player_spawn_warning_description": "Une erreur s'est produite lors de la tentative de faire apparaître un joueur. La plupart du temps, cela est causé par une incompatibilité de mod... voir les journaux pour la trace de la pile",
+
+  "flashback.interpolation_type.smooth": "Lisse",
+  "flashback.interpolation_type.linear": "Linéaire",
+  "flashback.interpolation_type.ease_in": "Lisse Entrée (Linéaire Sortie)",
+  "flashback.interpolation_type.ease_out": "Lisse Sortie (Linéaire Entrée)",
+  "flashback.interpolation_type.ease_in_out": "Lisse Entrée/Sortie",
+  "flashback.interpolation_type.hold": "Maintenir",
+  "flashback.interpolation_type.hermite": "Hermite",
+  "flashback.recording_controls_location.right": "Droite",
+  "flashback.recording_controls_location.below": "En dessous",
+  "flashback.recording_controls_location.left": "Gauche",
+  "flashback.recording_controls_location.hidden": "Caché",
+  "flashback.disable_server_resource_packs": "Désactiver les packs de ressources du serveur"
 }
