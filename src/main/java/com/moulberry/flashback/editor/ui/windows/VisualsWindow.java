@@ -321,6 +321,12 @@ public class VisualsWindow {
                     editorState.markDirty();
                 }
             }
+
+            if (replayServer.hasServerResourcePack) {
+                if (ImGui.checkbox(I18n.get("flashback.disable_server_resource_packs"), visuals.disableServerResourcePack)) {
+                    visuals.disableServerResourcePack = !visuals.disableServerResourcePack;
+                }
+            }
         }
         ImGui.end();
     }

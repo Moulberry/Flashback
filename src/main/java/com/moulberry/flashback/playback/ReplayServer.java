@@ -153,6 +153,7 @@ public class ReplayServer extends IntegratedServer {
     public boolean isProcessingSnapshot = false;
     private boolean processedSnapshot = false;
     public volatile boolean fastForwarding = false;
+    public volatile boolean hasServerResourcePack = false;
 
     private record BlockAtPosition(long pos, BlockState blockState) {}
     private List<BlockAtPosition> pendingBlockOverrides = new ArrayList<>();
@@ -395,9 +396,13 @@ public class ReplayServer extends IntegratedServer {
 
                 // Send all resource packs
                 serverPlayer.connection.send(new ClientboundResourcePackPopPacket(Optional.empty()));
-                for (RemotePack remotePack : remotePacks.values()) {
-                    serverPlayer.connection.send(new ClientboundResourcePackPushPacket(remotePack.id,
-                        remotePack.url, remotePack.hash, true, Optional.empty()));
+
+                EditorState editorState = ReplayServer.this.getEditorState();
+                if (!editorState.replayVisuals.disableServerResourcePack) {
+                    for (RemotePack remotePack : remotePacks.values()) {
+                        serverPlayer.connection.send(new ClientboundResourcePackPushPacket(remotePack.id,
+                            remotePack.url, remotePack.hash, true, Optional.empty()));
+                    }
                 }
 
                 // Send tab list customization
@@ -857,6 +862,8 @@ public class ReplayServer extends IntegratedServer {
             this.gamePacketHandler.flushPendingEntities();
         }
 
+        EditorState editorState = this.getEditorState();
+
         this.lastReplayTick = this.targetTick;
         this.lastTickTimeNanos = this.nextTickTimeNanos - this.tickRateManager().nanosecondsPerTick();
 
@@ -1031,7 +1038,7 @@ public class ReplayServer extends IntegratedServer {
         }
 
         // Update resourcepacks
-        if (this.remotePacks.isEmpty()) {
+        if (this.remotePacks.isEmpty() || editorState.replayVisuals.disableServerResourcePack) {
             if (!this.oldRemotePacks.isEmpty()) {
                 this.oldRemotePacks.clear();
                 this.getPlayerList().broadcastAll(new ClientboundResourcePackPopPacket(Optional.empty()));
@@ -1059,6 +1066,7 @@ public class ReplayServer extends IntegratedServer {
                 }
             });
         }
+        this.hasServerResourcePack = !this.remotePacks.isEmpty();
 
         if (this.sendFinishedServerTick.compareAndExchange(true, false)) {
             for (ReplayPlayer replayViewer : this.replayViewers) {
