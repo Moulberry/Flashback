@@ -3,6 +3,7 @@ package com.moulberry.flashback.screen;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.network.chat.Component;
@@ -12,8 +13,20 @@ public class FlashbackButton extends Button {
 
     private static final ResourceLocation ICON_PIXELATED = ResourceLocation.parse("flashback:icon_pixelated.png");
 
+    private final ResourceLocation icon;
+
     public FlashbackButton(int x, int y, int width, int height, Component component, OnPress onPress) {
+        this(x, y, width, height, component, onPress, ICON_PIXELATED);
+    }
+
+    public FlashbackButton(int x, int y, int width, int height, Component component, OnPress onPress, ResourceLocation icon) {
         super(x, y, width, height, component, onPress, DEFAULT_NARRATION);
+        this.icon = icon;
+    }
+
+    public FlashbackButton flashbackWithTooltip() {
+        this.setTooltip(Tooltip.create(this.getMessage()));
+        return this;
     }
 
     @Override
@@ -27,7 +40,7 @@ public class FlashbackButton extends Button {
         int x = this.getX() + paddingX;
         int y = this.getY() + paddingY;
 
-        guiGraphics.blit(RenderPipelines.GUI_TEXTURED, ICON_PIXELATED, x, y, 0f, 0f, size, size, size, size);
+        guiGraphics.blit(RenderPipelines.GUI_TEXTURED, this.icon, x, y, 0f, 0f, size, size, size, size, ((int)(this.alpha * 0xFF) << 24) | 0xFFFFFF);
 
     }
 

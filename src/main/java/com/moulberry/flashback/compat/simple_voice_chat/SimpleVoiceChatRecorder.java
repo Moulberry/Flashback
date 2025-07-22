@@ -13,7 +13,7 @@ import java.util.UUID;
 public class SimpleVoiceChatRecorder {
 
     private static boolean shouldWritePacket() {
-        return Flashback.RECORDER != null && Flashback.RECORDER.readyToWrite() && Flashback.getConfig().recordVoiceChat;
+        return Flashback.RECORDER != null && Flashback.RECORDER.readyToWrite() && Flashback.getConfig().recording.recordVoiceChat;
     }
 
     public static void onReceiveEntitySound(ClientReceiveSoundEvent.EntitySound event) {

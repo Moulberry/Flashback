@@ -1,7 +1,7 @@
 package com.moulberry.flashback.editor.ui.windows;
 
 import com.moulberry.flashback.Flashback;
-import com.moulberry.flashback.configuration.FlashbackConfig;
+import com.moulberry.flashback.configuration.FlashbackConfigV1;
 import com.moulberry.flashback.editor.ui.ImGuiHelper;
 import com.moulberry.flashback.editor.ui.ReplayUI;
 import com.moulberry.flashback.state.EditorState;
@@ -52,14 +52,14 @@ public class RenderFilterWindow {
         if (ImGui.begin(title + "###Render Filter", open, flags)) {
             wasDocked = ImGui.isWindowDocked();
 
-            FlashbackConfig config = Flashback.getConfig();
+            FlashbackConfigV1 config = Flashback.getConfig();
 
-            if (!config.signedRenderFilter) {
+            if (!config.internal.signedRenderFilter) {
                 String name = Minecraft.getInstance().getGameProfile().getName();
                 ImGui.pushTextWrapPos(ReplayUI.scaleUi(300));
                 ImGui.textWrapped(I18n.get("flashback.render_filter_affirmation", name));
                 if (ImGui.checkbox(I18n.get("flashback.render_filter_sign", name), false)) {
-                    config.signedRenderFilter = true;
+                    config.internal.signedRenderFilter = true;
                     config.delayedSaveToDefaultFolder();
                 }
                 ImGui.popTextWrapPos();

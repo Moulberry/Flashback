@@ -5,6 +5,7 @@ import net.minecraft.network.chat.Component;
 public class FlashbackTextComponents {
 
     public static final Component FLASHBACK = Component.translatable("flashback.flashback");
+    public static final Component FLASHBACK_OPTIONS = Component.translatable("flashback.flashback_options");
     public static final Component SAVE_REPLAY = Component.translatable("flashback.save_replay");
     public static final Component EDIT_REPLAY = Component.translatable("flashback.edit_replay");
     public static final Component REPLAY_NAME = Component.translatable("flashback.replay_name");
