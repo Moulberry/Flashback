@@ -39,4 +39,3 @@ hs_err_*.log
 replay_*.log
 *.hprof
 *.jfr
-src/main/resources/assets/flashback/lang/en_us.json
