@@ -1,7 +1,7 @@
 package com.moulberry.flashback.editor.ui.windows;
 
 import com.moulberry.flashback.Flashback;
-import com.moulberry.flashback.configuration.FlashbackConfig;
+import com.moulberry.flashback.configuration.FlashbackConfigV1;
 import com.moulberry.flashback.editor.ui.WindowOpenState;
 import imgui.type.ImBoolean;
 
@@ -24,8 +24,8 @@ public enum WindowType {
     }
 
     public static void renderAll() {
-        FlashbackConfig config = Flashback.getConfig();
-        Set<String> openWindows = config.openedWindows;
+        FlashbackConfigV1 config = Flashback.getConfig();
+        Set<String> openWindows = config.internal.openedWindows;
 
         for (WindowType windowType : values()) {
             if (openWindows.contains(windowType.windowId)) {

@@ -166,7 +166,7 @@ public class VisualsWindow {
             }
             if (visuals.overrideFov) {
                 if (visuals.overrideFovAmount < 0) {
-                    visuals.overrideFovAmount = Flashback.getConfig().defaultOverrideFov;
+                    visuals.overrideFovAmount = Flashback.getConfig().internal.defaultOverrideFov;
                 }
 
                 ImGui.sameLine();

@@ -161,7 +161,7 @@ public class ExportJob {
 
         int oldGuiScale = Minecraft.getInstance().options.guiScale().get();
 
-        this.extraDummyFrames = Flashback.getConfig().exportRenderDummyFrames[0];
+        this.extraDummyFrames = Flashback.getConfig().exporting.exportRenderDummyFrames;
 
         try {
             Files.createDirectories(exportTempFolder);
