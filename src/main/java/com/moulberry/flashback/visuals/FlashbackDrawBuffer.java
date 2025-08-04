@@ -29,6 +29,9 @@ public class FlashbackDrawBuffer implements AutoCloseable {
 
     public FlashbackDrawBuffer(int usageFlags) {
         this.usageFlags = usageFlags;
+
+        // All draw buffers must have the USAGE_VERTEX flag set.
+        this.usageFlags |= GpuBuffer.USAGE_VERTEX;
     }
 
     @Override
