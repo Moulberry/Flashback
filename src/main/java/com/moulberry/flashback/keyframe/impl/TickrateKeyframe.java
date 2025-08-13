@@ -13,6 +13,7 @@ import com.moulberry.flashback.keyframe.types.SpeedKeyframeType;
 import com.moulberry.flashback.spline.CatmullRom;
 import com.moulberry.flashback.spline.Hermite;
 import imgui.ImGui;
+import net.minecraft.client.resources.language.I18n;
 
 import java.lang.reflect.Type;
 import java.util.Map;
@@ -45,8 +46,8 @@ public class TickrateKeyframe extends Keyframe {
     public void renderEditKeyframe(Consumer<Consumer<Keyframe>> update) {
         ImGui.setNextItemWidth(160);
         float[] input = new float[]{this.tickrate/20f};
-        if (ImGui.sliderFloat("Speed", input, 0.1f, 10.0f)) {
-            float tickrate = input[0]*20f;
+        if (ImGui.sliderFloat(I18n.get("flashback.keyframe.speed"), input, 0.1f, 10.0f)) {
+            float tickrate = Math.max(0.01f, input[0]*20f);
             if (this.tickrate != tickrate) {
                 update.accept(keyframe -> ((TickrateKeyframe)keyframe).tickrate = tickrate);
             }
@@ -72,7 +73,7 @@ public class TickrateKeyframe extends Keyframe {
     }
 
     @Override
-    public KeyframeChange createHermiteInterpolatedChange(Map<Integer, Keyframe> keyframes, float amount) {
+    public KeyframeChange createHermiteInterpolatedChange(Map<Float, Keyframe> keyframes, float amount) {
         float tickrate = (float) Hermite.value(Maps.transformValues(keyframes, k -> (double) ((TickrateKeyframe)k).tickrate), amount);
         return new KeyframeChangeTickrate(tickrate);
     }

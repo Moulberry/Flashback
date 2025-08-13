@@ -1,17 +1,16 @@
 package com.moulberry.flashback.editor.ui;
 
-import com.mojang.blaze3d.platform.GlStateManager;
-import com.mojang.blaze3d.platform.TextureUtil;
+import com.mojang.blaze3d.opengl.GlStateManager;
 import com.mojang.blaze3d.platform.Window;
 import com.moulberry.flashback.Flashback;
+import com.moulberry.flashback.configuration.FlashbackConfigV1;
 import com.moulberry.flashback.editor.ui.windows.ExportDoneWindow;
 import com.moulberry.flashback.editor.ui.windows.ExportQueueWindow;
 import com.moulberry.flashback.editor.ui.windows.ExportScreenshotWindow;
-import com.moulberry.flashback.editor.ui.windows.MovementWindow;
-import com.moulberry.flashback.editor.ui.windows.PlayerListWindow;
 import com.moulberry.flashback.editor.ui.windows.PreferencesWindow;
 import com.moulberry.flashback.editor.ui.windows.SelectedEntityPopup;
 import com.moulberry.flashback.editor.ui.windows.WindowType;
+import com.moulberry.flashback.playback.ReplayServer;
 import com.moulberry.flashback.state.EditorState;
 import com.moulberry.flashback.state.EditorStateManager;
 import com.moulberry.flashback.combo_options.Sizing;
@@ -22,14 +21,16 @@ import com.moulberry.flashback.editor.ui.windows.VisualsWindow;
 import imgui.*;
 import imgui.flag.*;
 import imgui.internal.ImGuiContext;
-import it.unimi.dsi.fastutil.ints.IntArrayList;
-import it.unimi.dsi.fastutil.ints.IntList;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.LoadingOverlay;
 import net.minecraft.client.gui.screens.ProgressScreen;
 import net.minecraft.client.gui.screens.ReceivingLevelScreen;
 import net.minecraft.client.multiplayer.MultiPlayerGameMode;
 import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.client.resources.language.ClientLanguage;
+import net.minecraft.client.resources.language.I18n;
+import net.minecraft.locale.Language;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
@@ -49,8 +50,7 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
 
 public class ReplayUI {
@@ -83,10 +83,6 @@ public class ReplayUI {
     private static boolean wasNavClose = false;
     private static boolean navClose = false;
 
-    private static final Lock deferredCloseLock = new ReentrantLock();
-    private static final IntList deferredCloseTextureIds = new IntArrayList();
-    private static final List<AutoCloseable> deferredClose = new ArrayList<>();
-
     private static float globalScale = 1.0f;
     public static float newGlobalScale = 1.0f;
     private static float contentScale = 1.0f;
@@ -102,9 +98,15 @@ public class ReplayUI {
     private static UUID selectedEntity = null;
     private static boolean openSelectedEntityPopup = false;
 
+    private static int displayingTip = -1;
+    private static boolean dontShowTipsOnStartupCheckbox = false;
+
+    public static boolean shownRegistryErrorWarning = false;
+    public static boolean shownPlayerSpawnErrorWarning = false;
+
     public static void init() {
         if (initialized) {
-            throw new IllegalStateException("ReplayUI initialized twice");
+            return;
         }
         initialized = true;
 
@@ -121,8 +123,16 @@ public class ReplayUI {
         } else {
             try {
                 String imguiIni = Files.readString(path);
+                boolean modified = false;
                 if (imguiIni.contains("[Window][Timeline]")) {
                     imguiIni = imguiIni.replace("[Window][Timeline]", "[Window][###Timeline]");
+                    modified = true;
+                }
+                if (imguiIni.contains("[Window][Visuals]")) {
+                    imguiIni = imguiIni.replace("[Window][Visuals]", "[Window][###Visuals]");
+                    modified = true;
+                }
+                if (modified) {
                     Files.writeString(path, imguiIni);
                 }
             } catch (IOException ignored) {}
@@ -174,13 +184,27 @@ public class ReplayUI {
         rangesBuilder.addRanges(fonts.getGlyphRangesDefault());
 
         if (languageCode.startsWith("uk") || languageCode.startsWith("ru") || languageCode.startsWith("bg")) {
-            rangesBuilder.addRanges(fonts.getGlyphRangesCyrillic());
+            addRanges(rangesBuilder, fonts.getGlyphRangesCyrillic());
         } else if (languageCode.startsWith("tr")) {
             rangesBuilder.addText("ÇçĞğİıÖöŞşÜü");
         } else if (languageCode.startsWith("pl")) {
-            rangesBuilder.addRanges(new short[]{0x0100, 0x017F, 0});
+            addRanges(rangesBuilder, new short[]{0x0100, 0x017F, 0});
         } else if (languageCode.startsWith("cs")) {
             rangesBuilder.addText("ÁáČčĎďÉéĚěÍíŇňÓóŘřŠšŤťÚúŮůÝýŽž");
+        } else if (languageCode.startsWith("he")) {
+            addRanges(rangesBuilder, new short[]{(short)'\u0590', (short)'\u05FF', (short)'\uFB1D', (short)'\uFB4F', 0});
+        } else if (languageCode.startsWith("ja")) {
+            addRanges(rangesBuilder, fonts.getGlyphRangesJapanese());
+        } else if (languageCode.startsWith("zh")) {
+            addRanges(rangesBuilder, fonts.getGlyphRangesChineseFull());
+        } else if (languageCode.startsWith("ko")) {
+            addRanges(rangesBuilder, fonts.getGlyphRangesKorean());
+        }
+
+        if (Language.getInstance() instanceof ClientLanguage clientLanguage) {
+            for (String value : clientLanguage.storage.values()) {
+                rangesBuilder.addText(value);
+            }
         }
 
         rangesBuilder.addChar('\u2318'); // Mac CMD
@@ -231,13 +255,16 @@ public class ReplayUI {
             short[] hebrewRanges = new short[]{(short)'\u0590', (short)'\u05FF', (short)'\uFB1D', (short)'\uFB4F', 0};
             io.getFonts().addFontFromMemoryTTF(loadFont("heebo-medium.ttf"), size, fontConfig, hebrewRanges);
         } else if (languageCode.startsWith("ja")) {
-            io.getFonts().addFontFromMemoryTTF(loadFont("notosansjp-medium.ttf"), size,
-                fontConfig, GlyphRanges.getJapaneseRanges());
+            io.getFonts().addFontFromMemoryTTF(loadFont("notosansjp-medium.ttf"), size*5/4,
+                fontConfig, glyphRanges);
         } else if (languageCode.startsWith("zh")) {
-            io.getFonts().addFontFromMemoryTTF(loadFont("notosanssc-medium.otf"), size,
-                fontConfig, GlyphRanges.getChineseFullRanges());
-            io.getFonts().addFontFromMemoryTTF(loadFont("notosanstc-medium.otf"), size,
-                fontConfig, GlyphRanges.getChineseFullRanges());
+            io.getFonts().addFontFromMemoryTTF(loadFont("notosanstc-medium.ttf"), size*5/4,
+                fontConfig, glyphRanges);
+            io.getFonts().addFontFromMemoryTTF(loadFont("notosanssc-medium.ttf"), size*5/4,
+                fontConfig, glyphRanges);
+        } else if (languageCode.startsWith("ko")) {
+            io.getFonts().addFontFromMemoryTTF(loadFont("notosanskr-medium.ttf"), size*5/4,
+                fontConfig, glyphRanges);
         }
         fontConfig.setMergeMode(false);
 
@@ -246,6 +273,16 @@ public class ReplayUI {
 
         fontConfig.destroy();
         fonts.clearTexData();
+    }
+
+    private static void addRanges(ImFontGlyphRangesBuilder builder, short[] ranges) {
+        for(int i = 0; i < ranges.length && ranges[i] != 0; i += 2) {
+            int from = ranges[i] & 0xFFFF;
+            int to = ranges[i + 1] & 0xFFFF;
+            for(int k = from; k <= to; ++k) {
+                builder.addChar((char)k);
+            }
+        }
     }
 
     private static short[] buildMaterialIconRanges() {
@@ -268,6 +305,8 @@ public class ReplayUI {
         builder.addChar('\ue92b');
         builder.addChar('\ueb3b');
         builder.addChar('\ue14a');
+        builder.addChar('\ue55f');
+        builder.addChar('\uea44');
         return builder.buildRanges();
     }
 
@@ -419,24 +458,6 @@ public class ReplayUI {
         return true;
     }
 
-    public static void deferredCloseTextureId(int textureId) {
-        deferredCloseLock.lock();
-        try {
-            deferredCloseTextureIds.add(textureId);
-        } finally {
-            deferredCloseLock.unlock();
-        }
-    }
-
-    public static void deferredClose(AutoCloseable autoCloseable) {
-        deferredCloseLock.lock();
-        try {
-            deferredClose.add(autoCloseable);
-        } finally {
-            deferredCloseLock.unlock();
-        }
-    }
-
     public static boolean isActive() {
         return activeLastFrame;
     }
@@ -452,7 +473,7 @@ public class ReplayUI {
 
         // Recalculate the size of the gameplay window
         Window window = Minecraft.getInstance().getWindow();
-        if (window.getWidth() > 0 && window.getWidth() <= 32768 && window.getHeight() > 0 && window.getHeight() <= 32768) {
+        if (window.getWidth() > 0 && window.getWidth() <= 16384 && window.getHeight() > 0 && window.getHeight() <= 16384) {
             Minecraft.getInstance().resizeDisplay();
         }
         imguiGlfw.ungrab();
@@ -482,9 +503,16 @@ public class ReplayUI {
     }
 
     public static void drawOverlay() {
+        if (!initialized && Minecraft.getInstance().getOverlay() instanceof LoadingOverlay) {
+            return;
+        }
+
+        init();
+
+        GlStateManager._disableColorLogicOp(); // Needed on 1.21.5 because vanilla doesn't reset this after rendering
+
         long oldImGuiContext = ImGui.getCurrentContext().ptr;
         ImGui.setCurrentContext(imGuiContext);
-
         try {
             drawOverlayInternal();
         } finally {
@@ -502,23 +530,6 @@ public class ReplayUI {
 
         if (!initialized) {
             throw new IllegalStateException("Tried to use EditorUI while it was not initialized");
-        }
-
-        deferredCloseLock.lock();
-        try {
-            for (int id : deferredCloseTextureIds) {
-                TextureUtil.releaseTextureId(id);
-            }
-            deferredCloseTextureIds.clear();
-
-            for (AutoCloseable closeable : deferredClose) {
-                try {
-                    closeable.close();
-                } catch (Exception e) {}
-            }
-            deferredClose.clear();
-        } finally {
-            deferredCloseLock.unlock();
         }
 
         if (Minecraft.getInstance().screen instanceof ProgressScreen || Minecraft.getInstance().screen instanceof ReceivingLevelScreen) {
@@ -676,7 +687,7 @@ public class ReplayUI {
                     ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoCollapse |
                     ImGuiWindowFlags.NoDocking | ImGuiWindowFlags.NoSavedSettings)) {
 
-                    ImGui.text(showText);
+                    ImGui.textUnformatted(showText);
                 }
                 ImGui.end();
 
@@ -708,6 +719,80 @@ public class ReplayUI {
                     drawList.addLine(frameX + frameWidth/2, frameY, frameX + frameWidth/2, frameY+frameHeight, 0xAAFFFFFF, 2);
                     drawList.addLine(frameX, frameY + frameHeight/2, frameX + frameWidth, frameY + frameHeight/2, 0xAAFFFFFF, 2);
                     drawList.addImDrawListFlags(ImDrawListFlags.AntiAliasedLines);
+                }
+            }
+
+            if (displayingTip == -1) {
+                FlashbackConfigV1 config = Flashback.getConfig();
+                if (!config.internal.showTipOfTheDay) {
+                    displayingTip = 0;
+                } else {
+                    long currentTime = System.currentTimeMillis();
+                    if (currentTime >= config.internal.nextTipOfTheDay - TimeUnit.DAYS.toMillis(2) && currentTime <= config.internal.nextTipOfTheDay) {
+                        displayingTip = 0;
+                    } else {
+                        displayingTip = Integer.numberOfTrailingZeros(~config.internal.viewedTipsOfTheDay) + 1;
+                        config.internal.viewedTipsOfTheDay |= 1 << (displayingTip - 1);
+                        config.internal.nextTipOfTheDay = currentTime + TimeUnit.DAYS.toMillis(1);
+                        config.delayedSaveToDefaultFolder();
+                    }
+                }
+            } else if (displayingTip > 0) {
+                int tip = displayingTip - 1;
+                if (tip >= DailyTips.TIPS.length) {
+                    displayingTip = 0;
+                } else {
+                    ImGuiViewport viewport = ImGui.getMainViewport();
+                    ImGui.setNextWindowPos(viewport.getCenterX(), viewport.getCenterY(), ImGuiCond.Appearing, 0.5f, 0.5f);
+                    if (ImGui.begin(I18n.get("flashback.tip_of_the_day"), ImGuiWindowFlags.NoSavedSettings | ImGuiWindowFlags.AlwaysAutoResize)) {
+                        float oldPositionY = ImGui.getCursorPosY();
+
+                        ImGui.pushTextWrapPos(scaleUi(375));
+                        ImGui.textUnformatted(DailyTips.TIPS[tip]);
+                        ImGui.popTextWrapPos();
+
+                        float verticalSize = ImGui.getCursorPosY() - oldPositionY;
+                        int minimumVerticalSize = scaleUi(100);
+                        if (verticalSize < minimumVerticalSize) {
+                            ImGui.setCursorPosY(ImGui.getCursorPosY() + minimumVerticalSize - verticalSize);
+                        }
+
+                        if (ImGui.checkbox(I18n.get("flashback.replayui.dont_show_tips"), dontShowTipsOnStartupCheckbox)) {
+                            dontShowTipsOnStartupCheckbox = !dontShowTipsOnStartupCheckbox;
+                        }
+                        ImGui.sameLine();
+                        ImGui.dummy(scaleUi(20), 0);
+                        ImGui.sameLine();
+                        if (ImGui.button(I18n.get("flashback.close"))) {
+                            if (dontShowTipsOnStartupCheckbox) {
+                                FlashbackConfigV1 config = Flashback.getConfig();
+                                config.internal.showTipOfTheDay = false;
+                                config.delayedSaveToDefaultFolder();
+                            }
+                            displayingTip = 0;
+                        }
+                        ImGui.sameLine();
+                        boolean canShowPrev = displayingTip > 1;
+                        if (!canShowPrev) ImGui.beginDisabled();
+                        if (ImGui.button(I18n.get("gui.back")) && canShowPrev) {
+                            FlashbackConfigV1 config = Flashback.getConfig();
+                            displayingTip -= 1;
+                            config.internal.viewedTipsOfTheDay |= 1 << (displayingTip - 1);
+                            config.delayedSaveToDefaultFolder();
+                        }
+                        if (!canShowPrev) ImGui.endDisabled();
+                        ImGui.sameLine();
+                        boolean canShowNext = displayingTip < DailyTips.TIPS.length;
+                        if (!canShowNext) ImGui.beginDisabled();
+                        if (ImGui.button(I18n.get("flashback.next")) && canShowNext) {
+                            FlashbackConfigV1 config = Flashback.getConfig();
+                            displayingTip += 1;
+                            config.internal.viewedTipsOfTheDay |= 1 << (displayingTip - 1);
+                            config.delayedSaveToDefaultFolder();
+                        }
+                        if (!canShowNext) ImGui.endDisabled();
+                    }
+                    ImGui.end();
                 }
             }
 
@@ -753,7 +838,7 @@ public class ReplayUI {
                                 final float defaultFlyingSpeed = 0.05f;
                                 float flyingSpeed = Mth.clamp(player.getAbilities().getFlyingSpeed() + (float)wheelY * defaultFlyingSpeed / 10f,
                                     defaultFlyingSpeed / 10f, defaultFlyingSpeed * 10.0f);
-                                setInfoOverlay(String.format("Flying Speed: %.1f", flyingSpeed / defaultFlyingSpeed));
+                                setInfoOverlay(I18n.get("flashback.flying_speed", flyingSpeed / defaultFlyingSpeed));
                                 player.getAbilities().setFlyingSpeed(flyingSpeed);
                             }
                         }
@@ -776,6 +861,39 @@ public class ReplayUI {
         ExportQueueWindow.render();
 
         WindowType.renderAll();
+
+        ReplayServer replayServer = Flashback.getReplayServer();
+        if (replayServer != null) {
+            if (replayServer.failedToLoadRegistryDataWarning && !shownRegistryErrorWarning) {
+                ImGui.openPopup("###RegistryWarning");
+                if (ImGuiHelper.beginPopupModal(I18n.get("flashback.registry_warning") + "###RegistryWarning", ImGuiWindowFlags.AlwaysAutoResize)) {
+                    ImGui.pushTextWrapPos(scaleUi(375));
+                    ImGui.textWrapped(I18n.get("flashback.registry_warning_description"));
+                    ImGui.popTextWrapPos();
+
+                    if (ImGui.button(I18n.get("gui.ok"))) {
+                        ImGui.closeCurrentPopup();
+                        shownRegistryErrorWarning = true;
+                    }
+                    ImGui.endPopup();
+
+                }
+            } else if (replayServer.failedToSpawnPlayerWarning && !shownPlayerSpawnErrorWarning) {
+                ImGui.openPopup("###PlayerSpawnWarning");
+                if (ImGuiHelper.beginPopupModal(I18n.get("flashback.player_spawn_warning") + "###PlayerSpawnWarning", ImGuiWindowFlags.AlwaysAutoResize)) {
+                    ImGui.pushTextWrapPos(scaleUi(375));
+                    ImGui.textWrapped(I18n.get("flashback.player_spawn_warning_description"));
+                    ImGui.popTextWrapPos();
+
+                    if (ImGui.button(I18n.get("gui.ok"))) {
+                        ImGui.closeCurrentPopup();
+                        shownPlayerSpawnErrorWarning = true;
+                    }
+                    ImGui.endPopup();
+
+                }
+            }
+        }
 
         ExportDoneWindow.render();
 

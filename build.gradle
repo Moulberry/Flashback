@@ -10,7 +10,7 @@ buildscript {
 }
 
 plugins {
-	id 'fabric-loom' version '1.8-SNAPSHOT'
+	id 'fabric-loom' version '1.10-SNAPSHOT'
     id 'com.github.johnrengelman.shadow' version "7.1.2"
 	id 'maven-publish'
 }
@@ -35,7 +35,7 @@ repositories {
 			includeGroup("maven.modrinth")
 		}
 	}
-    maven { url = "https://maven.bawnorton.com/releases" }
+    mavenLocal()
 }
 
 loom {
@@ -62,10 +62,15 @@ dependencies {
 	// Fabric API. This is technically optional, but you probably want it anyway.
 	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
 
-	include(implementation("com.moulberry:mixinconstraints:1.0.6"))
+	include(implementation("com.moulberry:mixinconstraints:1.0.8"))
 
-    modCompileOnly(rootProject.files('deps/DistantHorizons-2.3.0-b-RC3-1.21.4-neoforge-fabric.jar'))
+    include(modImplementation("com.moulberry:lattice:1.2.10")) {
+        attributes {
+            attribute(Attribute.of("earth.terrarium.cloche.modLoader", String), "fabric")
+        }
+    }
 
+    modCompileOnly("maven.modrinth:distanthorizons:Mt9bDAs6")
     modCompileOnly("maven.modrinth:sodium:RncWhTxD")
     modCompileOnly("maven.modrinth:iris:kuOV4Ece")
     modCompileOnly("maven.modrinth:bobby:2cuVyTav")

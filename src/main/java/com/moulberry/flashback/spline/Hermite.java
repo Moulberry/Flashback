@@ -8,11 +8,11 @@ import java.util.Map;
 
 public class Hermite {
 
-    public static Vector3d position(Map<Integer, Vector3d> map, float amount) {
+    public static Vector3d position(Map<Float, Vector3d> map, float amount) {
         HermiteInterpolator hermiteInterpolator = new HermiteInterpolator();
 
         double[] array = new double[3];
-        for (Map.Entry<Integer, Vector3d> entry : map.entrySet()) {
+        for (Map.Entry<Float, Vector3d> entry : map.entrySet()) {
             array[0] = entry.getValue().x;
             array[1] = entry.getValue().y;
             array[2] = entry.getValue().z;
@@ -24,11 +24,11 @@ public class Hermite {
         return new Vector3d(values[0], values[1], values[2]);
     }
 
-    public static double value(Map<Integer, Double> map, float amount) {
+    public static double value(Map<Float, Double> map, float amount) {
         HermiteInterpolator hermiteInterpolator = new HermiteInterpolator();
 
         double[] array = new double[1];
-        for (Map.Entry<Integer, Double> entry : map.entrySet()) {
+        for (Map.Entry<Float, Double> entry : map.entrySet()) {
             array[0] = entry.getValue();
             hermiteInterpolator.addSamplePoint(entry.getKey(), array);
         }
@@ -36,13 +36,13 @@ public class Hermite {
         return hermiteInterpolator.value(amount)[0];
     }
 
-    public static double degrees(Map<Integer, Double> map, float amount) {
+    public static double degrees(Map<Float, Double> map, float amount) {
         HermiteInterpolator hermiteInterpolator = new HermiteInterpolator();
 
         double lastAngle = 0.0;
 
         double[] array = new double[1];
-        for (Map.Entry<Integer, Double> entry : map.entrySet()) {
+        for (Map.Entry<Float, Double> entry : map.entrySet()) {
             double angle = lastAngle + Mth.wrapDegrees(entry.getValue() - lastAngle);
             array[0] = angle;
 

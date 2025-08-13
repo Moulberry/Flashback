@@ -24,7 +24,7 @@ public abstract class MixinWindow {
     @Shadow private int width;
     @Shadow private int height;
 
-    @Shadow private double guiScale;
+    @Shadow private int guiScale;
 
     @Shadow private int guiScaledWidth;
 
@@ -116,27 +116,27 @@ public abstract class MixinWindow {
     }
 
     @Inject(method = "setGuiScale", at=@At("HEAD"), cancellable = true)
-    public void setGuiScale(double d, CallbackInfo ci) {
+    public void setGuiScale(int scale, CallbackInfo ci) {
         if (Flashback.EXPORT_JOB != null && Flashback.EXPORT_JOB.shouldChangeFramebufferSize()) {
             int fbw = Flashback.EXPORT_JOB.getWidth();
             int fbh = Flashback.EXPORT_JOB.getHeight();
 
-            this.guiScale = d;
-            int i = (int)((double)fbw / d);
-            this.guiScaledWidth = (double)fbw / d > (double)i ? i + 1 : i;
-            int j = (int)((double)fbh / d);
-            this.guiScaledHeight = (double)fbh / d > (double)j ? j + 1 : j;
+            this.guiScale = scale;
+            int i = (int)((double)fbw / scale);
+            this.guiScaledWidth = (double)fbw / scale > (double)i ? i + 1 : i;
+            int j = (int)((double)fbh / scale);
+            this.guiScaledHeight = (double)fbh / scale > (double)j ? j + 1 : j;
 
             ci.cancel();
         } else if (ReplayUI.shouldModifyViewport()) {
             int fbw = ReplayUI.getNewGameWidth(this.calculateWidthScaleFactor());
             int fbh = ReplayUI.getNewGameHeight(this.calculateHeightScaleFactor());
 
-            this.guiScale = d;
-            int i = (int)((double)fbw / d);
-            this.guiScaledWidth = (double)fbw / d > (double)i ? i + 1 : i;
-            int j = (int)((double)fbh / d);
-            this.guiScaledHeight = (double)fbh / d > (double)j ? j + 1 : j;
+            this.guiScale = scale;
+            int i = (int)((double)fbw / scale);
+            this.guiScaledWidth = (double)fbw / scale > (double)i ? i + 1 : i;
+            int j = (int)((double)fbh / scale);
+            this.guiScaledHeight = (double)fbh / scale > (double)j ? j + 1 : j;
 
             ci.cancel();
         }

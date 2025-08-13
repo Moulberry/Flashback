@@ -3,6 +3,7 @@ package com.moulberry.flashback.screen.select_replay;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -37,9 +38,9 @@ public class SortDirectionButton extends Button {
         int y = this.getY() + paddingY;
 
         if (this.sortDescending) {
-            guiGraphics.blit(RenderType::guiTextured, DOWN_ARROW, x, y, 0f, 0f, size, size, size, size);
+            guiGraphics.blit(RenderPipelines.GUI_TEXTURED, DOWN_ARROW, x, y, 0f, 0f, size, size, size, size);
         } else {
-            guiGraphics.blit(RenderType::guiTextured, UP_ARROW, x, y, 0f, 0f, size, size, size, size);
+            guiGraphics.blit(RenderPipelines.GUI_TEXTURED, UP_ARROW, x, y, 0f, 0f, size, size, size, size);
         }
     }
 

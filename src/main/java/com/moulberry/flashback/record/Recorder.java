@@ -7,6 +7,7 @@ import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.datafixers.util.Pair;
 import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.PacketHelper;
+import com.moulberry.flashback.RegistryMetaHelper;
 import com.moulberry.flashback.action.*;
 import com.moulberry.flashback.compat.DistantHorizonsSupport;
 import com.moulberry.flashback.io.AsyncReplaySaver;
@@ -60,6 +61,7 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.TagNetworkSerialization;
 import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.Display;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.Leashable;
@@ -104,6 +106,7 @@ public class Recorder {
     private int writtenTicks = 0;
     private final FlashbackMeta metadata = new FlashbackMeta();
     private boolean hasTakenScreenshot = false;
+    private NativeImage finishedScreenshot = null;
 
     private record PacketWithPhase(Packet<?> packet, ConnectionProtocol phase){}
     private final Queue<PacketWithPhase> pendingPackets = new ConcurrentLinkedQueue<>();
@@ -148,7 +151,7 @@ public class Recorder {
         this.configurationPacketCodec = ConfigurationProtocols.CLIENTBOUND.codec();
         this.gamePacketCodec = GameProtocols.CLIENTBOUND_TEMPLATE.bind(RegistryFriendlyByteBuf.decorator(registryAccess)).codec();
 
-        this.metadata.dataVersion = SharedConstants.getCurrentVersion().getDataVersion().getVersion();
+        this.metadata.dataVersion = SharedConstants.getCurrentVersion().dataVersion().version();
         this.metadata.protocolVersion = SharedConstants.getProtocolVersion();
         this.metadata.versionString = SharedConstants.VERSION_STRING;
 
@@ -162,6 +165,8 @@ public class Recorder {
         if (Flashback.supportsDistantHorizons) {
             this.metadata.distantHorizonPaths.putAll(DistantHorizonsSupport.getDimensionPaths());
         }
+
+        this.metadata.namespacesForRegistries = RegistryMetaHelper.calculateNamespacesForRegistries();
 
         String worldName = null;
         ServerData serverData = Minecraft.getInstance().getCurrentServer();
@@ -227,7 +232,7 @@ public class Recorder {
     private int trackAccuratePositionCounter = 10;
 
     public void trackPartialPosition(Entity entity, float partialTick) {
-        int localPlayerUpdatesPerSecond = Flashback.getConfig().localPlayerUpdatesPerSecond;
+        int localPlayerUpdatesPerSecond = Flashback.getConfig().recording.localPlayerUpdatesPerSecond;
         if (localPlayerUpdatesPerSecond <= 20) {
             return;
         }
@@ -263,7 +268,7 @@ public class Recorder {
         boolean isLevelLoaded = !(Minecraft.getInstance().screen instanceof ReceivingLevelScreen);
         boolean changedDimensions = false;
 
-        int localPlayerUpdatesPerSecond = Flashback.getConfig().localPlayerUpdatesPerSecond;
+        int localPlayerUpdatesPerSecond = Flashback.getConfig().recording.localPlayerUpdatesPerSecond;
         boolean trackAccurateFirstPersonPosition = localPlayerUpdatesPerSecond > 20;
         boolean wroteNewTick = false;
 
@@ -281,9 +286,12 @@ public class Recorder {
             this.writtenTicksInChunk += 1;
             this.writtenTicks += 1;
 
+            if (this.finishedScreenshot != null) {
+                this.asyncReplaySaver.writeIcon(this.finishedScreenshot);
+                this.finishedScreenshot = null;
+            }
             if (!this.hasTakenScreenshot && ((this.writtenTicks >= 20 && minecraft.screen == null) || close)) {
-                NativeImage nativeImage = Screenshot.takeScreenshot(minecraft.getMainRenderTarget());
-                this.asyncReplaySaver.writeIcon(nativeImage);
+                Screenshot.takeScreenshot(minecraft.getMainRenderTarget(), image -> this.finishedScreenshot = image);
                 this.hasTakenScreenshot = true;
             }
 
@@ -319,7 +327,7 @@ public class Recorder {
             int chunkId = this.metadata.chunks.size();
             String chunkName = "c" + chunkId + ".flashback";
 
-            if (changedDimensions && Flashback.getConfig().markDimensionChanges) {
+            if (changedDimensions && Flashback.getConfig().recording.markDimensionChanges) {
                 this.addMarker(new ReplayMarker(0xAA00AA, null, "Changed Dimension"));
             }
 
@@ -471,7 +479,7 @@ public class Recorder {
 
         List<Packet<? super ClientGamePacketListener>> gamePackets = new ArrayList<>();
 
-        if (Flashback.getConfig().recordHotbar) {
+        if (Flashback.getConfig().recording.recordHotbar) {
             if (player.experienceProgress != this.lastExperienceProgress || player.totalExperience != this.lastTotalExperience ||
                     player.experienceLevel != this.lastExperienceLevel) {
                 this.lastExperienceProgress = player.experienceProgress;
@@ -487,7 +495,7 @@ public class Recorder {
                 gamePackets.add(new ClientboundSetHealthPacket(player.getHealth(), foodData.getFoodLevel(), foodData.getSaturationLevel()));
             }
 
-            int selectedSlot = player.getInventory().selected;
+            int selectedSlot = player.getInventory().getSelectedSlot();
             if (selectedSlot != this.lastSelectedSlot) {
                 gamePackets.add(new ClientboundSetHeldSlotPacket(selectedSlot));
                 this.lastSelectedSlot = selectedSlot;
@@ -531,7 +539,7 @@ public class Recorder {
             gamePackets.add(new ClientboundSetEquipmentPacket(player.getId(), changedSlots));
         }
 
-        if (Flashback.getConfig().recordHotbar) {
+        if (Flashback.getConfig().recording.recordHotbar) {
             for (int i = 0; i < this.lastHotbarItems.length; i++) {
                 ItemStack hotbarItem = player.getInventory().getItem(i);
 
@@ -573,6 +581,8 @@ public class Recorder {
         this.lastSwingTime = player.swingTime;
         this.wasSwinging = player.swinging;
 
+        gamePackets.add(new ClientboundSetEntityMotionPacket(player.getId(), player.getDeltaMovement()));
+
         this.asyncReplaySaver.writeGamePackets(this.gamePacketCodec, gamePackets);
     }
 
@@ -606,14 +616,19 @@ public class Recorder {
             }
 
             Position position;
+
+            float headRot = entity.getYHeadRot();
             if (entity instanceof LivingEntity livingEntity) {
-                double lerpHeadRot = livingEntity.lerpHeadSteps > 0 ? livingEntity.lerpYHeadRot : livingEntity.getYHeadRot();
-                position = new Position(livingEntity.lerpTargetX(), entity.lerpTargetY(), entity.lerpTargetZ(),
-                    entity.lerpTargetYRot(), entity.lerpTargetXRot(), (float) lerpHeadRot, entity.onGround());
+                headRot = livingEntity.lerpHeadSteps > 0 ? (float) livingEntity.lerpYHeadRot : livingEntity.getYHeadRot();
+            }
+
+            var interpolation = entity.getInterpolation();
+            if (interpolation != null && interpolation.hasActiveInterpolation()) {
+                var xyz = interpolation.position();
+                position = new Position(xyz.x, xyz.y, xyz.z, interpolation.yRot(), interpolation.xRot(), headRot, entity.onGround());
             } else {
-                var trackingPosition = entity.trackingPosition();
-                position = new Position(trackingPosition.x, trackingPosition.y, trackingPosition.z,
-                    entity.getYRot(), entity.getXRot(), entity.getYHeadRot(), entity.onGround());
+                var xyz = entity.trackingPosition();
+                position = new Position(xyz.x, xyz.y, xyz.z, entity.getYRot(), entity.getXRot(), headRot, entity.onGround());
             }
             Position lastPosition = this.lastPositions.get(entity);
 
@@ -898,24 +913,57 @@ public class Recorder {
         // Create player info update packet
         var infoUpdatePacket = new ClientboundPlayerInfoUpdatePacket(EnumSet.of(ClientboundPlayerInfoUpdatePacket.Action.ADD_PLAYER,
             ClientboundPlayerInfoUpdatePacket.Action.UPDATE_LISTED, ClientboundPlayerInfoUpdatePacket.Action.UPDATE_DISPLAY_NAME), List.of());
-        infoUpdatePacket.entries = new ArrayList<>(level.players().size());
+        infoUpdatePacket.entries = new ArrayList<>();
         Set<UUID> addedEntries = new HashSet<>();
-        for (AbstractClientPlayer player : level.players()) {
-            if (addedEntries.add(player.getUUID())) {
-                PlayerInfo info = player.getPlayerInfo();
-                if (info != null) {
-                    infoUpdatePacket.entries.add(new ClientboundPlayerInfoUpdatePacket.Entry(player.getUUID(),
-                        player.getGameProfile(), true, info.getLatency(), info.getGameMode(), info.getTabListDisplayName(), info.showHat(), info.getTabListOrder(), null));
-                } else {
-                    infoUpdatePacket.entries.add(new ClientboundPlayerInfoUpdatePacket.Entry(player.getUUID(),
-                        player.getGameProfile(), true, 0, GameType.DEFAULT_MODE, player.getDisplayName(), true, 0, null));
-                }
-            }
-        }
+        Set<UUID> addedWithValidProperties = new HashSet<>();
         for (PlayerInfo info : connection.getListedOnlinePlayers()) {
+            boolean isValidProperties = !info.getProfile().getProperties().isEmpty();
             if (addedEntries.add(info.getProfile().getId())) {
                 infoUpdatePacket.entries.add(new ClientboundPlayerInfoUpdatePacket.Entry(info.getProfile().getId(),
                     info.getProfile(), true, info.getLatency(), info.getGameMode(), info.getTabListDisplayName(), info.showHat(), info.getTabListOrder(), null));
+                if (isValidProperties) {
+                    addedWithValidProperties.add(info.getProfile().getId());
+                }
+            }
+        }
+        for (PlayerInfo info : connection.getOnlinePlayers()) {
+            boolean isValidProperties = !info.getProfile().getProperties().isEmpty();
+            boolean add = false;
+            if (addedEntries.add(info.getProfile().getId())) {
+                add = true;
+            } else if (isValidProperties && !addedWithValidProperties.contains(info.getProfile().getId())) {
+                infoUpdatePacket.entries.removeIf(entry -> entry.profileId().equals(info.getProfile().getId()));
+                add = true;
+            }
+            if (add) {
+                infoUpdatePacket.entries.add(new ClientboundPlayerInfoUpdatePacket.Entry(info.getProfile().getId(),
+                    info.getProfile(), false, info.getLatency(), info.getGameMode(), info.getTabListDisplayName(), info.showHat(), info.getTabListOrder(), null));
+                if (isValidProperties) {
+                    addedWithValidProperties.add(info.getProfile().getId());
+                }
+            }
+        }
+        for (AbstractClientPlayer player : level.players()) {
+            PlayerInfo info = player.getPlayerInfo();
+            if (info != null) {
+                boolean isValidProperties = !info.getProfile().getProperties().isEmpty();
+                boolean add = false;
+                if (addedEntries.add(info.getProfile().getId())) {
+                    add = true;
+                } else if (isValidProperties && !addedWithValidProperties.contains(info.getProfile().getId())) {
+                    infoUpdatePacket.entries.removeIf(entry -> entry.profileId().equals(info.getProfile().getId()));
+                    add = true;
+                }
+                if (add) {
+                    infoUpdatePacket.entries.add(new ClientboundPlayerInfoUpdatePacket.Entry(player.getUUID(),
+                        player.getGameProfile(), false, info.getLatency(), info.getGameMode(), info.getTabListDisplayName(), info.showHat(), info.getTabListOrder(), null));
+                    if (isValidProperties) {
+                        addedWithValidProperties.add(info.getProfile().getId());
+                    }
+                }
+            } else if (addedEntries.add(player.getUUID())) {
+                infoUpdatePacket.entries.add(new ClientboundPlayerInfoUpdatePacket.Entry(player.getUUID(),
+                    player.getGameProfile(), false, 0, GameType.DEFAULT_MODE, player.getDisplayName(), true, 0, null));
             }
         }
         gamePackets.add(infoUpdatePacket);
@@ -1045,7 +1093,7 @@ public class Recorder {
             }
         }
 
-        if (Flashback.getConfig().recordHotbar) {
+        if (Flashback.getConfig().recording.recordHotbar) {
             this.lastExperienceProgress = localPlayer.experienceProgress;
             this.lastTotalExperience = localPlayer.totalExperience;
             this.lastExperienceLevel = localPlayer.experienceLevel;
@@ -1056,7 +1104,7 @@ public class Recorder {
             this.lastSaturationLevel = foodData.getSaturationLevel();
             gamePackets.add(new ClientboundSetHealthPacket(localPlayer.getHealth(), foodData.getFoodLevel(), foodData.getSaturationLevel()));
 
-            int selectedSlot = localPlayer.getInventory().selected;
+            int selectedSlot = localPlayer.getInventory().getSelectedSlot();
             this.lastSelectedSlot = selectedSlot;
             gamePackets.add(new ClientboundSetHeldSlotPacket(selectedSlot));
 

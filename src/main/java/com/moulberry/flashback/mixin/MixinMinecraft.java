@@ -6,9 +6,9 @@ import com.mojang.authlib.yggdrasil.YggdrasilAuthenticationService;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.FreezeSlowdownFormula;
-import com.moulberry.flashback.configuration.FlashbackConfig;
+import com.moulberry.flashback.combo_options.GlowingOverride;
+import com.moulberry.flashback.configuration.FlashbackConfigV1;
 import com.moulberry.flashback.editor.ui.windows.ExportDoneWindow;
-import com.moulberry.flashback.editor.ui.windows.WindowType;
 import com.moulberry.flashback.exporting.ExportJob;
 import com.moulberry.flashback.exporting.ExportJobQueue;
 import com.moulberry.flashback.keyframe.handler.MinecraftKeyframeHandler;
@@ -19,8 +19,8 @@ import com.moulberry.flashback.exporting.PerfectFrames;
 import com.moulberry.flashback.playback.ReplayServer;
 import com.moulberry.flashback.ext.MinecraftExt;
 import com.moulberry.flashback.editor.ui.ReplayUI;
+import com.moulberry.flashback.visuals.AccurateEntityPositionHandler;
 import it.unimi.dsi.fastutil.floats.FloatUnaryOperator;
-import net.minecraft.ChatFormatting;
 import net.minecraft.CrashReport;
 import net.minecraft.ReportedException;
 import net.minecraft.Util;
@@ -28,17 +28,14 @@ import net.minecraft.client.*;
 import net.minecraft.client.gui.screens.LevelLoadingScreen;
 import net.minecraft.client.gui.screens.Overlay;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.main.GameConfig;
 import net.minecraft.client.multiplayer.ClientHandshakePacketListenerImpl;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.multiplayer.chat.report.ReportEnvironment;
-import net.minecraft.client.particle.ParticleEngine;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.client.server.IntegratedServer;
 import net.minecraft.client.sounds.SoundManager;
 import net.minecraft.network.Connection;
-import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.login.ServerboundHelloPacket;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.Services;
@@ -47,7 +44,6 @@ import net.minecraft.server.level.progress.ProcessorChunkProgressListener;
 import net.minecraft.server.level.progress.StoringChunkProgressListener;
 import net.minecraft.server.packs.repository.PackRepository;
 import net.minecraft.server.players.GameProfileCache;
-import net.minecraft.util.profiling.ProfilerFiller;
 import net.minecraft.world.TickRateManager;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.block.entity.SkullBlockEntity;
@@ -75,9 +71,6 @@ import java.util.concurrent.atomic.AtomicReference;
 
 @Mixin(Minecraft.class)
 public abstract class MixinMinecraft implements MinecraftExt {
-
-    @Shadow
-    public abstract void disconnect();
 
     @Shadow
     @Final
@@ -145,10 +138,11 @@ public abstract class MixinMinecraft implements MinecraftExt {
 
     @Shadow @Final public LevelRenderer levelRenderer;
 
-    @Inject(method="<init>", at=@At("RETURN"))
-    public void init(GameConfig gameConfig, CallbackInfo ci) {
-        ReplayUI.init();
-    }
+    @Shadow
+    protected abstract float getTickTargetMillis(float f);
+
+    @Shadow
+    public abstract void disconnectWithProgressScreen();
 
     @Inject(method = "pauseGame", at = @At("HEAD"), cancellable = true)
     public void pauseGame(boolean bl, CallbackInfo ci) {
@@ -162,6 +156,20 @@ public abstract class MixinMinecraft implements MinecraftExt {
         EditorState editorState = EditorStateManager.getCurrent();
         if (editorState != null && !editorState.replayVisuals.renderNametags) {
             cir.setReturnValue(false);
+        }
+    }
+
+    @Inject(method = "shouldEntityAppearGlowing", at = @At("HEAD"), cancellable = true)
+    private void shouldEntityAppearGlowing(Entity entity, CallbackInfoReturnable<Boolean> cir) {
+        EditorState editorState = EditorStateManager.getCurrent();
+        if (editorState != null) {
+            GlowingOverride glowingOverride = editorState.glowingOverride.get(entity.getUUID());
+
+            if (glowingOverride == GlowingOverride.FORCE_GLOW) {
+                cir.setReturnValue(true);
+            } else if (glowingOverride == GlowingOverride.FORCE_NO_GLOW) {
+                cir.setReturnValue(false);
+            }
         }
     }
 
@@ -179,7 +187,7 @@ public abstract class MixinMinecraft implements MinecraftExt {
         original.call(instance, camera);
     }
 
-    @Inject(method = "runTick", at=@At(value = "INVOKE", target = "Lcom/mojang/blaze3d/pipeline/RenderTarget;blitToScreen(II)V", shift = At.Shift.AFTER))
+    @Inject(method = "runTick", at=@At(value = "INVOKE", target = "Lcom/mojang/blaze3d/pipeline/RenderTarget;blitToScreen()V", shift = At.Shift.AFTER))
     public void afterMainBlit(boolean bl, CallbackInfo ci) {
         if (!RenderSystem.isOnRenderThread()) return;
         ReplayUI.drawOverlay();
@@ -208,10 +216,10 @@ public abstract class MixinMinecraft implements MinecraftExt {
             }
         }
 
-        FlashbackConfig config = Flashback.getConfig();
-        if (inReplay && !config.disableThirdPersonCancel) {
+        FlashbackConfigV1 config = Flashback.getConfig();
+        if (inReplay && !config.advanced.disableThirdPersonCancel) {
             // Force camera type to first person
-            if (this.player != null && this.cameraEntity == this.player && this.options.getCameraType() != CameraType.FIRST_PERSON) {
+            if (ReplayUI.isActive() && this.player != null && this.cameraEntity == this.player && this.options.getCameraType() != CameraType.FIRST_PERSON) {
                 this.options.setCameraType(CameraType.FIRST_PERSON);
                 this.levelRenderer.needsUpdate();
 
@@ -275,7 +283,8 @@ public abstract class MixinMinecraft implements MinecraftExt {
 
                 TickRateManager tickRateManager = this.level.tickRateManager();
                 if (tickRateManager.runsNormally()) {
-                    cir.setReturnValue(1000f / Math.max(1f, capture.tickrate));
+                    float manualMultiplier = replayServer.getDesiredTickRate(true) / 20.0f;
+                    cir.setReturnValue(1000f / Math.max(1f, capture.tickrate * manualMultiplier));
                 }
             } else {
                 TickRateManager tickRateManager = this.level.tickRateManager();
@@ -287,13 +296,10 @@ public abstract class MixinMinecraft implements MinecraftExt {
         }
     }
 
-    @Unique
-    private final DeltaTracker.Timer localPlayerTimer = new DeltaTracker.Timer(20.0f, 0, FloatUnaryOperator.identity());
-
     @Inject(method = "disconnect(Lnet/minecraft/client/gui/screens/Screen;Z)V", at = @At("HEAD"))
     public void disconnectHead(Screen screen, boolean isTransferring, CallbackInfo ci) {
         try {
-            if (Flashback.getConfig().automaticallyFinish && Flashback.RECORDER != null && !isTransferring) {
+            if (Flashback.getConfig().recordingControls.automaticallyFinish && Flashback.RECORDER != null && !isTransferring) {
                 Flashback.finishRecordingReplay();
             }
         } catch (Exception e) {
@@ -305,6 +311,9 @@ public abstract class MixinMinecraft implements MinecraftExt {
     public void disconnectReturn(Screen screen, boolean bl, CallbackInfo ci) {
         Flashback.updateIsInReplay();
     }
+
+    @Unique
+    private final DeltaTracker.Timer localPlayerTimer = new DeltaTracker.Timer(20.0f, 0, FloatUnaryOperator.identity());
 
     @Inject(method = "runTick", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/Minecraft;runAllTasks()V", shift = At.Shift.AFTER))
     public void runTick_runAllTasks(boolean runTick, CallbackInfo ci) {
@@ -323,13 +332,13 @@ public abstract class MixinMinecraft implements MinecraftExt {
             } finally {
                 PerfectFrames.disable();
                 Flashback.EXPORT_JOB = null;
-                ExportDoneWindow.exportDoneWindowOpen = true;
+                ExportDoneWindow.open();
             }
         }
 
         if (Flashback.isInReplay()) {
-            int localPlayerTicks = localPlayerTimer.advanceTime(Util.getMillis(), runTick);
-            if (this.level != null && this.player != null && !this.player.isPassenger() && !this.player.isRemoved()) {
+            int localPlayerTicks = this.localPlayerTimer.advanceTime(Util.getMillis(), runTick);
+            if (this.flashback$overridingLocalPlayerTimer()) {
                 localPlayerTicks = Math.min(10, localPlayerTicks);
                 for (int i = 0; i < localPlayerTicks; i++) {
                     this.level.guardEntityTick(this.level::tickNonPassenger, this.player);
@@ -339,8 +348,13 @@ public abstract class MixinMinecraft implements MinecraftExt {
     }
 
     @Override
+    public boolean flashback$overridingLocalPlayerTimer() {
+        return !Flashback.isExporting() && this.level != null && this.player != null && !this.player.isPassenger() && !this.player.isRemoved() && Math.round(this.getTickTargetMillis(50)) != 50;
+    }
+
+    @Override
     public float flashback$getLocalPlayerPartialTick(float originalPartialTick) {
-        if (Flashback.isExporting() || this.cameraEntity != this.player) {
+        if (this.cameraEntity != this.player || !this.flashback$overridingLocalPlayerTimer()) {
             return originalPartialTick;
         }
         return this.localPlayerTimer.getGameTimeDeltaPartialTick(true);
@@ -363,6 +377,16 @@ public abstract class MixinMinecraft implements MinecraftExt {
             return;
         }
 
+        LocalPlayer player = this.player;
+        DeltaTracker deltaTracker = this.deltaTracker;
+
+        if (Flashback.RECORDER != null && player != null) {
+            float partialTick = deltaTracker.getGameTimeDeltaPartialTick(true);
+            Flashback.RECORDER.trackPartialPosition(player, partialTick);
+        }
+
+        AccurateEntityPositionHandler.apply(this.level, deltaTracker);
+
         boolean forceApplyKeyframes = this.applyKeyframes.compareAndSet(true, false);
         if (!replayServer.replayPaused || forceApplyKeyframes) {
             EditorState editorState = EditorStateManager.get(replayServer.getMetadata().replayIdentifier);
@@ -376,7 +400,7 @@ public abstract class MixinMinecraft implements MinecraftExt {
     @Override
     public void flashback$startReplayServer(LevelStorageSource.LevelStorageAccess levelStorageAccess, PackRepository packRepository, WorldStem stem,
                                             UUID playbackUUID, Path path) {
-        this.disconnect();
+        this.disconnectWithProgressScreen();
         this.progressListener.set(null);
         Instant instant = Instant.now();
         try {

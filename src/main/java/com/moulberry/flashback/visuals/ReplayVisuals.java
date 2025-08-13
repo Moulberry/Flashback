@@ -30,7 +30,7 @@ public class ReplayVisuals {
     public float[] fogColour = new float[]{0f, 1f, 0f};
 
     public boolean overrideFov = false;
-    public float overrideFovAmount = 70f;
+    public float overrideFovAmount = -1f;
 
     public boolean overrideCameraShake = false;
     public boolean cameraShakeSplitParams = false;
@@ -53,6 +53,8 @@ public class ReplayVisuals {
     public boolean cameraPath = true;
     public Sizing sizing = Sizing.KEEP_ASPECT_RATIO;
     public AspectRatio changeAspectRatio = AspectRatio.ASPECT_16_9;
+
+    public boolean disableServerResourcePack = false;
 
     public void setFov(float fov) {
         if (!overrideFov || Math.abs(overrideFovAmount - fov) >= 0.01) {

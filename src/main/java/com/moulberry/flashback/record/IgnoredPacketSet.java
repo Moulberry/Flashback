@@ -15,6 +15,23 @@ public class IgnoredPacketSet {
         return IGNORED.contains(packet.getClass());
     }
 
+    public static boolean isIgnoredInReplay(Packet<?> packet) {
+        return IGNORED_IN_REPLAY.contains(packet.getClass());
+    }
+
+    private static final Set<Class<?>> IGNORED_IN_REPLAY = Set.of(
+        ClientboundAwardStatsPacket.class,
+        ClientboundRecipeBookAddPacket.class,
+        ClientboundRecipeBookRemovePacket.class,
+        ClientboundRecipeBookSettingsPacket.class,
+        ClientboundUpdateRecipesPacket.class,
+        ClientboundTransferPacket.class,
+        ClientboundUpdateAdvancementsPacket.class,
+        ClientboundClearDialogPacket.class,
+        ClientboundShowDialogPacket.class,
+        ClientboundTrackedWaypointPacket.class
+    );
+
     private static final Set<Class<?>> IGNORED = Set.of(
         // Ignored because these are added directly by mixin/record/MixinClientLevel
         ClientboundLevelEventPacket.class,
@@ -30,6 +47,8 @@ public class IgnoredPacketSet {
         ClientboundPingPacket.class,
         ClientboundKeepAlivePacket.class,
         ClientboundTransferPacket.class,
+        ClientboundClearDialogPacket.class,
+        ClientboundShowDialogPacket.class,
 
         // Configuration
         ClientboundFinishConfigurationPacket.class,
@@ -85,7 +104,9 @@ public class IgnoredPacketSet {
         ClientboundChunkBatchStartPacket.class,
         ClientboundChunkBatchFinishedPacket.class,
         ClientboundDebugSamplePacket.class,
-        ClientboundPongResponsePacket.class
+        ClientboundPongResponsePacket.class,
+        ClientboundTestInstanceBlockStatus.class,
+        ClientboundTrackedWaypointPacket.class
     );
 
 }

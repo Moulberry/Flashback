@@ -39,7 +39,7 @@ public class PacketHelper {
 
         // Try to construct ServerEntity with dummy values
         try {
-            serverEntity = new ServerEntity(null, entity, 1, false, packet -> {});
+            serverEntity = new ServerEntity(null, entity, 1, false, packet -> {}, (packet, ignore) -> {});
         } catch (Exception e) {}
 
         // Error while trying to construct, possibly mod incompatibility? Try bypassing the constructor

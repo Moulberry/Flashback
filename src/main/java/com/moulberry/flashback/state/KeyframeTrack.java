@@ -7,10 +7,6 @@ import com.moulberry.flashback.keyframe.Keyframe;
 import com.moulberry.flashback.keyframe.KeyframeType;
 import com.moulberry.flashback.keyframe.change.KeyframeChange;
 import com.moulberry.flashback.keyframe.change.KeyframeChangeTickrate;
-import com.moulberry.flashback.keyframe.handler.KeyframeHandler;
-import com.moulberry.flashback.keyframe.handler.MinecraftKeyframeHandler;
-import com.moulberry.flashback.keyframe.handler.ReplayServerKeyframeHandler;
-import com.moulberry.flashback.keyframe.impl.CameraKeyframe;
 import com.moulberry.flashback.keyframe.impl.TimelapseKeyframe;
 import com.moulberry.flashback.keyframe.interpolation.InterpolationType;
 import com.moulberry.flashback.keyframe.interpolation.SidedInterpolationType;
@@ -18,8 +14,7 @@ import com.moulberry.flashback.keyframe.types.TimelapseKeyframeType;
 import imgui.type.ImString;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -40,7 +35,7 @@ public class KeyframeTrack {
     }
 
     @Nullable
-    public KeyframeChange createKeyframeChange(float tick) {
+    public KeyframeChange createKeyframeChange(float tick, @Nullable RealTimeMapping realTimeMapping) {
         if (this.keyframeType == TimelapseKeyframeType.INSTANCE) {
             return this.tryApplyKeyframesTimelapse(tick);
         }
@@ -83,7 +78,11 @@ public class KeyframeTrack {
             rightInterpolation = leftInterpolation;
         }
 
-        float amount = (tick - lowerEntry.getKey()) / (ceilEntry.getKey() - lowerEntry.getKey());
+        float realTimeTick = realTimeMapping == null ? tick : realTimeMapping.getRealTime(tick);
+        float realTimeLowerTick = realTimeMapping == null ? lowerEntry.getKey() : realTimeMapping.getRealTime(lowerEntry.getKey());
+        float realTimeCeilTick = realTimeMapping == null ? ceilEntry.getKey() : realTimeMapping.getRealTime(ceilEntry.getKey());
+
+        float amount = (realTimeTick - realTimeLowerTick) / (realTimeCeilTick - realTimeLowerTick);
 
         KeyframeChange leftChange = null;
         KeyframeChange rightChange = null;
@@ -100,8 +99,11 @@ public class KeyframeTrack {
                 afterAfterEntry = ceilEntry;
             }
 
+            float realTimeBeforeTick = realTimeMapping == null ? beforeEntry.getKey() : realTimeMapping.getRealTime(beforeEntry.getKey());
+            float realTimeAfterTick = realTimeMapping == null ? afterAfterEntry.getKey() : realTimeMapping.getRealTime(afterAfterEntry.getKey());
+
             KeyframeChange smoothChange = beforeEntry.getValue().createSmoothInterpolatedChange(lowerEntry.getValue(), ceilEntry.getValue(), afterAfterEntry.getValue(),
-                    beforeEntry.getKey(), lowerEntry.getKey(), ceilEntry.getKey(), afterAfterEntry.getKey(), amount);
+                realTimeBeforeTick, realTimeLowerTick, realTimeCeilTick, realTimeAfterTick, amount);
 
             if (leftInterpolation == SidedInterpolationType.SMOOTH) {
                 leftChange = smoothChange;
@@ -159,7 +161,13 @@ public class KeyframeTrack {
                 subMap = this.keyframesByTick;
             }
 
-            KeyframeChange hermiteChange = lowerKeyframe.createHermiteInterpolatedChange(subMap, tick);
+            Map<Float, Keyframe> transformedMap = new HashMap<>();
+            for (Map.Entry<Integer, Keyframe> entry : subMap.entrySet()) {
+                float realtime = realTimeMapping == null ? entry.getKey() : realTimeMapping.getRealTime(entry.getKey());
+                transformedMap.put(realtime, entry.getValue());
+            }
+
+            KeyframeChange hermiteChange = lowerKeyframe.createHermiteInterpolatedChange(transformedMap, realTimeTick);
             if (leftInterpolation == SidedInterpolationType.HERMITE) {
                 leftChange = hermiteChange;
             }
@@ -167,7 +175,6 @@ public class KeyframeTrack {
                 rightChange = hermiteChange;
             }
         }
-        // todo: hermite
         if (leftChange == null || rightChange == null) {
             double adjustedAmount = SidedInterpolationType.interpolate(leftInterpolation, rightInterpolation, amount);
 
@@ -175,7 +182,7 @@ public class KeyframeTrack {
 
             if (adjustedAmount != 0.0) {
                 KeyframeChange keyframeChangeCeil = ceilEntry.getValue().createChange();
-                keyframeChange = keyframeChange.interpolate(keyframeChangeCeil, (float) adjustedAmount);
+                keyframeChange = KeyframeChange.interpolateSafe(keyframeChange, keyframeChangeCeil, (float) adjustedAmount);
             }
 
             if (leftChange == null) {
@@ -186,15 +193,7 @@ public class KeyframeTrack {
             }
         }
 
-        if (leftChange == rightChange) {
-            return leftChange;
-        } else if (leftChange == null) {
-            return rightChange;
-        } else if (rightChange == null) {
-            return leftChange;
-        } else {
-            return leftChange.interpolate(rightChange, amount);
-        }
+        return KeyframeChange.interpolateSafe(leftChange, rightChange, amount);
     }
 
     @Nullable
@@ -219,7 +218,7 @@ public class KeyframeTrack {
 
             if (ceilTicks <= lowerTicks) {
                 ReplayUI.setInfoOverlayShort("Unable to timelapse. Right keyframe's time must be greater than left keyframe's time");
-                return new KeyframeChangeTickrate(20.0f);
+                return null;
             } else {
                 double tickrate = (double) (ceilEntry.getKey() - lowerEntry.getKey()) / (ceilTicks - lowerTicks) * 20;
                 return new KeyframeChangeTickrate((float) tickrate);

@@ -1,33 +1,39 @@
 package com.moulberry.flashback.mixin.visuals;
 
-import com.mojang.blaze3d.shaders.FogShape;
-import com.mojang.blaze3d.systems.RenderSystem;
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.moulberry.flashback.state.EditorState;
 import com.moulberry.flashback.state.EditorStateManager;
-import net.minecraft.client.Camera;
-import net.minecraft.client.renderer.FogParameters;
-import net.minecraft.client.renderer.FogRenderer;
+import com.moulberry.flashback.visuals.ReplayVisuals;
+import net.minecraft.client.renderer.fog.FogRenderer;
 import org.joml.Vector4f;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+
+import java.nio.ByteBuffer;
 
 @Mixin(FogRenderer.class)
 public class MixinFogRenderer {
 
-    @Inject(method = "setupFog", at = @At("RETURN"), cancellable = true, require = 0)
-    private static void setupFog(Camera camera, FogRenderer.FogMode fogMode, Vector4f vector4f, float f, boolean bl, float g, CallbackInfoReturnable<FogParameters> cir) {
+    @WrapOperation(method = "setupFog", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/fog/FogRenderer;updateBuffer(Ljava/nio/ByteBuffer;ILorg/joml/Vector4f;FFFFFF)V"))
+    public void setupFog_updateBuffer(FogRenderer instance, ByteBuffer byteBuffer, int i, Vector4f colour, float environmentalStart, float environmentalEnd,
+            float renderDistanceStart, float renderDistanceEnd, float skyEnd, float cloudEnd, Operation<Void> original) {
         EditorState editorState = EditorStateManager.getCurrent();
-        if (editorState != null && editorState.replayVisuals.overrideFog) {
-            FogParameters returnParameters = cir.getReturnValue();
-            if (returnParameters != null) {
-                cir.setReturnValue(new FogParameters(editorState.replayVisuals.overrideFogStart,
-                        editorState.replayVisuals.overrideFogEnd, FogShape.SPHERE, returnParameters.red(),
-                        returnParameters.green(), returnParameters.blue(), returnParameters.alpha()));
+        if (editorState != null) {
+            ReplayVisuals visuals = editorState.replayVisuals;
+            if (visuals.overrideFog) {
+                environmentalStart = visuals.overrideFogStart;
+                environmentalEnd = visuals.overrideFogEnd;
+                renderDistanceStart = visuals.overrideFogStart;
+                renderDistanceEnd = visuals.overrideFogEnd;
+                skyEnd = visuals.overrideFogEnd;
+                cloudEnd = visuals.overrideFogEnd;
+            }
+            if (visuals.overrideFogColour) {
+                float[] fogColour = visuals.fogColour;
+                colour.set(fogColour[0], fogColour[1], fogColour[2], 1.0F);
             }
         }
+        original.call(instance, byteBuffer, i, colour, environmentalStart, environmentalEnd, renderDistanceStart, renderDistanceEnd, skyEnd, cloudEnd);
     }
-
 }

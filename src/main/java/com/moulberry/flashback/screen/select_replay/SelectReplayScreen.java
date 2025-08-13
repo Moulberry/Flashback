@@ -1,10 +1,9 @@
 package com.moulberry.flashback.screen.select_replay;
 
 import com.moulberry.flashback.Flashback;
-import com.moulberry.flashback.configuration.FlashbackConfig;
-import com.moulberry.flashback.screen.ConfigScreen;
+import com.moulberry.flashback.RegistryMetaHelper;
+import com.moulberry.flashback.configuration.FlashbackConfigV1;
 import com.moulberry.flashback.screen.ReplaySummary;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.CycleButton;
@@ -15,6 +14,8 @@ import net.minecraft.network.chat.Component;
 import org.jetbrains.annotations.Nullable;
 
 import java.nio.file.Path;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 
 public class SelectReplayScreen extends Screen {
 
@@ -25,47 +26,54 @@ public class SelectReplayScreen extends Screen {
     private Button deleteButton;
     protected EditBox searchBox;
     private ReplaySelectionList list;
+    private LinkedHashMap<String, LinkedHashSet<String>> currentNamespacesForRegistries;
 
     public SelectReplayScreen(Screen screen, Path path) {
         super(Component.translatable("flashback.select_replay"));
         this.lastScreen = screen;
         this.path = path;
+        this.currentNamespacesForRegistries = RegistryMetaHelper.calculateNamespacesForRegistries();
     }
 
     @Override
     protected void init() {
         this.searchBox = new EditBox(this.font, this.width / 2 - 128, 22, 126, 20, this.searchBox, Component.translatable("selectWorld.search"));
         this.searchBox.setResponder(string -> {
-            FlashbackConfig config = Flashback.getConfig();
-            this.list.updateFilter(string, config.replaySorting, config.sortDescending);
+            FlashbackConfigV1 config = Flashback.getConfig();
+            this.list.updateFilter(string, config.internal.replaySorting, config.internal.sortDescending);
         });
         this.addWidget(this.searchBox);
 
-        FlashbackConfig config = Flashback.getConfig();
+        FlashbackConfigV1 config = Flashback.getConfig();
 
         this.addRenderableWidget(CycleButton.builder(ReplaySorting::component)
             .withValues(ReplaySorting.values())
-            .withInitialValue(config.replaySorting)
-            .create(this.width / 2 + 2, 22, 125, 20, Component.literal("Sort"), (button, sorting) -> {
-                FlashbackConfig configuration = Flashback.getConfig();
-                configuration.replaySorting = sorting;
+            .withInitialValue(config.internal.replaySorting)
+            .create(this.width / 2 + 2, 22, 125, 20, Component.translatable("flashback.sort"), (button, sorting) -> {
+                FlashbackConfigV1 configuration = Flashback.getConfig();
+                configuration.internal.replaySorting = sorting;
                 configuration.delayedSaveToDefaultFolder();
-                this.list.updateFilter(this.searchBox.getValue(), configuration.replaySorting, configuration.sortDescending);
+                this.list.updateFilter(this.searchBox.getValue(), configuration.internal.replaySorting, configuration.internal.sortDescending);
             })
         );
 
-        this.addRenderableWidget(new SortDirectionButton(this.width / 2 + 131, 22, 20, 20, Component.literal("Sort Direction"),
+        this.addRenderableWidget(new SortDirectionButton(this.width / 2 + 131, 22, 20, 20, Component.translatable("flashback.sort_direction"),
             sortDescending -> {
-                FlashbackConfig configuration = Flashback.getConfig();
-                configuration.sortDescending = sortDescending;
+                FlashbackConfigV1 configuration = Flashback.getConfig();
+                configuration.internal.sortDescending = sortDescending;
                 configuration.delayedSaveToDefaultFolder();
-                this.list.updateFilter(this.searchBox.getValue(), configuration.replaySorting, configuration.sortDescending);
-            }, config.sortDescending));
+                this.list.updateFilter(this.searchBox.getValue(), configuration.internal.replaySorting, configuration.internal.sortDescending);
+            }, config.internal.sortDescending));
 
         this.list = this.addRenderableWidget(new ReplaySelectionList(this, this.minecraft,
-                 this.width, this.height - 112, 48, 36, this.searchBox.getValue(), config.replaySorting, config.sortDescending, this.list));
+                 this.width, this.height - 112, 48, 36, this.searchBox.getValue(), config.internal.replaySorting, config.internal.sortDescending,
+                 this.currentNamespacesForRegistries, this.list));
+
         this.selectButton = this.addRenderableWidget(Button.builder(Component.translatable("flashback.select_replay.open"), this::tryOpenReplay)
-                .bounds(this.width / 2 - 151, this.height - 52, 302, 20).build());
+                                                           .bounds(this.width / 2 - 151, this.height - 52, 150, 20).build());
+        this.addRenderableWidget(Button.builder(Component.translatable("flashback.flashback_options"), btn -> Flashback.openConfigScreen(this))
+                                       .bounds(this.width / 2 + 1, this.height - 52, 150, 20).build());
+
         this.editButton = this.addRenderableWidget(Button.builder(Component.translatable("selectWorld.edit"), this::tryEditReplay)
                 .bounds(this.width / 2 - 151, this.height - 28, 98, 20).build());
         this.deleteButton = this.addRenderableWidget(Button.builder(Component.translatable("selectWorld.delete"), this::tryDeleteReplay)
@@ -73,10 +81,6 @@ public class SelectReplayScreen extends Screen {
         this.addRenderableWidget(Button.builder(CommonComponents.GUI_BACK, button -> this.minecraft.setScreen(this.lastScreen))
                                                            .bounds(this.width / 2 + 53, this.height - 28, 98, 20).build());
 
-        if (this.width/2 > 154 + 128) {
-            this.addRenderableWidget(Button.builder(Component.literal("Flashback Settings"), btn -> Minecraft.getInstance().setScreen(new ConfigScreen(this)))
-                                           .bounds(this.width - 120 - 8, this.height - 28, 120, 20).build());
-        }
         this.updateButtonStatus(null);
     }
 
@@ -94,7 +98,7 @@ public class SelectReplayScreen extends Screen {
     public void render(GuiGraphics guiGraphics, int i, int j, float f) {
         super.render(guiGraphics, i, j, f);
         this.searchBox.render(guiGraphics, i, j, f);
-        guiGraphics.drawCenteredString(this.font, this.title, this.width / 2, 8, 0xFFFFFF);
+        guiGraphics.drawCenteredString(this.font, this.title, this.width / 2, 8, 0xFFFFFFFF);
     }
 
     public void updateButtonStatus(@Nullable ReplaySummary replaySummary) {

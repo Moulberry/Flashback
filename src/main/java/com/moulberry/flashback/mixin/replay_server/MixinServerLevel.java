@@ -3,21 +3,31 @@ package com.moulberry.flashback.mixin.replay_server;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.moulberry.flashback.ext.ServerLevelExt;
+import com.moulberry.flashback.playback.ReplayServer;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import it.unimi.dsi.fastutil.longs.LongSet;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerChunkCache;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.chunk.ChunkGeneratorStructureState;
+import org.jetbrains.annotations.NotNull;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(value = ServerLevel.class, priority = 900)
 public abstract class MixinServerLevel implements ServerLevelExt {
+
+    @Shadow
+    @NotNull
+    public abstract MinecraftServer getServer();
 
     @Unique
     private long seedHash = 0;
@@ -65,11 +75,25 @@ public abstract class MixinServerLevel implements ServerLevelExt {
 
     @WrapOperation(method = "<init>", at = @At(value = "INVOKE", target = "Lnet/minecraft/server/level/ServerChunkCache;getGeneratorState()Lnet/minecraft/world/level/chunk/ChunkGeneratorStructureState;"))
     public ChunkGeneratorStructureState getGeneratorState(ServerChunkCache instance, Operation<ChunkGeneratorStructureState> original) {
-        return null;
+        if (this.getServer() instanceof ReplayServer) {
+            return null;
+        } else {
+            return original.call(instance);
+        }
     }
 
     @WrapOperation(method = "<init>", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/chunk/ChunkGeneratorStructureState;ensureStructuresGenerated()V"))
     public void ensureStructuresGenerated(ChunkGeneratorStructureState instance, Operation<Void> original) {
+        if (instance != null) {
+            original.call(instance);
+        }
+    }
+
+    @Inject(method = "waitForChunkAndEntities", at = @At("HEAD"), cancellable = true)
+    public void waitForChunkAndEntities(ChunkPos chunkPos, int i, CallbackInfo ci) {
+        if (this.getServer() instanceof ReplayServer) {
+            ci.cancel();
+        }
     }
 
 }

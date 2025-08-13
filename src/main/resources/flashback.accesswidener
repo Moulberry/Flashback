@@ -14,10 +14,8 @@ accessible method net/minecraft/tags/TagNetworkSerialization serializeToNetwork 
 
 accessible field net/minecraft/world/entity/LivingEntity lerpHeadSteps I
 accessible field net/minecraft/world/entity/LivingEntity lerpYHeadRot D
-accessible field net/minecraft/world/entity/LivingEntity lerpSteps I
 accessible method net/minecraft/world/entity/Entity lerpPositionAndRotationStep (IDDDDD)V
 accessible method net/minecraft/world/entity/LivingEntity lerpHeadRotationStep (ID)V
-accessible method net/minecraft/world/entity/LivingEntity tickHeadTurn (FF)F
 
 accessible field net/minecraft/client/gui/components/BossHealthOverlay events Ljava/util/Map;
 
@@ -132,7 +130,6 @@ accessible field com/mojang/blaze3d/platform/Window height I
 # Visuals
 accessible field net/minecraft/client/Camera eyeHeight F
 accessible method net/minecraft/client/multiplayer/ClientLevel getEntities ()Lnet/minecraft/world/level/entity/LevelEntityGetter;
-accessible field net/minecraft/client/renderer/FogRenderer targetBiomeFog I
 
 # Exporting
 accessible field net/minecraft/client/Minecraft clientTickCount J
@@ -150,7 +147,6 @@ accessible field net/minecraft/client/renderer/SectionOcclusionGraph fullUpdateT
 accessible field net/minecraft/client/renderer/SectionOcclusionGraph needsFullUpdate Z
 accessible field com/mojang/blaze3d/platform/Window framebufferWidth I
 accessible field com/mojang/blaze3d/platform/Window framebufferHeight I
-accessible field com/mojang/blaze3d/pipeline/RenderTarget colorTextureId I
 accessible field net/minecraft/client/Minecraft mainRenderTarget Lcom/mojang/blaze3d/pipeline/RenderTarget;
 mutable field net/minecraft/client/Minecraft mainRenderTarget Lcom/mojang/blaze3d/pipeline/RenderTarget;
 accessible field net/minecraft/client/multiplayer/ClientPacketListener random Lnet/minecraft/util/RandomSource;
@@ -165,3 +161,8 @@ accessible field net/minecraft/client/sounds/SoundEngineExecutor thread Ljava/la
 accessible class net/minecraft/world/level/border/WorldBorder$MovingBorderExtent
 accessible field net/minecraft/world/entity/player/Player DATA_PLAYER_MODE_CUSTOMISATION Lnet/minecraft/network/syncher/EntityDataAccessor;
 accessible field net/minecraft/world/entity/player/Player DATA_PLAYER_MAIN_HAND Lnet/minecraft/network/syncher/EntityDataAccessor;
+
+accessible class net/minecraft/client/gui/Gui$ContextualInfo
+accessible field net/minecraft/client/renderer/GameRenderer fogRenderer Lnet/minecraft/client/renderer/fog/FogRenderer;
+
+accessible field net/minecraft/client/resources/language/ClientLanguage storage Ljava/util/Map;

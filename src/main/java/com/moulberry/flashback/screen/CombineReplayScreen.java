@@ -24,6 +24,7 @@ import net.minecraft.core.MappedRegistry;
 import net.minecraft.core.Registry;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.WorldLoader;
 import net.minecraft.server.WorldStem;
@@ -73,11 +74,15 @@ public class CombineReplayScreen extends Screen {
     private Button outputButton;
 
     protected CombineReplayScreen(@Nullable Screen lastScreen, @Nullable Path firstReplay, @Nullable Path secondReplay, @Nullable Path output) {
-        super(Component.literal("Combine Replay"));
+        super(Component.translatable("flashback.combine_replay"));
         this.lastScreen = lastScreen;
         this.firstReplay = firstReplay;
         this.secondReplay = secondReplay;
         this.output = output;
+    }
+
+    @Override
+    protected void setInitialFocus() {
     }
 
     @Override
@@ -88,9 +93,9 @@ public class CombineReplayScreen extends Screen {
         gridLayout.defaultCellSetting().padding(4, 4, 4, 0);
         GridLayout.RowHelper rowHelper = gridLayout.createRowHelper(2);
 
-        rowHelper.addChild(new StringWidget(204, 20, Component.literal("Combine Replay"), this.font), 2);
+        rowHelper.addChild(new StringWidget(204, 20, Component.translatable("flashback.combine_replay"), this.font), 2);
 
-        rowHelper.addChild(new BottomTextWidget(204, 10, Component.literal("New Replay Name"), this.font).alignLeft(), 2);
+        rowHelper.addChild(new BottomTextWidget(204, 10, Component.translatable("flashback.combine_replay.new_replay_name"), this.font).alignLeft(), 2);
 
         EditBox replayNameEditBox = new EditBox(this.font, 0, 0, 204, 20, Component.literal(this.newReplayName));
         replayNameEditBox.setMaxLength(128);
@@ -100,7 +105,7 @@ public class CombineReplayScreen extends Screen {
 
         Path replayFolder = Flashback.getReplayFolder();
 
-        rowHelper.addChild(new BottomTextWidget(204, 10, Component.literal("Source #1"), this.font).alignLeft(), 2);
+        rowHelper.addChild(new BottomTextWidget(204, 10, Component.translatable("flashback.combine_replay.source_n", Component.literal("1")), this.font).alignLeft(), 2);
 
         String firstReplayPath = this.firstReplay == null ? "" : this.firstReplay.toString();
         this.firstReplayButton = Button.builder(Component.literal(firstReplayPath), button -> {
@@ -115,7 +120,7 @@ public class CombineReplayScreen extends Screen {
         }).width(204).build();
         rowHelper.addChild(this.firstReplayButton, 2);
 
-        rowHelper.addChild(new BottomTextWidget(204, 10, Component.literal("Source #2"), this.font).alignLeft(), 2);
+        rowHelper.addChild(new BottomTextWidget(204, 10, Component.translatable("flashback.combine_replay.source_n", Component.literal("2")), this.font).alignLeft(), 2);
 
         String secondReplayPath = this.secondReplay == null ? "" : this.secondReplay.toString();
         this.secondReplayButton = Button.builder(Component.literal(secondReplayPath), button -> {
@@ -130,7 +135,7 @@ public class CombineReplayScreen extends Screen {
         }).width(204).build();
         rowHelper.addChild(this.secondReplayButton, 2);
 
-        rowHelper.addChild(new BottomTextWidget(204, 10, Component.literal("Output"), this.font).alignLeft(), 2);
+        rowHelper.addChild(new BottomTextWidget(204, 10, Component.translatable("flashback.combine_replay.output"), this.font).alignLeft(), 2);
 
         String outputPath = this.output == null ? "" : this.output.toString();
         this.outputButton = Button.builder(Component.literal(outputPath), button -> {
@@ -147,7 +152,7 @@ public class CombineReplayScreen extends Screen {
 
         rowHelper.addChild(new BottomTextWidget(204, 10, Component.literal(""), this.font), 2);
 
-        rowHelper.addChild(Button.builder(Component.literal("Combine Replays"), button -> {
+        rowHelper.addChild(Button.builder(Component.translatable("flashback.combine_replay.do_combine"), button -> {
             try {
                 PackRepository packRepository = ServerPacksSource.createVanillaTrustedRepository();
                 packRepository.reload();
@@ -178,17 +183,19 @@ public class CombineReplayScreen extends Screen {
             } catch (Exception e) {
                 Flashback.LOGGER.error("Error combining replays", e);
                 Minecraft.getInstance().setScreen(new AlertScreen(() -> Minecraft.getInstance().setScreen(this.lastScreen),
-                    Component.literal("Unable to combine replays"), Component.literal(e.getMessage())));
+                    Component.translatable("flashback.combine_replay.error"), Component.literal(e.getMessage())));
             }
 
         }).width(98).build(), 1);
-        rowHelper.addChild(Button.builder(Component.literal("Cancel"), button -> {
+        rowHelper.addChild(Button.builder(CommonComponents.GUI_CANCEL, button -> {
             Minecraft.getInstance().setScreen(this.lastScreen);
         }).width(98).build(), 1);
 
         gridLayout.arrangeElements();
         FrameLayout.alignInRectangle(gridLayout, 0, 0, this.width, this.height, 0.5f, 0.5f);
         gridLayout.visitWidgets(this::addRenderableWidget);
+
+        this.setInitialFocus(replayNameEditBox);
     }
 
     @Override

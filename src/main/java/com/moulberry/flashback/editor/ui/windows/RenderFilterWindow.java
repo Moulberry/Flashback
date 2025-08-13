@@ -1,8 +1,9 @@
 package com.moulberry.flashback.editor.ui.windows;
 
 import com.moulberry.flashback.Flashback;
-import com.moulberry.flashback.configuration.FlashbackConfig;
+import com.moulberry.flashback.configuration.FlashbackConfigV1;
 import com.moulberry.flashback.editor.ui.ImGuiHelper;
+import com.moulberry.flashback.editor.ui.ReplayUI;
 import com.moulberry.flashback.state.EditorState;
 import com.moulberry.flashback.state.EditorStateManager;
 import imgui.ImGui;
@@ -47,17 +48,18 @@ public class RenderFilterWindow {
         if (!wasDocked) {
             flags |= ImGuiWindowFlags.AlwaysAutoResize;
         }
-        if (ImGui.begin("Render Filter###Render Filter", open, flags)) {
+        String title = I18n.get("flashback.render_filter");
+        if (ImGui.begin(title + "###Render Filter", open, flags)) {
             wasDocked = ImGui.isWindowDocked();
 
-            FlashbackConfig config = Flashback.getConfig();
+            FlashbackConfigV1 config = Flashback.getConfig();
 
-            if (!config.signedRenderFilter) {
+            if (!config.internal.signedRenderFilter) {
                 String name = Minecraft.getInstance().getGameProfile().getName();
-                ImGui.pushTextWrapPos(300);
-                ImGui.textWrapped("I, " + name + ", do solemnly swear that I will not toggle something off in the 'Render Filter' menu and then later ask in Flashback support why the entity is not being rendered.");
-                if (ImGui.checkbox("Signed, " + name + ".", false)) {
-                    config.signedRenderFilter = true;
+                ImGui.pushTextWrapPos(ReplayUI.scaleUi(300));
+                ImGui.textWrapped(I18n.get("flashback.render_filter_affirmation", name));
+                if (ImGui.checkbox(I18n.get("flashback.render_filter_sign", name), false)) {
+                    config.internal.signedRenderFilter = true;
                     config.delayedSaveToDefaultFolder();
                 }
                 ImGui.popTextWrapPos();
@@ -73,8 +75,8 @@ public class RenderFilterWindow {
             }
 
             if (ImGui.beginTabBar("##Select")) {
-                if (ImGui.beginTabItem("Entities")) {
-                    ImGui.inputText("Search", entitySearch);
+                if (ImGui.beginTabItem(I18n.get("flashback.entities"))) {
+                    ImGui.inputText(I18n.get("flashback.search"), entitySearch);
                     String searchString = ImGuiHelper.getString(entitySearch).trim().toLowerCase(Locale.ROOT);
                     if (!searchString.equals(lastEntitySearch)) {
                         lastEntitySearch = searchString;
@@ -95,7 +97,7 @@ public class RenderFilterWindow {
                     }
 
                     if (searchedEntityTypes.isEmpty()) {
-                        ImGui.text("No entities found");
+                        ImGui.textUnformatted(I18n.get("flashback.no_entities_found"));
                     } else {
                         if (ImGui.beginChild("##Scroller", 0, 300)) {
                             ImGuiListClipper.forEach(searchedEntityTypes.size(), new ImListClipperCallback() {
@@ -119,11 +121,11 @@ public class RenderFilterWindow {
                         }
                         ImGui.endChild();
 
-                        if (ImGui.smallButton("Enable All")) {
+                        if (ImGui.smallButton(I18n.get("flashback.enable_all"))) {
                             editorState.filteredEntities.clear();
                         }
                         ImGui.sameLine();
-                        if (ImGui.smallButton("Disable All")) {
+                        if (ImGui.smallButton(I18n.get("flashback.disable_all"))) {
                             for (EntityType<?> entityType : BuiltInRegistries.ENTITY_TYPE) {
                                 ResourceLocation resourceLocation = BuiltInRegistries.ENTITY_TYPE.getKey(entityType);
                                 editorState.filteredEntities.add(resourceLocation.toString());
@@ -133,8 +135,8 @@ public class RenderFilterWindow {
 
                     ImGui.endTabItem();
                 }
-                if (ImGui.beginTabItem("Particles")) {
-                    ImGui.inputText("Search", particleSearch);
+                if (ImGui.beginTabItem(I18n.get("flashback.particles"))) {
+                    ImGui.inputText(I18n.get("flashback.search"), particleSearch);
                     String searchString = ImGuiHelper.getString(particleSearch).trim().toLowerCase(Locale.ROOT);
                     if (!searchString.equals(lastParticleSearch)) {
                         lastParticleSearch = searchString;
@@ -166,7 +168,7 @@ public class RenderFilterWindow {
                     }
 
                     if (searchedParticleTypes.isEmpty()) {
-                        ImGui.text("No particles found");
+                        ImGui.textUnformatted(I18n.get("flashback.no_particles_found"));
                     } else {
                         if (ImGui.beginChild("##Scroller", 0, 300)) {
                             ImGuiListClipper.forEach(searchedParticleTypes.size(), new ImListClipperCallback() {
@@ -195,11 +197,11 @@ public class RenderFilterWindow {
                         }
                         ImGui.endChild();
 
-                        if (ImGui.smallButton("Enable All")) {
+                        if (ImGui.smallButton(I18n.get("flashback.enable_all"))) {
                             editorState.filteredParticles.clear();
                         }
                         ImGui.sameLine();
-                        if (ImGui.smallButton("Disable All")) {
+                        if (ImGui.smallButton(I18n.get("flashback.disable_all"))) {
                             for (ParticleType<?> particleType : BuiltInRegistries.PARTICLE_TYPE) {
                                 ResourceLocation resourceLocation = BuiltInRegistries.PARTICLE_TYPE.getKey(particleType);
                                 if (resourceLocation == null) {
@@ -210,8 +212,8 @@ public class RenderFilterWindow {
                         }
                     }
 
-                    ImGui.pushTextWrapPos(300);
-                    ImGui.textWrapped("Note: Due to technical limitations, will only prevent new particles from spawning. Existing particles won't be affected.");
+                    ImGui.pushTextWrapPos(ReplayUI.scaleUi(300));
+                    ImGui.textWrapped(I18n.get("flashback.particles_note"));
                     ImGui.popTextWrapPos();
 
                     ImGui.endTabItem();

@@ -8,27 +8,16 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
 import com.google.gson.JsonSerializationContext;
 import com.google.gson.JsonSerializer;
-import com.moulberry.flashback.Interpolation;
 import com.moulberry.flashback.editor.ui.ImGuiHelper;
 import com.moulberry.flashback.keyframe.Keyframe;
 import com.moulberry.flashback.keyframe.KeyframeType;
 import com.moulberry.flashback.keyframe.change.KeyframeChange;
-import com.moulberry.flashback.keyframe.change.KeyframeChangeCameraPosition;
-import com.moulberry.flashback.keyframe.handler.KeyframeHandler;
+import com.moulberry.flashback.keyframe.change.KeyframeChangeCameraPositionOrbit;
 import com.moulberry.flashback.keyframe.interpolation.InterpolationType;
 import com.moulberry.flashback.keyframe.types.CameraOrbitKeyframeType;
 import com.moulberry.flashback.spline.CatmullRom;
 import com.moulberry.flashback.spline.Hermite;
-import com.moulberry.flashback.state.EditorState;
-import com.moulberry.flashback.state.EditorStateManager;
-import imgui.ImGui;
-import imgui.type.ImFloat;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.player.LocalPlayer;
-import net.minecraft.util.Mth;
-import net.minecraft.world.entity.Entity;
-import net.minecraft.world.phys.Vec3;
-import org.joml.Quaternionf;
+import net.minecraft.client.resources.language.I18n;
 import org.joml.Vector3d;
 
 import java.lang.reflect.Type;
@@ -37,7 +26,7 @@ import java.util.function.Consumer;
 
 public class CameraOrbitKeyframe extends Keyframe {
 
-    public final Vector3d center;
+    public Vector3d center;
     public float distance;
     public float yaw;
     public float pitch;
@@ -67,7 +56,7 @@ public class CameraOrbitKeyframe extends Keyframe {
     @Override
     public void renderEditKeyframe(Consumer<Consumer<Keyframe>> update) {
         float[] center = new float[]{(float) this.center.x, (float) this.center.y, (float) this.center.z};
-        if (ImGuiHelper.inputFloat("Position", center)) {
+        if (ImGuiHelper.inputFloat(I18n.get("flashback.position"), center)) {
             if (center[0] != this.center.x) {
                 update.accept(keyframe -> ((CameraOrbitKeyframe)keyframe).center.x = center[0]);
             }
@@ -79,40 +68,27 @@ public class CameraOrbitKeyframe extends Keyframe {
             }
         }
         float[] input = new float[]{this.distance};
-        if (ImGuiHelper.inputFloat("Distance", input)) {
+        if (ImGuiHelper.inputFloat(I18n.get("flashback.distance"), input)) {
             if (input[0] != this.distance) {
                 update.accept(keyframe -> ((CameraOrbitKeyframe)keyframe).distance = input[0]);
             }
         }
         input[0] = this.yaw;
-        if (ImGuiHelper.inputFloat("Yaw", input)) {
+        if (ImGuiHelper.inputFloat(I18n.get("flashback.yaw"), input)) {
             if (input[0] != this.yaw) {
                 update.accept(keyframe -> ((CameraOrbitKeyframe)keyframe).yaw = input[0]);
             }
         }
         input[0] = this.pitch;
-        if (ImGuiHelper.inputFloat("Pitch", input)) {
+        if (ImGuiHelper.inputFloat(I18n.get("flashback.pitch"), input)) {
             if (input[0] != this.pitch) {
                 update.accept(keyframe -> ((CameraOrbitKeyframe)keyframe).pitch = input[0]);
             }
         }
     }
 
-    private static KeyframeChangeCameraPosition createChangeFrom(Vector3d center, float distance, float yaw, float pitch) {
-        float pitchRadians = (float) Math.toRadians(pitch);
-        float yawRadians = (float) Math.toRadians(-yaw);
-        float cosYaw = Mth.cos(yawRadians);
-        float sinYaw = Mth.sin(yawRadians);
-        float cosPitch = Mth.cos(pitchRadians);
-        float sinPitch = Mth.sin(pitchRadians);
-
-        Vector3d look = new Vector3d(sinYaw * cosPitch, -sinPitch, cosYaw * cosPitch);
-        Vector3d cameraPosition = new Vector3d(center).sub(look.mul(distance));
-        LocalPlayer player = Minecraft.getInstance().player;
-        if (player != null) {
-            cameraPosition.y -= player.getEyeHeight();
-        }
-        return new KeyframeChangeCameraPosition(cameraPosition, yaw, pitch, 0.0f);
+    private static KeyframeChangeCameraPositionOrbit createChangeFrom(Vector3d center, float distance, float yaw, float pitch) {
+        return new KeyframeChangeCameraPositionOrbit(center, distance, yaw, pitch);
     }
 
     @Override
@@ -143,7 +119,7 @@ public class CameraOrbitKeyframe extends Keyframe {
     }
 
     @Override
-    public KeyframeChange createHermiteInterpolatedChange(Map<Integer, Keyframe> keyframes, float amount) {
+    public KeyframeChange createHermiteInterpolatedChange(Map<Float, Keyframe> keyframes, float amount) {
         Vector3d position = Hermite.position(Maps.transformValues(keyframes, k -> ((CameraOrbitKeyframe)k).center), amount);
         double distance = Hermite.value(Maps.transformValues(keyframes, k -> (double) ((CameraOrbitKeyframe)k).distance), amount);
 

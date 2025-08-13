@@ -1,25 +1,15 @@
 package com.moulberry.flashback.editor.ui.windows;
 
 import com.moulberry.flashback.Flashback;
-import com.moulberry.flashback.combo_options.VideoContainer;
-import com.moulberry.flashback.configuration.FlashbackConfig;
+import com.moulberry.flashback.configuration.FlashbackConfigV1;
 import com.moulberry.flashback.editor.ui.ImGuiHelper;
-import com.moulberry.flashback.exporting.AsyncFileDialogs;
-import com.moulberry.flashback.exporting.ExportJob;
-import com.moulberry.flashback.exporting.ExportSettings;
-import com.moulberry.flashback.keyframe.interpolation.InterpolationType;
-import com.moulberry.flashback.state.EditorState;
-import com.moulberry.flashback.state.EditorStateManager;
+import com.moulberry.flashback.editor.ui.ReplayUI;
 import imgui.ImGui;
 import imgui.ImVec2;
 import imgui.flag.ImGuiCond;
 import imgui.flag.ImGuiWindowFlags;
-import imgui.type.ImShort;
 import imgui.type.ImString;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.player.LocalPlayer;
-
-import java.nio.file.Path;
+import net.minecraft.client.resources.language.I18n;
 
 public class PreferencesWindow {
 
@@ -36,8 +26,9 @@ public class PreferencesWindow {
 
         ImVec2 center = ImGui.getMainViewport().getCenter();
         ImGui.setNextWindowPos(center.x, center.y, ImGuiCond.Appearing, 0.5f, 0.5f);
-        ImGui.setNextWindowSize(400, 0);
-        if (ImGuiHelper.beginPopupModalCloseable("Preferences###Preferences", ImGuiWindowFlags.NoResize)) {
+        ImGui.setNextWindowSize(ReplayUI.scaleUi(400), 0);
+        String title = I18n.get("flashback.preferences");
+        if (ImGuiHelper.beginPopupModalCloseable(title + "###Preferences", ImGuiWindowFlags.NoResize)) {
             if (close) {
                 close = false;
                 ImGui.closeCurrentPopup();
@@ -45,35 +36,51 @@ public class PreferencesWindow {
                 return;
             }
 
-            FlashbackConfig config = Flashback.getConfig();
+            FlashbackConfigV1 config = Flashback.getConfig();
 
             // Exporting
             ImGuiHelper.separatorWithText("Exporting");
 
-            ImString imString = ImGuiHelper.createResizableImString(config.defaultExportFilename);
-            ImGui.setNextItemWidth(200);
-            if (ImGui.inputText("Export Filename", imString)) {
-                config.defaultExportFilename = ImGuiHelper.getString(imString);
+            ImString imString = ImGuiHelper.createResizableImString(config.exporting.defaultExportFilename);
+            ImGui.setNextItemWidth(ReplayUI.scaleUi(200));
+            if (ImGui.inputText(I18n.get("flashback.export_filename"), imString)) {
+                config.exporting.defaultExportFilename = ImGuiHelper.getString(imString);
                 config.delayedSaveToDefaultFolder();
             }
-            ImGuiHelper.tooltip("The default filename when exporting\nVariables:\n\t%date%\tyear-month-day\n\t%time%\thh_mm_ss\n\t%replay%\tReplay name\n\t%seq%\tExport count for this session");
+            ImGuiHelper.tooltip(I18n.get("flashback.export_filename_tooltip"));
 
             // Keyframes
-            ImGuiHelper.separatorWithText("Keyframes");
+            ImGuiHelper.separatorWithText(I18n.get("flashback.keyframes"));
 
-            ImGui.setNextItemWidth(200);
-            config.defaultInterpolationType = ImGuiHelper.enumCombo("Default Interpolation", config.defaultInterpolationType);
+            ImGui.setNextItemWidth(ReplayUI.scaleUi(200));
+            config.keyframes.defaultInterpolationType = ImGuiHelper.enumCombo(I18n.get("flashback.default_interpolation"), config.keyframes.defaultInterpolationType);
+            ImGuiHelper.tooltip(I18n.get("flashback.default_interpolation_description"));
 
-            if (ImGui.collapsingHeader("Advanced")) {
-                ImGui.textWrapped("Don't change any of these unless you know what you're doing!! If you change one of these and then ask for support you will be made fun of!!");
-                if (ImGui.checkbox("Disable increased first-person updates", config.disableIncreasedFirstPersonUpdates)) {
-                    config.disableIncreasedFirstPersonUpdates = !config.disableIncreasedFirstPersonUpdates;
+            if (ImGui.checkbox(I18n.get("flashback.use_realtime_interpolation"), config.keyframes.useRealtimeInterpolation)) {
+                config.keyframes.useRealtimeInterpolation = !config.keyframes.useRealtimeInterpolation;
+            }
+            ImGuiHelper.tooltip(I18n.get("flashback.use_realtime_interpolation_description"));
+
+            if (ImGui.collapsingHeader(I18n.get("flashback.advanced"))) {
+                ImGui.textWrapped(I18n.get("flashback.advanced_description"));
+
+                if (ImGui.checkbox(I18n.get("flashback.disable_first_person_updates"), config.advanced.disableIncreasedFirstPersonUpdates)) {
+                    config.advanced.disableIncreasedFirstPersonUpdates = !config.advanced.disableIncreasedFirstPersonUpdates;
                     config.delayedSaveToDefaultFolder();
                 }
-                if (ImGui.checkbox("Disable third-person cancel", config.disableThirdPersonCancel)) {
-                    config.disableThirdPersonCancel = !config.disableThirdPersonCancel;
+
+                if (ImGui.checkbox(I18n.get("flashback.disable_third_person_cancel"), config.advanced.disableThirdPersonCancel)) {
+                    config.advanced.disableThirdPersonCancel = !config.advanced.disableThirdPersonCancel;
                     config.delayedSaveToDefaultFolder();
                 }
+
+                ImGui.setNextItemWidth(ReplayUI.scaleUi(200));
+                int[] value = new int[]{config.exporting.exportRenderDummyFrames};
+                if (ImGui.sliderInt(I18n.get("flashback.dummy_render_frames"), value, 0, 100)) {
+                    config.exporting.exportRenderDummyFrames = value[0];
+                    config.delayedSaveToDefaultFolder();
+                }
+                ImGuiHelper.tooltip(I18n.get("flashback.dummy_render_frames_description"));
             }
 
             ImGuiHelper.endPopupModalCloseable();

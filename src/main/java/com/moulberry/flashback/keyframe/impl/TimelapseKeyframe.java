@@ -21,6 +21,7 @@ import com.moulberry.flashback.spline.CatmullRom;
 import com.moulberry.flashback.spline.Hermite;
 import imgui.ImGui;
 import imgui.type.ImString;
+import net.minecraft.client.resources.language.I18n;
 
 import java.lang.reflect.Type;
 import java.util.Map;
@@ -57,7 +58,7 @@ public class TimelapseKeyframe extends Keyframe {
     @Override
     public void renderEditKeyframe(Consumer<Consumer<Keyframe>> update) {
         ImGui.setNextItemWidth(160);
-        ImGui.inputText("Time", timelapseKeyframeInput);
+        ImGui.inputText(I18n.get("flashback.time"), timelapseKeyframeInput);
         if (ImGui.isItemDeactivatedAfterEdit()) {
             int ticks = Utils.stringToTime(timelapseKeyframeInput.get());
             if (this.ticks != ticks) {
@@ -77,7 +78,7 @@ public class TimelapseKeyframe extends Keyframe {
     }
 
     @Override
-    public KeyframeChange createHermiteInterpolatedChange(Map<Integer, Keyframe> keyframes, float amount) {
+    public KeyframeChange createHermiteInterpolatedChange(Map<Float, Keyframe> keyframes, float amount) {
         throw new UnsupportedOperationException();
     }
 

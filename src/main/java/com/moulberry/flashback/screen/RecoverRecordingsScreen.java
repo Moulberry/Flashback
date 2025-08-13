@@ -50,15 +50,15 @@ public class RecoverRecordingsScreen extends Screen {
         int height = lines * this.font.lineHeight;
         int buttonY = Mth.clamp(90 + height + 12, this.height / 6 + 96, this.height - 24);
 
-        this.addRenderableWidget(Button.builder(Component.literal("Recover").withStyle(ChatFormatting.GREEN), b -> {
+        this.addRenderableWidget(Button.builder(Component.translatable("flashback.recover").withStyle(ChatFormatting.GREEN), b -> {
             Minecraft.getInstance().setScreen(this.lastScreen);
             this.handler.accept(RecoveryOption.RECOVER);
         }).bounds((this.width - 304) / 2, buttonY, 96, 20).build());
-        this.addRenderableWidget(Button.builder(Component.literal("Skip").withStyle(ChatFormatting.YELLOW), b -> {
+        this.addRenderableWidget(Button.builder(Component.translatable("flashback.skip").withStyle(ChatFormatting.YELLOW), b -> {
             Minecraft.getInstance().setScreen(this.lastScreen);
             this.handler.accept(RecoveryOption.SKIP);
         }).bounds((this.width - 304) / 2 + 104, buttonY, 96, 20).build());
-        this.addRenderableWidget(Button.builder(Component.literal("Delete").withStyle(ChatFormatting.RED), b -> {
+        this.addRenderableWidget(Button.builder(Component.translatable("flashback.delete").withStyle(ChatFormatting.RED), b -> {
             Minecraft.getInstance().setScreen(this.lastScreen);
             this.handler.accept(RecoveryOption.DELETE);
         }).bounds((this.width - 304)/2 + 208, buttonY, 96, 20).build());
@@ -67,7 +67,7 @@ public class RecoverRecordingsScreen extends Screen {
     @Override
     public void render(GuiGraphics guiGraphics, int i, int j, float f) {
         super.render(guiGraphics, i, j, f);
-        guiGraphics.drawCenteredString(this.font, this.title, this.width / 2, 70, 0xFFFFFF);
+        guiGraphics.drawCenteredString(this.font, this.title, this.width / 2, 70, 0xFFFFFFFF);
         this.message.renderCentered(guiGraphics, this.width / 2, 90);
     }
 

@@ -10,6 +10,7 @@ import com.moulberry.flashback.keyframe.handler.KeyframeHandler;
 import com.moulberry.flashback.keyframe.impl.TimelapseKeyframe;
 import imgui.ImGui;
 import imgui.type.ImString;
+import net.minecraft.client.resources.language.I18n;
 import org.jetbrains.annotations.Nullable;
 
 public class TimelapseKeyframeType implements KeyframeType<TimelapseKeyframe> {
@@ -31,7 +32,7 @@ public class TimelapseKeyframeType implements KeyframeType<TimelapseKeyframe> {
 
     @Override
     public String name() {
-        return "Timelapse";
+        return I18n.get("flashback.keyframe.timelapse");
     }
 
     @Override
@@ -50,6 +51,11 @@ public class TimelapseKeyframeType implements KeyframeType<TimelapseKeyframe> {
     }
 
     @Override
+    public boolean neverApplyLastKeyframe() {
+        return true;
+    }
+
+    @Override
     public @Nullable TimelapseKeyframe createDirect() {
         return null;
     }
@@ -60,12 +66,12 @@ public class TimelapseKeyframeType implements KeyframeType<TimelapseKeyframe> {
         timelapseKeyframeInput.inputData.allowedChars = "0123456789tsmh.";
 
         return () -> {
-            ImGui.inputText("Time", timelapseKeyframeInput);
-            if (ImGui.button("Add")) {
+            ImGui.inputText(I18n.get("flashback.time"), timelapseKeyframeInput);
+            if (ImGui.button(I18n.get("flashback.add"))) {
                 return new TimelapseKeyframe(Utils.stringToTime(ImGuiHelper.getString(timelapseKeyframeInput)));
             }
             ImGui.sameLine();
-            if (ImGui.button("Cancel")) {
+            if (ImGui.button(I18n.get("gui.cancel"))) {
                 ImGui.closeCurrentPopup();
             }
             return null;

@@ -22,6 +22,7 @@ import com.moulberry.flashback.spline.Hermite;
 import com.moulberry.flashback.state.EditorState;
 import com.moulberry.flashback.state.EditorStateManager;
 import imgui.ImGui;
+import net.minecraft.client.resources.language.I18n;
 
 import java.lang.reflect.Type;
 import java.util.Map;
@@ -61,7 +62,7 @@ public class CameraShakeKeyframe extends Keyframe {
     @Override
     public void renderEditKeyframe(Consumer<Consumer<Keyframe>> update) {
         ImGui.setNextItemWidth(160);
-        if (ImGui.checkbox("Split Y/X", this.splitParams)) {
+        if (ImGui.checkbox(I18n.get("flashback.split_yx"), this.splitParams)) {
             boolean splitParams = this.splitParams;
             update.accept(keyframe -> {
                 CameraShakeKeyframe cameraShakeKeyframe = (CameraShakeKeyframe) keyframe;
@@ -74,7 +75,7 @@ public class CameraShakeKeyframe extends Keyframe {
         if (this.splitParams) {
             float[] input = new float[]{this.frequencyX};
             ImGui.setNextItemWidth(160);
-            if (ImGui.sliderFloat("Frequency X", input, 0.1f, 10.0f, "%.1f") && input[0] != this.frequencyX) {
+            if (ImGui.sliderFloat(I18n.get("flashback.frequency_x"), input, 0.1f, 10.0f, "%.1f") && input[0] != this.frequencyX) {
                 update.accept(keyframe -> {
                     ((CameraShakeKeyframe)keyframe).splitParams = true;
                     ((CameraShakeKeyframe)keyframe).frequencyX = input[0];
@@ -83,7 +84,7 @@ public class CameraShakeKeyframe extends Keyframe {
 
             input[0] = this.amplitudeX;
             ImGui.setNextItemWidth(160);
-            if (ImGui.sliderFloat("Amplitude X", input, 0.0f, 10.0f, "%.1f") && input[0] != this.amplitudeX) {
+            if (ImGui.sliderFloat(I18n.get("flashback.amplitude_x"), input, 0.0f, 10.0f, "%.1f") && input[0] != this.amplitudeX) {
                 update.accept(keyframe -> {
                     ((CameraShakeKeyframe)keyframe).splitParams = true;
                     ((CameraShakeKeyframe)keyframe).amplitudeX = input[0];
@@ -92,7 +93,7 @@ public class CameraShakeKeyframe extends Keyframe {
 
             input[0] = this.frequencyY;
             ImGui.setNextItemWidth(160);
-            if (ImGui.sliderFloat("Frequency Y", input, 0.1f, 10.0f, "%.1f") && input[0] != this.frequencyY) {
+            if (ImGui.sliderFloat(I18n.get("flashback.frequency_y"), input, 0.1f, 10.0f, "%.1f") && input[0] != this.frequencyY) {
                 update.accept(keyframe -> {
                     ((CameraShakeKeyframe)keyframe).splitParams = true;
                     ((CameraShakeKeyframe)keyframe).frequencyY = input[0];
@@ -101,7 +102,7 @@ public class CameraShakeKeyframe extends Keyframe {
 
             input[0] = this.amplitudeY;
             ImGui.setNextItemWidth(160);
-            if (ImGui.sliderFloat("Amplitude Y", input, 0.0f, 10.0f, "%.1f") && input[0] != this.amplitudeY) {
+            if (ImGui.sliderFloat(I18n.get("flashback.amplitude_y"), input, 0.0f, 10.0f, "%.1f") && input[0] != this.amplitudeY) {
                 update.accept(keyframe -> {
                     ((CameraShakeKeyframe)keyframe).splitParams = true;
                     ((CameraShakeKeyframe)keyframe).amplitudeY = input[0];
@@ -110,7 +111,7 @@ public class CameraShakeKeyframe extends Keyframe {
         } else {
             float[] input = new float[]{this.frequencyX};
             ImGui.setNextItemWidth(160);
-            if (ImGui.sliderFloat("Frequency", input, 0.1f, 10.0f, "%.1f") && input[0] != this.frequencyX) {
+            if (ImGui.sliderFloat(I18n.get("flashback.frequency"), input, 0.1f, 10.0f, "%.1f") && input[0] != this.frequencyX) {
                 update.accept(keyframe -> {
                     ((CameraShakeKeyframe)keyframe).frequencyX = input[0];
                     ((CameraShakeKeyframe)keyframe).frequencyY = input[0];
@@ -119,7 +120,7 @@ public class CameraShakeKeyframe extends Keyframe {
 
             input[0] = this.amplitudeX;
             ImGui.setNextItemWidth(160);
-            if (ImGui.sliderFloat("Amplitude", input, 0.0f, 10.0f, "%.1f") && input[0] != this.amplitudeX) {
+            if (ImGui.sliderFloat(I18n.get("flashback.amplitude"), input, 0.0f, 10.0f, "%.1f") && input[0] != this.amplitudeX) {
                 update.accept(keyframe -> {
                     ((CameraShakeKeyframe)keyframe).amplitudeX = input[0];
                     ((CameraShakeKeyframe)keyframe).amplitudeY = input[0];
@@ -152,7 +153,7 @@ public class CameraShakeKeyframe extends Keyframe {
     }
 
     @Override
-    public KeyframeChange createHermiteInterpolatedChange(Map<Integer, Keyframe> keyframes, float amount) {
+    public KeyframeChange createHermiteInterpolatedChange(Map<Float, Keyframe> keyframes, float amount) {
         float frequencyX = (float) Hermite.value(Maps.transformValues(keyframes, k -> (double) ((CameraShakeKeyframe)k).frequencyX), amount);
         float amplitudeX = (float) Hermite.value(Maps.transformValues(keyframes, k -> (double) ((CameraShakeKeyframe)k).amplitudeX), amount);
         float frequencyY = (float) Hermite.value(Maps.transformValues(keyframes, k -> (double) ((CameraShakeKeyframe)k).frequencyY), amount);

@@ -6,9 +6,11 @@ import com.mojang.authlib.properties.PropertyMap;
 import com.moulberry.flashback.keyframe.Keyframe;
 import com.moulberry.flashback.keyframe.KeyframeRegistry;
 import com.moulberry.flashback.keyframe.KeyframeType;
+import com.moulberry.flashback.keyframe.impl.BlockOverrideKeyframe;
 import com.moulberry.flashback.keyframe.impl.CameraKeyframe;
 import com.moulberry.flashback.keyframe.impl.CameraOrbitKeyframe;
 import com.moulberry.flashback.keyframe.impl.CameraShakeKeyframe;
+import com.moulberry.flashback.keyframe.impl.TrackEntityKeyframe;
 import com.moulberry.flashback.keyframe.impl.FOVKeyframe;
 import com.moulberry.flashback.keyframe.impl.FreezeKeyframe;
 import com.moulberry.flashback.keyframe.impl.TickrateKeyframe;
@@ -40,12 +42,14 @@ public class FlashbackGson {
 
             .registerTypeAdapter(CameraKeyframe.class, new CameraKeyframe.TypeAdapter())
             .registerTypeAdapter(CameraOrbitKeyframe.class, new CameraOrbitKeyframe.TypeAdapter())
+            .registerTypeAdapter(TrackEntityKeyframe.class, new TrackEntityKeyframe.TypeAdapter())
             .registerTypeAdapter(FOVKeyframe.class, new FOVKeyframe.TypeAdapter())
             .registerTypeAdapter(CameraShakeKeyframe.class, new CameraShakeKeyframe.TypeAdapter())
             .registerTypeAdapter(TickrateKeyframe.class, new TickrateKeyframe.TypeAdapter())
             .registerTypeAdapter(TimelapseKeyframe.class, new TimelapseKeyframe.TypeAdapter())
             .registerTypeAdapter(TimeOfDayKeyframe.class, new TimeOfDayKeyframe.TypeAdapter())
             .registerTypeAdapter(FreezeKeyframe.class, new FreezeKeyframe.TypeAdapter())
+            .registerTypeAdapter(BlockOverrideKeyframe.class, new BlockOverrideKeyframe.TypeAdapter())
             .registerTypeAdapter(Keyframe.class, new Keyframe.TypeAdapter())
 
             .registerTypeAdapter(EditorSceneHistoryAction.SetKeyframe.class, new EditorSceneHistoryAction.SetKeyframe.TypeAdapter())

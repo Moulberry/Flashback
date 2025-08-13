@@ -13,8 +13,14 @@ import java.util.Set;
 public record MinecraftKeyframeHandler(Minecraft minecraft) implements KeyframeHandler {
 
     private static final Set<Class<? extends KeyframeChange>> supportedChanges = Set.of(
-            KeyframeChangeCameraPosition.class, KeyframeChangeFov.class, KeyframeChangeTimeOfDay.class, KeyframeChangeCameraShake.class
+            KeyframeChangeCameraPosition.class, KeyframeChangeCameraPositionOrbit.class, KeyframeChangeTrackEntity.class,
+            KeyframeChangeFov.class, KeyframeChangeTimeOfDay.class, KeyframeChangeCameraShake.class
     );
+
+    @Override
+    public Minecraft getMinecraft() {
+        return this.minecraft;
+    }
 
     @Override
     public boolean supportsKeyframeChange(Class<? extends KeyframeChange> clazz) {
@@ -26,10 +32,11 @@ public record MinecraftKeyframeHandler(Minecraft minecraft) implements KeyframeH
         LocalPlayer player = this.minecraft.player;
         if (player != null) {
             if (this.minecraft.cameraEntity != this.minecraft.player) {
-                Minecraft.getInstance().getConnection().sendUnsignedCommand("spectate");
+                Minecraft.getInstance().getConnection().sendCommand("spectate");
             }
 
-            player.moveTo(position.x, position.y, position.z, (float) yaw, (float) pitch);
+            player.snapTo(position.x, position.y, position.z, (float) yaw, (float) pitch);
+            player.getInterpolation().cancel();
 
             EditorState editorState = EditorStateManager.getCurrent();
             if (editorState != null) {
@@ -56,11 +63,6 @@ public record MinecraftKeyframeHandler(Minecraft minecraft) implements KeyframeH
 
     @Override
     public void applyTimeOfDay(int timeOfDay) {
-        timeOfDay = timeOfDay % 24000;
-        if (timeOfDay < 0) {
-            timeOfDay += 24000;
-        }
-
         EditorState editorState = EditorStateManager.getCurrent();
         if (editorState != null) {
             editorState.replayVisuals.overrideTimeOfDay = timeOfDay;

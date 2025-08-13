@@ -1,11 +1,14 @@
 package com.moulberry.flashback.exporting;
 
-import com.mojang.blaze3d.pipeline.MainTarget;
-import com.mojang.blaze3d.pipeline.RenderTarget;
+import com.mojang.blaze3d.opengl.GlDevice;
+import com.mojang.blaze3d.opengl.GlStateManager;
+import com.mojang.blaze3d.opengl.GlTexture;
 import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.blaze3d.systems.RenderSystem;
-import net.minecraft.client.Minecraft;
+import com.mojang.blaze3d.textures.GpuTexture;
 import org.jetbrains.annotations.Nullable;
+import org.lwjgl.opengl.GL11;
+import org.lwjgl.opengl.GL30;
 import org.lwjgl.opengl.GL30C;
 import org.lwjgl.system.MemoryUtil;
 
@@ -22,7 +25,7 @@ public class SaveableFramebuffer implements AutoCloseable {
         this.pboId = -1;
     }
 
-    public void startDownload(RenderTarget framebuffer, int width, int height) {
+    public void startDownload(GpuTexture gpuTexture, int width, int height) {
         if (this.isDownloading) {
             throw new IllegalStateException("Can't start downloading while already downloading");
         }
@@ -36,13 +39,18 @@ public class SaveableFramebuffer implements AutoCloseable {
             GL30C.glBindBuffer(GL30C.GL_PIXEL_PACK_BUFFER, 0);
         }
 
-        framebuffer.bindWrite(true);
+        int fbo = ((GlTexture)gpuTexture).getFbo(((GlDevice)RenderSystem.getDevice()).directStateAccess(), null);
+        GlStateManager._glBindFramebuffer(GL30.GL_FRAMEBUFFER, fbo);
 
         GL30C.glBindBuffer(GL30C.GL_PIXEL_PACK_BUFFER, this.pboId);
+        GlStateManager._pixelStore(GL11.GL_PACK_ALIGNMENT, 1);
+        GlStateManager._pixelStore(GL11.GL_PACK_ROW_LENGTH, 0);
+        GlStateManager._pixelStore(GL11.GL_PACK_SKIP_PIXELS, 0);
+        GlStateManager._pixelStore(GL11.GL_PACK_SKIP_ROWS, 0);
         GL30C.glReadPixels(0, 0, width, height, GL30C.GL_RGBA, GL30C.GL_UNSIGNED_BYTE, 0);
         GL30C.glBindBuffer(GL30C.GL_PIXEL_PACK_BUFFER, 0);
 
-        framebuffer.unbindWrite();
+        GlStateManager._glBindFramebuffer(GL30.GL_FRAMEBUFFER, 0);
     }
 
     public NativeImage finishDownload(int width, int height) {

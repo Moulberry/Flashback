@@ -46,14 +46,14 @@ public class UnsupportedLoaderScreen extends Screen {
 
         this.clearWidgets();
         if (this.countdown == 0) {
-            var button = Button.builder(Component.literal("I Understand"), b -> {
-                Flashback.getConfig().nextUnsupportedModLoaderWarning = System.currentTimeMillis() + Duration.ofDays(7).toMillis();
+            var button = Button.builder(Component.translatable("flashback.i_understand"), b -> {
+                Flashback.getConfig().internal.nextUnsupportedModLoaderWarning = System.currentTimeMillis() + Duration.ofDays(7).toMillis();
                 Flashback.getConfig().delayedSaveToDefaultFolder();
                 Minecraft.getInstance().setScreen(this.lastScreen);
            }).bounds((this.width - 150) / 2, buttonY, 150, 20).build();
             this.addRenderableWidget(button);
         } else if (this.countdown <= 10) {
-            var button = Button.builder(Component.literal("I Understand (" + this.countdown + ")"), b -> {})
+            var button = Button.builder(Component.translatable("flashback.i_understand_countdown", Component.literal(String.valueOf(this.countdown))), b -> {})
                                .bounds((this.width - 150) / 2, buttonY, 150, 20).build();
             button.active = false;
             this.addRenderableWidget(button);
@@ -63,7 +63,7 @@ public class UnsupportedLoaderScreen extends Screen {
     @Override
     public void render(GuiGraphics guiGraphics, int i, int j, float f) {
         super.render(guiGraphics, i, j, f);
-        guiGraphics.drawCenteredString(this.font, this.title, this.width / 2, 70, 0xFFFFFF);
+        guiGraphics.drawCenteredString(this.font, this.title, this.width / 2, 70, 0xFFFFFFFF);
         this.message.renderCentered(guiGraphics, this.width / 2, 90);
 
         if (this.countdown > 0 && System.currentTimeMillis() - this.lastInitTime > 1000) {

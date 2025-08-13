@@ -1,5 +1,6 @@
 package com.moulberry.flashback.editor;
 
+import com.moulberry.flashback.editor.ui.KeyframeRelativeOffsets;
 import com.moulberry.flashback.keyframe.Keyframe;
 import com.moulberry.flashback.keyframe.KeyframeType;
 import com.moulberry.flashback.state.EditorScene;
@@ -16,7 +17,7 @@ import java.util.TreeMap;
 
 public record SavedTrack(KeyframeType<?> type, int track, boolean copiedFromDisabled,
                          TreeMap<Integer, Keyframe> keyframes) {
-    public int applyToScene(EditorScene editorScene, int cursorTicks, int totalTicks) {
+    public int applyToScene(EditorScene editorScene, int cursorTicks, int totalTicks, KeyframeRelativeOffsets offsets) {
         if (this.keyframes == null || this.keyframes.isEmpty()) {
             return 0;
         }
@@ -25,28 +26,28 @@ public record SavedTrack(KeyframeType<?> type, int track, boolean copiedFromDisa
         if (this.track >= 0 && this.track < editorScene.keyframeTracks.size()) {
             KeyframeTrack keyframeTrack = editorScene.keyframeTracks.get(this.track);
             if ((keyframeTrack.enabled || this.copiedFromDisabled) && keyframeTrack.keyframeType == this.type) {
-                return this.applyTo(editorScene, this.type, keyframeTrack, this.track, cursorTicks, totalTicks);
+                return this.applyTo(editorScene, keyframeTrack, this.track, cursorTicks, totalTicks, offsets);
             }
         }
 
         // Try to find first eligible enabled track
         for (KeyframeTrack keyframeTrack : editorScene.keyframeTracks) {
             if (keyframeTrack.enabled && keyframeTrack.keyframeType == this.type) {
-                return this.applyTo(editorScene, this.type, keyframeTrack, this.track, cursorTicks, totalTicks);
+                return this.applyTo(editorScene, keyframeTrack, this.track, cursorTicks, totalTicks, offsets);
             }
         }
 
         // Create new track
-        return this.applyTo(editorScene, this.type, null, this.track, cursorTicks, totalTicks);
+        return this.applyTo(editorScene, null, editorScene.keyframeTracks.size(), cursorTicks, totalTicks, offsets);
     }
 
-    private int applyTo(EditorScene editorScene, KeyframeType<?> type, @Nullable KeyframeTrack existing, int trackIndex, int cursorTicks, int totalTicks) {
+    private int applyTo(EditorScene editorScene, @Nullable KeyframeTrack existing, int trackIndex, int cursorTicks, int totalTicks, KeyframeRelativeOffsets offsets) {
         List<EditorSceneHistoryAction> undo = new ArrayList<>();
         List<EditorSceneHistoryAction> redo = new ArrayList<>();
 
         if (existing == null) {
-            undo.add(new EditorSceneHistoryAction.RemoveTrack(type, trackIndex));
-            redo.add(new EditorSceneHistoryAction.AddTrack(type, trackIndex));
+            undo.add(new EditorSceneHistoryAction.RemoveTrack(this.type, trackIndex));
+            redo.add(new EditorSceneHistoryAction.AddTrack(this.type, trackIndex));
         }
 
         int count = 0;
@@ -57,12 +58,15 @@ public record SavedTrack(KeyframeType<?> type, int track, boolean copiedFromDisa
                     Keyframe old = existing.keyframesByTick.get(newTick);
 
                     if (old != null) {
-                        undo.add(new EditorSceneHistoryAction.SetKeyframe(type, trackIndex, newTick, old.copy()));
+                        undo.add(new EditorSceneHistoryAction.SetKeyframe(this.type, trackIndex, newTick, old.copy()));
                     } else {
-                        undo.add(new EditorSceneHistoryAction.RemoveKeyframe(type, trackIndex, newTick));
+                        undo.add(new EditorSceneHistoryAction.RemoveKeyframe(this.type, trackIndex, newTick));
                     }
                 }
-                redo.add(new EditorSceneHistoryAction.SetKeyframe(type, trackIndex, newTick, entry.getValue().copy()));
+
+                Keyframe newKeyframe = entry.getValue().copy();
+                offsets.apply(newKeyframe);
+                redo.add(new EditorSceneHistoryAction.SetKeyframe(this.type, trackIndex, newTick, newKeyframe));
 
                 count += 1;
             }

@@ -14,6 +14,7 @@ import com.moulberry.flashback.keyframe.types.FOVKeyframeType;
 import com.moulberry.flashback.spline.CatmullRom;
 import com.moulberry.flashback.spline.Hermite;
 import imgui.ImGui;
+import net.minecraft.client.resources.language.I18n;
 
 import java.lang.reflect.Type;
 import java.util.Map;
@@ -46,7 +47,7 @@ public class FOVKeyframe extends Keyframe {
     public void renderEditKeyframe(Consumer<Consumer<Keyframe>> update) {
         ImGui.setNextItemWidth(160);
         float[] input = new float[]{this.fov};
-        if (ImGui.sliderFloat("FOV", input, 1.0f, 110.0f, "%.1f")) {
+        if (ImGui.sliderFloat(I18n.get("flashback.fov"), input, 1.0f, 110.0f, "%.1f")) {
             if (this.fov != input[0]) {
                 update.accept(keyframe -> ((FOVKeyframe)keyframe).fov = input[0]);
             }
@@ -75,7 +76,7 @@ public class FOVKeyframe extends Keyframe {
     }
 
     @Override
-    public KeyframeChange createHermiteInterpolatedChange(Map<Integer, Keyframe> keyframes, float amount) {
+    public KeyframeChange createHermiteInterpolatedChange(Map<Float, Keyframe> keyframes, float amount) {
         float focalLength = (float) Hermite.value(Maps.transformValues(keyframes, k -> (double) Utils.fovToFocalLength(((FOVKeyframe)k).fov)), amount);
         return new KeyframeChangeFov(Utils.focalLengthToFov(focalLength));
     }

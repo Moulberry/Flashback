@@ -10,6 +10,7 @@ import imgui.flag.ImGuiCol;
 import imgui.flag.ImGuiTableColumnFlags;
 import imgui.flag.ImGuiTableFlags;
 import imgui.flag.ImGuiWindowFlags;
+import net.minecraft.client.resources.language.I18n;
 
 public class ExportQueueWindow {
 
@@ -25,32 +26,33 @@ public class ExportQueueWindow {
             open = false;
         }
 
-        if (ImGuiHelper.beginPopupModalCloseable("Export Queue###ExportQueue", ImGuiWindowFlags.AlwaysAutoResize)) {
+        String title = I18n.get("flashback.export_queue");
+        if (ImGuiHelper.beginPopupModalCloseable(title + "###ExportQueue", ImGuiWindowFlags.AlwaysAutoResize)) {
             ImGuiHelper.pushStyleColor(ImGuiCol.Border, 0xFF808080);
 
             boolean canStartJob = !ExportJobQueue.queuedJobs.isEmpty() && Flashback.EXPORT_JOB == null;
             boolean canRemoveJob = !ExportJobQueue.queuedJobs.isEmpty();
 
-            ImGui.text("Jobs");
+            ImGui.textUnformatted(I18n.get("flashback.export_jobs"));
             if (ImGui.beginChild("##Jobs", 300, 150, true)) {
                 if (ImGui.beginTable("##JobTable", 3, ImGuiTableFlags.SizingFixedFit)) {
-                    ImGui.tableSetupColumn("Name", ImGuiTableColumnFlags.WidthStretch);
+                    ImGui.tableSetupColumn(I18n.get("flashback.name"), ImGuiTableColumnFlags.WidthStretch);
 
                     int startJob = -1;
                     int removeJob = -1;
 
                     for (int i = 0; i < ExportJobQueue.queuedJobs.size(); i++) {
                         ExportSettings queuedJob = ExportJobQueue.queuedJobs.get(i);
-                        String name = queuedJob.name() == null ? "Job #" + (i+1) : queuedJob.name();
+                        String name = queuedJob.name() == null ? I18n.get("flashback.job_n", (i+1)) : queuedJob.name();
 
                         ImGui.tableNextColumn();
-                        ImGui.text(name);
+                        ImGui.textUnformatted(name);
                         ImGui.tableNextColumn();
-                        if (ImGui.smallButton("Start")) {
+                        if (ImGui.smallButton(I18n.get("flashback.start"))) {
                             startJob = i;
                         }
                         ImGui.tableNextColumn();
-                        if (ImGui.smallButton("Remove")) {
+                        if (ImGui.smallButton(I18n.get("flashback.remove"))) {
                             removeJob = i;
                         }
                     }
@@ -71,7 +73,7 @@ public class ExportQueueWindow {
 
 
             if (!canStartJob) ImGui.beginDisabled();
-            if (ImGui.button("Start All") && canStartJob) {
+            if (ImGui.button(I18n.get("flashback.start_all")) && canStartJob) {
                 ExportJobQueue.drainingQueue = true;
             }
             if (!canStartJob) ImGui.endDisabled();
@@ -79,7 +81,7 @@ public class ExportQueueWindow {
             ImGui.sameLine();
 
             if (!canRemoveJob) ImGui.beginDisabled();
-            if (ImGui.button("Remove All") && canRemoveJob) {
+            if (ImGui.button(I18n.get("flashback.remove_all")) && canRemoveJob) {
                 ExportJobQueue.queuedJobs.clear();
             }
             if (!canRemoveJob) ImGui.endDisabled();
