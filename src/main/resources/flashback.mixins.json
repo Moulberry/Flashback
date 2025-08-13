@@ -6,6 +6,7 @@
   "client": [
     "MixinAbstractClientPlayer",
     "MixinDebugScreenOverlay",
+    "MixinLanguageManager",
     "MixinLevelRenderer",
     "MixinMinecraft",
     "MixinMouseHandler",
