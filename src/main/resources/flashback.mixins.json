@@ -5,6 +5,7 @@
   "compatibilityLevel": "JAVA_21",
   "client": [
     "MixinDebugScreenOverlay",
+    "MixinLanguageManager",
     "MixinLevelRenderer",
     "MixinMinecraft",
     "MixinMouseHandler",
