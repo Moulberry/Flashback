@@ -20,7 +20,7 @@ public enum MovementDirection implements ComboOption {
 
     @Override
     public String toString() {
-        return this.name();
+        return this.text();
     }
 
 }
