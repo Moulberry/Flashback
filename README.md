@@ -21,3 +21,4 @@ Flashback currently does not accept outside contributions
 ## License
 
 This project is licensed with a custom license, see [LICENSE.md](https://github.com/Moulberry/Flashback/blob/master/LICENSE.md)
+The localization files (src/main/resources/assets/flashback/lang) are licensed separately under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)
