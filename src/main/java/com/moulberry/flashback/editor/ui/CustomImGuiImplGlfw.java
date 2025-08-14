@@ -54,9 +54,6 @@ public class CustomImGuiImplGlfw {
     public static final boolean IS_WINDOWS = OS.contains("win");
     protected static final boolean IS_APPLE = OS.contains("mac") || OS.contains("darwin");
 
-    // ImGui Structs
-    private ImGuiIO io = null;
-
     // Pointer of the current GLFW window
     private long mainWindowPtr;
 
@@ -153,7 +150,7 @@ public class CustomImGuiImplGlfw {
     public MouseHandledBy getMouseHandledBy() {
         if (!ReplayUI.isActive()) return MouseHandledBy.GAME;
         if (this.grabbed != null) return this.grabbed;
-        if (this.io.getWantCaptureMouse()) return MouseHandledBy.IMGUI;
+        if (ReplayUI.getIO().getWantCaptureMouse()) return MouseHandledBy.IMGUI;
         return MouseHandledBy.BOTH;
     }
 
@@ -262,8 +259,9 @@ public class CustomImGuiImplGlfw {
         if (AsyncFileDialogs.hasDialog()) return;
 
         if (ReplayUI.isActive()) {
-            this.io.setMouseWheelH(this.io.getMouseWheelH() + (float) xOffset);
-            this.io.setMouseWheel(this.io.getMouseWheel() + (float) yOffset);
+            var io = ReplayUI.getIO();
+            io.setMouseWheelH(io.getMouseWheelH() + (float) xOffset);
+            io.setMouseWheel(io.getMouseWheel() + (float) yOffset);
 
             if (Minecraft.getInstance().screen == null || !ReplayUI.isMainFrameActive()) {
                 return;
@@ -303,9 +301,11 @@ public class CustomImGuiImplGlfw {
             this.ungrab();
         }
 
+        var io = ReplayUI.getIO();
+
         if (!ReplayUI.isActive() || Minecraft.getInstance().screen != null) {
             if (action == GLFW_RELEASE && key >= 0 && key < this.keyOwnerWindows.length) {
-                this.io.setKeysDown(key, false);
+                io.setKeysDown(key, false);
                 this.keyOwnerWindows[key] = 0;
             }
             if (this.prevUserCallbackKey != null && windowId == this.mainWindowPtr) {
@@ -435,7 +435,7 @@ public class CustomImGuiImplGlfw {
             this.prevUserCallbackWindowFocus.invoke(windowId, focused);
         }
 
-        this.io.addFocusEvent(focused);
+        ReplayUI.getIO().addFocusEvent(focused);
     }
 
     /**
@@ -471,12 +471,13 @@ public class CustomImGuiImplGlfw {
             return;
         }
 
-        if (!this.io.getWantCaptureKeyboard() && !this.io.getWantTextInput() && this.prevUserCallbackChar != null && windowId == this.mainWindowPtr) {
+        var io = ReplayUI.getIO();
+        if (!io.getWantCaptureKeyboard() && !io.getWantTextInput() && this.prevUserCallbackChar != null && windowId == this.mainWindowPtr) {
             this.prevUserCallbackChar.invoke(windowId, c, mods);
         }
 
         if (!ImGuiHelper.addInputCharacter((char) c)) {
-            this.io.addInputCharacter(c);
+            io.addInputCharacter(c);
         }
     }
 
@@ -521,12 +522,12 @@ public class CustomImGuiImplGlfw {
 
     public void enableTabInput() {
         this.keyMap[ImGuiKey.Tab] = GLFW_KEY_TAB;
-        this.io.setKeyMap(this.keyMap);
+        ReplayUI.getIO().setKeyMap(this.keyMap);
     }
 
     public void disableTabInput() {
         this.keyMap[ImGuiKey.Tab] = -1;
-        this.io.setKeyMap(this.keyMap);
+        ReplayUI.getIO().setKeyMap(this.keyMap);
     }
 
     /**
@@ -538,11 +539,12 @@ public class CustomImGuiImplGlfw {
      * @param installCallbacks should window callbacks be installed
      * @return true if everything initialized
      */
-    public boolean init(final long windowId, final boolean installCallbacks, ImGuiIO imGuiIo) {
+    public boolean init(final long windowId, final boolean installCallbacks) {
         this.mainWindowPtr = windowId;
-        this.io = imGuiIo;
 
         this.detectGlfwVersionAndEnabledFeatures();
+
+        final ImGuiIO io = ReplayUI.getIO();
 
         io.addBackendFlags(ImGuiBackendFlags.HasMouseCursors | ImGuiBackendFlags.HasSetMousePos | ImGuiBackendFlags.PlatformHasViewports);
         io.setBackendPlatformName("imgui_java_impl_glfw");
@@ -628,16 +630,16 @@ public class CustomImGuiImplGlfw {
      * Updates {@link ImGuiIO} and {@link org.lwjgl.glfw.GLFW} state.
      */
     public void newFrame() {
-        this.io.ptr = ImGui.getIO().ptr;
+        final ImGuiIO io = ReplayUI.getIO();
 
         glfwGetWindowSize(this.mainWindowPtr, this.winWidth, this.winHeight);
         glfwGetFramebufferSize(this.mainWindowPtr, this.fbWidth, this.fbHeight);
 
-        this.io.setDisplaySize((float) this.winWidth[0], (float) this.winHeight[0]);
+        io.setDisplaySize((float) this.winWidth[0], (float) this.winHeight[0]);
         if (this.winWidth[0] > 0 && this.winHeight[0] > 0) {
             final float scaleX = (float) this.fbWidth[0] / this.winWidth[0];
             final float scaleY = (float) this.fbHeight[0] / this.winHeight[0];
-            this.io.setDisplayFramebufferScale(scaleX, scaleY);
+            io.setDisplayFramebufferScale(scaleX, scaleY);
 
             GLFW.glfwGetWindowContentScale(Minecraft.getInstance().getWindow().getWindow(),
                     this.windowScaleX, this.windowScaleY);
@@ -648,7 +650,7 @@ public class CustomImGuiImplGlfw {
         }
 
         final double currentTime = glfwGetTime();
-        this.io.setDeltaTime(this.time > 0.0 ? (float) (currentTime - this.time) : 1.0f / 60.0f);
+        io.setDeltaTime(this.time > 0.0 ? (float) (currentTime - this.time) : 1.0f / 60.0f);
         this.time = currentTime;
 
         if (AsyncFileDialogs.hasDialog()) {
@@ -665,14 +667,14 @@ public class CustomImGuiImplGlfw {
 
                 // Release for imgui
                 for (int key = 0; key < this.keyOwnerWindows.length; key++) {
-                    this.io.setKeysDown(key, false);
+                    io.setKeysDown(key, false);
                     this.keyOwnerWindows[key] = 0;
                 }
 
-                this.io.setKeyCtrl(false);
-                this.io.setKeyShift(false);
-                this.io.setKeyAlt(false);
-                this.io.setKeySuper(false);
+                io.setKeyCtrl(false);
+                io.setKeyShift(false);
+                io.setKeyAlt(false);
+                io.setKeySuper(false);
             }
 
             return;
@@ -714,15 +716,17 @@ public class CustomImGuiImplGlfw {
             if (!this.releasedAllKeysBecauseOfDisable) {
                 this.releasedAllKeysBecauseOfDisable = true;
 
+                var io = ReplayUI.getIO();
+
                 for (int key = 0; key < this.keyOwnerWindows.length; key++) {
-                    this.io.setKeysDown(key, false);
+                    io.setKeysDown(key, false);
                     this.keyOwnerWindows[key] = 0;
                 }
 
-                this.io.setKeyCtrl(false);
-                this.io.setKeyShift(false);
-                this.io.setKeyAlt(false);
-                this.io.setKeySuper(false);
+                io.setKeyCtrl(false);
+                io.setKeyShift(false);
+                io.setKeyAlt(false);
+                io.setKeySuper(false);
 
                 final ImGuiPlatformIO platformIO = ImGui.getPlatformIO();
                 for (int n = 0; n < platformIO.getViewportsSize(); n++) {
@@ -754,10 +758,12 @@ public class CustomImGuiImplGlfw {
     }
 
     private void updateMousePosAndButtons() {
+        var io = ReplayUI.getIO();
+
         var mouseHandledBy = this.getMouseHandledBy();
         if (!mouseHandledBy.allowImgui() || AsyncFileDialogs.hasDialog()) {
             for (int i = 0; i < ImGuiMouseButton.COUNT; i++) {
-                this.io.setMouseDown(i, false);
+                io.setMouseDown(i, false);
                 this.mouseJustPressed[i] = false;
             }
             return;
@@ -765,13 +771,13 @@ public class CustomImGuiImplGlfw {
 
         for (int i = 0; i < ImGuiMouseButton.COUNT; i++) {
             // If a mouse press event came, always pass it as "mouse held this frame", so we don't miss click-release events that are shorter than 1 frame.
-            this.io.setMouseDown(i, this.mouseJustPressed[i] || glfwGetMouseButton(this.mainWindowPtr, i) != 0);
+            io.setMouseDown(i, this.mouseJustPressed[i] || glfwGetMouseButton(this.mainWindowPtr, i) != 0);
             this.mouseJustPressed[i] = false;
         }
 
-        this.io.getMousePos(this.mousePosBackup);
-        this.io.setMousePos(-Float.MAX_VALUE, -Float.MAX_VALUE);
-        this.io.setMouseHoveredViewport(0);
+        io.getMousePos(this.mousePosBackup);
+        io.setMousePos(-Float.MAX_VALUE, -Float.MAX_VALUE);
+        io.setMouseHoveredViewport(0);
 
         final ImGuiPlatformIO platformIO = ImGui.getPlatformIO();
 
@@ -815,7 +821,8 @@ public class CustomImGuiImplGlfw {
     private void updateMouseCursor() {
         if (AsyncFileDialogs.hasDialog()) return;
 
-        final boolean noCursorChange = this.io.hasConfigFlags(ImGuiConfigFlags.NoMouseCursorChange);
+        var io = ReplayUI.getIO();
+        final boolean noCursorChange = io.hasConfigFlags(ImGuiConfigFlags.NoMouseCursorChange);
         final boolean cursorDisabled = glfwGetInputMode(this.mainWindowPtr, GLFW_CURSOR) == GLFW_CURSOR_DISABLED;
 
         if (noCursorChange || cursorDisabled) {
@@ -843,11 +850,12 @@ public class CustomImGuiImplGlfw {
     private void updateGamepads() {
         if (AsyncFileDialogs.hasDialog()) return;
 
-        if (!this.io.hasConfigFlags(ImGuiConfigFlags.NavEnableGamepad)) {
+        var io = ReplayUI.getIO();
+        if (!io.hasConfigFlags(ImGuiConfigFlags.NavEnableGamepad)) {
             return;
         }
 
-        this.io.setNavInputs(this.emptyNavInputs);
+        io.setNavInputs(this.emptyNavInputs);
 
         final ByteBuffer buttons = glfwGetJoystickButtons(GLFW_JOYSTICK_1);
         final int buttonsCount = buttons.limit();
@@ -855,27 +863,27 @@ public class CustomImGuiImplGlfw {
         final FloatBuffer axis = glfwGetJoystickAxes(GLFW_JOYSTICK_1);
         final int axisCount = axis.limit();
 
-        this.mapButton(ImGuiNavInput.Activate, 0, buttons, buttonsCount, this.io);   // Cross / A
-        this.mapButton(ImGuiNavInput.Cancel, 1, buttons, buttonsCount, this.io);     // Circle / B
-        this.mapButton(ImGuiNavInput.Menu, 2, buttons, buttonsCount, this.io);       // Square / X
-        this.mapButton(ImGuiNavInput.Input, 3, buttons, buttonsCount, this.io);      // Triangle / Y
-        this.mapButton(ImGuiNavInput.DpadLeft, 13, buttons, buttonsCount, this.io);  // D-Pad Left
-        this.mapButton(ImGuiNavInput.DpadRight, 11, buttons, buttonsCount, this.io); // D-Pad Right
-        this.mapButton(ImGuiNavInput.DpadUp, 10, buttons, buttonsCount, this.io);    // D-Pad Up
-        this.mapButton(ImGuiNavInput.DpadDown, 12, buttons, buttonsCount, this.io);  // D-Pad Down
-        this.mapButton(ImGuiNavInput.FocusPrev, 4, buttons, buttonsCount, this.io);  // L1 / LB
-        this.mapButton(ImGuiNavInput.FocusNext, 5, buttons, buttonsCount, this.io);  // R1 / RB
-        this.mapButton(ImGuiNavInput.TweakSlow, 4, buttons, buttonsCount, this.io);  // L1 / LB
-        this.mapButton(ImGuiNavInput.TweakFast, 5, buttons, buttonsCount, this.io);  // R1 / RB
-        this.mapAnalog(ImGuiNavInput.LStickLeft, 0, -0.3f, -0.9f, axis, axisCount, this.io);
-        this.mapAnalog(ImGuiNavInput.LStickRight, 0, +0.3f, +0.9f, axis, axisCount, this.io);
-        this.mapAnalog(ImGuiNavInput.LStickUp, 1, +0.3f, +0.9f, axis, axisCount, this.io);
-        this.mapAnalog(ImGuiNavInput.LStickDown, 1, -0.3f, -0.9f, axis, axisCount, this.io);
+        this.mapButton(ImGuiNavInput.Activate, 0, buttons, buttonsCount, io);   // Cross / A
+        this.mapButton(ImGuiNavInput.Cancel, 1, buttons, buttonsCount, io);     // Circle / B
+        this.mapButton(ImGuiNavInput.Menu, 2, buttons, buttonsCount, io);       // Square / X
+        this.mapButton(ImGuiNavInput.Input, 3, buttons, buttonsCount, io);      // Triangle / Y
+        this.mapButton(ImGuiNavInput.DpadLeft, 13, buttons, buttonsCount, io);  // D-Pad Left
+        this.mapButton(ImGuiNavInput.DpadRight, 11, buttons, buttonsCount, io); // D-Pad Right
+        this.mapButton(ImGuiNavInput.DpadUp, 10, buttons, buttonsCount, io);    // D-Pad Up
+        this.mapButton(ImGuiNavInput.DpadDown, 12, buttons, buttonsCount, io);  // D-Pad Down
+        this.mapButton(ImGuiNavInput.FocusPrev, 4, buttons, buttonsCount, io);  // L1 / LB
+        this.mapButton(ImGuiNavInput.FocusNext, 5, buttons, buttonsCount, io);  // R1 / RB
+        this.mapButton(ImGuiNavInput.TweakSlow, 4, buttons, buttonsCount, io);  // L1 / LB
+        this.mapButton(ImGuiNavInput.TweakFast, 5, buttons, buttonsCount, io);  // R1 / RB
+        this.mapAnalog(ImGuiNavInput.LStickLeft, 0, -0.3f, -0.9f, axis, axisCount, io);
+        this.mapAnalog(ImGuiNavInput.LStickRight, 0, +0.3f, +0.9f, axis, axisCount, io);
+        this.mapAnalog(ImGuiNavInput.LStickUp, 1, +0.3f, +0.9f, axis, axisCount, io);
+        this.mapAnalog(ImGuiNavInput.LStickDown, 1, -0.3f, -0.9f, axis, axisCount, io);
 
         if (axisCount > 0 && buttonsCount > 0) {
-            this.io.addBackendFlags(ImGuiBackendFlags.HasGamepad);
+            io.addBackendFlags(ImGuiBackendFlags.HasGamepad);
         } else {
-            this.io.removeBackendFlags(ImGuiBackendFlags.HasGamepad);
+            io.removeBackendFlags(ImGuiBackendFlags.HasGamepad);
         }
     }
 

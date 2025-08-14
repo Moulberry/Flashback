@@ -88,7 +88,7 @@ public class ReplayUI {
     private static float contentScale = 1.0f;
 
     private static ImGuiContext imGuiContext = null;
-    private static ImGuiIO imGuiIo = null;
+    private static ImGuiIO imGuiIO = null;
 
     private static boolean popupOpenLastFrame = false;
 
@@ -142,15 +142,17 @@ public class ReplayUI {
         imGuiContext = new ImGuiContext(ImGui.createContext().ptr);
         ImGui.setCurrentContext(imGuiContext);
 
+        imGuiIO = new ImGuiIO(ImGui.getIO().ptr);
+
         Path relativePath = FabricLoader.getInstance().getGameDir().relativize(path);
-        ImGui.getIO().setIniFilename(relativePath.toString());
+        ReplayUI.getIO().setIniFilename(relativePath.toString());
 
-        // ImGui.getIO().addConfigFlags(ImGuiConfigFlags.NavEnableKeyboard);
-        ImGui.getIO().addConfigFlags(ImGuiConfigFlags.DockingEnable);
-        // ImGui.getIO().addConfigFlags(ImGuiConfigFlags.ViewportsEnable);
-        ImGui.getIO().setConfigMacOSXBehaviors(Minecraft.ON_OSX);
+        // ReplayUI.getIO().addConfigFlags(ImGuiConfigFlags.NavEnableKeyboard);
+        ReplayUI.getIO().addConfigFlags(ImGuiConfigFlags.DockingEnable);
+        // ReplayUI.getIO().addConfigFlags(ImGuiConfigFlags.ViewportsEnable);
+        ReplayUI.getIO().setConfigMacOSXBehaviors(Minecraft.ON_OSX);
 
-        imguiGlfw.init(Minecraft.getInstance().getWindow().getWindow(), true, new ImGuiIO(ImGui.getIO().ptr));
+        imguiGlfw.init(Minecraft.getInstance().getWindow().getWindow(), true);
         imguiGl3.init("#version 150");
 
         contentScale = imguiGlfw.contentScale;
@@ -174,7 +176,7 @@ public class ReplayUI {
             return;
         }
 
-        ImGuiIO io = ImGui.getIO();
+        ImGuiIO io = ReplayUI.getIO();
         ImFontAtlas fonts = io.getFonts();
         fonts.clear();
 
@@ -322,8 +324,15 @@ public class ReplayUI {
         }
     }
 
+    public static ImGuiIO getIO() {
+        if (!initialized) {
+            init();
+        }
+        return imGuiIO;
+    }
+
     public static Vec3 getMouseForwardsVector() {
-        return getMouseForwardsVector(ImGui.getMousePosX(), ImGui.getMousePosY());
+        return getMouseForwardsVector(ReplayUI.getIO().getMousePosX(), ReplayUI.getIO().getMousePosY());
     }
 
     public static Vec3 getMouseForwardsVector(float mouseX, float mouseY) {
@@ -332,8 +341,8 @@ public class ReplayUI {
     }
 
     public static Vec2 getMouseViewportFraction() {
-        float x = (ImGui.getMousePosX() - ImGui.getMainViewport().getPosX() - frameX) / frameWidth;
-        float y = (ImGui.getMousePosY() - ImGui.getMainViewport().getPosY() - frameY) / frameHeight;
+        float x = (ReplayUI.getIO().getMousePosX() - ImGui.getMainViewport().getPosX() - frameX) / frameWidth;
+        float y = (ReplayUI.getIO().getMousePosY() - ImGui.getMainViewport().getPosY() - frameY) / frameHeight;
         return new Vec2(x, y);
     }
 
@@ -569,7 +578,7 @@ public class ReplayUI {
 
         hasAnyPopupOpen = ImGui.isPopupOpen("", ImGuiPopupFlags.AnyPopup);
 
-        navClose = hasAnyPopupOpen && ImGui.getIO().getNavInputs(ImGuiNavInput.Cancel) != 0.0f;
+        navClose = hasAnyPopupOpen && ReplayUI.getIO().getNavInputs(ImGuiNavInput.Cancel) != 0.0f;
         if (wasNavClose != navClose) {
             wasNavClose = navClose;
         } else if (wasNavClose) {
@@ -577,9 +586,9 @@ public class ReplayUI {
         }
 
         if (hasAnyPopupOpen) {
-            ImGui.getIO().addConfigFlags(ImGuiConfigFlags.NavEnableKeyboard);
+            ReplayUI.getIO().addConfigFlags(ImGuiConfigFlags.NavEnableKeyboard);
         } else {
-            ImGui.getIO().removeConfigFlags(ImGuiConfigFlags.NavEnableKeyboard);
+            ReplayUI.getIO().removeConfigFlags(ImGuiConfigFlags.NavEnableKeyboard);
         }
 
         MainMenuBar.render();
@@ -621,7 +630,7 @@ public class ReplayUI {
             float minY = ImGui.getWindowContentRegionMinY();
             float maxY = ImGui.getWindowContentRegionMaxY();
 
-            if (ImGui.getIO().hasConfigFlags(ImGuiConfigFlags.ViewportsEnable)) {
+            if (ReplayUI.getIO().hasConfigFlags(ImGuiConfigFlags.ViewportsEnable)) {
                 frameX = (int) (ImGui.getWindowPosX() - ImGui.getWindowViewport().getPosX() + minX);
                 frameY = (int) (ImGui.getWindowPosY() - ImGui.getWindowViewport().getPosY() + minY);
             } else {
@@ -823,7 +832,7 @@ public class ReplayUI {
 
             openSelectedEntityPopup = false;
 
-            if (ImGui.isWindowHovered() && ImGui.getMousePosY() > ImGui.getWindowPosY()) {
+            if (ImGui.isWindowHovered() && ReplayUI.getIO().getMousePosY() > ImGui.getWindowPosY()) {
                 isFrameHovered = true;
 
                 if (Minecraft.getInstance().screen != null) {
@@ -833,7 +842,7 @@ public class ReplayUI {
                     if (isFrameFocused || isMovingCamera) {
                         LocalPlayer player = Minecraft.getInstance().player;
                         if (player != null) {
-                            int wheelY = (int) Math.signum(ImGui.getIO().getMouseWheel());
+                            int wheelY = (int) Math.signum(ReplayUI.getIO().getMouseWheel());
                             if (wheelY != 0) {
                                 final float defaultFlyingSpeed = 0.05f;
                                 float flyingSpeed = Mth.clamp(player.getAbilities().getFlyingSpeed() + (float)wheelY * defaultFlyingSpeed / 10f,
@@ -843,7 +852,7 @@ public class ReplayUI {
                             }
                         }
                     }
-                    if (!isMovingCamera && ImGui.getIO().getWantCaptureMouse() && !popupOpenLastFrame && !ImGui.isPopupOpen("", ImGuiPopupFlags.AnyPopup)) {
+                    if (!isMovingCamera && ReplayUI.getIO().getWantCaptureMouse() && !popupOpenLastFrame && !ImGui.isPopupOpen("", ImGuiPopupFlags.AnyPopup)) {
                         fireCancelNavInput |= handleBasicInputs();
                     }
                 }
@@ -903,8 +912,8 @@ public class ReplayUI {
         ImGuiHelper.endFrame();
 
         if (fireCancelNavInput) {
-            ImGui.getIO().setNavInputs(ImGuiNavInput.Input, 1.0f);
-            ImGui.getIO().setNavInputs(ImGuiNavInput.Cancel, 1.0f);
+            ReplayUI.getIO().setNavInputs(ImGuiNavInput.Input, 1.0f);
+            ReplayUI.getIO().setNavInputs(ImGuiNavInput.Cancel, 1.0f);
         }
 
         long ctx = GLFW.glfwGetCurrentContext();
@@ -1022,7 +1031,7 @@ public class ReplayUI {
     }
 
     public static boolean isCtrlOrCmdDown() {
-        return Minecraft.ON_OSX ? ImGui.getIO().getKeySuper() : ImGui.getIO().getKeyCtrl();
+        return Minecraft.ON_OSX ? ReplayUI.getIO().getKeySuper() : ReplayUI.getIO().getKeyCtrl();
     }
 
 }

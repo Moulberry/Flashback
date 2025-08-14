@@ -127,7 +127,7 @@ public final class CustomImGuiImplGl3 {
 
         this.createDeviceObjects();
 
-        if (ImGui.getIO().hasConfigFlags(ImGuiConfigFlags.ViewportsEnable)) {
+        if (ReplayUI.getIO().hasConfigFlags(ImGuiConfigFlags.ViewportsEnable)) {
             this.initPlatformInterface();
         }
     }
@@ -224,7 +224,7 @@ public final class CustomImGuiImplGl3 {
     public void updateFontsTexture() {
         if (this.gFontTexture != -1) glDeleteTextures(this.gFontTexture);
 
-        final ImFontAtlas fontAtlas = ImGui.getIO().getFonts();
+        final ImFontAtlas fontAtlas = ReplayUI.getIO().getFonts();
         final ImInt width = new ImInt();
         final ImInt height = new ImInt();
         final ByteBuffer buffer = fontAtlas.getTexDataAsRGBA32(width, height);
@@ -253,7 +253,7 @@ public final class CustomImGuiImplGl3 {
     }
 
     private void setupBackendCapabilitiesFlags() {
-        final ImGuiIO io = ImGui.getIO();
+        final ImGuiIO io = ReplayUI.getIO();
         io.setBackendRendererName("imgui_java_impl_opengl3");
 
         // We can honor the ImDrawCmd::VtxOffset field, allowing for large meshes.
