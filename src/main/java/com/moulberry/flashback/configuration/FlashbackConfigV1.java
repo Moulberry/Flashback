@@ -171,6 +171,10 @@ public class FlashbackConfigV1 {
         @LatticeOption(title = "flashback.disable_third_person_cancel")
         @LatticeWidgetButton
         public boolean disableThirdPersonCancel = false;
+
+        @LatticeOption(title = "flashback.advanced.synchronize_ticking", description = "!!.description")
+        @LatticeWidgetButton
+        public boolean synchronizeTicking = false;
     }
 
     public SubcategoryInternal internal = new SubcategoryInternal();
