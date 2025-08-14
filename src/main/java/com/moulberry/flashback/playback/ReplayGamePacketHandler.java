@@ -1,5 +1,8 @@
 package com.moulberry.flashback.playback;
 
+import ca.spottedleaf.starlight.common.chunk.ExtendedChunk;
+import ca.spottedleaf.starlight.common.light.SWMRNibbleArray;
+import ca.spottedleaf.starlight.common.light.StarLightEngine;
 import com.mojang.authlib.GameProfile;
 import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.PacketHelper;
@@ -20,6 +23,7 @@ import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import it.unimi.dsi.fastutil.longs.LongSet;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerWorldEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
+import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.multiplayer.PlayerInfo;
 import net.minecraft.core.*;
 import net.minecraft.core.registries.Registries;
@@ -610,8 +614,24 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
 
         chunk.replaceWithPacketData(chunkData.getReadBuffer(), chunkData.getHeightmaps(), chunkData.getBlockEntitiesTagsConsumer(x, z));
 
+
         var lightData = levelChunkWithLightPacket.getLightData();
-        this.applyLightData(levelLightEngine, x, z, lightData);
+        if (FabricLoader.getInstance().isModLoaded("starlight")) {
+            chunk.setLightCorrect(false);
+            try {
+                var blockNibbles = StarLightEngine.getFilledEmptyLight(this.level());
+                var skyNibbles = StarLightEngine.getFilledEmptyLight(this.level());
+                extractStarlightData(levelLightEngine, lightData.getBlockYMask(), lightData.getEmptyBlockYMask(), lightData.getBlockUpdates().iterator(), blockNibbles);
+                extractStarlightData(levelLightEngine, lightData.getSkyYMask(), lightData.getEmptySkyYMask(), lightData.getSkyUpdates().iterator(), skyNibbles);
+                ((ExtendedChunk)chunk).setBlockNibbles(blockNibbles);
+                ((ExtendedChunk)chunk).setSkyNibbles(skyNibbles);
+            } catch (Exception e) {
+                Flashback.LOGGER.error("Error while setting starlight light data", e);
+            }
+            chunk.setLightCorrect(true);
+        } else {
+            this.applyLightData(levelLightEngine, x, z, lightData);
+        }
 
         ChunkPos chunkPos = chunk.getPos();
         ((ServerLevelExt)this.level()).flashback$markChunkAsSendable(chunkPos.toLong());
@@ -622,6 +642,17 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
         }
 
         chunk.markUnsaved();
+    }
+
+    private static void extractStarlightData(LevelLightEngine levelLightEngine, BitSet yMask, BitSet emptyYMask, Iterator<byte[]> iterator, SWMRNibbleArray[] nibbles) {
+        for (int index = 0; index < levelLightEngine.getLightSectionCount(); index++) {
+            boolean hasData = yMask.get(index);
+            boolean isEmpty = emptyYMask.get(index);
+            if (hasData || isEmpty) {
+                var dataLayer = hasData ? new DataLayer(iterator.next().clone()) : new DataLayer();
+                nibbles[index] = SWMRNibbleArray.fromVanilla(dataLayer);
+            }
+        }
     }
 
     private void applyLightData(LevelLightEngine levelLightEngine, int x, int z, ClientboundLightUpdatePacketData clientboundLightUpdatePacketData) {
@@ -640,7 +671,6 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
         ((ThreadedLevelLightEngineExt)levelLightEngine).flashback$submitPost(x, z, () -> {
             // Initialize light
             LevelChunk chunkAccess = this.level().getChunk(x, z);
-            // todo: do we need to do this if replaceWithPacketData already does it?
             chunkAccess.initializeLightSources();
             boolean isLightCorrect = chunkAccess.getPersistedStatus().isOrAfter(ChunkStatus.LIGHT) && chunkAccess.isLightCorrect();
             ((ThreadedLevelLightEngine)levelLightEngine).initializeLight(chunkAccess, isLightCorrect).thenRun(() -> {
@@ -660,7 +690,7 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
     }
 
     private void readSectionList(int x, int z, LevelLightEngine levelLightEngine, LightLayer lightLayer, BitSet yMask, BitSet emptyYMask, Iterator<byte[]> iterator) {
-        for(int index = 0; index < levelLightEngine.getLightSectionCount(); ++index) {
+        for (int index = 0; index < levelLightEngine.getLightSectionCount(); index++) {
             int y = levelLightEngine.getMinLightSection() + index;
             boolean hasData = yMask.get(index);
             boolean isEmpty = emptyYMask.get(index);
