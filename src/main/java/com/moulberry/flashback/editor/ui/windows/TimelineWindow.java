@@ -230,8 +230,8 @@ public class TimelineWindow {
         renderDeltaNanos = Math.max(0, Math.min(1_000_000_000, currentTime - lastRenderNanos));
         lastRenderNanos = currentTime;
 
-        mouseX = ImGui.getMousePosX();
-        mouseY = ImGui.getMousePosY();
+        mouseX = ReplayUI.getIO().getMousePosX();
+        mouseY = ReplayUI.getIO().getMousePosY();
 
         int currentReplayTick = replayServer.getReplayTick();
         int totalTicks = replayServer.getTotalReplayTicks();
@@ -494,9 +494,9 @@ public class TimelineWindow {
             editingKeyframeTick = -1;
         }
 
-        boolean shouldProcessInput = !ImGui.isPopupOpen("", ImGuiPopupFlags.AnyPopup) && !ImGui.getIO().getWantTextInput();
+        boolean shouldProcessInput = !ImGui.isPopupOpen("", ImGuiPopupFlags.AnyPopup) && !ReplayUI.getIO().getWantTextInput();
         if (shouldProcessInput) {
-            int scroll = (int) Math.signum(ImGui.getIO().getMouseWheel());
+            int scroll = (int) Math.signum(ReplayUI.getIO().getMouseWheel());
             if (scroll != 0 && mouseX > x + middleX && mouseX < x + width && mouseY > y && mouseY < y + height) {
                 double mousePercentage = (mouseX - (x + middleX)) / (width - middleX);
 
