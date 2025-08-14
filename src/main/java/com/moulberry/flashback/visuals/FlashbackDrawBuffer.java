@@ -52,7 +52,7 @@ public class FlashbackDrawBuffer implements AutoCloseable {
         if (this.vertexBuffer != null) {
             this.vertexBuffer.close();
         }
-        this.vertexBuffer = RenderSystem.getDevice().createBuffer(null, this.usageFlags, byteBuffer);
+        this.vertexBuffer = RenderSystem.getDevice().createBuffer(null, this.usageFlags | GpuBuffer.USAGE_VERTEX, byteBuffer);
     }
 
     public void draw() {
