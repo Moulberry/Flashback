@@ -3,6 +3,7 @@ package com.moulberry.flashback.visuals;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.moulberry.flashback.Flashback;
+import com.moulberry.flashback.editor.ui.ReplayUI;
 import com.moulberry.flashback.playback.ReplayServer;
 import com.moulberry.flashback.record.FlashbackMeta;
 import com.moulberry.flashback.record.ReplayMarker;
@@ -30,7 +31,7 @@ public class WorldRenderHook {
 
     public static void renderHook(PoseStack poseStack, float partialTick, boolean renderBlockOutline, Camera camera, GameRenderer gameRenderer, Matrix4f projection) {
         ReplayServer replayServer = Flashback.getReplayServer();
-        if (replayServer == null || Flashback.isExporting()) {
+        if (replayServer == null || Flashback.isExporting() || !ReplayUI.isActive()) {
             return;
         }
 
