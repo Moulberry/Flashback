@@ -37,7 +37,7 @@
 
   "flashback.option.exporting": "导出",
   "flashback.export_filename": "导出文件名",
-  "flashback.export_filename_tooltip": "导出时的默认文件名\n变量:\n  %% date%% => 年-月-日\n  %%time%% => 时_分_秒\n  %%replay%% => 回放名称\n  %%seq%% => 本次会话的导出计数",
+  "flashback.export_filename_tooltip": "导出时的默认文件名\n变量:\n  %%date%% => 年-月-日\n  %%time%% => 时_分_秒\n  %%replay%% => 回放名称\n  %%seq%% => 本次会话的导出计数",
   "flashback.dummy_render_frames": "虚拟渲染帧",
   "flashback.dummy_render_frames_description": "这将使导出器在保存帧之前渲染额外的虚拟帧。\n这将极大地增加导出所需的时间，但在使用依赖时间累积的着色器或缺乏对 FREX 无瑕疵帧支持的模组时，这可能是必要的",
 
