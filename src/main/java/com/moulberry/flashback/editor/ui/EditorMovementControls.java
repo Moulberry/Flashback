@@ -235,8 +235,8 @@ public abstract sealed class EditorMovementControls permits EditorMovementContro
 
             player.turn(mouseDeltaX * sensitivity, mouseDeltaY * sensitivity * invert);
 
-            if (ImGui.getIO().getMouseWheel() != 0) {
-                float wheel = Math.signum(ImGui.getIO().getMouseWheel());
+            if (ReplayUI.getIO().getMouseWheel() != 0) {
+                float wheel = Math.signum(ReplayUI.getIO().getMouseWheel());
 
                 float move = this.distance * 0.05f;
                 if (move > 4) move = 4 + (float)Math.sqrt(move - 4);
