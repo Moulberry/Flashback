@@ -996,6 +996,28 @@ public class Recorder {
         gamePackets.add(new ClientboundGameEventPacket(ClientboundGameEventPacket.RAIN_LEVEL_CHANGE, level.getRainLevel(1.0f)));
         gamePackets.add(new ClientboundGameEventPacket(ClientboundGameEventPacket.THUNDER_LEVEL_CHANGE, level.getThunderLevel(1.0f)));
 
+        // Force light updates
+        try {
+            for (int i = 0; i < 1000; i++) {
+                if (level.isLightUpdateQueueEmpty()) {
+                    break;
+                }
+                level.pollLightUpdates();
+            }
+        } catch (Exception e) {
+            Flashback.LOGGER.error("Error while running light tasks", e);
+        }
+        for (int i = 0; i < 256; i++) {
+            try {
+                if (level.getLightEngine().runLightUpdates() == 0) {
+                    break;
+                }
+            } catch (Exception e) {
+                Flashback.LOGGER.error("Error while running light updates", e);
+                break;
+            }
+        }
+
         // Chunk data
         if (Runtime.getRuntime().availableProcessors() <= 1) {
             List<ClientboundLevelChunkWithLightPacket> levelChunkPackets = new ArrayList<>();
@@ -1046,19 +1068,9 @@ public class Recorder {
                     return dx*dx + dz*dz;
                 }));
 
-                // Ensure light is up-to-date
-                for (int i = 0; i < 1000; i++) {
-                    if (level.isLightUpdateQueueEmpty()) {
-                        break;
-                    }
-                    level.pollLightUpdates();
-                }
-
-                // We get the light data on this thread to avoid
-                // slowdown due to synchronization
+                // We get the light data on this thread to avoid slowdown due to synchronization
                 for (PositionedTask positionedTask : levelChunkPacketTasks) {
-                    positionedTask.lightData = new ClientboundLightUpdatePacketData(positionedTask.pos,
-                            level.getLightEngine(), null, null);
+                    positionedTask.lightData = new ClientboundLightUpdatePacketData(positionedTask.pos, level.getLightEngine(), null, null);
                 }
 
                 for (PositionedTask positionedTask : levelChunkPacketTasks) {
