@@ -1,6 +1,7 @@
 package com.moulberry.flashback.visuals;
 
 import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.playback.ReplayServer;
 import com.moulberry.flashback.record.FlashbackMeta;
@@ -43,7 +44,7 @@ public class WorldRenderHook {
             var multiBufferSource = Minecraft.getInstance().renderBuffers().bufferSource();
             multiBufferSource.endBatch();
 
-            var bufferBuilder = multiBufferSource.getBuffer(MARKER_CIRCLE_RENDER_TYPE);
+            VertexConsumer bufferBuilder = null;
 
             String dimension = Minecraft.getInstance().level.dimension().toString();
 
@@ -65,6 +66,10 @@ public class WorldRenderHook {
                 );
                 poseStack.mulPose(camera.rotation());
 
+                if (bufferBuilder == null) {
+                    bufferBuilder = multiBufferSource.getBuffer(MARKER_CIRCLE_RENDER_TYPE);
+                }
+
                 final float width = 0.2f;
                 bufferBuilder.addVertex(poseStack.last(), -width, -width, 0.0f).setUv(0f, 0f).setColor(marker.colour() | 0xFF000000);
                 bufferBuilder.addVertex(poseStack.last(), width, -width, 0.0f).setUv(1f, 0f).setColor(marker.colour() | 0xFF000000);
@@ -80,15 +85,11 @@ public class WorldRenderHook {
                     int descriptionWidth = font.width(marker.description());
                     font.drawInBatch(marker.description(), -descriptionWidth/2f, -20f, 0xFFFFFFFF,
                         true, matrix4f, multiBufferSource, Font.DisplayMode.NORMAL, 0, 0xF000F0);
+                    bufferBuilder = null;
                 }
 
                 poseStack.popPose();
             }
-
-//            MeshData meshData = bufferBuilder.build();
-//            if (meshData != null) {
-//                RenderType.guiTextured(ResourceLocation.parse("flashback:world_marker_circle.png")).draw(meshData);
-//            }
 
             multiBufferSource.endBatch();
         }
