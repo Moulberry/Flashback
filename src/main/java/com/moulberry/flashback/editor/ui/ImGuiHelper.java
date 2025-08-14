@@ -6,27 +6,15 @@ import imgui.ImVec2;
 import imgui.flag.ImGuiCol;
 import imgui.flag.ImGuiComboFlags;
 import imgui.flag.ImGuiHoveredFlags;
-import imgui.flag.ImGuiInputTextFlags;
-import imgui.flag.ImGuiNavInput;
-import imgui.flag.ImGuiStyleVar;
 import imgui.flag.ImGuiWindowFlags;
 import imgui.type.ImBoolean;
 import imgui.type.ImFloat;
 import imgui.type.ImInt;
 import imgui.type.ImString;
-import net.minecraft.Util;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.screens.ConfirmLinkScreen;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
 
-import java.net.URI;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.function.IntConsumer;
-import java.util.function.Predicate;
 
 public class ImGuiHelper {
 
@@ -50,6 +38,10 @@ public class ImGuiHelper {
     private static final int[] enumComboSharedArray = new int[]{0};
     private static final Map<Class<?>, Object[]> enumComboCachedValues = new HashMap<>();
     private static final Map<Class<?>, String[]> enumComboCachedText = new HashMap<>();
+
+    public static void clearEnumComboTextCache() {
+        enumComboCachedText.clear();
+    }
 
     public static <T extends Enum<?> & ComboOption> T enumCombo(String label, T c, T[] values) {
         int currentIndex = -1;
@@ -372,7 +364,7 @@ public class ImGuiHelper {
             }
 
             if (ImGui.isItemHovered()) {
-                int scroll = (int) Math.signum(ImGui.getIO().getMouseWheel());
+                int scroll = (int) Math.signum(ReplayUI.getIO().getMouseWheel());
                 if (scroll != 0) {
                     valueChanged = true;
                     value[i] += 1;
@@ -439,7 +431,7 @@ public class ImGuiHelper {
                 focusLastIndex = 0;
             }
 
-            int scroll = (int) Math.signum(ImGui.getIO().getMouseWheel());
+            int scroll = (int) Math.signum(ReplayUI.getIO().getMouseWheel());
             if (ImGui.inputFloat("", imFloat, 0)) {
                 valueChanged = true;
                 value[i] = imFloat.get();
