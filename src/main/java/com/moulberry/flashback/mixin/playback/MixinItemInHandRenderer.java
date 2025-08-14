@@ -23,6 +23,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import org.jetbrains.annotations.Nullable;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
@@ -31,6 +32,8 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.ModifyArg;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 
 @Mixin(ItemInHandRenderer.class)
@@ -94,7 +97,7 @@ public abstract class MixinItemInHandRenderer implements ItemInHandRendererExt {
     }
 
     @Override
-    public void flashback$renderHandsWithItems(float partialTick, PoseStack poseStack, MultiBufferSource.BufferSource bufferSource, AbstractClientPlayer clientPlayer, int i) {
+    public void flashback$renderHandsWithItems(float partialTick, PoseStack poseStack, MultiBufferSource.BufferSource bufferSource, AbstractClientPlayer clientPlayer, int i, @Nullable Set<InteractionHand> renderableArms) {
         EditorState editorState = EditorStateManager.getCurrent();
         if (editorState != null && editorState.hideDuringExport.contains(clientPlayer.getUUID())) {
             return;
@@ -105,7 +108,14 @@ public abstract class MixinItemInHandRenderer implements ItemInHandRendererExt {
         float g = clientPlayer.getAttackAnim(partialTick);
         InteractionHand interactionHand = MoreObjects.firstNonNull(clientPlayer.swingingArm, InteractionHand.MAIN_HAND);
         float h = Mth.lerp(partialTick, clientPlayer.xRotO, clientPlayer.getXRot());
-         int handRenderSelection = evaluateWhichHandsToRender(clientPlayer);
+        int handRenderSelection = evaluateWhichHandsToRender(clientPlayer);
+        if (renderableArms != null) {
+            if (!renderableArms.contains(InteractionHand.MAIN_HAND)) handRenderSelection &= ~RENDER_MAIN_HAND;
+            if (!renderableArms.contains(InteractionHand.OFF_HAND)) handRenderSelection &= ~RENDER_OFF_HAND;
+        }
+        if (handRenderSelection == 0) {
+            return;
+        }
         if (clientPlayer instanceof RemotePlayerExt remotePlayerExt) {
             float xBob = remotePlayerExt.flashback$getXBob(partialTick);
             float yBob = remotePlayerExt.flashback$getYBob(partialTick);
