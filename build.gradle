@@ -72,7 +72,7 @@ dependencies {
 
     modCompileOnly("maven.modrinth:distanthorizons:Mt9bDAs6")
     modCompileOnly("maven.modrinth:sodium:RncWhTxD")
-    modCompileOnly("maven.modrinth:iris:kuOV4Ece")
+    modCompileOnly("maven.modrinth:iris:l77DAK6U")
     modCompileOnly("maven.modrinth:bobby:2cuVyTav")
     modCompileOnly("maven.modrinth:simple-voice-chat:4Zzq92HE")
     modCompileOnly("maven.modrinth:replaymod:NtlpUQgI")

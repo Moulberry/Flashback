@@ -37,6 +37,8 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
+import java.util.Objects;
+
 @Mixin(GameRenderer.class)
 public abstract class MixinGameRenderer {
 
@@ -66,8 +68,9 @@ public abstract class MixinGameRenderer {
 
     @WrapOperation(method = "renderItemInHand", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/multiplayer/MultiPlayerGameMode;getPlayerMode()Lnet/minecraft/world/level/GameType;"))
     public GameType getPlayerMode(MultiPlayerGameMode instance, Operation<GameType> original) {
-        if (Flashback.getSpectatingPlayer() != null) {
-            return GameType.SURVIVAL;
+        AbstractClientPlayer spectatingPlayer = Flashback.getSpectatingPlayer();
+        if (spectatingPlayer != null) {
+            return Objects.requireNonNullElse(spectatingPlayer.gameMode(), GameType.SURVIVAL);
         }
         return original.call(instance);
     }
@@ -78,7 +81,7 @@ public abstract class MixinGameRenderer {
         if (spectatingPlayer != null) {
             Entity entity = this.minecraft.getCameraEntity() == null ? this.minecraft.player : this.minecraft.getCameraEntity();
             float frozenPartialTick = this.minecraft.level.tickRateManager().isEntityFrozen(entity) ? 1.0f : f;
-            ((ItemInHandRendererExt)instance).flashback$renderHandsWithItems(frozenPartialTick, poseStack, bufferSource, spectatingPlayer, i);
+            ((ItemInHandRendererExt)instance).flashback$renderHandsWithItems(frozenPartialTick, poseStack, bufferSource, spectatingPlayer, i, null);
         } else {
             original.call(instance, f, poseStack, bufferSource, localPlayer, i);
         }
