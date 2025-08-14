@@ -65,6 +65,7 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.ChatFormatting;
@@ -128,13 +129,15 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.LockSupport;
 
 public class Flashback implements ModInitializer, ClientModInitializer {
     public static final Logger LOGGER = LoggerFactory.getLogger("flashback");
 
     public static final int MAGIC = 0xD780E884;
-    public static Recorder RECORDER = null;
+    public static volatile Recorder RECORDER = null;
     public static ExportJob EXPORT_JOB = null;
     private static FlashbackConfigV1 config;
     public static LatticeElements configElements = null;
@@ -454,6 +457,9 @@ public class Flashback implements ModInitializer, ClientModInitializer {
 
         AtomicReference<String> unsupportedLoader = new AtomicReference<>(findUnsupportedLoaders());
 
+        AtomicBoolean synchronizeTickingCanTickClient = new AtomicBoolean(true);
+        AtomicBoolean synchronizeTickingCanTickServer = new AtomicBoolean(true);
+
         ClientTickEvents.END_CLIENT_TICK.register(minecraft -> {
             updateIsInReplay();
 
@@ -472,15 +478,26 @@ public class Flashback implements ModInitializer, ClientModInitializer {
             }
 
             Flashback.getConfig().tickDelayedSave();
+
+            synchronizeTickingCanTickServer.set(true);
         });
 
         ClientTickEvents.START_CLIENT_TICK.register(minecraft -> {
-            if (canReplaceScreen(Minecraft.getInstance().screen)) {
-                openNewScreen(unsupportedLoader, Minecraft.getInstance().screen);
+            if (RECORDER != null && Flashback.config.advanced.synchronizeTicking && minecraft.hasSingleplayerServer()) {
+                boolean isLevelLoaded = !(minecraft.screen instanceof ReceivingLevelScreen);
+                boolean willRecord = minecraft.level != null && (minecraft.getOverlay() == null || !minecraft.getOverlay().isPauseScreen()) &&
+                    !minecraft.isPaused() && !RECORDER.isPaused() && isLevelLoaded;
+                while (willRecord && !synchronizeTickingCanTickClient.compareAndSet(true, false)) {
+                    LockSupport.parkNanos("flashback synchronized ticking: waiting for server", 100000L);
+                }
             }
 
-            if (Minecraft.getInstance().level != null && delayedStartRecording > 0) {
-                IntegratedServer integratedServer = Minecraft.getInstance().getSingleplayerServer();
+            if (canReplaceScreen(minecraft.screen)) {
+                openNewScreen(unsupportedLoader, minecraft.screen);
+            }
+
+            if (minecraft.level != null && delayedStartRecording > 0) {
+                IntegratedServer integratedServer = minecraft.getSingleplayerServer();
                 if (integratedServer != null && integratedServer.getClass() != IntegratedServer.class) {
                     delayedStartRecording = 0; // Only allow on actual integrated servers, not replay servers or any other custom server a mod might spin up
                 } else if (Flashback.getConfig().recordingControls.automaticallyStart && RECORDER == null) {
@@ -494,6 +511,18 @@ public class Flashback implements ModInitializer, ClientModInitializer {
             }
 
             updateIsInReplay();
+        });
+
+        ServerTickEvents.END_SERVER_TICK.register(minecraftServer -> {
+            synchronizeTickingCanTickClient.set(true);
+        });
+
+        ServerTickEvents.START_SERVER_TICK.register(minecraftServer -> {
+            if (RECORDER != null && Flashback.config.advanced.synchronizeTicking) {
+                while (!synchronizeTickingCanTickServer.compareAndSet(true, false)) {
+                    LockSupport.parkNanos("flashback synchronized ticking: waiting for client", 100000L);
+                }
+            }
         });
 
         if (FabricLoader.getInstance().isModLoaded("distanthorizons")) {
