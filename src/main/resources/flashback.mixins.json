@@ -15,6 +15,7 @@
     "MixinWindow",
     "audio.MixinAudioLibrary",
     "audio.MixinSoundEngine",
+    "language.MixinClientLanguage",
     "millis.MixinRenderStateShard",
     "millis.MixinWorldBorderRenderer",
     "movement.MixinMouseHandler",
