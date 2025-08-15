@@ -47,6 +47,8 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.resources.language.I18n;
+import net.minecraft.commands.arguments.EntityAnchorArgument;
+import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector2f;
 import org.joml.Vector3d;
@@ -345,6 +347,8 @@ public class TimelineWindow {
         renderSeparators(minorsPerMajor, x, middleX, minorSeparatorWidth, errorOffset, width, drawList, y, timestampHeight, middleY, minTicks, ticksPerMinor, showSubSeconds, majorSeparatorHeight, minorSeparatorHeight);
 
         // render markers
+        ReplayMarker hoveredMarker = null;
+        int hoveredMarkerTick = currentReplayTick;
         {
             for (int tick = minTicks-10; tick <= minTicks + availableTicks + 10; tick++) {
                 Map.Entry<Integer, ReplayMarker> markerEntry = metadata.replayMarkers.ceilingEntry(tick);
@@ -360,8 +364,13 @@ public class TimelineWindow {
                 colour = ((colour >> 16) & 0xFF) | (colour & 0xFF00) | ((colour << 16) & 0xFF0000) | 0xFF000000; // change endianness
                 drawList.addCircleFilled(markerX, y+middleY, ReplayUI.scaleUi(5), colour);
 
-                if (!ImGui.isAnyMouseDown() && marker.description() != null && Math.abs(markerX - mouseX) <= 5 && Math.abs(y+middleY - mouseY) <= 5) {
-                    ImGuiHelper.drawTooltip(marker.description());
+                if (hoveredMarker == null && Math.abs(markerX - mouseX) <= 5 && Math.abs(y+middleY - mouseY) <= 5) {
+                    if (!ImGui.isAnyMouseDown() && marker.description() != null) {
+                        ImGuiHelper.drawTooltip(marker.description());
+                    }
+
+                    hoveredMarker = marker;
+                    hoveredMarkerTick = markerTick;
                 }
 
                 tick = markerTick + 1;
@@ -520,7 +529,27 @@ public class TimelineWindow {
 
             boolean leftClicked = ImGui.isMouseClicked(ImGuiMouseButton.Left);
             boolean rightClicked = ImGui.isMouseClicked(ImGuiMouseButton.Right);
-            if (mouseX < x + width - 2 && (leftClicked || rightClicked)) {
+            if (leftClicked && hoveredMarker != null) {
+                replayServer.goToReplayTick(hoveredMarkerTick);
+                if (hoveredMarker.position() != null) {
+                    ReplayMarker.MarkerPosition position = hoveredMarker.position();
+                    String dimension = Minecraft.getInstance().level.dimension().toString();
+                    if (dimension.equals(position.dimension())) {
+                        LocalPlayer player = Minecraft.getInstance().player;
+
+                        Vec3 target = new Vec3(position.position());
+                        Vec3 playerEyes = player.getEyePosition();
+                        Vec3 delta = playerEyes.subtract(target);
+                        double distance = delta.length();
+                        if (distance > 3) {
+                            Vec3 repositioned = delta.normalize().scale(3).add(target).subtract(0, player.getEyeHeight(), 0);
+                            player.snapTo(repositioned);
+                        }
+                        player.lookAt(EntityAnchorArgument.Anchor.EYES, target);
+                        player.setDeltaMovement(Vec3.ZERO);
+                    }
+                }
+            } else if (mouseX < x + width - 2 && (leftClicked || rightClicked)) {
                 handleClick(replayServer, totalTicks, contentY);
                 if (leftClicked) {
                     draggingMouseButton = ImGuiMouseButton.Left;
