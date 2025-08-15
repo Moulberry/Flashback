@@ -37,7 +37,7 @@
 
   "flashback.option.exporting": "내보내기",
   "flashback.export_filename": "내보내기 파일 이름",
-  "flashback.export_filename_tooltip": "내보내기 시 기본 파일 이름\n변수:\n  %% date%% => 년-월-일\n  %%time%% => 시_분_초\n  %%replay%% => 리플레이 이름\n  %%seq%% => 해당 세션에 대한 내보내기 수",
+  "flashback.export_filename_tooltip": "내보내기 시 기본 파일 이름\n변수:\n  %%date%% => 년-월-일\n  %%time%% => 시_분_초\n  %%replay%% => 리플레이 이름\n  %%seq%% => 해당 세션에 대한 내보내기 수",
   "flashback.dummy_render_frames": "더미 렌더 프레임",
   "flashback.dummy_render_frames_description": "이것은 내보내기 프로그램이 프레임을 저장하기 전에 추가 더미 프레임을 렌더링하게 만듭니다.\n이렇게 하면 내보내는 데 걸리는 시간이 '엄청나게' 늘어나지만 시간 누적에 의존하는 셰이더나 FREX Flawless Frames에 대한 지원이 부족한 모드를 사용할 때 필수적일 수 있습니다.",
 
