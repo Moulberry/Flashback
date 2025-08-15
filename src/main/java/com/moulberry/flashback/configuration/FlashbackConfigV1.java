@@ -4,24 +4,30 @@ import com.google.gson.JsonObject;
 import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.FlashbackGson;
 import com.moulberry.flashback.combo_options.AudioCodec;
+import com.moulberry.flashback.combo_options.MarkerColour;
 import com.moulberry.flashback.combo_options.MovementDirection;
 import com.moulberry.flashback.combo_options.RecordingControlsLocation;
 import com.moulberry.flashback.combo_options.VideoCodec;
 import com.moulberry.flashback.combo_options.VideoContainer;
 import com.moulberry.flashback.keyframe.interpolation.InterpolationType;
 import com.moulberry.flashback.screen.select_replay.ReplaySorting;
+import com.moulberry.lattice.LatticeDynamicFrequency;
 import com.moulberry.lattice.annotation.LatticeCategory;
 import com.moulberry.lattice.annotation.LatticeFormatValues;
 import com.moulberry.lattice.annotation.LatticeOption;
+import com.moulberry.lattice.annotation.constraint.LatticeEnableIf;
 import com.moulberry.lattice.annotation.constraint.LatticeFloatRange;
 import com.moulberry.lattice.annotation.constraint.LatticeIntRange;
 import com.moulberry.lattice.annotation.constraint.LatticeShowIf;
 import com.moulberry.lattice.annotation.widget.LatticeWidgetButton;
 import com.moulberry.lattice.annotation.widget.LatticeWidgetDropdown;
+import com.moulberry.lattice.annotation.widget.LatticeWidgetKeybind;
 import com.moulberry.lattice.annotation.widget.LatticeWidgetMessage;
 import com.moulberry.lattice.annotation.widget.LatticeWidgetSlider;
 import com.moulberry.lattice.annotation.widget.LatticeWidgetTextField;
 import net.fabricmc.loader.api.FabricLoader;
+import net.minecraft.ChatFormatting;
+import net.minecraft.client.KeyMapping;
 import net.minecraft.network.chat.Component;
 
 import java.io.IOException;
@@ -155,6 +161,82 @@ public class FlashbackConfigV1 {
         @LatticeOption(title = "flashback.lock_pitch")
         @LatticeWidgetButton
         public boolean flightLockPitch = false;
+    }
+
+    @LatticeCategory(name = "flashback.option.marker")
+    public SubcategoryMarker marker = new SubcategoryMarker();
+
+    public static class SubcategoryMarker {
+        @LatticeOption(title = "flashback.keybind.create_marker_1")
+        @LatticeWidgetKeybind
+        private transient final KeyMapping createMarker1KeyBind = Flashback.createMarker1KeyBind;
+
+        @LatticeOption(title = "flashback.keybind.create_marker_2")
+        @LatticeWidgetKeybind
+        private transient final KeyMapping createMarker2KeyBind = Flashback.createMarker2KeyBind;
+
+        @LatticeOption(title = "flashback.keybind.create_marker_3")
+        @LatticeWidgetKeybind
+        private transient final KeyMapping createMarker3KeyBind = Flashback.createMarker3KeyBind;
+
+        @LatticeOption(title = "flashback.keybind.create_marker_4")
+        @LatticeWidgetKeybind
+        private transient final KeyMapping createMarker4KeyBind = Flashback.createMarker4KeyBind;
+
+        @LatticeCategory(name = "flashback.option.marker.marker_1_options")
+        @LatticeEnableIf(function = "createMarker1IsBound", frequency = LatticeDynamicFrequency.EVERY_TICK)
+        public SubcategoryMarkerOptions markerOptions1 = new SubcategoryMarkerOptions();
+
+        @LatticeCategory(name = "flashback.option.marker.marker_2_options")
+        @LatticeEnableIf(function = "createMarker2IsBound", frequency = LatticeDynamicFrequency.EVERY_TICK)
+        public SubcategoryMarkerOptions markerOptions2 = new SubcategoryMarkerOptions();
+
+        @LatticeCategory(name = "flashback.option.marker.marker_3_options")
+        @LatticeEnableIf(function = "createMarker3IsBound", frequency = LatticeDynamicFrequency.EVERY_TICK)
+        public SubcategoryMarkerOptions markerOptions3 = new SubcategoryMarkerOptions();
+
+        @LatticeCategory(name = "flashback.option.marker.marker_4_options")
+        @LatticeEnableIf(function = "createMarker4IsBound", frequency = LatticeDynamicFrequency.EVERY_TICK)
+        public SubcategoryMarkerOptions markerOptions4 = new SubcategoryMarkerOptions();
+
+        public static class SubcategoryMarkerOptions {
+            @LatticeOption(title = "flashback.color")
+            @LatticeWidgetDropdown
+            public MarkerColour color = MarkerColour.RED;
+
+            @LatticeOption(title = "flashback.custom_rgb")
+            @LatticeWidgetTextField
+            @LatticeShowIf(function = "isColorSetToCustom", frequency = LatticeDynamicFrequency.EVERY_TICK)
+            public String customRGB = "#FF0000";
+
+            @LatticeOption(title = "flashback.option.marker.options.save_position")
+            @LatticeWidgetButton
+            public boolean savePosition = true;
+
+            @LatticeOption(title = "flashback.description")
+            @LatticeWidgetTextField
+            public String description = "";
+
+            private boolean isColorSetToCustom() {
+                return this.color == MarkerColour.CUSTOM_RGB;
+            }
+        }
+
+        private boolean createMarker1IsBound() {
+            return !this.createMarker1KeyBind.isUnbound();
+        }
+
+        private boolean createMarker2IsBound() {
+            return !this.createMarker2KeyBind.isUnbound();
+        }
+
+        private boolean createMarker3IsBound() {
+            return !this.createMarker3KeyBind.isUnbound();
+        }
+
+        private boolean createMarker4IsBound() {
+            return !this.createMarker4KeyBind.isUnbound();
+        }
     }
 
     @LatticeCategory(name = "flashback.advanced")
