@@ -14,7 +14,7 @@ import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.ItemBlockRenderTypes;
 import net.minecraft.client.renderer.ItemInHandRenderer;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.chunk.ChunkSectionLayer;
+import net.minecraft.client.renderer.RenderType;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.item.BlockItem;
@@ -48,7 +48,7 @@ public abstract class MixinIrisHandRenderer {
             var item = spectatingPlayer.getItemBySlot(hand == InteractionHand.OFF_HAND ? EquipmentSlot.OFFHAND : EquipmentSlot.MAINHAND).getItem();
 
             if (item instanceof BlockItem blockItem) {
-                cir.setReturnValue(ItemBlockRenderTypes.getChunkRenderType(blockItem.getBlock().defaultBlockState()) == ChunkSectionLayer.TRANSLUCENT);
+                cir.setReturnValue(ItemBlockRenderTypes.getChunkRenderType(blockItem.getBlock().defaultBlockState()) == RenderType.translucent());
             } else {
                 cir.setReturnValue(false);
             }
