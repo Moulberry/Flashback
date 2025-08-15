@@ -2,12 +2,14 @@ package com.moulberry.flashback;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
+import com.mojang.blaze3d.platform.InputConstants;
 import com.mojang.brigadier.arguments.BoolArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.realmsclient.RealmsMainScreen;
 import com.mojang.serialization.Lifecycle;
 import com.moulberry.flashback.action.*;
+import com.moulberry.flashback.combo_options.MarkerColour;
 import com.moulberry.flashback.command.BetterColorArgument;
 import com.moulberry.flashback.compat.DistantHorizonsSupport;
 import com.moulberry.flashback.compat.simple_voice_chat.SimpleVoiceChatPlayback;
@@ -62,6 +64,7 @@ import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
@@ -71,12 +74,14 @@ import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.ChatFormatting;
 import net.minecraft.FileUtil;
 import net.minecraft.Util;
+import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.toasts.SystemToast;
 import net.minecraft.client.gui.screens.*;
 import net.minecraft.client.gui.screens.multiplayer.JoinMultiplayerScreen;
 import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.client.resources.language.I18n;
 import net.minecraft.client.server.IntegratedServer;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.arguments.EntityArgument;
@@ -106,6 +111,7 @@ import net.minecraft.world.level.storage.PrimaryLevelData;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.Nullable;
+import org.lwjgl.glfw.GLFW;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -156,6 +162,15 @@ public class Flashback implements ModInitializer, ClientModInitializer {
     private static boolean isOpeningReplay = false;
 
     public static long worldBorderLerpStartTime = -1L;
+
+    public static final KeyMapping createMarker1KeyBind = KeyBindingHelper.registerKeyBinding(new KeyMapping("flashback.keybind.create_marker_1",
+        InputConstants.Type.KEYSYM, InputConstants.UNKNOWN.getValue(), "flashback.keybind"));
+    public static final KeyMapping createMarker2KeyBind = KeyBindingHelper.registerKeyBinding(new KeyMapping("flashback.keybind.create_marker_2",
+        InputConstants.Type.KEYSYM, InputConstants.UNKNOWN.getValue(), "flashback.keybind"));
+    public static final KeyMapping createMarker3KeyBind = KeyBindingHelper.registerKeyBinding(new KeyMapping("flashback.keybind.create_marker_3",
+        InputConstants.Type.KEYSYM, InputConstants.UNKNOWN.getValue(), "flashback.keybind"));
+    public static final KeyMapping createMarker4KeyBind = KeyBindingHelper.registerKeyBinding(new KeyMapping("flashback.keybind.create_marker_4",
+        InputConstants.Type.KEYSYM, InputConstants.UNKNOWN.getValue(), "flashback.keybind"));
 
     public static ResourceLocation createResourceLocation(String value) {
         return ResourceLocation.fromNamespaceAndPath("flashback", value);
@@ -375,22 +390,22 @@ public class Flashback implements ModInitializer, ClientModInitializer {
             flashback.then(ClientCommandManager.literal("config").executes(this::openFlashbackConfig));
             flashback.then(ClientCommandManager.literal("mark")
                 .executes(command -> {
-                    this.addMarker(command, null, null, null);
+                    this.addMarker(null, null, null);
                     return 0;
                 }).then(ClientCommandManager.argument("color", BetterColorArgument.color()).executes(command -> {
                     int colour = command.getArgument("color", Integer.class);
-                    this.addMarker(command, colour, null, null);
+                    this.addMarker(colour, null, null);
                     return 0;
                 }).then(ClientCommandManager.argument("savePosition", BoolArgumentType.bool()).executes(command -> {
                     int colour = command.getArgument("color", Integer.class);
                     boolean savePosition = command.getArgument("savePosition", Boolean.class);
-                    this.addMarker(command, colour, savePosition, null);
+                    this.addMarker(colour, savePosition, null);
                     return 0;
                 }).then(ClientCommandManager.argument("description", StringArgumentType.greedyString()).executes(command -> {
                     int colour = command.getArgument("color", Integer.class);
                     boolean savePosition = command.getArgument("savePosition", Boolean.class);
                     String description = command.getArgument("description", String.class);
-                    this.addMarker(command, colour, savePosition, description);
+                    this.addMarker(colour, savePosition, description);
                     return 0;
                 })))));
             dispatcher.register(flashback);
@@ -511,6 +526,19 @@ public class Flashback implements ModInitializer, ClientModInitializer {
             }
 
             updateIsInReplay();
+
+            if (createMarker1KeyBind.consumeClick()) {
+                addMarker(Flashback.config.marker.markerOptions1);
+            }
+            if (createMarker2KeyBind.consumeClick()) {
+                addMarker(Flashback.config.marker.markerOptions2);
+            }
+            if (createMarker3KeyBind.consumeClick()) {
+                addMarker(Flashback.config.marker.markerOptions3);
+            }
+            if (createMarker4KeyBind.consumeClick()) {
+                addMarker(Flashback.config.marker.markerOptions4);
+            }
         });
 
         ServerTickEvents.END_SERVER_TICK.register(minecraftServer -> {
@@ -643,9 +671,27 @@ public class Flashback implements ModInitializer, ClientModInitializer {
             || screen instanceof RealmsMainScreen || screen instanceof JoinMultiplayerScreen;
     }
 
-    private void addMarker(CommandContext<FabricClientCommandSource> command, @Nullable Integer colour, @Nullable Boolean savePosition, @Nullable String description) {
+    private void addMarker(FlashbackConfigV1.SubcategoryMarker.SubcategoryMarkerOptions options) {
+        int colour;
+        if (options.color == MarkerColour.CUSTOM_RGB) {
+            String custom = options.customRGB.replaceAll("[^0-9a-fA-F]", "");
+            if (custom.isEmpty()) {
+                colour = 0;
+            } else {
+                colour = Integer.parseInt(custom, 16);
+            }
+        } else {
+            colour = options.color.colour;
+        }
+
+        addMarker(colour, options.savePosition, options.description);
+    }
+
+    private void addMarker(@Nullable Integer colour, @Nullable Boolean savePosition, @Nullable String description) {
+        Minecraft minecraft = Minecraft.getInstance();
+
         if (RECORDER == null) {
-            command.getSource().sendError(Component.translatable("flashback.mark_command.not_recording"));
+            minecraft.gui.getChat().addMessage(Component.translatable("flashback.mark_command.not_recording").withStyle(ChatFormatting.RED));
             return;
         }
 
@@ -658,15 +704,21 @@ public class Flashback implements ModInitializer, ClientModInitializer {
             }
         }
 
+        if (description != null && description.isBlank()) {
+            description = null;
+        }
+
         String feedback;
-        if (colour != null) {
-            feedback = "Added #" + Integer.toHexString(colour) + " marker";
+        if (description != null) {
+            feedback = I18n.get("flashback.mark.added_with_description", description);
+        } else if (colour != null) {
+            feedback = I18n.get("flashback.mark.added_with_color", Integer.toHexString(colour));
         } else {
-            feedback = "Added marker";
+            feedback = I18n.get("flashback.mark.added");
         }
 
         if (position != null) {
-            feedback += String.format(" at %.2f, %.2f, %.2f", position.position().x, position.position().y, position.position().z);
+            feedback += I18n.get("flashback.mark.added_at", position.position().x, position.position().y, position.position().z);
         }
 
         if (colour == null) {
@@ -680,7 +732,7 @@ public class Flashback implements ModInitializer, ClientModInitializer {
             }
         }
 
-        command.getSource().sendFeedback(Component.literal(feedback));
+        minecraft.gui.getChat().addMessage(Component.literal(feedback));
         RECORDER.addMarker(new ReplayMarker(colour, position, description));
     }
 
