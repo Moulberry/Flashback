@@ -73,7 +73,11 @@ public abstract class MixinGameRenderer {
     public GameType getPlayerMode(MultiPlayerGameMode instance, Operation<GameType> original) {
         AbstractClientPlayer spectatingPlayer = Flashback.getSpectatingPlayer();
         if (spectatingPlayer != null) {
-            return Objects.requireNonNullElse(spectatingPlayer.gameMode(), GameType.SURVIVAL);
+            var playerInfo = spectatingPlayer.getPlayerInfo();
+            if (playerInfo == null) {
+                return GameType.SURVIVAL;
+            }
+            return playerInfo.getGameMode();
         }
         return original.call(instance);
     }
