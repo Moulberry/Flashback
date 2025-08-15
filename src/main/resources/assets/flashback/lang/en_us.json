@@ -13,6 +13,12 @@
 
   "flashback.option.per_second": "%s/s",
 
+  "flashback.keybind": "Flashback Keybinds",
+  "flashback.keybind.create_marker_1": "Create Marker #1",
+  "flashback.keybind.create_marker_2": "Create Marker #2",
+  "flashback.keybind.create_marker_3": "Create Marker #3",
+  "flashback.keybind.create_marker_4": "Create Marker #4",
+
   "flashback.option.recording_controls": "Recording Controls",
   "flashback.option.recording_controls.location": "Pause Menu Controls Location",
   "flashback.option.recording_controls.location.description": "Location of the Flashback buttons in the Minecraft pause menu",
@@ -49,12 +55,27 @@
 
   "flashback.option.editor_movement": "Editor Movement",
 
+  "flashback.option.marker": "Marker",
+  "flashback.option.marker.marker_1_options": "Marker #1 Options",
+  "flashback.option.marker.marker_2_options": "Marker #2 Options",
+  "flashback.option.marker.marker_3_options": "Marker #3 Options",
+  "flashback.option.marker.marker_4_options": "Marker #4 Options",
+  "flashback.option.marker.options.save_position": "Save Position",
+  "flashback.custom_rgb": "Custom RGB",
+  "flashback.color": "Color",
+  "flashback.description": "Description",
+
   "flashback.advanced": "Advanced",
   "flashback.advanced_description": "Don't change any of these unless you know what you're doing!! If you change one of these and then ask for support you will be made fun of!!",
   "flashback.disable_first_person_updates": "Disable increased first-person updates",
   "flashback.disable_third_person_cancel": "Disable third-person cancel",
   "flashback.advanced.synchronize_ticking": "Synchronize Ticking",
   "flashback.advanced.synchronize_ticking.description": "Tick client and integrated server in lockstep. Only works in singleplayer. Useful if recording below 20 TPS. May result in deadlocks",
+
+  "flashback.mark.added_with_description": "Added \"%s\" marker",
+  "flashback.mark.added_with_color": "Added #%s marker",
+  "flashback.mark.added": "Added marker",
+  "flashback.mark.added_at": " at %.2f, %.2f, %.2f",
 
   "flashback.replay_sorting.created_date": "Created Date",
   "flashback.replay_sorting.replay_name": "Replay Name",
