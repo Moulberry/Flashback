@@ -543,7 +543,7 @@ public class TimelineWindow {
                         double distance = delta.length();
                         if (distance > 3) {
                             Vec3 repositioned = delta.normalize().scale(3).add(target).subtract(0, player.getEyeHeight(), 0);
-                            player.snapTo(repositioned);
+                            player.moveTo(repositioned);
                         }
                         player.lookAt(EntityAnchorArgument.Anchor.EYES, target);
                         player.setDeltaMovement(Vec3.ZERO);
