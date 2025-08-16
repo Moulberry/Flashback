@@ -13,3 +13,4 @@ Authors/contributors:
 - zh_cn.json: abcdd12344, Q2297045667
 - ja_jp.json: hqnkuh
 - fr_fr.json: MazeWave
+- cs_cz.json: Madeleaan
