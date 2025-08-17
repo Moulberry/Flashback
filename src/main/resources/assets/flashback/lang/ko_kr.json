@@ -13,6 +13,12 @@
 
   "flashback.option.per_second": "%s/s",
 
+  "flashback.keybind": "플래시백 키지정",
+  "flashback.keybind.create_marker_1": "마커 생성 #1",
+  "flashback.keybind.create_marker_2": "마커 생성 #2",
+  "flashback.keybind.create_marker_3": "마커 생성 #3",
+  "flashback.keybind.create_marker_4": "마커 생성 #4",
+
   "flashback.option.recording_controls": "녹화 설정",
   "flashback.option.recording_controls.location": "게임 메뉴 컨트롤 위치",
   "flashback.option.recording_controls.location.description": "마인크래프트 게임 메뉴에서 플래시백 버튼의 위치입니다.",
@@ -49,10 +55,27 @@
 
   "flashback.option.editor_movement": "편집자 이동",
 
+  "flashback.option.marker": "마커",
+  "flashback.option.marker.marker_1_options": "마커 #1 옵션",
+  "flashback.option.marker.marker_2_options": "마커 #2 옵션",
+  "flashback.option.marker.marker_3_options": "마커 #3 옵션",
+  "flashback.option.marker.marker_4_options": "마커 #4 옵션",
+  "flashback.option.marker.options.save_position": "위치 저장",
+  "flashback.custom_rgb": "사용자 지정 RGB",
+  "flashback.color": "색상",
+  "flashback.description": "설명",
+
   "flashback.advanced": "고급 설정",
   "flashback.advanced_description": "이게 뭔지 정확히 알지 않는 이상 절대 이 중 어떤 것도 바꾸지 마세요!! 이 중 하나라도 바꿨으면서 도움을 요청하면 놀림 받을 것입니다!!",
   "flashback.disable_first_person_updates": "비활성화 증가된 일인칭 업데이트",
   "flashback.disable_third_person_cancel": "비활성화 삼인칭 취소",
+  "flashback.advanced.synchronize_ticking": "틱킹 동기화",
+  "flashback.advanced.synchronize_ticking.description": "클라이언트와 통합 서버를 동시에 틱 연산합니다. 싱글 플레이어에서만 작동합니다. 20 TPS 미만으로 녹화하는 경우에 유용합니다. 교착 상태가 발생할 수 있습니다.",
+
+  "flashback.mark.added_with_description": "\"%s\" 마커 추가",
+  "flashback.mark.added_with_color": "#%s 마커 추가",
+  "flashback.mark.added": "마커 추가",
+  "flashback.mark.added_at": " 위치 %.2f, %.2f, %.2f",
 
   "flashback.replay_sorting.created_date": "생성된 날짜",
   "flashback.replay_sorting.replay_name": "리플레이 이름",
