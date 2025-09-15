@@ -35,13 +35,6 @@ public class SelectReplayScreen extends Screen {
         this.currentNamespacesForRegistries = RegistryMetaHelper.calculateNamespacesForRegistries();
     }
 
-    public SelectReplayScreen(Screen screen) {
-        super(Component.translatable("flashback.select_replay"));
-        this.lastScreen = screen;
-        this.path = Flashback.getReplayFolder();
-        this.currentNamespacesForRegistries = RegistryMetaHelper.calculateNamespacesForRegistries();
-    }
-
     @Override
     protected void init() {
         this.searchBox = new EditBox(this.font, this.width / 2 - 128, 22, 126, 20, this.searchBox, Component.translatable("selectWorld.search"));

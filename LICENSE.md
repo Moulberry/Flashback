@@ -11,4 +11,3 @@ Authors/contributors:
 - en_us.json: Moulberry
 - ko_kr.json: MagPlum
 - zh_cn.json: abcdd12344, Q2297045667
-- cs_cz.json: Madeleaan
