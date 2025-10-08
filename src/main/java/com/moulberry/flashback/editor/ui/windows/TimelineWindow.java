@@ -45,6 +45,7 @@ import imgui.type.ImString;
 import it.unimi.dsi.fastutil.ints.*;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.input.InputQuirks;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.resources.language.I18n;
 import net.minecraft.commands.arguments.EntityAnchorArgument;
@@ -719,7 +720,7 @@ public class TimelineWindow {
         boolean pressedIn = ImGui.isKeyPressed(GLFW.GLFW_KEY_I, false);
         boolean pressedOut = ImGui.isKeyPressed(GLFW.GLFW_KEY_O, false);
 
-        boolean ctrlPressed = Minecraft.ON_OSX ? ImGui.isKeyDown(GLFW.GLFW_KEY_LEFT_SUPER) : ImGui.isKeyDown(GLFW.GLFW_KEY_LEFT_CONTROL);
+        boolean ctrlPressed = InputQuirks.REPLACE_CTRL_KEY_WITH_CMD_KEY ? ImGui.isKeyDown(GLFW.GLFW_KEY_LEFT_SUPER) : ImGui.isKeyDown(GLFW.GLFW_KEY_LEFT_CONTROL);
         boolean pressedCopy = ctrlPressed && ImGui.isKeyPressed(GLFW.GLFW_KEY_C, false);
         boolean pressedPaste = ctrlPressed && ImGui.isKeyPressed(GLFW.GLFW_KEY_V, false);
 
@@ -1919,7 +1920,7 @@ public class TimelineWindow {
                 if (ImGui.invisibleButton("##Add", buttonSize, buttonSize)) {
                     createNewKeyframe(trackIndex, cursorTicks, keyframeType, keyframeTrack);
 
-                    if (keyframeType instanceof CameraKeyframeType && Minecraft.getInstance().player != Minecraft.getInstance().cameraEntity) {
+                    if (keyframeType instanceof CameraKeyframeType && Minecraft.getInstance().player != Minecraft.getInstance().getCameraEntity()) {
                         ReplayUI.setInfoOverlay(I18n.get("flashback.camera_keyframes_not_needed"));
                         Minecraft.getInstance().getConnection().sendCommand("spectate");
                     }

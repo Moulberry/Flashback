@@ -4,6 +4,7 @@
 package com.moulberry.flashback.screen;
 
 import com.moulberry.flashback.record.FlashbackMeta;
+import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.SharedConstants;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
@@ -37,16 +38,17 @@ public class ReplaySummary implements Comparable<ReplaySummary> {
         this.filesize = filesize;
         this.iconBytes = iconBytes;
 
+        String versionString = FabricLoader.getInstance().getRawGameVersion();
         if (metadata.namespacesForRegistries != null && !currentNamespacesForRegistries.equals(metadata.namespacesForRegistries)) {
             this.hasNamespaceMismatch = true;
         }
         if (metadata.protocolVersion != 0 && metadata.protocolVersion != SharedConstants.getProtocolVersion()) {
             this.canOpen = false;
 
-            if (metadata.versionString != null && !metadata.versionString.equals(SharedConstants.VERSION_STRING)) {
+            if (metadata.versionString != null && !metadata.versionString.equals(versionString)) {
                 this.hoverInfo = Component.translatable("flashback.incompatible_replay_version",
                     Component.literal(metadata.versionString),
-                    Component.literal(SharedConstants.VERSION_STRING));
+                    Component.literal(versionString));
             } else {
                 this.hoverInfo = Component.translatable("flashback.incompatible_replay_version_protocol",
                     Component.literal(String.valueOf(metadata.protocolVersion)),
@@ -55,10 +57,10 @@ public class ReplaySummary implements Comparable<ReplaySummary> {
         } else if (metadata.dataVersion != 0 && metadata.dataVersion != SharedConstants.getCurrentVersion().dataVersion().version()) {
             this.hasWarning = true;
 
-            if (metadata.versionString != null && !metadata.versionString.equals(SharedConstants.VERSION_STRING)) {
+            if (metadata.versionString != null && !metadata.versionString.equals(versionString)) {
                 this.hoverInfo = Component.translatable("flashback.maybe_incompatible_replay_version",
                     Component.literal(metadata.versionString),
-                    Component.literal(SharedConstants.VERSION_STRING));
+                    Component.literal(versionString));
             } else {
                 this.hoverInfo = Component.translatable("flashback.incompatible_replay_version_data",
                     Component.literal(String.valueOf(metadata.dataVersion)),

@@ -13,7 +13,7 @@
 
   "flashback.option.per_second": "%s/s",
 
-  "flashback.keybind": "Flashback Keybinds",
+  "key.category.flashback.keybind": "Flashback Keybinds",
   "flashback.keybind.create_marker_1": "Create Marker #1",
   "flashback.keybind.create_marker_2": "Create Marker #2",
   "flashback.keybind.create_marker_3": "Create Marker #3",

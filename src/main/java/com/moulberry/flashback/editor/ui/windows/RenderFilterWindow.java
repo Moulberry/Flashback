@@ -55,7 +55,7 @@ public class RenderFilterWindow {
             FlashbackConfigV1 config = Flashback.getConfig();
 
             if (!config.internal.signedRenderFilter) {
-                String name = Minecraft.getInstance().getGameProfile().getName();
+                String name = Minecraft.getInstance().getGameProfile().name();
                 ImGui.pushTextWrapPos(ReplayUI.scaleUi(300));
                 ImGui.textWrapped(I18n.get("flashback.render_filter_affirmation", name));
                 if (ImGui.checkbox(I18n.get("flashback.render_filter_sign", name), false)) {

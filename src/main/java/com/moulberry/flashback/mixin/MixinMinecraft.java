@@ -30,6 +30,7 @@ import net.minecraft.client.gui.screens.Overlay;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.multiplayer.ClientHandshakePacketListenerImpl;
 import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.client.multiplayer.LevelLoadTracker;
 import net.minecraft.client.multiplayer.chat.report.ReportEnvironment;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.LevelRenderer;
@@ -40,10 +41,12 @@ import net.minecraft.network.protocol.login.ServerboundHelloPacket;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.Services;
 import net.minecraft.server.WorldStem;
-import net.minecraft.server.level.progress.ProcessorChunkProgressListener;
-import net.minecraft.server.level.progress.StoringChunkProgressListener;
+import net.minecraft.server.level.ChunkLevel;
+import net.minecraft.server.level.progress.LevelLoadListener;
+import net.minecraft.server.level.progress.LoggingLevelLoadListener;
 import net.minecraft.server.packs.repository.PackRepository;
-import net.minecraft.server.players.GameProfileCache;
+import net.minecraft.util.profiling.ProfilerFiller;
+import net.minecraft.util.thread.ReentrantBlockableEventLoop;
 import net.minecraft.world.TickRateManager;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.block.entity.SkullBlockEntity;
@@ -66,19 +69,12 @@ import java.time.Instant;
 import java.util.Queue;
 import java.util.UUID;
 import java.util.concurrent.Executor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 @Mixin(Minecraft.class)
-public abstract class MixinMinecraft implements MinecraftExt {
-
-    @Shadow
-    @Final
-    private AtomicReference<StoringChunkProgressListener> progressListener;
-
-    @Shadow
-    @Final
-    private YggdrasilAuthenticationService authenticationService;
+public abstract class MixinMinecraft extends ReentrantBlockableEventLoop<Runnable> implements MinecraftExt {
 
     @Shadow
     @Final
@@ -89,6 +85,10 @@ public abstract class MixinMinecraft implements MinecraftExt {
 
     @Shadow
     private boolean isLocalServer;
+
+    public MixinMinecraft(String string) {
+        super(string);
+    }
 
     @Shadow
     public abstract void updateReportEnvironment(ReportEnvironment reportEnvironment);
@@ -110,10 +110,6 @@ public abstract class MixinMinecraft implements MinecraftExt {
 
     @Shadow
     private @Nullable Connection pendingConnection;
-
-    @Shadow
-    @Final
-    private Queue<Runnable> progressTasks;
 
     @Shadow
     @Nullable
@@ -143,6 +139,10 @@ public abstract class MixinMinecraft implements MinecraftExt {
 
     @Shadow
     public abstract void disconnectWithProgressScreen();
+
+    @Shadow @Final private Services services;
+
+    @Shadow @Nullable public abstract Entity getCameraEntity();
 
     @Inject(method = "pauseGame", at = @At("HEAD"), cancellable = true)
     public void pauseGame(boolean bl, CallbackInfo ci) {
@@ -219,7 +219,7 @@ public abstract class MixinMinecraft implements MinecraftExt {
         FlashbackConfigV1 config = Flashback.getConfig();
         if (inReplay && !config.advanced.disableThirdPersonCancel) {
             // Force camera type to first person
-            if (ReplayUI.isActive() && this.player != null && this.cameraEntity == this.player && this.options.getCameraType() != CameraType.FIRST_PERSON) {
+            if (ReplayUI.isActive() && this.player != null && this.getCameraEntity() == this.player && this.options.getCameraType() != CameraType.FIRST_PERSON) {
                 this.options.setCameraType(CameraType.FIRST_PERSON);
                 this.levelRenderer.needsUpdate();
 
@@ -354,7 +354,7 @@ public abstract class MixinMinecraft implements MinecraftExt {
 
     @Override
     public float flashback$getLocalPlayerPartialTick(float originalPartialTick) {
-        if (this.cameraEntity != this.player || !this.flashback$overridingLocalPlayerTimer()) {
+        if (this.getCameraEntity() != this.player || !this.flashback$overridingLocalPlayerTimer()) {
             return originalPartialTick;
         }
         return this.localPlayerTimer.getGameTimeDeltaPartialTick(true);
@@ -401,21 +401,19 @@ public abstract class MixinMinecraft implements MinecraftExt {
     public void flashback$startReplayServer(LevelStorageSource.LevelStorageAccess levelStorageAccess, PackRepository packRepository, WorldStem stem,
                                             UUID playbackUUID, Path path) {
         this.disconnectWithProgressScreen();
-        this.progressListener.set(null);
         Instant instant = Instant.now();
+        LevelLoadTracker levelLoadTracker = new LevelLoadTracker(0L);
+        LevelLoadingScreen levelLoadingScreen = new LevelLoadingScreen(levelLoadTracker, LevelLoadingScreen.Reason.OTHER);
+        this.setScreen(levelLoadingScreen);
+        int i = ChunkLevel.RADIUS_AROUND_FULL_CHUNK + 6;
+
         try {
 //            levelStorageAccess.saveDataTag((RegistryAccess)worldStem.registries().compositeAccess(), worldStem.worldData());
-            Services services = Services.create(this.authenticationService, this.gameDirectory);
-            services.profileCache().setExecutor((Executor)this);
-            SkullBlockEntity.setup(services, (Executor)this);
-            GameProfileCache.setUsesAuthentication(false);
+            LevelLoadListener levelLoadListener = LevelLoadListener.compose(levelLoadTracker, LoggingLevelLoadListener.forSingleplayer());
             this.singleplayerServer = MinecraftServer.spin(thread -> new ReplayServer(thread, (Minecraft) (Object) this,
-                levelStorageAccess, packRepository, stem, services, i -> {
-                StoringChunkProgressListener storingChunkProgressListener = StoringChunkProgressListener.createFromGameruleRadius(i);
-                this.progressListener.set(storingChunkProgressListener);
-                return ProcessorChunkProgressListener.createStarted(storingChunkProgressListener, this.progressTasks::add);
-            }, playbackUUID, path));
+                levelStorageAccess, packRepository, stem, this.services, levelLoadListener, playbackUUID, path));
             Flashback.updateIsInReplay();
+            levelLoadTracker.setServerChunkStatusView(this.singleplayerServer.createChunkLoadStatusView(i));
             this.isLocalServer = true;
             this.updateReportEnvironment(ReportEnvironment.local());
 //            this.quickPlayLog.setWorldData(QuickPlayLog.Type.SINGLEPLAYER, levelStorageAccess.getLevelId(), worldStem.worldData().getLevelName());
@@ -426,26 +424,27 @@ public abstract class MixinMinecraft implements MinecraftExt {
 //            crashReportCategory.setDetail("Level Name", () -> worldStem.worldData().getLevelName());
             throw new ReportedException(crashReport);
         }
-        while (this.progressListener.get() == null) {
-            Thread.yield();
-        }
-        LevelLoadingScreen levelLoadingScreen = new LevelLoadingScreen(this.progressListener.get());
-        this.setScreen(levelLoadingScreen);
+
+        long delay = TimeUnit.SECONDS.toNanos(1L) / 60L;
+
         while (!this.singleplayerServer.isReady() || this.overlay != null) {
+            long end = Util.getNanos() + delay;
             levelLoadingScreen.tick();
-            this.runTick(false);
-            try {
-                Thread.sleep(16L);
-            } catch (InterruptedException crashReport) {
-                // empty catch block
+            if (this.overlay != null) {
+                this.overlay.tick();
             }
+
+            this.runTick(false);
+            this.runAllTasks();
+            this.managedBlock(() -> Util.getNanos() > end);
             this.handleDelayedCrash();
         }
+
         Duration duration = Duration.between(instant, Instant.now());
         SocketAddress socketAddress = this.singleplayerServer.getConnection().startMemoryChannel();
         Connection connection = Connection.connectToLocalServer(socketAddress);
         connection.initiateServerboundPlayConnection(socketAddress.toString(), 0, new ClientHandshakePacketListenerImpl(connection,
-            (Minecraft) (Object) this, null, null, false, duration, component -> {}, null));
+            (Minecraft) (Object) this, null, null, false, duration, component -> {}, levelLoadTracker, null));
         connection.send(new ServerboundHelloPacket(this.getUser().getName(), this.getUser().getProfileId()));
         this.pendingConnection = connection;
     }

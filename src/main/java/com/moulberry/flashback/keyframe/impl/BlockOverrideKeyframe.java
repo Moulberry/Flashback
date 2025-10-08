@@ -25,6 +25,7 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.PalettedContainer;
+import net.minecraft.world.level.chunk.Strategy;
 
 import java.lang.reflect.Type;
 import java.util.Map;
@@ -40,6 +41,8 @@ public class BlockOverrideKeyframe extends Keyframe {
         }
     }
     public static final BlockState EMPTY_STATE = Blocks.VOID_AIR.defaultBlockState();
+
+    private final Strategy<BlockState> containerStrategy = Strategy.createForBlockStates(Block.BLOCK_STATE_REGISTRY);
 
     public Long2ObjectMap<PalettedContainer<BlockState>> blocks = new Long2ObjectOpenHashMap<>();
     private long lastPos = MIN_POSITION_LONG;
@@ -58,7 +61,7 @@ public class BlockOverrideKeyframe extends Keyframe {
         long chunk = BlockPos.asLong(x >> 4, y >> 4, z >> 4);
         if (chunk != lastPos) {
             lastPos = chunk;
-            lastContainer = blocks.computeIfAbsent(chunk, l -> new PalettedContainer<>(Block.BLOCK_STATE_REGISTRY, EMPTY_STATE, PalettedContainer.Strategy.SECTION_STATES));
+            lastContainer = blocks.computeIfAbsent(chunk, l -> new PalettedContainer<>(EMPTY_STATE, containerStrategy));
         }
         lastContainer.set(x & 0xF, y & 0xF, z & 0xF, blockState);
     }
@@ -88,7 +91,7 @@ public class BlockOverrideKeyframe extends Keyframe {
     }
 
     private static final Codec<PalettedContainer<BlockState>> BLOCK_STATE_CODEC = PalettedContainer.codecRW(
-        Block.BLOCK_STATE_REGISTRY, BlockState.CODEC, PalettedContainer.Strategy.SECTION_STATES, EMPTY_STATE
+        BlockState.CODEC, Strategy.createForBlockStates(Block.BLOCK_STATE_REGISTRY), EMPTY_STATE
     );
 
     public static class TypeAdapter implements JsonSerializer<BlockOverrideKeyframe>, JsonDeserializer<BlockOverrideKeyframe> {

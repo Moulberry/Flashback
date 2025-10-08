@@ -22,7 +22,7 @@ public class MixinMouseHandler {
         }
     }
 
-    @Inject(method = {"onPress", "onScroll", "onMove"}, at = @At("HEAD"), cancellable = true)
+    @Inject(method = {"onButton", "onScroll", "onMove"}, at = @At("HEAD"), cancellable = true)
     public void onUseMouse(CallbackInfo ci) {
         if (Flashback.isExporting()) {
             ci.cancel();

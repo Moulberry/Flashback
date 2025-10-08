@@ -48,10 +48,10 @@ public class MixinRemotePlayer extends AbstractClientPlayer implements RemotePla
             this.yBobO = yBob;
             this.yBob += Mth.wrapDegrees(this.getYRot() - this.yBob) * 0.5f;
 
-            if (this.lastPosition != null && this.walkDist == this.walkDistO) {
+            if (this.lastPosition != null && this.avatarState().getInterpolatedWalkDistance(0) == this.avatarState().getInterpolatedWalkDistance(1)) {
                 double dx = this.lastPosition.x - this.position().x;
                 double dz = this.lastPosition.z - this.position().z;
-                this.walkDist += (float) Math.sqrt(dx*dx + dz*dz) * 0.6f;
+                this.addWalkedDistance((float) Math.sqrt(dx*dx + dz*dz) * 0.6f);
             }
             this.lastPosition = this.position();
         }

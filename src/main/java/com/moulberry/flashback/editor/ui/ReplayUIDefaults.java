@@ -74,7 +74,7 @@ public class ReplayUIDefaults {
         style.setColor(ImGuiCol.TabActive, 0xFF484040);
         style.setColor(ImGuiCol.ModalWindowDimBg, 0x58CCCCCC);
 
-        if (GLFW.glfwGetKey(Minecraft.getInstance().getWindow().getWindow(), GLFW.GLFW_KEY_K) != 0) {
+        if (GLFW.glfwGetKey(Minecraft.getInstance().getWindow().handle(), GLFW.GLFW_KEY_K) != 0) {
             ImGui.styleColorsDark(style);
         }
     }

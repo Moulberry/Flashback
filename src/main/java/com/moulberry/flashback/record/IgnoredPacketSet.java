@@ -2,6 +2,7 @@ package com.moulberry.flashback.record;
 
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.common.*;
+import net.minecraft.network.protocol.configuration.ClientboundCodeOfConductPacket;
 import net.minecraft.network.protocol.configuration.ClientboundFinishConfigurationPacket;
 import net.minecraft.network.protocol.cookie.ClientboundCookieRequestPacket;
 import net.minecraft.network.protocol.game.*;
@@ -52,6 +53,7 @@ public class IgnoredPacketSet {
 
         // Configuration
         ClientboundFinishConfigurationPacket.class,
+        ClientboundCodeOfConductPacket.class,
 
         // Game
         ClientboundAwardStatsPacket.class,
@@ -106,7 +108,11 @@ public class IgnoredPacketSet {
         ClientboundDebugSamplePacket.class,
         ClientboundPongResponsePacket.class,
         ClientboundTestInstanceBlockStatus.class,
-        ClientboundTrackedWaypointPacket.class
+        ClientboundTrackedWaypointPacket.class,
+        ClientboundDebugChunkValuePacket.class,
+        ClientboundDebugBlockValuePacket.class,
+        ClientboundDebugEntityValuePacket.class,
+        ClientboundDebugEventPacket.class
     );
 
 }

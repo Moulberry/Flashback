@@ -57,8 +57,8 @@ public class MixinEntityRenderer {
         }
     }
 
-    @Inject(method = "renderNameTag", at = @At("HEAD"), cancellable = true)
-    public void renderNameTag(EntityRenderState entityRenderState, Component component, PoseStack poseStack, MultiBufferSource multiBufferSource, int i, CallbackInfo ci) {
+    @Inject(method = "submitNameTag", at = @At("HEAD"), cancellable = true)
+    public void submitNameTag(CallbackInfo ci) {
         EditorState editorState = EditorStateManager.getCurrent();
         if (editorState != null && !editorState.replayVisuals.renderNametags) {
             ci.cancel();

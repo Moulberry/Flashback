@@ -1,5 +1,6 @@
 package com.moulberry.flashback.exporting;
 
+import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
 import org.lwjgl.PointerBuffer;
 import org.lwjgl.system.MemoryStack;
@@ -12,6 +13,7 @@ import java.util.concurrent.Executors;
 
 public class AsyncFileDialogs {
 
+    private static final boolean ON_OSX = Util.getPlatform() == Util.OS.OSX;
     private static CompletableFuture<String> currentSaveOrOpenFileDialog = null;
     private static final ExecutorService dialogThread = Executors.newSingleThreadExecutor();
     private static boolean initializedNfd = false;
@@ -69,7 +71,7 @@ public class AsyncFileDialogs {
             }
         };
 
-        if (Minecraft.ON_OSX) {
+        if (ON_OSX) {
             // MacOS needs dialogs to be run from the main thread
             Minecraft.getInstance().submit(runnable);
         } else {
@@ -128,7 +130,7 @@ public class AsyncFileDialogs {
             }
         };
 
-        if (Minecraft.ON_OSX) {
+        if (ON_OSX) {
             // MacOS needs dialogs to be run from the main thread
             Minecraft.getInstance().submit(runnable);
         } else {
@@ -175,7 +177,7 @@ public class AsyncFileDialogs {
             }
         };
 
-        if (Minecraft.ON_OSX) {
+        if (ON_OSX) {
             // MacOS needs dialogs to be run from the main thread
             Minecraft.getInstance().submit(runnable);
         } else {

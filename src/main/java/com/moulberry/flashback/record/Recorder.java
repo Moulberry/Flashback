@@ -1,8 +1,11 @@
 package com.moulberry.flashback.record;
 
+import com.google.common.collect.ImmutableMultimap;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.mojang.authlib.GameProfile;
+import com.mojang.authlib.properties.Property;
+import com.mojang.authlib.properties.PropertyMap;
 import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.datafixers.util.Pair;
 import com.moulberry.flashback.Flashback;
@@ -22,7 +25,7 @@ import net.minecraft.client.Screenshot;
 import net.minecraft.client.gui.components.BossHealthOverlay;
 import net.minecraft.client.gui.components.LerpingBossEvent;
 import net.minecraft.client.gui.components.PlayerTabOverlay;
-import net.minecraft.client.gui.screens.ReceivingLevelScreen;
+import net.minecraft.client.gui.screens.LevelLoadingScreen;
 import net.minecraft.client.multiplayer.ClientChunkCache;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.multiplayer.ClientPacketListener;
@@ -153,7 +156,7 @@ public class Recorder {
 
         this.metadata.dataVersion = SharedConstants.getCurrentVersion().dataVersion().version();
         this.metadata.protocolVersion = SharedConstants.getProtocolVersion();
-        this.metadata.versionString = SharedConstants.VERSION_STRING;
+        this.metadata.versionString = FabricLoader.getInstance().getRawGameVersion();
 
         if (FabricLoader.getInstance().isModLoaded("bobby")) {
             try {
@@ -265,7 +268,7 @@ public class Recorder {
 
         Minecraft minecraft = Minecraft.getInstance();
 
-        boolean isLevelLoaded = !(Minecraft.getInstance().screen instanceof ReceivingLevelScreen);
+        boolean isLevelLoaded = !(Minecraft.getInstance().screen instanceof LevelLoadingScreen);
         boolean changedDimensions = false;
 
         int localPlayerUpdatesPerSecond = Flashback.getConfig().recording.localPlayerUpdatesPerSecond;
@@ -738,9 +741,11 @@ public class Recorder {
             Vec3 deltaMovement = localPlayer.getDeltaMovement();
 
             GameProfile currentProfile = localPlayer.getGameProfile();
-            GameProfile newProfile = new GameProfile(currentProfile.getId(), currentProfile.getName());
-            newProfile.getProperties().putAll(Minecraft.getInstance().getGameProfile().getProperties());
-            newProfile.getProperties().putAll(currentProfile.getProperties());
+
+            ImmutableMultimap.Builder<String, Property> propertyMapBuilder = ImmutableMultimap.builder();
+            propertyMapBuilder.putAll(Minecraft.getInstance().getGameProfile().properties());
+            propertyMapBuilder.putAll(currentProfile.properties());
+            GameProfile newProfile = new GameProfile(currentProfile.id(), currentProfile.name(), new PropertyMap(propertyMapBuilder.build()));
             int gameModeId = Minecraft.getInstance().gameMode.getPlayerMode().getId();
 
             this.asyncReplaySaver.submit(writer -> {
@@ -917,48 +922,48 @@ public class Recorder {
         Set<UUID> addedEntries = new HashSet<>();
         Set<UUID> addedWithValidProperties = new HashSet<>();
         for (PlayerInfo info : connection.getListedOnlinePlayers()) {
-            boolean isValidProperties = !info.getProfile().getProperties().isEmpty();
-            if (addedEntries.add(info.getProfile().getId())) {
-                infoUpdatePacket.entries.add(new ClientboundPlayerInfoUpdatePacket.Entry(info.getProfile().getId(),
+            boolean isValidProperties = !info.getProfile().properties().isEmpty();
+            if (addedEntries.add(info.getProfile().id())) {
+                infoUpdatePacket.entries.add(new ClientboundPlayerInfoUpdatePacket.Entry(info.getProfile().id(),
                     info.getProfile(), true, info.getLatency(), info.getGameMode(), info.getTabListDisplayName(), info.showHat(), info.getTabListOrder(), null));
                 if (isValidProperties) {
-                    addedWithValidProperties.add(info.getProfile().getId());
+                    addedWithValidProperties.add(info.getProfile().id());
                 }
             }
         }
         for (PlayerInfo info : connection.getOnlinePlayers()) {
-            boolean isValidProperties = !info.getProfile().getProperties().isEmpty();
+            boolean isValidProperties = !info.getProfile().properties().isEmpty();
             boolean add = false;
-            if (addedEntries.add(info.getProfile().getId())) {
+            if (addedEntries.add(info.getProfile().id())) {
                 add = true;
-            } else if (isValidProperties && !addedWithValidProperties.contains(info.getProfile().getId())) {
-                infoUpdatePacket.entries.removeIf(entry -> entry.profileId().equals(info.getProfile().getId()));
+            } else if (isValidProperties && !addedWithValidProperties.contains(info.getProfile().id())) {
+                infoUpdatePacket.entries.removeIf(entry -> entry.profileId().equals(info.getProfile().id()));
                 add = true;
             }
             if (add) {
-                infoUpdatePacket.entries.add(new ClientboundPlayerInfoUpdatePacket.Entry(info.getProfile().getId(),
+                infoUpdatePacket.entries.add(new ClientboundPlayerInfoUpdatePacket.Entry(info.getProfile().id(),
                     info.getProfile(), false, info.getLatency(), info.getGameMode(), info.getTabListDisplayName(), info.showHat(), info.getTabListOrder(), null));
                 if (isValidProperties) {
-                    addedWithValidProperties.add(info.getProfile().getId());
+                    addedWithValidProperties.add(info.getProfile().id());
                 }
             }
         }
         for (AbstractClientPlayer player : level.players()) {
             PlayerInfo info = player.getPlayerInfo();
             if (info != null) {
-                boolean isValidProperties = !info.getProfile().getProperties().isEmpty();
+                boolean isValidProperties = !info.getProfile().properties().isEmpty();
                 boolean add = false;
-                if (addedEntries.add(info.getProfile().getId())) {
+                if (addedEntries.add(info.getProfile().id())) {
                     add = true;
-                } else if (isValidProperties && !addedWithValidProperties.contains(info.getProfile().getId())) {
-                    infoUpdatePacket.entries.removeIf(entry -> entry.profileId().equals(info.getProfile().getId()));
+                } else if (isValidProperties && !addedWithValidProperties.contains(info.getProfile().id())) {
+                    infoUpdatePacket.entries.removeIf(entry -> entry.profileId().equals(info.getProfile().id()));
                     add = true;
                 }
                 if (add) {
                     infoUpdatePacket.entries.add(new ClientboundPlayerInfoUpdatePacket.Entry(player.getUUID(),
                         player.getGameProfile(), false, info.getLatency(), info.getGameMode(), info.getTabListDisplayName(), info.showHat(), info.getTabListOrder(), null));
                     if (isValidProperties) {
-                        addedWithValidProperties.add(info.getProfile().getId());
+                        addedWithValidProperties.add(info.getProfile().id());
                     }
                 }
             } else if (addedEntries.add(player.getUUID())) {
@@ -982,7 +987,7 @@ public class Recorder {
         }
 
         // Scoreboard
-        Scoreboard scoreboard = localPlayer.getScoreboard();
+        Scoreboard scoreboard = localPlayer.connection.scoreboard();
         for (PlayerTeam playerTeam : scoreboard.getPlayerTeams()) {
             gamePackets.add(ClientboundSetPlayerTeamPacket.createAddOrModifyPacket(playerTeam, true));
         }
@@ -1009,7 +1014,7 @@ public class Recorder {
         WorldBorder worldBorder = level.getWorldBorder();
         gamePackets.add(new ClientboundInitializeBorderPacket(worldBorder));
         gamePackets.add(new ClientboundSetTimePacket(level.getGameTime(), level.getDayTime(), level.tickDayTime));
-        gamePackets.add(new ClientboundSetDefaultSpawnPositionPacket(level.getSharedSpawnPos(), level.getSharedSpawnAngle()));
+        gamePackets.add(new ClientboundSetDefaultSpawnPositionPacket(level.getRespawnData()));
         if (level.isRaining()) {
             gamePackets.add(new ClientboundGameEventPacket(ClientboundGameEventPacket.START_RAINING, 0.0f));
         } else {

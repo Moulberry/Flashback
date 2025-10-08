@@ -56,11 +56,11 @@ public class PlayerListWindow {
         for (PlayerInfo playerInfo : connection.getOnlinePlayers()) {
             GameProfile profile = playerInfo.getProfile();
 
-            if (profile.getId().equals(Minecraft.getInstance().player.getUUID())) {
+            if (profile.id().equals(Minecraft.getInstance().player.getUUID())) {
                 continue;
             }
 
-            if (profile.getId().version() != 4) {
+            if (profile.id().version() != 4) {
                 hasNpcs = true;
                 if (!includeNpcs) {
                     continue;
@@ -70,7 +70,7 @@ public class PlayerListWindow {
             double distanceSq = Double.MAX_VALUE;
 
             if (level != null && camera != null) {
-                Player player = level.getPlayerByUUID(profile.getId());
+                Player player = level.getPlayerByUUID(profile.id());
                 if (player != null) {
                     distanceSq = player.distanceToSqr(camera);
                 }
@@ -80,7 +80,7 @@ public class PlayerListWindow {
             if (blankSearch) {
                 searchEntries.add(searchEntry);
             } else {
-                String nameLower = profile.getName().toLowerCase(Locale.ROOT);
+                String nameLower = profile.name().toLowerCase(Locale.ROOT);
                 if (nameLower.startsWith(searchLower)) {
                     searchEntries.add(searchEntry);
                 } else if (nameLower.contains(searchLower)) {
@@ -139,27 +139,27 @@ public class PlayerListWindow {
                 PlayerInfo playerInfo = searchedPlayers.get(i);
                 GameProfile profile = playerInfo.getProfile();
 
-                ImGui.textUnformatted(profile.getName());
+                ImGui.textUnformatted(profile.name());
                 ImGui.sameLine();
                 if (ImGui.smallButton(I18n.get("flashback.tp"))) {
-                    Minecraft.getInstance().getConnection().sendCommand("teleport " + profile.getId());
+                    Minecraft.getInstance().getConnection().sendCommand("teleport " + profile.id());
                     lastUpdate = currentTime;
                 }
                 if (editorState != null) {
                     ImGui.sameLine();
-                    if (editorState.hideDuringExport.contains(profile.getId())) {
+                    if (editorState.hideDuringExport.contains(profile.id())) {
                         if (ImGui.smallButton(I18n.get("flashback.show"))) {
-                            editorState.hideDuringExport.remove(profile.getId());
+                            editorState.hideDuringExport.remove(profile.id());
                             lastUpdate = currentTime;
                         }
                     } else if (ImGui.smallButton(I18n.get("flashback.hide"))) {
-                        editorState.hideDuringExport.add(profile.getId());
+                        editorState.hideDuringExport.add(profile.id());
                         lastUpdate = currentTime;
                     }
                 }
                 ImGui.sameLine();
                 if (ImGui.smallButton(I18n.get("flashback.spectate"))) {
-                    Minecraft.getInstance().getConnection().sendCommand("spectate " + profile.getId());
+                    Minecraft.getInstance().getConnection().sendCommand("spectate " + profile.id());
                     lastUpdate = currentTime;
                 }
                 ImGui.popID();
@@ -194,27 +194,27 @@ public class PlayerListWindow {
         for (PlayerInfo playerInfo : connection.getOnlinePlayers()) {
             GameProfile profile = playerInfo.getProfile();
 
-            if (profile.getId().equals(Minecraft.getInstance().player.getUUID())) {
+            if (profile.id().equals(Minecraft.getInstance().player.getUUID())) {
                 continue;
             }
 
-            if (profile.getId().version() != 4 && !includeNpcs) {
+            if (profile.id().version() != 4 && !includeNpcs) {
                 continue;
             }
 
             if (blankSearch) {
                 if (visible) {
-                    editorState.hideDuringExport.remove(profile.getId());
+                    editorState.hideDuringExport.remove(profile.id());
                 } else {
-                    editorState.hideDuringExport.add(profile.getId());
+                    editorState.hideDuringExport.add(profile.id());
                 }
             } else {
-                String nameLower = profile.getName().toLowerCase(Locale.ROOT);
+                String nameLower = profile.name().toLowerCase(Locale.ROOT);
                 if (nameLower.contains(searchLower)) {
                     if (visible) {
-                        editorState.hideDuringExport.remove(profile.getId());
+                        editorState.hideDuringExport.remove(profile.id());
                     } else {
-                        editorState.hideDuringExport.add(profile.getId());
+                        editorState.hideDuringExport.add(profile.id());
                     }
                 }
             }

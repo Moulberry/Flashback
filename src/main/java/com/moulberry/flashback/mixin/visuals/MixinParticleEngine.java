@@ -23,22 +23,17 @@ public class MixinParticleEngine {
     @Inject(method = "createParticle", at = @At("HEAD"), cancellable = true)
     public void createParticle(ParticleOptions particleOptions, double d, double e, double f, double g, double h, double i, CallbackInfoReturnable<Particle> cir) {
         EditorState editorState = EditorStateManager.getCurrent();
-        if (editorState != null && !editorState.filteredParticles.isEmpty()) {
-            ParticleType<?> particleType = particleOptions.getType();
-            ResourceLocation resourceLocation = BuiltInRegistries.PARTICLE_TYPE.getKey(particleType);
-            if (resourceLocation != null && editorState.filteredParticles.contains(resourceLocation.toString())) {
+        if (editorState != null) {
+            if (!editorState.replayVisuals.renderParticles) {
                 cir.setReturnValue(null);
+                return;
             }
-        }
-    }
-
-    @Inject(method = {"destroy", "crack"}, at = @At("HEAD"), cancellable = true)
-    public void destroy(CallbackInfo ci) {
-        EditorState editorState = EditorStateManager.getCurrent();
-        if (editorState != null && !editorState.filteredParticles.isEmpty()) {
-            ResourceLocation resourceLocation = BuiltInRegistries.PARTICLE_TYPE.getKey(ParticleTypes.BLOCK);
-            if (resourceLocation != null && editorState.filteredParticles.contains(resourceLocation.toString())) {
-                ci.cancel();
+            if (!editorState.filteredParticles.isEmpty()) {
+                ParticleType<?> particleType = particleOptions.getType();
+                ResourceLocation resourceLocation = BuiltInRegistries.PARTICLE_TYPE.getKey(particleType);
+                if (resourceLocation != null && editorState.filteredParticles.contains(resourceLocation.toString())) {
+                    cir.setReturnValue(null);
+                }
             }
         }
     }

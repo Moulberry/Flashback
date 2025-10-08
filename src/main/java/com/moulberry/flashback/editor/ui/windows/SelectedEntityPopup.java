@@ -53,7 +53,7 @@ public class SelectedEntityPopup {
 
         GameProfile skinOverride = editorState.skinOverride.get(entity.getUUID());
         if (skinOverride != null) {
-            changeSkinInput.set(skinOverride.getId().toString());
+            changeSkinInput.set(skinOverride.id().toString());
         } else {
             changeSkinInput.set("");
         }
@@ -66,7 +66,7 @@ public class SelectedEntityPopup {
         ImGui.separator();
 
         if (ImGui.button(I18n.get("flashback.look_at"))) {
-            Minecraft.getInstance().cameraEntity.lookAt(EntityAnchorArgument.Anchor.EYES, entity.getEyePosition());
+            Minecraft.getInstance().getCameraEntity().lookAt(EntityAnchorArgument.Anchor.EYES, entity.getEyePosition());
         }
         ImGui.sameLine();
         if (ImGui.button(I18n.get("flashback.spectate"))) {
@@ -104,7 +104,7 @@ public class SelectedEntityPopup {
                     if (ImGui.checkbox(I18n.get("flashback.hide_cape"), true)) {
                         editorState.hideCape.remove(player.getUUID());
                     }
-                } else if (player.isModelPartShown(PlayerModelPart.CAPE) && player.getSkin().capeTexture() != null) {
+                } else if (player.isModelPartShown(PlayerModelPart.CAPE) && player.getSkin().cape() != null) {
                     if (ImGui.checkbox(I18n.get("flashback.hide_cape"), false)) {
                         editorState.hideCape.add(player.getUUID());
                     }
@@ -163,7 +163,7 @@ public class SelectedEntityPopup {
                             editorState.hideBelowName.remove(player.getUUID());
                         }
                     } else {
-                        Scoreboard scoreboard = player.getScoreboard();
+                        Scoreboard scoreboard = player.level().getScoreboard();
                         Objective objective = scoreboard.getDisplayObjective(DisplaySlot.BELOW_NAME);
                         if (objective != null) {
                             if (ImGui.checkbox(I18n.get("flashback.hide_text_below_name"), false)) {
@@ -184,9 +184,11 @@ public class SelectedEntityPopup {
                     try {
                         UUID changeSkinUuid = UUID.fromString(string);
                         if (ImGui.button(I18n.get("flashback.apply_skin_from_uuid"))) {
-                            ProfileResult profile = Minecraft.getInstance().getMinecraftSessionService().fetchProfile(changeSkinUuid, true);
-                            editorState.skinOverride.put(entity.getUUID(), profile.profile());
-                            editorState.skinOverrideFromFile.remove(entity.getUUID());
+                            ProfileResult profile = Minecraft.getInstance().services().sessionService().fetchProfile(changeSkinUuid, true);
+                            if (profile != null) {
+                                editorState.skinOverride.put(entity.getUUID(), profile.profile());
+                                editorState.skinOverrideFromFile.remove(entity.getUUID());
+                            }
                         }
                     } catch (Exception ignored) {}
                 }

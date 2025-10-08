@@ -62,7 +62,7 @@ public class VisualsWindow {
                 editorState.markDirty();
             }
 
-            if (Minecraft.getInstance().cameraEntity != null && Minecraft.getInstance().cameraEntity != Minecraft.getInstance().player) {
+            if (Minecraft.getInstance().getCameraEntity() != null && Minecraft.getInstance().getCameraEntity() != Minecraft.getInstance().player) {
                 if (ImGui.checkbox(I18n.get("flashback.visuals.gui.hotbar"), visuals.showHotbar)) {
                     visuals.showHotbar = !visuals.showHotbar;
                     editorState.markDirty();

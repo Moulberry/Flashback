@@ -38,8 +38,9 @@ public class MixinLevelRenderer {
         target = "Lnet/minecraft/client/Options;getCloudsType()Lnet/minecraft/client/CloudStatus;",
         shift = At.Shift.BEFORE
     ))
-    public void renderLevelPost(GraphicsResourceAllocator graphicsResourceAllocator, DeltaTracker deltaTracker, boolean renderBlockOutline, Camera camera, Matrix4f matrix4f, Matrix4f projection,
-            GpuBufferSlice gpuBufferSlice, Vector4f vector4f, boolean bl2, CallbackInfo ci, @Local FrameGraphBuilder frameGraphBuilder) {
+    public void renderLevelPost(GraphicsResourceAllocator graphicsResourceAllocator, DeltaTracker deltaTracker, boolean renderBlockOutline, Camera camera, Matrix4f matrix4f,
+                                Matrix4f matrix4f2, Matrix4f matrix4f3, GpuBufferSlice gpuBufferSlice, Vector4f vector4f, boolean bl2, CallbackInfo ci,
+                                @Local FrameGraphBuilder frameGraphBuilder) {
         if (!Flashback.isInReplay()) {
             return;
         }
@@ -66,8 +67,7 @@ public class MixinLevelRenderer {
             modelViewStack.pushMatrix();
             modelViewStack.identity();
 
-            float tickDelta = deltaTracker.getGameTimeDeltaPartialTick(true);
-            WorldRenderHook.renderHook(poseStack, tickDelta, renderBlockOutline, camera, Minecraft.getInstance().gameRenderer, projection);
+            WorldRenderHook.renderHook(poseStack, camera);
 
             this.renderBuffers.bufferSource().endBatch();
 

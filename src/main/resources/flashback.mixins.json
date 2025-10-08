@@ -4,6 +4,7 @@
   "plugin": "com.moulberry.mixinconstraints.ConstraintsMixinPlugin",
   "compatibilityLevel": "JAVA_21",
   "client": [
+    "MixinDebugScreenEntryList",
     "MixinDebugScreenOverlay",
     "MixinLanguageManager",
     "MixinLevelRenderer",
@@ -36,6 +37,7 @@
     "ui.MixinPauseScreen",
     "ui.MixinTitleScreen",
     "visuals.MixinAbstractClientPlayer",
+    "visuals.MixinAvatar",
     "visuals.MixinBossHealthOverlay",
     "visuals.MixinClientLevel",
     "visuals.MixinClientLevelData",
@@ -97,6 +99,7 @@
     "replay_server.MixinChunkStatusTasks",
     "replay_server.MixinPersistentEntitySectionManager",
     "replay_server.MixinPlayerList",
+    "replay_server.MixinPrepareSpawnTask",
     "replay_server.MixinServerChunkCache",
     "replay_server.MixinServerConfigurationPacketListenerImpl",
     "replay_server.MixinServerEntity",

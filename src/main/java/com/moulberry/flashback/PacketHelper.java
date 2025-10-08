@@ -3,6 +3,7 @@ package com.moulberry.flashback;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.*;
 import net.minecraft.server.level.ServerEntity;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.ExperienceOrb;
@@ -19,8 +20,23 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.ArrayList;
+import java.util.function.Predicate;
 
 public class PacketHelper {
+
+    private static ServerEntity.Synchronizer EMPTY_SYNCHRONIZER = new ServerEntity.Synchronizer() {
+        @Override
+        public void sendToTrackingPlayers(Packet<? super ClientGamePacketListener> packet) {
+        }
+
+        @Override
+        public void sendToTrackingPlayersAndSelf(Packet<? super ClientGamePacketListener> packet) {
+        }
+
+        @Override
+        public void sendToTrackingPlayersFiltered(Packet<? super ClientGamePacketListener> packet, Predicate<ServerPlayer> predicate) {
+        }
+    };
 
     public static boolean shouldIgnoreEntity(Entity entity) {
         return entity == null || entity.isRemoved() || entity instanceof EnderDragonPart || entity.getType().clientTrackingRange() <= 0;
@@ -39,7 +55,7 @@ public class PacketHelper {
 
         // Try to construct ServerEntity with dummy values
         try {
-            serverEntity = new ServerEntity(null, entity, 1, false, packet -> {}, (packet, ignore) -> {});
+            serverEntity = new ServerEntity(null, entity, 1, false, EMPTY_SYNCHRONIZER);
         } catch (Exception e) {}
 
         // Error while trying to construct, possibly mod incompatibility? Try bypassing the constructor
@@ -48,7 +64,7 @@ public class PacketHelper {
                 serverEntity = (ServerEntity) UnsafeWrapper.UNSAFE.allocateInstance(ServerEntity.class);
                 serverEntity.positionCodec = new VecDeltaCodec();
                 serverEntity.lastPassengers = new ArrayList<>();
-                serverEntity.broadcast = packet -> {};
+                serverEntity.synchronizer = EMPTY_SYNCHRONIZER;
                 serverEntity.entity = entity;
                 serverEntity.positionCodec.setBase(entity.trackingPosition());
                 serverEntity.lastSentMovement = entity.getDeltaMovement();

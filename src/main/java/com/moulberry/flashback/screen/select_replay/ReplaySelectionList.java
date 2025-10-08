@@ -14,7 +14,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.ObjectSelectionList;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
-import net.minecraft.client.gui.navigation.CommonInputs;
+import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.sounds.SoundEvents;
 import org.jetbrains.annotations.Nullable;
@@ -76,8 +76,8 @@ public class ReplaySelectionList extends ObjectSelectionList<ReplaySelectionEntr
     }
 
     @Override
-    public boolean keyPressed(int i, int j, int k) {
-        if (CommonInputs.selected(i)) {
+    public boolean keyPressed(KeyEvent keyEvent) {
+        if (keyEvent.isSelection()) {
             ReplaySelectionEntry.ReplayListEntry replayListEntry = this.getReplayListEntry();
             if (replayListEntry != null && replayListEntry.canOpen()) {
                 this.minecraft.getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0f));
@@ -86,7 +86,7 @@ public class ReplaySelectionList extends ObjectSelectionList<ReplaySelectionEntr
             }
         }
 
-        return super.keyPressed(i, j, k);
+        return super.keyPressed(keyEvent);
     }
 
     @Override

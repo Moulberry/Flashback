@@ -40,7 +40,7 @@ public class CameraKeyframeType implements KeyframeType<CameraKeyframe> {
 
     @Override
     public @Nullable CameraKeyframe createDirect() {
-        Entity entity = Minecraft.getInstance().cameraEntity;
+        Entity entity = Minecraft.getInstance().getCameraEntity();
         if (entity != null) {
             return new CameraKeyframe(entity);
         }

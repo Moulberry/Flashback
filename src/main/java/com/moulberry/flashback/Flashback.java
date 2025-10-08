@@ -75,6 +75,7 @@ import net.minecraft.FileUtil;
 import net.minecraft.Util;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.components.debug.*;
 import net.minecraft.client.gui.components.toasts.SystemToast;
 import net.minecraft.client.gui.screens.*;
 import net.minecraft.client.gui.screens.multiplayer.JoinMultiplayerScreen;
@@ -100,6 +101,7 @@ import net.minecraft.world.flag.FeatureFlags;
 import net.minecraft.world.level.*;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.biome.Biomes;
+import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.dimension.BuiltinDimensionTypes;
 import net.minecraft.world.level.dimension.DimensionType;
 import net.minecraft.world.level.dimension.LevelStem;
@@ -110,7 +112,6 @@ import net.minecraft.world.level.storage.PrimaryLevelData;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.Nullable;
-import org.lwjgl.glfw.GLFW;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -124,15 +125,7 @@ import java.nio.file.attribute.BasicFileAttributeView;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.time.Duration;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
@@ -162,14 +155,17 @@ public class Flashback implements ModInitializer, ClientModInitializer {
 
     public static long worldBorderLerpStartTime = -1L;
 
+    private static final KeyMapping.Category category = KeyMapping.Category.register(createResourceLocation("keybind"));
     public static final KeyMapping createMarker1KeyBind = KeyBindingHelper.registerKeyBinding(new KeyMapping("flashback.keybind.create_marker_1",
-        InputConstants.Type.KEYSYM, InputConstants.UNKNOWN.getValue(), "flashback.keybind"));
+        InputConstants.Type.KEYSYM, InputConstants.UNKNOWN.getValue(), category));
     public static final KeyMapping createMarker2KeyBind = KeyBindingHelper.registerKeyBinding(new KeyMapping("flashback.keybind.create_marker_2",
-        InputConstants.Type.KEYSYM, InputConstants.UNKNOWN.getValue(), "flashback.keybind"));
+        InputConstants.Type.KEYSYM, InputConstants.UNKNOWN.getValue(), category));
     public static final KeyMapping createMarker3KeyBind = KeyBindingHelper.registerKeyBinding(new KeyMapping("flashback.keybind.create_marker_3",
-        InputConstants.Type.KEYSYM, InputConstants.UNKNOWN.getValue(), "flashback.keybind"));
+        InputConstants.Type.KEYSYM, InputConstants.UNKNOWN.getValue(), category));
     public static final KeyMapping createMarker4KeyBind = KeyBindingHelper.registerKeyBinding(new KeyMapping("flashback.keybind.create_marker_4",
-        InputConstants.Type.KEYSYM, InputConstants.UNKNOWN.getValue(), "flashback.keybind"));
+        InputConstants.Type.KEYSYM, InputConstants.UNKNOWN.getValue(), category));
+
+    public static final ResourceLocation RECORDING_INFO_DEBUG_SCREEN_ID = createResourceLocation("recording_info");
 
     public static ResourceLocation createResourceLocation(String value) {
         return ResourceLocation.fromNamespaceAndPath("flashback", value);
@@ -373,6 +369,23 @@ public class Flashback implements ModInitializer, ClientModInitializer {
             }
         });
 
+        // Setup custom debug screen info
+        DebugScreenEntries.register(RECORDING_INFO_DEBUG_SCREEN_ID, new DebugScreenEntry() {
+            @Override
+            public void display(DebugScreenDisplayer debugScreenDisplayer, @Nullable Level level, @Nullable LevelChunk levelChunk, @Nullable LevelChunk levelChunk2) {
+                if (Flashback.RECORDER != null) {
+                    debugScreenDisplayer.addToGroup(RECORDING_INFO_DEBUG_SCREEN_ID, Flashback.RECORDER.getDebugString());
+                }
+            }
+        });
+        Map<DebugScreenProfile, Map<ResourceLocation, DebugScreenEntryStatus>> newProfiles = new LinkedHashMap<>();
+        for (Map.Entry<DebugScreenProfile, Map<ResourceLocation, DebugScreenEntryStatus>> entry : DebugScreenEntries.PROFILES.entrySet()) {
+            var newMap = new LinkedHashMap<>(entry.getValue());
+            newMap.put(RECORDING_INFO_DEBUG_SCREEN_ID, DebugScreenEntryStatus.IN_F3);
+            newProfiles.put(entry.getKey(), Collections.unmodifiableMap(newMap));
+        }
+        DebugScreenEntries.PROFILES = Collections.unmodifiableMap(newProfiles);
+
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) -> {
             var flashback = ClientCommandManager.literal("flashback");
             flashback.then(ClientCommandManager.literal("start").executes(this::startRecordingReplay));
@@ -480,7 +493,7 @@ public class Flashback implements ModInitializer, ClientModInitializer {
             AccurateEntityPositionHandler.tick();
 
             // Fix for camera entity sometimes being incorrect when respawning
-            Entity camera = Minecraft.getInstance().cameraEntity;
+            Entity camera = Minecraft.getInstance().getCameraEntity();
             LocalPlayer player = Minecraft.getInstance().player;
             if (player != null && camera != null && camera != player) {
                 if (camera.isRemoved()) {
@@ -498,7 +511,7 @@ public class Flashback implements ModInitializer, ClientModInitializer {
 
         ClientTickEvents.START_CLIENT_TICK.register(minecraft -> {
             if (RECORDER != null && Flashback.config.advanced.synchronizeTicking && minecraft.hasSingleplayerServer()) {
-                boolean isLevelLoaded = !(minecraft.screen instanceof ReceivingLevelScreen);
+                boolean isLevelLoaded = !(minecraft.screen instanceof LevelLoadingScreen);
                 boolean willRecord = minecraft.level != null && (minecraft.getOverlay() == null || !minecraft.getOverlay().isPauseScreen()) &&
                     !minecraft.isPaused() && !RECORDER.isPaused() && isLevelLoaded;
                 while (willRecord && !synchronizeTickingCanTickClient.compareAndSet(true, false)) {

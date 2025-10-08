@@ -66,21 +66,11 @@ public class SaveableFramebufferQueue implements AutoCloseable {
             src.setFilterMode(FilterMode.LINEAR);
         }
 
-        RenderSystem.AutoStorageIndexBuffer autoStorageIndexBuffer = RenderSystem.getSequentialBuffer(VertexFormat.Mode.QUADS);
-        GpuBuffer indexBuffer = autoStorageIndexBuffer.getBuffer(6);
-        GpuBuffer vertexBuffer = RenderSystem.getQuadVertexBuffer();
-
-        GpuBufferSlice gpuBufferSlice = RenderSystem.getDynamicUniforms().writeTransform(RenderSystem.getModelViewMatrix(), new Vector4f(1.0F, 1.0F, 1.0F, 1.0F),
-            RenderSystem.getModelOffset(), RenderSystem.getTextureMatrix(), RenderSystem.getShaderLineWidth());
-
         try (RenderPass renderPass = RenderSystem.getDevice().createCommandEncoder().createRenderPass(() -> "flashback flip pass", this.flipBufferView, OptionalInt.empty())) {
             renderPass.setPipeline(ShaderManager.BLIT_SCREEN_FLIP);
             RenderSystem.bindDefaultUniforms(renderPass);
-            renderPass.setUniform("DynamicTransforms", gpuBufferSlice);
-            renderPass.setVertexBuffer(0, vertexBuffer);
-            renderPass.setIndexBuffer(indexBuffer, autoStorageIndexBuffer.type());
             renderPass.bindSampler("InSampler", src.getColorTextureView());
-            renderPass.drawIndexed(0, 0, 6, 1);
+            renderPass.draw(0, 3);
         }
 
         // todo nobuild

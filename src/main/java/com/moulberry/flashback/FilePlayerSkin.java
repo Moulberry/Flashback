@@ -4,8 +4,10 @@ import com.mojang.blaze3d.platform.NativeImage;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.client.resources.DefaultPlayerSkin;
-import net.minecraft.client.resources.PlayerSkin;
+import net.minecraft.core.ClientAsset;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.player.PlayerModelType;
+import net.minecraft.world.entity.player.PlayerSkin;
 
 import java.io.InputStream;
 import java.nio.file.Files;
@@ -52,9 +54,9 @@ public class FilePlayerSkin {
 
             // We determine the type using the alpha of the pixel at 54, 20
             int argb = nativeImage.getPixel(54 * w / 64, 20 * h / 64);
-            PlayerSkin.Model model = PlayerSkin.Model.WIDE;
+            PlayerModelType model = PlayerModelType.WIDE;
             if (((argb >> 24) & 0xFF) < 20) {
-                model = PlayerSkin.Model.SLIM;
+                model = PlayerModelType.SLIM;
             }
 
             DynamicTexture dynamicTexture = new DynamicTexture(() -> "file player skin", nativeImage);
@@ -63,7 +65,7 @@ public class FilePlayerSkin {
             Minecraft.getInstance().getTextureManager().register(resourceLocation, dynamicTexture);
             GlobalCleaner.INSTANCE.register(this, new CleanState(resourceLocation));
 
-            this.playerSkin = new PlayerSkin(resourceLocation, null, null, null, model, false);
+            this.playerSkin = PlayerSkin.insecure(new ClientAsset.ResourceTexture(resourceLocation, resourceLocation), null, null, model);
         } catch (Exception e) {
             Flashback.LOGGER.error("Unable to load skin from file", e);
             this.playerSkin = DefaultPlayerSkin.getDefaultSkin();

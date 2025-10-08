@@ -72,10 +72,11 @@ import net.minecraft.server.level.ServerEntity;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.level.TicketType;
-import net.minecraft.server.level.progress.ChunkProgressListenerFactory;
+import net.minecraft.server.level.progress.LevelLoadListener;
 import net.minecraft.server.network.CommonListenerCookie;
 import net.minecraft.server.network.ConfigurationTask;
 import net.minecraft.server.packs.repository.PackRepository;
+import net.minecraft.server.players.NameAndId;
 import net.minecraft.server.players.PlayerList;
 import net.minecraft.stats.ServerStatsCounter;
 import net.minecraft.util.Mth;
@@ -180,8 +181,8 @@ public class ReplayServer extends IntegratedServer {
     private boolean initializedWithSnapshot = false;
 
     public ReplayServer(Thread thread, Minecraft minecraft, LevelStorageSource.LevelStorageAccess levelStorageAccess, PackRepository packRepository, WorldStem worldStem, Services services,
-                        ChunkProgressListenerFactory chunkProgressListenerFactory, UUID playbackUUID, Path path) {
-        super(thread, minecraft, levelStorageAccess, packRepository, worldStem, services, chunkProgressListenerFactory);
+                        LevelLoadListener levelLoadListener, UUID playbackUUID, Path path) {
+        super(thread, minecraft, levelStorageAccess, packRepository, worldStem, services, levelLoadListener);
         this.playbackUUID = playbackUUID;
         this.gamePacketHandler = new ReplayGamePacketHandler(this);
         this.configurationPacketHandler = new ReplayConfigurationPacketHandler(this);
@@ -310,7 +311,7 @@ public class ReplayServer extends IntegratedServer {
     public boolean initServer() {
         Entity.ENTITY_COUNTER.set(1000000);
 
-        this.setPlayerList(new PlayerList(this, this.registries(), this.playerDataStorage, 1) {
+        this.setPlayerList(new PlayerList(this, this.registries(), this.playerDataStorage, this.notificationManager()) {
             @Override
             public void placeNewPlayer(Connection connection, ServerPlayer serverPlayer, CommonListenerCookie commonListenerCookie) {
                 if (Flashback.getConfig().internal.filterUnnecessaryPackets) {
@@ -320,7 +321,7 @@ public class ReplayServer extends IntegratedServer {
             }
 
             @Override
-            public boolean canBypassPlayerLimit(GameProfile gameProfile) {
+            public boolean canBypassPlayerLimit(NameAndId nameAndId) {
                 return true;
             }
 
@@ -773,7 +774,7 @@ public class ReplayServer extends IntegratedServer {
         return false;
     }
 
-    public static final TicketType ENTITY_LOAD_TICKET = new TicketType(20L, false, TicketType.TicketUse.LOADING_AND_SIMULATION);
+    public static final TicketType ENTITY_LOAD_TICKET = new TicketType(20L, TicketType.FLAG_LOADING | TicketType.FLAG_SIMULATION);
 
     @Override
     public void loadLevel() {
@@ -1168,13 +1169,13 @@ public class ReplayServer extends IntegratedServer {
                         byte quantizedXRot = (byte) Mth.floor(serverEntity.entity.getXRot() * 256.0F / 360.0F);
 
                         if (!serverEntity.entity.isPassenger() && !serverEntity.positionCodec.getBase().equals(trackingPosition)) {
-                            trackedEntity.broadcast(new ClientboundEntityPositionSyncPacket(serverEntity.entity.getId(),
+                            trackedEntity.sendToTrackingPlayers(new ClientboundEntityPositionSyncPacket(serverEntity.entity.getId(),
                                     PositionMoveRotation.of(serverEntity.entity), serverEntity.wasOnGround));
                             serverEntity.positionCodec.setBase(trackingPosition);
                             serverEntity.lastSentYRot = quantizedYRot;
                             serverEntity.lastSentXRot = quantizedXRot;
                         } else if (quantizedYRot != serverEntity.lastSentYRot || quantizedXRot != serverEntity.lastSentXRot) {
-                            trackedEntity.broadcast(new ClientboundMoveEntityPacket.Rot(entityId, quantizedYRot, quantizedXRot, serverEntity.wasOnGround));
+                            trackedEntity.sendToTrackingPlayers(new ClientboundMoveEntityPacket.Rot(entityId, quantizedYRot, quantizedXRot, serverEntity.wasOnGround));
                             serverEntity.lastSentYRot = quantizedYRot;
                             serverEntity.lastSentXRot = quantizedXRot;
                         }
@@ -1570,7 +1571,7 @@ public class ReplayServer extends IntegratedServer {
     }
 
     @Override
-    public boolean isSingleplayerOwner(GameProfile gameProfile) {
-        return gameProfile.getName().equals(REPLAY_VIEWER_NAME) && gameProfile.getProperties().containsKey("IsReplayViewer");
+    public boolean isSingleplayerOwner(NameAndId nameAndId) {
+        return nameAndId.name().equals(REPLAY_VIEWER_NAME);
     }
 }

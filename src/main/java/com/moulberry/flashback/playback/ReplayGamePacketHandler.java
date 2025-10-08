@@ -107,12 +107,12 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
         }
     }
 
-    private void forward(Entity entity, Packet<?> packet) {
+    private void forward(Entity entity, Packet<? super ClientGamePacketListener> packet) {
         if (entity == null) {
             this.forward(packet);
         } else {
             ServerChunkCache serverChunkCache = this.level().getChunkSource();
-            serverChunkCache.broadcast(entity, packet);
+            serverChunkCache.sendToTrackingPlayers(entity, packet);
         }
     }
 
@@ -213,7 +213,6 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
 
     private ServerPlayer spawnPlayer(ClientboundAddEntityPacket addEntityPacket, GameProfile gameProfile, GameType gameType) {
         this.flushPendingEntities();
-        gameProfile.getProperties().removeAll("IsReplayViewer");
 
         CommonListenerCookie commonListenerCookie = CommonListenerCookie.createInitial(gameProfile, false);
         ServerPlayer serverPlayer = new FakePlayer(this.replayServer, this.level(), commonListenerCookie.gameProfile(), commonListenerCookie.clientInformation()) {
@@ -531,14 +530,14 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
                 continue;
             }
 
-            passenger.startRiding(vehicle, true);
+            passenger.startRiding(vehicle, true, false);
         }
     }
 
     @Override
     public void handleExplosion(ClientboundExplodePacket e) {
-        ClientboundExplodePacket withoutKnockback = new ClientboundExplodePacket(e.center(),
-                Optional.empty(), e.explosionParticle(), e.explosionSound());
+        ClientboundExplodePacket withoutKnockback = new ClientboundExplodePacket(e.center(), e.radius(), e.blockCount(),
+                Optional.empty(), e.explosionParticle(), e.explosionSound(), e.blockParticles());
         forward(withoutKnockback);
     }
 
@@ -790,10 +789,8 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
             }
             Holder.Reference<Biome> plains = this.replayServer.registryAccess().lookupOrThrow(Registries.BIOME).get(Biomes.PLAINS).get();
             LevelStem levelStem = new LevelStem(commonPlayerSpawnInfo.dimensionType(), new EmptyLevelSource(plains));
-            var progressListener = this.replayServer.progressListenerFactory.create(this.replayServer.worldData.getGameRules().getInt(GameRules.RULE_SPAWN_CHUNK_RADIUS));
             ServerLevel serverLevel = new ServerLevel(this.replayServer, this.replayServer.executor, this.replayServer.storageSource,
-                serverLevelData, dimension, levelStem, progressListener,
-                false, commonPlayerSpawnInfo.seed(), List.of(), false, null);
+                serverLevelData, dimension, levelStem, false, commonPlayerSpawnInfo.seed(), List.of(), false, null);
             serverLevel.noSave = true;
             ServerWorldEvents.LOAD.invoker().onWorldLoad(this.replayServer, serverLevel);
             this.replayServer.levels.put(dimension, serverLevel);
@@ -996,8 +993,8 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
 
             // Copy over the customization & main hand even if the entity data flag isn't set
             // This should ensure that the skin layers are kept properly when respawning
-            newServerPlayer.getEntityData().set(Player.DATA_PLAYER_MODE_CUSTOMISATION, oldServerPlayer.getEntityData().get(Player.DATA_PLAYER_MODE_CUSTOMISATION));
-            newServerPlayer.getEntityData().set(Player.DATA_PLAYER_MAIN_HAND, oldServerPlayer.getEntityData().get(Player.DATA_PLAYER_MAIN_HAND));
+            newServerPlayer.getEntityData().set(Avatar.DATA_PLAYER_MODE_CUSTOMISATION, oldServerPlayer.getEntityData().get(Avatar.DATA_PLAYER_MODE_CUSTOMISATION));
+            newServerPlayer.getEntityData().set(Avatar.DATA_PLAYER_MAIN_HAND, oldServerPlayer.getEntityData().get(Avatar.DATA_PLAYER_MAIN_HAND));
 
             if (clientboundRespawnPacket.shouldKeep((byte)2)) {
                 newServerPlayer.setShiftKeyDown(oldServerPlayer.isShiftKeyDown());
@@ -1080,10 +1077,7 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
         forward(entity, clientboundSetEntityMotionPacket);
 
         if (entity != null) {
-            double motionX = clientboundSetEntityMotionPacket.getXa();
-            double motionY = clientboundSetEntityMotionPacket.getYa();
-            double motionZ = clientboundSetEntityMotionPacket.getZa();
-            entity.setDeltaMovement(motionX, motionY, motionZ);
+            entity.setDeltaMovement(clientboundSetEntityMotionPacket.getMovement());
         }
     }
 
@@ -1179,7 +1173,7 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
 
     @Override
     public void handleSetSpawn(ClientboundSetDefaultSpawnPositionPacket clientboundSetDefaultSpawnPositionPacket) {
-        this.level().setDefaultSpawnPos(clientboundSetDefaultSpawnPositionPacket.getPos(), clientboundSetDefaultSpawnPositionPacket.getAngle());
+        this.level().setRespawnData(clientboundSetDefaultSpawnPositionPacket.respawnData());
     }
 
     @Override
@@ -1704,6 +1698,26 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
 
     @Override
     public void handleWaypoint(ClientboundTrackedWaypointPacket clientboundTrackedWaypointPacket) {
+    }
+
+    @Override
+    public void handleDebugChunkValue(ClientboundDebugChunkValuePacket clientboundDebugChunkValuePacket) {
+    }
+
+    @Override
+    public void handleDebugBlockValue(ClientboundDebugBlockValuePacket clientboundDebugBlockValuePacket) {
+    }
+
+    @Override
+    public void handleDebugEntityValue(ClientboundDebugEntityValuePacket clientboundDebugEntityValuePacket) {
+    }
+
+    @Override
+    public void handleDebugEvent(ClientboundDebugEventPacket clientboundDebugEventPacket) {
+    }
+
+    @Override
+    public void handleGameTestHighlightPos(ClientboundGameTestHighlightPosPacket clientboundGameTestHighlightPosPacket) {
     }
 
     @Override

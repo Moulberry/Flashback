@@ -89,7 +89,7 @@ public abstract class MixinServerLevel implements ServerLevelExt {
         }
     }
 
-    @Inject(method = "waitForChunkAndEntities", at = @At("HEAD"), cancellable = true)
+    @Inject(method = "waitForEntities", at = @At("HEAD"), cancellable = true)
     public void waitForChunkAndEntities(ChunkPos chunkPos, int i, CallbackInfo ci) {
         if (this.getServer() instanceof ReplayServer) {
             ci.cancel();

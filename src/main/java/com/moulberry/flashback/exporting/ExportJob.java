@@ -43,10 +43,7 @@ import java.nio.FloatBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Random;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.LockSupport;
 
@@ -483,6 +480,7 @@ public class ExportJob {
 
         Minecraft minecraft = Minecraft.getInstance();
 
+        minecraft.packetProcessor().processQueuedPackets();
         while (minecraft.pollTask()) {}
         this.updateClientFreeze(frozen);
         minecraft.tick();
@@ -583,7 +581,7 @@ public class ExportJob {
 
             lines.add("");
 
-            boolean debugPressed = GLFW.glfwGetKey(Minecraft.getInstance().getWindow().getWindow(), GLFW.GLFW_KEY_F3) != GLFW.GLFW_RELEASE;
+            boolean debugPressed = GLFW.glfwGetKey(Minecraft.getInstance().getWindow().handle(), GLFW.GLFW_KEY_F3) != GLFW.GLFW_RELEASE;
             if (pressedDebugKey != debugPressed) {
                 pressedDebugKey = debugPressed;
                 if (pressedDebugKey) {
@@ -603,7 +601,7 @@ public class ExportJob {
 
             if (currentFrame == totalFrames) {
                 lines.add("Saving...");
-            } else if (GLFW.glfwGetKey(Minecraft.getInstance().getWindow().getWindow(), GLFW.GLFW_KEY_ESCAPE) != GLFW.GLFW_RELEASE) {
+            } else if (GLFW.glfwGetKey(Minecraft.getInstance().getWindow().handle(), GLFW.GLFW_KEY_ESCAPE) != GLFW.GLFW_RELEASE) {
                 long current = System.currentTimeMillis();
                 if (this.escapeCancelStartMillis <= 0 || current < this.escapeCancelStartMillis) {
                     this.escapeCancelStartMillis = current;
@@ -643,7 +641,7 @@ public class ExportJob {
                 font.drawInBatch(Component.literal(patreon).withStyle(ChatFormatting.UNDERLINE), x - patreonWidth/2f, y,
                     -1, true, matrix, bufferSource, Font.DisplayMode.NORMAL, 0, 0xF000F0);
 
-                if (GLFW.glfwGetMouseButton(window.getWindow(), GLFW.GLFW_MOUSE_BUTTON_LEFT) != 0) {
+                if (GLFW.glfwGetMouseButton(window.handle(), GLFW.GLFW_MOUSE_BUTTON_LEFT) != 0) {
                     if (!this.patreonLinkClicked) {
                         this.patreonLinkClicked = true;
                         Util.getPlatform().openUri(patreon);

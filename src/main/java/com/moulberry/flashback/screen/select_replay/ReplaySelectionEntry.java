@@ -21,6 +21,7 @@ import net.minecraft.client.gui.screens.GenericMessageScreen;
 import net.minecraft.client.gui.screens.LoadingDotsText;
 import net.minecraft.client.gui.screens.ProgressScreen;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.resources.language.I18n;
@@ -71,11 +72,12 @@ public abstract class ReplaySelectionEntry extends ObjectSelectionList.Entry<Rep
         }
 
         @Override
-        public void render(GuiGraphics guiGraphics, int index, int y, int x, int width, int height, int mouseX, int mouseY, boolean hovered, float partialTick) {
-            guiGraphics.blitSprite(RenderPipelines.GUI_TEXTURED, SPRITES.get(true, hovered), x + 4, y + 2, width - 8, height - 4);
+        public void renderContent(GuiGraphics guiGraphics, int mouseX, int mouseY, boolean hovered, float partialTick) {
+            guiGraphics.blitSprite(RenderPipelines.GUI_TEXTURED, SPRITES.get(true, hovered), this.getContentX() + 4, this.getContentY() + 2,
+                    this.getContentWidth() - 8, this.getContentHeight() - 4);
 
             int p = (this.minecraft.screen.width - this.minecraft.font.width(LOAD_REPLAY_LABEL)) / 2;
-            int q = y + (height - this.minecraft.font.lineHeight) / 2 + 1;
+            int q = this.getContentY() + (this.getContentHeight() - this.minecraft.font.lineHeight) / 2 + 1;
             guiGraphics.drawString(this.minecraft.font, LOAD_REPLAY_LABEL, p, q, 0xFFFFFFFF, true);
         }
 
@@ -94,9 +96,9 @@ public abstract class ReplaySelectionEntry extends ObjectSelectionList.Entry<Rep
         }
 
         @Override
-        public void render(GuiGraphics guiGraphics, int i, int j, int k, int l, int m, int n, int o, boolean bl, float f) {
+        public void renderContent(GuiGraphics guiGraphics, int mouseX, int mouseY, boolean hovered, float partialTick) {
             int p = (this.minecraft.screen.width - this.minecraft.font.width(LOADING_LABEL)) / 2;
-            int q = j + (m - this.minecraft.font.lineHeight) / 2;
+            int q = this.getContentY() + (this.getContentHeight() - this.minecraft.font.lineHeight) / 2;
             guiGraphics.drawString(this.minecraft.font, LOADING_LABEL, p, q, 0xFFFFFFFF, false);
             String string = LoadingDotsText.get(Util.getMillis());
             int r = (this.minecraft.screen.width - this.minecraft.font.width(string)) / 2;
@@ -139,7 +141,9 @@ public abstract class ReplaySelectionEntry extends ObjectSelectionList.Entry<Rep
         }
 
         @Override
-        public void render(GuiGraphics guiGraphics, int index, int y, int x, int width, int height, int mouseX, int mouseY, boolean hovered, float partialTick) {
+        public void renderContent(GuiGraphics guiGraphics, int mouseX, int mouseY, boolean hovered, float partialTick) {
+            int x = this.getContentX();
+            int y = this.getContentY();
             guiGraphics.drawString(this.minecraft.font, this.nameComponent, x + ICON_WIDTH + 3, y + 1, -1, false);
 
             int textY = y + this.minecraft.font.lineHeight + 2;
@@ -165,15 +169,15 @@ public abstract class ReplaySelectionEntry extends ObjectSelectionList.Entry<Rep
         }
 
         @Override
-        public boolean mouseClicked(double d, double e, int i) {
+        public boolean mouseClicked(MouseButtonEvent mouseButtonEvent, boolean doubleClick) {
             this.replaySelectionList.setSelected(this);
-            if (d - (double) this.replaySelectionList.getRowLeft() <= 32.0 || Util.getMillis() - this.lastClickTime < 250L) {
+            if (mouseButtonEvent.x() - (double) this.replaySelectionList.getRowLeft() <= 32.0 || Util.getMillis() - this.lastClickTime < 250L) {
                 this.minecraft.getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0f));
                 this.minecraft.setScreen(new SelectReplayScreen(this.replaySelectionList.getScreen(), this.path));
                 return true;
             }
             this.lastClickTime = Util.getMillis();
-            return super.mouseClicked(d, e, i);
+            return super.mouseClicked(mouseButtonEvent, doubleClick);
         }
     }
 
@@ -203,7 +207,10 @@ public abstract class ReplaySelectionEntry extends ObjectSelectionList.Entry<Rep
         }
 
         @Override
-        public void render(GuiGraphics guiGraphics, int index, int y, int x, int width, int height, int mouseX, int mouseY, boolean hovered, float partialTick) {
+        public void renderContent(GuiGraphics guiGraphics, int mouseX, int mouseY, boolean hovered, float partialTick) {
+            int x = this.getContentX();
+            int y = this.getContentY();
+
             String title = this.summary.getReplayName();
             String fileAndTime = this.summary.getReplayId();
             long p = this.summary.getLastModified();
@@ -211,7 +218,7 @@ public abstract class ReplaySelectionEntry extends ObjectSelectionList.Entry<Rep
                 fileAndTime = fileAndTime + " (" + DATE_FORMAT.format(Instant.ofEpochMilli(p)) + ")";
             }
             if (StringUtils.isEmpty(title)) {
-                title = I18n.get("flashback.select_replay.replay") + " " + (index + 1);
+                title = I18n.get("flashback.select_replay.replay");
             }
             Component info = this.summary.getInfo();
 
@@ -257,12 +264,12 @@ public abstract class ReplaySelectionEntry extends ObjectSelectionList.Entry<Rep
         }
 
         @Override
-        public boolean mouseClicked(double d, double e, int i) {
+        public boolean mouseClicked(MouseButtonEvent event, boolean doubleClicked) {
             if (!this.summary.canOpen()) {
                 return true;
             }
             this.replaySelectionList.setSelected(this);
-            if (d - (double) this.replaySelectionList.getRowLeft() <= 32.0 || Util.getMillis() - this.lastClickTime < 250L) {
+            if (event.x() - (double) this.replaySelectionList.getRowLeft() <= 32.0 || Util.getMillis() - this.lastClickTime < 250L) {
                 if (this.canOpen()) {
                     this.minecraft.getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0f));
                     this.openReplay();
@@ -270,7 +277,7 @@ public abstract class ReplaySelectionEntry extends ObjectSelectionList.Entry<Rep
                 return true;
             }
             this.lastClickTime = Util.getMillis();
-            return super.mouseClicked(d, e, i);
+            return super.mouseClicked(event, doubleClicked);
         }
 
         public boolean canOpen() {
@@ -283,7 +290,7 @@ public abstract class ReplaySelectionEntry extends ObjectSelectionList.Entry<Rep
                     Screen previousScreen = this.minecraft.screen;
                     BooleanConsumer afterWarning = doLoad -> {
                         if (doLoad) {
-                            this.minecraft.forceSetScreen(new GenericMessageScreen(Component.translatable("flashback.select_replay.data_read")));
+                            this.minecraft.setScreenAndShow(new GenericMessageScreen(Component.translatable("flashback.select_replay.data_read")));
                             Flashback.openReplayWorld(this.summary.getPath());
                         } else {
                             this.minecraft.setScreen(previousScreen);
@@ -293,7 +300,7 @@ public abstract class ReplaySelectionEntry extends ObjectSelectionList.Entry<Rep
                     this.minecraft.setScreen(new ConfirmScreen(afterWarning, Component.translatable("flashback.screen_registry_mismatch"), message,
                         Component.translatable("selectWorld.backupJoinSkipButton"), CommonComponents.GUI_CANCEL));
                 } else {
-                    this.minecraft.forceSetScreen(new GenericMessageScreen(Component.translatable("flashback.select_replay.data_read")));
+                    this.minecraft.setScreenAndShow(new GenericMessageScreen(Component.translatable("flashback.select_replay.data_read")));
                     Flashback.openReplayWorld(this.summary.getPath());
                 }
 

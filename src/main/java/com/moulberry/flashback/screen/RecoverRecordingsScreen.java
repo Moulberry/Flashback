@@ -68,7 +68,8 @@ public class RecoverRecordingsScreen extends Screen {
     public void render(GuiGraphics guiGraphics, int i, int j, float f) {
         super.render(guiGraphics, i, j, f);
         guiGraphics.drawCenteredString(this.font, this.title, this.width / 2, 70, 0xFFFFFFFF);
-        this.message.renderCentered(guiGraphics, this.width / 2, 90);
+
+        this.message.render(guiGraphics, MultiLineLabel.Align.CENTER, this.width / 2, 90, this.font.lineHeight, true, -1);
     }
 
     @Override

@@ -32,7 +32,7 @@ public class MixinWorldBorderMovingBorderExtent {
         return original.call();
     }
 
-    @WrapOperation(method = "getLerpRemainingTime", at = @At(value = "INVOKE", target = "Lnet/minecraft/Util;getMillis()J"), require = 0)
+    @WrapOperation(method = "getLerpTime", at = @At(value = "INVOKE", target = "Lnet/minecraft/Util;getMillis()J"), require = 0)
     private long getLerpRemainingTime(Operation<Long> original) {
         if (Flashback.isInReplay()) {
             return Flashback.getVisualMillis();

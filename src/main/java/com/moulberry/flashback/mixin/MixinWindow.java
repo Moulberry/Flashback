@@ -35,7 +35,7 @@ public abstract class MixinWindow {
 
     @Shadow
     @Final
-    private long window;
+    private long handle;
 
     @Unique
     private float calculateWidthScaleFactor() {
@@ -81,7 +81,7 @@ public abstract class MixinWindow {
 
     @Inject(method = "onResize", at=@At("HEAD"), cancellable = true)
     public void onResize(long l, int i, int j, CallbackInfo ci) {
-        if (l != this.window) {
+        if (l != this.handle) {
             ci.cancel();
         }
     }

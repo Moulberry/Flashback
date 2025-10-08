@@ -231,7 +231,7 @@ public abstract sealed class EditorMovementControls permits EditorMovementContro
 
             double baseSensitivity = Minecraft.getInstance().options.sensitivity().get() * (double)0.6f + (double)0.2f;
             double sensitivity = baseSensitivity * baseSensitivity * baseSensitivity * 8.0;
-            int invert = Minecraft.getInstance().options.invertYMouse().get() ? -1 : 1;
+            int invert = Minecraft.getInstance().options.invertMouseY().get() ? -1 : 1;
 
             player.turn(mouseDeltaX * sensitivity, mouseDeltaY * sensitivity * invert);
 

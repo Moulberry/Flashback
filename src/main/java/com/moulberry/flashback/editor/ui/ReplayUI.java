@@ -23,9 +23,10 @@ import imgui.flag.*;
 import imgui.internal.ImGuiContext;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.LevelLoadingScreen;
 import net.minecraft.client.gui.screens.LoadingOverlay;
 import net.minecraft.client.gui.screens.ProgressScreen;
-import net.minecraft.client.gui.screens.ReceivingLevelScreen;
+import net.minecraft.client.input.InputQuirks;
 import net.minecraft.client.multiplayer.MultiPlayerGameMode;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.resources.language.ClientLanguage;
@@ -147,12 +148,12 @@ public class ReplayUI {
         Path relativePath = FabricLoader.getInstance().getGameDir().relativize(path);
         ReplayUI.getIO().setIniFilename(relativePath.toString());
 
-        // ReplayUI.getIO().addConfigFlags(ImGuiConfigFlags.NavEnableKeyboard);
-        ReplayUI.getIO().addConfigFlags(ImGuiConfigFlags.DockingEnable);
-        // ReplayUI.getIO().addConfigFlags(ImGuiConfigFlags.ViewportsEnable);
-        ReplayUI.getIO().setConfigMacOSXBehaviors(Minecraft.ON_OSX);
+        // ImGui.getIO().addConfigFlags(ImGuiConfigFlags.NavEnableKeyboard);
+        ImGui.getIO().addConfigFlags(ImGuiConfigFlags.DockingEnable);
+        // ImGui.getIO().addConfigFlags(ImGuiConfigFlags.ViewportsEnable);
+        ImGui.getIO().setConfigMacOSXBehaviors(InputQuirks.REPLACE_CTRL_KEY_WITH_CMD_KEY);
 
-        imguiGlfw.init(Minecraft.getInstance().getWindow().getWindow(), true);
+        imguiGlfw.init(Minecraft.getInstance().getWindow().handle(), true);
         imguiGl3.init("#version 150");
 
         contentScale = imguiGlfw.contentScale;
@@ -541,7 +542,7 @@ public class ReplayUI {
             throw new IllegalStateException("Tried to use EditorUI while it was not initialized");
         }
 
-        if (Minecraft.getInstance().screen instanceof ProgressScreen || Minecraft.getInstance().screen instanceof ReceivingLevelScreen) {
+        if (Minecraft.getInstance().screen instanceof ProgressScreen || Minecraft.getInstance().screen instanceof LevelLoadingScreen) {
             return;
         }
 
@@ -941,7 +942,7 @@ public class ReplayUI {
         if (ImGui.isMouseClicked(GLFW.GLFW_MOUSE_BUTTON_RIGHT)) {
             HitResult result = getLookTarget();
             if (result instanceof EntityHitResult entityHitResult) {
-                if (Minecraft.getInstance().player == Minecraft.getInstance().cameraEntity) {
+                if (Minecraft.getInstance().player == Minecraft.getInstance().getCameraEntity()) {
                     Minecraft.getInstance().player.setDeltaMovement(Vec3.ZERO);
                 }
                 selectedEntity = entityHitResult.getEntity().getUUID();
@@ -968,7 +969,7 @@ public class ReplayUI {
             return null;
         }
 
-        Entity cameraEntity = Minecraft.getInstance().cameraEntity;
+        Entity cameraEntity = Minecraft.getInstance().getCameraEntity();
         if (cameraEntity == null) {
             return null;
         }
@@ -1031,7 +1032,7 @@ public class ReplayUI {
     }
 
     public static boolean isCtrlOrCmdDown() {
-        return Minecraft.ON_OSX ? ReplayUI.getIO().getKeySuper() : ReplayUI.getIO().getKeyCtrl();
+        return InputQuirks.REPLACE_CTRL_KEY_WITH_CMD_KEY ? ReplayUI.getIO().getKeySuper() : ReplayUI.getIO().getKeyCtrl();
     }
 
 }

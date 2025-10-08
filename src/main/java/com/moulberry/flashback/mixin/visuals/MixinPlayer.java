@@ -28,18 +28,6 @@ public abstract class MixinPlayer extends LivingEntity {
         super(entityType, level);
     }
 
-    @Inject(method = "isModelPartShown", at = @At("HEAD"), cancellable = true)
-    public void isModelPartShown(PlayerModelPart playerModelPart, CallbackInfoReturnable<Boolean> cir) {
-        EditorState editorState = EditorStateManager.getCurrent();
-        if (editorState != null) {
-            var skinOverride = editorState.skinOverride.get(this.uuid);
-            var skinOverrideFile = editorState.skinOverrideFromFile.get(this.uuid);
-            if (skinOverride != null || skinOverrideFile != null) {
-                cir.setReturnValue(true);
-            }
-        }
-    }
-
     @WrapOperation(method = "getDisplayName", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/scores/PlayerTeam;formatNameForTeam(Lnet/minecraft/world/scores/Team;Lnet/minecraft/network/chat/Component;)Lnet/minecraft/network/chat/MutableComponent;"))
     public MutableComponent getDisplayName_formatNameForTeam(Team team, Component component, Operation<MutableComponent> original) {
         EditorState editorState = EditorStateManager.getCurrent();

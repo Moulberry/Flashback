@@ -20,12 +20,4 @@ public class MixinDebugScreenOverlay {
             ci.cancel();
         }
     }
-
-    @Inject(method = "getGameInformation", at = @At("RETURN"))
-    public void getGameInformation(CallbackInfoReturnable<List<String>> info) {
-        if (Flashback.RECORDER != null) {
-            info.getReturnValue().add(Flashback.RECORDER.getDebugString());
-        }
-    }
-
 }

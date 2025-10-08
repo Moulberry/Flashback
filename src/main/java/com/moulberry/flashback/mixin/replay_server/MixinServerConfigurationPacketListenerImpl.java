@@ -44,15 +44,6 @@ public abstract class MixinServerConfigurationPacketListenerImpl extends ServerC
         super(minecraftServer, connection, commonListenerCookie);
     }
 
-    @WrapOperation(method = "handleConfigurationFinished", at = @At(value = "NEW", target = "(Lnet/minecraft/server/MinecraftServer;Lnet/minecraft/server/level/ServerLevel;Lcom/mojang/authlib/GameProfile;Lnet/minecraft/server/level/ClientInformation;)Lnet/minecraft/server/level/ServerPlayer;"))
-    public ServerPlayer newServerPlayer(MinecraftServer minecraftServer, ServerLevel serverLevel, GameProfile gameProfile, ClientInformation clientInformation, Operation<ServerPlayer> original) {
-        if (minecraftServer instanceof ReplayServer replayServer) {
-            return replayServer.createPlayer(serverLevel, gameProfile, clientInformation);
-        } else {
-            return original.call(minecraftServer, serverLevel, gameProfile, clientInformation);
-        }
-    }
-
     @Override
     public void flashback$startConfiguration(List<Packet<? super ClientConfigurationPacketListener>> initialPackets, List<ConfigurationTask> tasks) {
         for (Packet<? super ClientConfigurationPacketListener> initialPacket : initialPackets) {

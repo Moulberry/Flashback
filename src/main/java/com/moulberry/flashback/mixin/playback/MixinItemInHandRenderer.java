@@ -17,6 +17,7 @@ import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.ItemInHandRenderer;
 import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Entity;
@@ -52,9 +53,6 @@ public abstract class MixinItemInHandRenderer implements ItemInHandRendererExt {
     private float offHandHeight;
 
     @Shadow
-    protected abstract void renderArmWithItem(AbstractClientPlayer abstractClientPlayer, float f, float g, InteractionHand interactionHand, float h, ItemStack itemStack, float i, PoseStack poseStack, MultiBufferSource multiBufferSource, int j);
-
-    @Shadow
     private ItemStack mainHandItem;
 
     @Shadow
@@ -64,6 +62,8 @@ public abstract class MixinItemInHandRenderer implements ItemInHandRendererExt {
     private static boolean isChargedCrossbow(ItemStack itemStack) {
         return false;
     }
+
+    @Shadow protected abstract void renderArmWithItem(AbstractClientPlayer abstractClientPlayer, float f, float g, InteractionHand interactionHand, float h, ItemStack itemStack, float i, PoseStack poseStack, SubmitNodeCollector submitNodeCollector, int j);
 
     @Unique
     private static final int RENDER_MAIN_HAND = 1;
@@ -97,7 +97,7 @@ public abstract class MixinItemInHandRenderer implements ItemInHandRendererExt {
     }
 
     @Override
-    public void flashback$renderHandsWithItems(float partialTick, PoseStack poseStack, MultiBufferSource.BufferSource bufferSource, AbstractClientPlayer clientPlayer, int i, @Nullable Set<InteractionHand> renderableArms) {
+    public void flashback$renderHandsWithItems(float partialTick, PoseStack poseStack, SubmitNodeCollector submitNodeCollector, AbstractClientPlayer clientPlayer, int i, @Nullable Set<InteractionHand> renderableArms) {
         EditorState editorState = EditorStateManager.getCurrent();
         if (editorState != null && editorState.hideDuringExport.contains(clientPlayer.getUUID())) {
             return;
@@ -125,19 +125,17 @@ public abstract class MixinItemInHandRenderer implements ItemInHandRendererExt {
         if ((handRenderSelection & RENDER_MAIN_HAND) != 0) {
             l = interactionHand == InteractionHand.MAIN_HAND ? g : 0.0f;
             m = 1.0f - Mth.lerp(partialTick, this.oMainHandHeight, this.mainHandHeight);
-            renderArmWithItem(clientPlayer, partialTick, h, InteractionHand.MAIN_HAND, l, this.mainHandItem, m, poseStack, bufferSource, i);
+            renderArmWithItem(clientPlayer, partialTick, h, InteractionHand.MAIN_HAND, l, this.mainHandItem, m, poseStack, submitNodeCollector, i);
         }
         if ((handRenderSelection & RENDER_OFF_HAND) != 0) {
             l = interactionHand == InteractionHand.OFF_HAND ? g : 0.0f;
             m = 1.0f - Mth.lerp(partialTick, this.oOffHandHeight, this.offHandHeight);
-            renderArmWithItem(clientPlayer, partialTick, h, InteractionHand.OFF_HAND, l, this.offHandItem, m, poseStack, bufferSource, i);
+            renderArmWithItem(clientPlayer, partialTick, h, InteractionHand.OFF_HAND, l, this.offHandItem, m, poseStack, submitNodeCollector, i);
         }
-        bufferSource.endBatch();
     }
 
     @Inject(method = "renderPlayerArm", at = @At(value = "FIELD", target = "Lnet/minecraft/client/renderer/ItemInHandRenderer;entityRenderDispatcher:Lnet/minecraft/client/renderer/entity/EntityRenderDispatcher;"))
-    public void renderPlayerArm(PoseStack poseStack, MultiBufferSource multiBufferSource, int i, float f, float g,
-                                HumanoidArm humanoidArm, CallbackInfo ci, @Local LocalRef<AbstractClientPlayer> player) {
+    public void renderPlayerArm(CallbackInfo ci, @Local LocalRef<AbstractClientPlayer> player) {
         AbstractClientPlayer spectatingPlayer = Flashback.getSpectatingPlayer();
         if (spectatingPlayer != null) {
             player.set(spectatingPlayer);

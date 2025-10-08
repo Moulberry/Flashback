@@ -37,7 +37,6 @@ public abstract class MixinServerLoginPacketListenerImpl {
             this.requestedUsername = ReplayServer.REPLAY_VIEWER_NAME;
             UUID replayViewerUUID = UUID.nameUUIDFromBytes(serverboundHelloPacket.name().getBytes(StandardCharsets.UTF_8));
             GameProfile gameProfile = new GameProfile(replayViewerUUID, ReplayServer.REPLAY_VIEWER_NAME);
-            gameProfile.getProperties().put("IsReplayViewer", new Property("IsReplayViewer", "True"));
             this.startClientVerification(gameProfile);
             ci.cancel();
         }

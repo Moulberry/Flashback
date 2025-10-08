@@ -48,7 +48,8 @@ accessible field net/minecraft/server/MinecraftServer levels Ljava/util/Map;
 accessible field net/minecraft/server/MinecraftServer worldData Lnet/minecraft/world/level/storage/WorldData;
 accessible field net/minecraft/server/MinecraftServer executor Ljava/util/concurrent/Executor;
 accessible field net/minecraft/server/MinecraftServer storageSource Lnet/minecraft/world/level/storage/LevelStorageSource$LevelStorageAccess;
-accessible field net/minecraft/server/MinecraftServer progressListenerFactory Lnet/minecraft/server/level/progress/ChunkProgressListenerFactory;
+# todo nobuild
+#accessible field net/minecraft/server/MinecraftServer progressListenerFactory Lnet/minecraft/server/level/progress/ChunkProgressListenerFactory;
 accessible field net/minecraft/server/MinecraftServer nextTickTimeNanos J
 
 accessible field net/minecraft/world/level/storage/PrimaryLevelData specialWorldProperty Lnet/minecraft/world/level/storage/PrimaryLevelData$SpecialWorldProperty;
@@ -106,8 +107,8 @@ accessible field net/minecraft/network/protocol/game/ClientboundLevelChunkPacket
 accessible field net/minecraft/server/level/ServerEntity positionCodec Lnet/minecraft/network/protocol/game/VecDeltaCodec;
 mutable field net/minecraft/server/level/ServerEntity positionCodec Lnet/minecraft/network/protocol/game/VecDeltaCodec;
 accessible field net/minecraft/server/level/ServerEntity lastPassengers Ljava/util/List;
-accessible field net/minecraft/server/level/ServerEntity broadcast Ljava/util/function/Consumer;
-mutable field net/minecraft/server/level/ServerEntity broadcast Ljava/util/function/Consumer;
+accessible field net/minecraft/server/level/ServerEntity synchronizer Lnet/minecraft/server/level/ServerEntity$Synchronizer;
+mutable field net/minecraft/server/level/ServerEntity synchronizer Lnet/minecraft/server/level/ServerEntity$Synchronizer;
 accessible field net/minecraft/server/level/ServerEntity entity Lnet/minecraft/world/entity/Entity;
 mutable field net/minecraft/server/level/ServerEntity entity Lnet/minecraft/world/entity/Entity;
 accessible field net/minecraft/server/level/ServerEntity lastSentMovement Lnet/minecraft/world/phys/Vec3;
@@ -159,10 +160,13 @@ accessible field net/minecraft/client/sounds/SoundEngine executor Lnet/minecraft
 accessible field net/minecraft/client/sounds/SoundEngineExecutor thread Ljava/lang/Thread;
 
 accessible class net/minecraft/world/level/border/WorldBorder$MovingBorderExtent
-accessible field net/minecraft/world/entity/player/Player DATA_PLAYER_MODE_CUSTOMISATION Lnet/minecraft/network/syncher/EntityDataAccessor;
-accessible field net/minecraft/world/entity/player/Player DATA_PLAYER_MAIN_HAND Lnet/minecraft/network/syncher/EntityDataAccessor;
+accessible field net/minecraft/world/entity/Avatar DATA_PLAYER_MODE_CUSTOMISATION Lnet/minecraft/network/syncher/EntityDataAccessor;
+accessible field net/minecraft/world/entity/Avatar DATA_PLAYER_MAIN_HAND Lnet/minecraft/network/syncher/EntityDataAccessor;
 
 accessible class net/minecraft/client/gui/Gui$ContextualInfo
 accessible field net/minecraft/client/renderer/GameRenderer fogRenderer Lnet/minecraft/client/renderer/fog/FogRenderer;
 
 accessible field net/minecraft/client/resources/language/ClientLanguage storage Ljava/util/Map;
+
+accessible class net/minecraft/server/network/config/PrepareSpawnTask$Ready
+mutable field net/minecraft/client/gui/components/debug/DebugScreenEntries PROFILES Ljava/util/Map;

@@ -132,7 +132,7 @@ public class MixinTitleScreen extends Screen {
                 if (!overlapsWithExistingButton) {
                     if (this.openSelectReplayScreenButton == null) {
                         this.openSelectReplayScreenButton = new FlashbackButton(x, y, size, size, Component.translatable("flashback.open_replays"), button -> {
-                            List<String> incompatibleMods = Screen.hasShiftDown() ? List.of() : Flashback.getReplayIncompatibleMods();
+                            List<String> incompatibleMods = this.minecraft.hasShiftDown() ? List.of() : Flashback.getReplayIncompatibleMods();
 
                             if (incompatibleMods.isEmpty()) {
                                 this.minecraft.setScreen(new SelectReplayScreen(this, Flashback.getReplayFolder()));

@@ -13,13 +13,13 @@ public class ShaderManager {
     public static final RenderPipeline BLIT_SCREEN = RenderPipelines.register(
         RenderPipeline.builder()
                       .withLocation(ResourceLocation.fromNamespaceAndPath("flashback", "pipeline/blit_screen"))
-                      .withVertexShader("core/blit_screen")
+                      .withVertexShader("core/screenquad")
                       .withFragmentShader("core/blit_screen")
                       .withSampler("InSampler")
                       .withDepthWrite(false)
                       .withCull(false)
                       .withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST)
-                      .withVertexFormat(DefaultVertexFormat.POSITION, VertexFormat.Mode.QUADS)
+                      .withVertexFormat(DefaultVertexFormat.EMPTY, VertexFormat.Mode.TRIANGLES)
                       .build()
     );
 
@@ -40,26 +40,26 @@ public class ShaderManager {
     public static RenderPipeline BLIT_SCREEN_ROUND_ALPHA = RenderPipelines.register(
         RenderPipeline.builder()
                       .withLocation(ResourceLocation.fromNamespaceAndPath("flashback", "pipeline/flashback_blit_screen_flip"))
-                      .withVertexShader(ResourceLocation.fromNamespaceAndPath("flashback", "core/blit_screen_round_alpha"))
+                      .withVertexShader("core/screenquad")
                       .withFragmentShader(ResourceLocation.fromNamespaceAndPath("flashback", "core/blit_screen_round_alpha"))
                       .withSampler("InSampler")
                       .withDepthWrite(false)
                       .withCull(false)
                       .withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST)
-                      .withVertexFormat(DefaultVertexFormat.POSITION, VertexFormat.Mode.QUADS)
+                      .withVertexFormat(DefaultVertexFormat.POSITION_TEX, VertexFormat.Mode.QUADS)
                       .build()
     );
 
     public static RenderPipeline BLIT_SCREEN_FLIP = RenderPipelines.register(
         RenderPipeline.builder()
                       .withLocation(ResourceLocation.fromNamespaceAndPath("flashback", "pipeline/flashback_blit_screen_flip"))
-                      .withVertexShader(ResourceLocation.fromNamespaceAndPath("flashback", "core/blit_screen_flip"))
+                      .withVertexShader(ResourceLocation.fromNamespaceAndPath("flashback", "core/screenquad_flip"))
                       .withFragmentShader("core/blit_screen")
                       .withSampler("InSampler")
                       .withDepthWrite(false)
                       .withCull(false)
                       .withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST)
-                      .withVertexFormat(DefaultVertexFormat.POSITION, VertexFormat.Mode.QUADS)
+                      .withVertexFormat(DefaultVertexFormat.EMPTY, VertexFormat.Mode.TRIANGLES)
                       .build()
     );
 

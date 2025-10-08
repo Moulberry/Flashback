@@ -25,6 +25,7 @@ import imgui.flag.ImGuiViewportFlags;
 import imgui.lwjgl3.glfw.ImGuiImplGlfwNative;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.input.KeyEvent;
 import net.minecraft.world.phys.Vec2;
 import org.lwjgl.PointerBuffer;
 import org.lwjgl.glfw.GLFW;
@@ -358,18 +359,18 @@ public class CustomImGuiImplGlfw {
                 passToMinecraft = true;
             } else if (ReplayUI.isMainFrameActive()) {
                 for (KeyMapping keyMapping : Minecraft.getInstance().options.keyMappings) {
-                    if (keyMapping.matches(key, scancode)) {
+                    if (keyMapping.matches(new KeyEvent(key, scancode, 0))) {
                         passToMinecraft = true;
                         break;
                     }
                 }
-            } else if (Minecraft.getInstance().options.keyUp.matches(key, scancode) ||
-                    Minecraft.getInstance().options.keyLeft.matches(key, scancode) ||
-                    Minecraft.getInstance().options.keyDown.matches(key, scancode) ||
-                    Minecraft.getInstance().options.keyRight.matches(key, scancode) ||
-                    Minecraft.getInstance().options.keyJump.matches(key, scancode) ||
-                    Minecraft.getInstance().options.keyChat.matches(key, scancode) ||
-                    Minecraft.getInstance().options.keyCommand.matches(key, scancode)) {
+            } else if (Minecraft.getInstance().options.keyUp.matches(new KeyEvent(key, scancode, 0)) ||
+                    Minecraft.getInstance().options.keyLeft.matches(new KeyEvent(key, scancode, 0)) ||
+                    Minecraft.getInstance().options.keyDown.matches(new KeyEvent(key, scancode, 0)) ||
+                    Minecraft.getInstance().options.keyRight.matches(new KeyEvent(key, scancode, 0)) ||
+                    Minecraft.getInstance().options.keyJump.matches(new KeyEvent(key, scancode, 0)) ||
+                    Minecraft.getInstance().options.keyChat.matches(new KeyEvent(key, scancode, 0)) ||
+                    Minecraft.getInstance().options.keyCommand.matches(new KeyEvent(key, scancode, 0))) {
                 ReplayUI.focusMainWindowCounter = 5;
                 passToMinecraft = true;
             }
@@ -602,7 +603,7 @@ public class CustomImGuiImplGlfw {
             final float scaleY = (float) this.fbHeight[0] / this.winHeight[0];
             io.setDisplayFramebufferScale(scaleX, scaleY);
 
-            GLFW.glfwGetWindowContentScale(Minecraft.getInstance().getWindow().getWindow(),
+            GLFW.glfwGetWindowContentScale(Minecraft.getInstance().getWindow().handle(),
                     this.windowScaleX, this.windowScaleY);
             this.contentScale = Math.max(this.windowScaleX[0] / scaleX, windowScaleY[0] / scaleY);
         }
@@ -641,7 +642,7 @@ public class CustomImGuiImplGlfw {
             final float scaleY = (float) this.fbHeight[0] / this.winHeight[0];
             io.setDisplayFramebufferScale(scaleX, scaleY);
 
-            GLFW.glfwGetWindowContentScale(Minecraft.getInstance().getWindow().getWindow(),
+            GLFW.glfwGetWindowContentScale(Minecraft.getInstance().getWindow().handle(),
                     this.windowScaleX, this.windowScaleY);
             this.contentScale = Math.max(this.windowScaleX[0] / scaleX, windowScaleY[0] / scaleY);
         }

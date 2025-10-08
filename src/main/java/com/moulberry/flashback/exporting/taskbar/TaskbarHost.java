@@ -36,7 +36,7 @@ public class TaskbarHost {
         }
 
 
-        var hwnd = new WinDef.HWND(new Pointer(GLFWNativeWin32.glfwGetWin32Window(Minecraft.getInstance().getWindow().getWindow())));
+        var hwnd = new WinDef.HWND(new Pointer(GLFWNativeWin32.glfwGetWin32Window(Minecraft.getInstance().getWindow().handle())));
         return new WindowsTaskbar(itaskbar3res.getValue(), hwnd);
     }
 }

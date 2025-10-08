@@ -59,7 +59,7 @@ public class CameraOrbitKeyframeType implements KeyframeType<CameraOrbitKeyframe
        float[] cameraOrbitYaw = new float[]{0.0f};
        float[] cameraOrbitPitch = new float[]{0.0f};
 
-       Entity entity = Minecraft.getInstance().cameraEntity;
+       Entity entity = Minecraft.getInstance().getCameraEntity();
        if (entity != null) {
            Vec3 eyePosition = entity.getEyePosition();
            cameraOrbitCenter[0] = (float) eyePosition.x;

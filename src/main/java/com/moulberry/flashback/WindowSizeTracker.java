@@ -37,7 +37,7 @@ public class WindowSizeTracker {
         // Calculate real framebuffer width/height
         int[] width = new int[1];
         int[] height = new int[1];
-        GLFW.glfwGetFramebufferSize(window.getWindow(), width, height);
+        GLFW.glfwGetFramebufferSize(window.handle(), width, height);
         realFramebufferWidth = width[0] > 0 ? width[0] : 1;
         realFramebufferHeight = height[0] > 0 ? height[0] : 1;
 

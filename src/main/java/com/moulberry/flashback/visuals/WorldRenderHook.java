@@ -29,7 +29,7 @@ public class WorldRenderHook {
                                  .createCompositeState(false)
     );
 
-    public static void renderHook(PoseStack poseStack, float partialTick, boolean renderBlockOutline, Camera camera, GameRenderer gameRenderer, Matrix4f projection) {
+    public static void renderHook(PoseStack poseStack, Camera camera) {
         ReplayServer replayServer = Flashback.getReplayServer();
         if (replayServer == null || Flashback.isExporting() || !ReplayUI.isActive()) {
             return;
