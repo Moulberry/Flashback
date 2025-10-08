@@ -1213,6 +1213,8 @@ public class ReplayServer extends IntegratedServer {
             } else if (tickRateManager.isFrozen() != isFrozen) {
                 tickRateManager.setFrozen(isFrozen);
             }
+        } else if (!tickRateManager.isFrozen()) {
+            tickRateManager.setFrozen(true);
         }
     }
 
