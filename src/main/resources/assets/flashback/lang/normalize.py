@@ -4,7 +4,7 @@ import os, json
 
 lines = []
 
-with open("en_us.json", "r") as file:
+with open("en_us.json", "r", encoding='utf-8') as file:
     for line in file:
         stripped = line.strip()
         if not stripped:
@@ -41,9 +41,9 @@ for file in os.listdir("."):
         continue
     if file == "en_us.json":
         continue
-    with open(file, 'r') as f:
+    with open(file, 'r', encoding='utf-8') as f:
         data = json.load(f)
-    with open(file, "w") as f:
+    with open(file, "w", encoding='utf-8') as f:
         f.write("{\n")
         for index, key in enumerate(lines):
             if not key:
