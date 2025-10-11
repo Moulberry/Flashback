@@ -13,12 +13,6 @@
 
   "flashback.option.per_second": "%s/s",
 
-  "flashback.keybind": null,
-  "flashback.keybind.create_marker_1": null,
-  "flashback.keybind.create_marker_2": null,
-  "flashback.keybind.create_marker_3": null,
-  "flashback.keybind.create_marker_4": null,
-
   "flashback.option.recording_controls": "녹화 설정",
   "flashback.option.recording_controls.location": "게임 메뉴 컨트롤 위치",
   "flashback.option.recording_controls.location.description": "마인크래프트 게임 메뉴에서 플래시백 버튼의 위치입니다.",
@@ -55,27 +49,10 @@
 
   "flashback.option.editor_movement": "편집자 이동",
 
-  "flashback.option.marker": null,
-  "flashback.option.marker.marker_1_options": null,
-  "flashback.option.marker.marker_2_options": null,
-  "flashback.option.marker.marker_3_options": null,
-  "flashback.option.marker.marker_4_options": null,
-  "flashback.option.marker.options.save_position": null,
-  "flashback.custom_rgb": null,
-  "flashback.color": null,
-  "flashback.description": null,
-
   "flashback.advanced": "고급 설정",
   "flashback.advanced_description": "이게 뭔지 정확히 알지 않는 이상 절대 이 중 어떤 것도 바꾸지 마세요!! 이 중 하나라도 바꿨으면서 도움을 요청하면 놀림 받을 것입니다!!",
   "flashback.disable_first_person_updates": "비활성화 증가된 일인칭 업데이트",
   "flashback.disable_third_person_cancel": "비활성화 삼인칭 취소",
-  "flashback.advanced.synchronize_ticking": null,
-  "flashback.advanced.synchronize_ticking.description": null,
-
-  "flashback.mark.added_with_description": null,
-  "flashback.mark.added_with_color": null,
-  "flashback.mark.added": null,
-  "flashback.mark.added_at": null,
 
   "flashback.replay_sorting.created_date": "생성된 날짜",
   "flashback.replay_sorting.replay_name": "리플레이 이름",
