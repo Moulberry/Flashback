@@ -107,4 +107,16 @@ public enum VideoContainer implements ComboOption {
         return this.supportedAudioCodecs;
     }
 
+    public String mimeType() {
+        return switch (this) {
+            case MP4 -> "video/mp4";
+            case MKV -> "video/mkv";
+            case AVI -> "video/x-msvideo";
+            case MOV -> "video/quicktime";
+            case PNG_SEQUENCE -> "image/png";
+            case WEBP -> "image/webp";
+            case WEBM -> "video/webm";
+            case GIF -> "image/gif";
+        };
+    }
 }

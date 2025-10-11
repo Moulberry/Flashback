@@ -82,8 +82,7 @@ public class ReplayUI {
     public static Matrix4f lastProjectionMatrix = null;
     public static Quaternionf lastViewQuaternion = null;
 
-    private static ImFont font = null;
-    public static ImFont icons = null;
+    public static ImFont font = null;
 
     private static String languageCode = null;
     private static boolean wasNavClose = false;

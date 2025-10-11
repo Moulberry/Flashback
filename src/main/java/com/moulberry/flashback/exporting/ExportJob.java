@@ -3,6 +3,7 @@ package com.moulberry.flashback.exporting;
 import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.pipeline.TextureTarget;
 import com.mojang.blaze3d.platform.GlStateManager;
+import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.blaze3d.platform.Window;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.*;
@@ -11,8 +12,7 @@ import com.moulberry.flashback.FreezeSlowdownFormula;
 import com.moulberry.flashback.Utils;
 import com.moulberry.flashback.combo_options.VideoContainer;
 import com.moulberry.flashback.editor.ui.ReplayUI;
-import com.moulberry.flashback.exporting.taskbar.ITaskbar;
-import com.moulberry.flashback.exporting.taskbar.TaskbarHost;
+import com.moulberry.flashback.editor.ui.windows.ExportDoneWindow;
 import com.moulberry.flashback.exporting.taskbar.TaskbarManager;
 import com.moulberry.flashback.keyframe.KeyframeType;
 import com.moulberry.flashback.keyframe.handler.KeyframeHandler;
@@ -92,6 +92,9 @@ public class ExportJob {
 
     private final AtomicBoolean finishedServerTick = new AtomicBoolean(false);
 
+    private NativeImage firstFrame = null;
+    private int writtenFrames = 0;
+
     public static final int SRC_PIXEL_FORMAT = avutil.AV_PIX_FMT_RGBA;
 
     public ExportJob(ExportSettings settings) {
@@ -157,8 +160,6 @@ public class ExportJob {
         Path exportTempFile = Path.of(tempFileName);
         Path exportTempFolder = exportTempFile.getParent();
 
-        TextureTarget infoRenderTarget = null;
-
         int oldGuiScale = Minecraft.getInstance().options.guiScale().get();
 
         this.extraDummyFrames = Flashback.getConfig().exporting.exportRenderDummyFrames;
@@ -166,17 +167,27 @@ public class ExportJob {
         try {
             Files.createDirectories(exportTempFolder);
 
-            RenderTarget mainTarget = Minecraft.getInstance().mainRenderTarget;
-            infoRenderTarget = new TextureTarget(mainTarget.width, mainTarget.height, false, Minecraft.ON_OSX);
-
             try (VideoWriter encoder = createVideoWriter(this.settings, tempFileName);
                  SaveableFramebufferQueue downloader = new SaveableFramebufferQueue(this.settings.resolutionX(), this.settings.resolutionY())) {
-                doExport(encoder, downloader, infoRenderTarget);
+                doExport(encoder, downloader);
             }
 
             if (this.settings.container() != VideoContainer.PNG_SEQUENCE) {
                 Files.move(exportTempFile, this.settings.output(), StandardCopyOption.REPLACE_EXISTING);
             }
+
+            try {
+                long size = 0;
+                double duration = this.writtenFrames / this.settings.framerate();
+
+                Path output = this.settings.output();
+                if (this.settings.container() != VideoContainer.PNG_SEQUENCE && Files.exists(output) && Files.isRegularFile(output)) {
+                    size = Files.size(output);
+                }
+
+                ExportDoneWindow.addFinishedExportEntry(new ExportDoneWindow.FinishedExportEntry(this.settings, this.firstFrame, duration, size));
+                this.firstFrame = null;
+            } catch (IOException ignored) {}
         } catch (IOException e) {
             throw new RuntimeException(e);
         } finally {
@@ -198,6 +209,11 @@ public class ExportJob {
             Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.NOTE_BLOCK_CHIME, 1.0f));
             Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.NOTE_BLOCK_BELL, 1.0f));
 
+            if (this.firstFrame != null) {
+                this.firstFrame.close();
+                this.firstFrame = null;
+            }
+
             try {
                 Files.deleteIfExists(exportTempFile);
             } catch (IOException ignored) {}
@@ -211,10 +227,6 @@ public class ExportJob {
                     Files.deleteIfExists(exportTempFolder);
                 }
             } catch (IOException ignored) {}
-
-            if (infoRenderTarget != null) {
-                infoRenderTarget.destroyBuffers();
-            }
         }
     }
 
@@ -226,7 +238,7 @@ public class ExportJob {
         }
     }
 
-    private void doExport(VideoWriter videoWriter, SaveableFramebufferQueue downloader, TextureTarget infoRenderTarget) {
+    private void doExport(VideoWriter videoWriter, SaveableFramebufferQueue downloader) {
         ReplayServer replayServer = Flashback.getReplayServer();
         if (replayServer == null) {
             return;
@@ -535,6 +547,11 @@ public class ExportJob {
             if (frame == null) {
                 break;
             }
+
+            if (this.firstFrame == null) {
+                this.firstFrame = frame.image().mappedCopy(x -> 0xFF000000 | x);
+            }
+            this.writtenFrames += 1;
 
             start = System.nanoTime();
             videoWriter.encode(frame.image(), frame.audioBuffer());
