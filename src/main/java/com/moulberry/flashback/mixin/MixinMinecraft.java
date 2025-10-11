@@ -332,7 +332,6 @@ public abstract class MixinMinecraft extends ReentrantBlockableEventLoop<Runnabl
             } finally {
                 PerfectFrames.disable();
                 Flashback.EXPORT_JOB = null;
-                ExportDoneWindow.open();
             }
         }
 

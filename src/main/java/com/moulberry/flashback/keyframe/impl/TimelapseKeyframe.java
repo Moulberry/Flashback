@@ -1,6 +1,5 @@
 package com.moulberry.flashback.keyframe.impl;
 
-import com.google.common.collect.Maps;
 import com.google.gson.JsonDeserializationContext;
 import com.google.gson.JsonDeserializer;
 import com.google.gson.JsonElement;
@@ -13,12 +12,8 @@ import com.moulberry.flashback.editor.ui.ImGuiHelper;
 import com.moulberry.flashback.keyframe.Keyframe;
 import com.moulberry.flashback.keyframe.KeyframeType;
 import com.moulberry.flashback.keyframe.change.KeyframeChange;
-import com.moulberry.flashback.keyframe.change.KeyframeChangeTickrate;
-import com.moulberry.flashback.keyframe.handler.KeyframeHandler;
 import com.moulberry.flashback.keyframe.interpolation.InterpolationType;
 import com.moulberry.flashback.keyframe.types.TimelapseKeyframeType;
-import com.moulberry.flashback.spline.CatmullRom;
-import com.moulberry.flashback.spline.Hermite;
 import imgui.ImGui;
 import imgui.type.ImString;
 import net.minecraft.client.resources.language.I18n;
@@ -35,7 +30,7 @@ public class TimelapseKeyframe extends Keyframe {
 
     public TimelapseKeyframe(int ticks) {
         this.ticks = ticks;
-        this.timelapseKeyframeInput = ImGuiHelper.createResizableImString(Utils.timeToString(this.ticks));
+        this.timelapseKeyframeInput = ImGuiHelper.createResizableImString(Utils.timeInTicksToString(this.ticks));
         this.timelapseKeyframeInput.inputData.allowedChars = "0123456789tsmh.";
         this.interpolationType(InterpolationType.LINEAR);
     }
