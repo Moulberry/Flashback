@@ -58,7 +58,7 @@ public class TaskbarManager {
             lastExportJobUpdate = -1;
         }
 
-        if (ExportDoneWindow.exportDoneWindowOpen) {
+        if (ExportDoneWindow.isDone()) {
             setTaskbarProgress(1, 1, false);
             return;
         }

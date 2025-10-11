@@ -1,6 +1,5 @@
 package com.moulberry.flashback.editor.ui.windows;
 
-import com.google.gson.reflect.TypeToken;
 import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.FlashbackGson;
 import com.moulberry.flashback.Utils;
@@ -1674,7 +1673,7 @@ public class TimelineWindow {
                             message = I18n.get("flashback.invalid").toUpperCase(Locale.ROOT);
                             textColour = 0xFF155FFF;
                         } else {
-                            message = Utils.timeToString(tickDelta);
+                            message = Utils.timeInTicksToString(tickDelta);
                         }
 
                         float textY = midY - lineHeight*0.3f;
