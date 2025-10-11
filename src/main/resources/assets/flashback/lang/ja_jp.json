@@ -66,11 +66,9 @@
   "flashback.description": "説明",
 
   "flashback.advanced": "詳細設定",
-  "flashback.advanced_description": null,
   "flashback.disable_first_person_updates": "一人称更新頻度の増加を無効化",
   "flashback.disable_third_person_cancel": "三人称キャンセルを無効化",
   "flashback.advanced.synchronize_ticking": "ティック同期",
-  "flashback.advanced.synchronize_ticking.description": null,
 
   "flashback.mark.added_with_description": "\"%s\" マーカーを追加しました",
   "flashback.mark.added_with_color": "#%s マーカーを追加しました",
@@ -213,8 +211,6 @@
   "flashback.hide_all": "すべて非表示",
   "flashback.show_all": "すべて表示",
   "flashback.keyframes": "キーフレーム",
-  "flashback.render_filter_affirmation": null,
-  "flashback.render_filter_sign": null,
   "flashback.entities": "エンティティ",
   "flashback.no_entities_found": "エンティティが見つかりません",
   "flashback.enable_all": "すべて有効化",
