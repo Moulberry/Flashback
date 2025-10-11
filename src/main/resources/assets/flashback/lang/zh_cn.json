@@ -13,6 +13,12 @@
 
   "flashback.option.per_second": "%s/秒",
 
+  "flashback.keybind": null,
+  "flashback.keybind.create_marker_1": null,
+  "flashback.keybind.create_marker_2": null,
+  "flashback.keybind.create_marker_3": null,
+  "flashback.keybind.create_marker_4": null,
+
   "flashback.option.recording_controls": "录制控制",
   "flashback.option.recording_controls.location": "暂停菜单控制位置",
   "flashback.option.recording_controls.location.description": "Flashback 按钮在 Minecraft 暂停菜单中的位置",
@@ -49,10 +55,27 @@
 
   "flashback.option.editor_movement": "编辑器移动",
 
+  "flashback.option.marker": null,
+  "flashback.option.marker.marker_1_options": null,
+  "flashback.option.marker.marker_2_options": null,
+  "flashback.option.marker.marker_3_options": null,
+  "flashback.option.marker.marker_4_options": null,
+  "flashback.option.marker.options.save_position": null,
+  "flashback.custom_rgb": null,
+  "flashback.color": null,
+  "flashback.description": null,
+
   "flashback.advanced": "高级",
   "flashback.advanced_description": "除非你知道自己在做什么，否则不要更改这些选项！如果你更改了这些，然后寻求支持，你会被嘲笑！！",
   "flashback.disable_first_person_updates": "禁用第一人称高频更新",
   "flashback.disable_third_person_cancel": "禁用第三人称取消",
+  "flashback.advanced.synchronize_ticking": null,
+  "flashback.advanced.synchronize_ticking.description": null,
+
+  "flashback.mark.added_with_description": null,
+  "flashback.mark.added_with_color": null,
+  "flashback.mark.added": null,
+  "flashback.mark.added_at": null,
 
   "flashback.replay_sorting.created_date": "创建日期",
   "flashback.replay_sorting.replay_name": "回放名称",
