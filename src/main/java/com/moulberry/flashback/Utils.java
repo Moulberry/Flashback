@@ -1,12 +1,10 @@
 package com.moulberry.flashback;
 
 import com.moulberry.flashback.playback.ReplayServer;
-import it.unimi.dsi.fastutil.objects.Object2FloatFunction;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.contents.PlainTextContents;
-import org.jetbrains.annotations.Nullable;
 
 import java.lang.reflect.Field;
 import java.time.LocalDateTime;
@@ -98,6 +96,9 @@ public class Utils {
     private static final int MINUTE_TO_TICKS = SECOND_TO_TICKS * 60;
     private static final int HOUR_TO_TICKS = MINUTE_TO_TICKS * 60;
 
+    private static final int MINUTE_TO_SECONDS = 60;
+    private static final int HOUR_TO_SECONDS = MINUTE_TO_SECONDS * 60;
+
     public static int stringToTime(String string) {
         int numberStart = 0;
         int total = 0;
@@ -133,24 +134,24 @@ public class Utils {
         return total;
     }
 
-    public static String timeToString(int ticks) {
+    public static String timeInTicksToString(int ticks) {
         StringBuilder builder = new StringBuilder();
-        timeToString(builder, ticks);
+        timeInTicksToString(builder, ticks);
         if (builder.isEmpty()) {
             return "0s";
         }
         return builder.toString();
     }
 
-    private static void timeToString(StringBuilder builder, int ticks) {
+    private static void timeInTicksToString(StringBuilder builder, int ticks) {
         if (ticks >= HOUR_TO_TICKS) {
             int hours = ticks / HOUR_TO_TICKS;
             builder.append(hours).append('h');
-            timeToString(builder, ticks - hours*HOUR_TO_TICKS);
+            timeInTicksToString(builder, ticks - hours*HOUR_TO_TICKS);
         } else if (ticks >= MINUTE_TO_TICKS) {
             int minutes = ticks / MINUTE_TO_TICKS;
             builder.append(minutes).append('m');
-            timeToString(builder, ticks - minutes*MINUTE_TO_TICKS);
+            timeInTicksToString(builder, ticks - minutes*MINUTE_TO_TICKS);
         } else if (ticks >= SECOND_TO_TICKS) {
             if (ticks % SECOND_TO_TICKS == 0) {
                 int seconds = ticks / SECOND_TO_TICKS;
@@ -161,6 +162,29 @@ public class Utils {
             }
         } else if (ticks > 0) {
             builder.append(ticks).append('t');
+        }
+    }
+
+    public static String timeInSecondsToString(int seconds) {
+        StringBuilder builder = new StringBuilder();
+        timeInSecondsToString(builder, seconds);
+        if (builder.isEmpty()) {
+            return "0s";
+        }
+        return builder.toString();
+    }
+
+    private static void timeInSecondsToString(StringBuilder builder, int seconds) {
+        if (seconds >= HOUR_TO_SECONDS) {
+            int hours = seconds / HOUR_TO_SECONDS;
+            builder.append(hours).append('h');
+            timeInSecondsToString(builder, seconds - hours*HOUR_TO_SECONDS);
+        } else if (seconds >= MINUTE_TO_SECONDS) {
+            int minutes = seconds / MINUTE_TO_SECONDS;
+            builder.append(minutes).append('m');
+            timeInSecondsToString(builder, seconds - minutes*MINUTE_TO_SECONDS);
+        } else if (seconds > 0) {
+            builder.append(seconds).append('s');
         }
     }
 
