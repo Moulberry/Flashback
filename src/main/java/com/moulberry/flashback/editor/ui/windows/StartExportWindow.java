@@ -129,6 +129,7 @@ public class StartExportWindow {
             }
 
             open = false;
+            close = false;
         }
 
         if (ImGuiHelper.beginPopupModalCloseable(I18n.get("flashback.export_to_video") + "###StartExport", ImGuiWindowFlags.AlwaysAutoResize)) {
@@ -260,8 +261,6 @@ public class StartExportWindow {
 
             ImGuiHelper.endPopupModalCloseable();
         }
-
-        close = false;
     }
 
     private static void renderVideoOptions(EditorState editorState, FlashbackConfigV1 config) {

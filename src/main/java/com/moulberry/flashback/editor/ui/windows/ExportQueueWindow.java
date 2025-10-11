@@ -42,6 +42,8 @@ public class ExportQueueWindow {
                     int removeJob = -1;
 
                     for (int i = 0; i < ExportJobQueue.queuedJobs.size(); i++) {
+                        ImGui.pushID(i);
+
                         ExportSettings queuedJob = ExportJobQueue.queuedJobs.get(i);
                         String name = queuedJob.name() == null ? I18n.get("flashback.job_n", (i+1)) : queuedJob.name();
 
@@ -55,6 +57,8 @@ public class ExportQueueWindow {
                         if (ImGui.smallButton(I18n.get("flashback.remove"))) {
                             removeJob = i;
                         }
+
+                        ImGui.popID();
                     }
 
                     if (startJob >= 0 && canStartJob) {
