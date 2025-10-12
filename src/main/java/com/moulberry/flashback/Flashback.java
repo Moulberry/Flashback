@@ -20,16 +20,7 @@ import com.moulberry.flashback.exporting.ExportJob;
 import com.moulberry.flashback.exporting.taskbar.TaskbarManager;
 import com.moulberry.flashback.ext.MinecraftExt;
 import com.moulberry.flashback.keyframe.KeyframeRegistry;
-import com.moulberry.flashback.keyframe.types.BlockOverrideKeyframeType;
-import com.moulberry.flashback.keyframe.types.CameraKeyframeType;
-import com.moulberry.flashback.keyframe.types.CameraOrbitKeyframeType;
-import com.moulberry.flashback.keyframe.types.CameraShakeKeyframeType;
-import com.moulberry.flashback.keyframe.types.TrackEntityKeyframeType;
-import com.moulberry.flashback.keyframe.types.FOVKeyframeType;
-import com.moulberry.flashback.keyframe.types.FreezeKeyframeType;
-import com.moulberry.flashback.keyframe.types.SpeedKeyframeType;
-import com.moulberry.flashback.keyframe.types.TimeOfDayKeyframeType;
-import com.moulberry.flashback.keyframe.types.TimelapseKeyframeType;
+import com.moulberry.flashback.keyframe.types.*;
 import com.moulberry.flashback.packet.FlashbackAccurateEntityPosition;
 import com.moulberry.flashback.packet.FlashbackClearEntities;
 import com.moulberry.flashback.packet.FlashbackClearParticles;
@@ -279,6 +270,7 @@ public class Flashback implements ModInitializer, ClientModInitializer {
         KeyframeRegistry.register(TimeOfDayKeyframeType.INSTANCE);
         KeyframeRegistry.register(FreezeKeyframeType.INSTANCE);
         KeyframeRegistry.register(BlockOverrideKeyframeType.INSTANCE);
+        KeyframeRegistry.register(AudioKeyframeType.INSTANCE);
 
         ClientPlayNetworking.registerGlobalReceiver(FlashbackForceClientTick.TYPE, (payload, context) -> {
             if (Flashback.isInReplay()) {
@@ -871,7 +863,7 @@ public class Flashback implements ModInitializer, ClientModInitializer {
             if (exportJob != null) {
                 tick = (float) exportJob.getCurrentTickDouble();
             } else {
-                tick = replayServer.getPartialReplayTick();
+                tick = (float) replayServer.getPartialReplayTick();
             }
 
             return (long)(tick * 50L);

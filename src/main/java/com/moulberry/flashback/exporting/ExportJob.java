@@ -2,8 +2,6 @@ package com.moulberry.flashback.exporting;
 
 import com.mojang.blaze3d.ProjectionType;
 import com.mojang.blaze3d.pipeline.RenderTarget;
-import com.mojang.blaze3d.pipeline.TextureTarget;
-import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.blaze3d.platform.Window;
 import com.mojang.blaze3d.systems.RenderSystem;
@@ -19,6 +17,7 @@ import com.moulberry.flashback.keyframe.KeyframeType;
 import com.moulberry.flashback.keyframe.handler.KeyframeHandler;
 import com.moulberry.flashback.keyframe.handler.MinecraftKeyframeHandler;
 import com.moulberry.flashback.keyframe.handler.TickrateKeyframeCapture;
+import com.moulberry.flashback.sound.FlashbackAudioManager;
 import com.moulberry.flashback.state.EditorState;
 import com.moulberry.flashback.playback.ReplayServer;
 import com.moulberry.flashback.visuals.AccurateEntityPositionHandler;
@@ -36,7 +35,6 @@ import net.minecraft.client.renderer.FogParameters;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.network.chat.Component;
 import net.minecraft.sounds.SoundEvents;
-import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.Vec3;
@@ -152,6 +150,7 @@ public class ExportJob {
         this.running = true;
         Minecraft.getInstance().mouseHandler.releaseMouse();
         Minecraft.getInstance().getSoundManager().stop();
+        Minecraft.getInstance().getSoundManager().tick(true);
 
         TaskbarManager.launchTaskbarManager();
 
@@ -303,8 +302,20 @@ public class ExportJob {
 
             AccurateEntityPositionHandler.apply(Minecraft.getInstance().level, timer);
 
-            KeyframeHandler keyframeHandler = new MinecraftKeyframeHandler(Minecraft.getInstance());
-            this.settings.editorState().applyKeyframes(keyframeHandler, (float)(this.settings.startTick() + currentTickDouble));
+            // Apply keyframes
+            if (frozen) {
+                FlashbackAudioManager.pauseAll();
+            } else {
+                FlashbackAudioManager.startHandling();
+            }
+            try {
+                KeyframeHandler keyframeHandler = new MinecraftKeyframeHandler(Minecraft.getInstance());
+                this.settings.editorState().applyKeyframes(keyframeHandler, (float)(this.settings.startTick() + currentTickDouble));
+            } finally {
+                if (!frozen) {
+                    FlashbackAudioManager.finishHandling();
+                }
+            }
 
             long pauseScreenStart = System.currentTimeMillis();
             int additionalDummyFrames = this.extraDummyFrames;

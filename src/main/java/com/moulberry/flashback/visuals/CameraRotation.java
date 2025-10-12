@@ -34,7 +34,7 @@ public class CameraRotation {
 
         ReplayServer replayServer = Flashback.getReplayServer();
         if (replayServer != null && visuals.overrideCameraShake && (Flashback.isExporting() || !replayServer.replayPaused)) {
-            float tick = Flashback.isExporting() ? (float) Flashback.EXPORT_JOB.getCurrentTickDouble() : replayServer.getPartialReplayTick();
+            float tick = Flashback.isExporting() ? (float) Flashback.EXPORT_JOB.getCurrentTickDouble() : (float) replayServer.getPartialReplayTick();
             float speedFactor = 20.0f / replayServer.getDesiredTickRate(false);
 
             if (tick < lastShakeReplayTick) {

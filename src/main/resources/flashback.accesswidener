@@ -160,6 +160,8 @@ accessible field net/minecraft/client/sounds/SoundEngine library Lcom/mojang/bla
 accessible field com/mojang/blaze3d/audio/Library currentDevice J
 accessible field com/mojang/blaze3d/audio/Library context J
 accessible field net/minecraft/client/sounds/SoundEngine executor Lnet/minecraft/client/sounds/SoundEngineExecutor;
+accessible field net/minecraft/client/sounds/SoundEngine channelAccess Lnet/minecraft/client/sounds/ChannelAccess;
+accessible field com/mojang/blaze3d/audio/Channel source I
 accessible field net/minecraft/client/sounds/SoundEngineExecutor thread Ljava/lang/Thread;
 
 accessible class net/minecraft/world/level/border/WorldBorder$MovingBorderExtent
