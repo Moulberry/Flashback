@@ -10,6 +10,7 @@ import com.moulberry.flashback.keyframe.change.KeyframeChangeTickrate;
 import com.moulberry.flashback.keyframe.impl.TimelapseKeyframe;
 import com.moulberry.flashback.keyframe.interpolation.InterpolationType;
 import com.moulberry.flashback.keyframe.interpolation.SidedInterpolationType;
+import com.moulberry.flashback.keyframe.types.AudioKeyframeType;
 import com.moulberry.flashback.keyframe.types.TimelapseKeyframeType;
 import imgui.type.ImString;
 import org.jetbrains.annotations.Nullable;
@@ -36,6 +37,9 @@ public class KeyframeTrack {
 
     @Nullable
     public KeyframeChange createKeyframeChange(float tick, @Nullable RealTimeMapping realTimeMapping) {
+        if (this.keyframeType.hasCustomKeyframeChangeCalculation()) {
+            return this.keyframeType.customKeyframeChange(this.keyframesByTick, tick);
+        }
         if (this.keyframeType == TimelapseKeyframeType.INSTANCE) {
             return this.tryApplyKeyframesTimelapse(tick);
         }

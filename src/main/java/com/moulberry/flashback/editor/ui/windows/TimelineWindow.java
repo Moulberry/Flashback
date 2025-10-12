@@ -334,7 +334,7 @@ public class TimelineWindow {
         float contentY = y + middleY - ImGui.getScrollY();
         renderKeyframeElements(x, contentY, cursorTicks, middleX);
 
-        childDrawList.pushClipRect(x + middleX, y + middleY, x + width, y + height);
+        childDrawList.pushClipRect(x + middleX + 1, y + middleY, x + width, y + height);
         renderKeyframes(x, contentY, mouseX, minTicks, availableTicks, totalTicks);
         childDrawList.popClipRect();
 
@@ -1062,13 +1062,25 @@ public class TimelineWindow {
 
                 int tick = timelineXToReplayTick(mouseX - x);
 
+                Map.Entry<Integer, Keyframe> closest = null;
+
                 Map.Entry<Integer, Keyframe> floor = keyframeTrack.keyframesByTick.floorEntry(tick);
-                Map.Entry<Integer, Keyframe> ceil = keyframeTrack.keyframesByTick.ceilingEntry(tick);
+                float floorCustomWidth = floor == null ? -1 : floor.getValue().getCustomWidthInTicks();
 
-                float floorX = floor == null ? Float.NaN : x + replayTickToTimelineX(floor.getKey());
-                float ceilX = ceil == null ? Float.NaN : x + replayTickToTimelineX(ceil.getKey());
+                if (floor != null && floorCustomWidth > 0) {
+                    int tickMax = floor.getKey() + (int) Math.ceil(floorCustomWidth);
+                    if (tick <= tickMax) {
+                        closest = floor;
+                    }
+                } else {
+                    Map.Entry<Integer, Keyframe> ceil = keyframeTrack.keyframesByTick.ceilingEntry(tick);
 
-                Map.Entry<Integer, Keyframe> closest = Utils.chooseClosest(mouseX, floorX, floor, ceilX, ceil, keyframeSize);
+                    float floorX = floor == null ? Float.NaN : x + replayTickToTimelineX(floor.getKey());
+                    float ceilX = ceil == null ? Float.NaN : x + replayTickToTimelineX(ceil.getKey());
+
+                    closest = Utils.chooseClosest(mouseX, floorX, floor, ceilX, ceil, keyframeSize);
+                }
+
                 if (closest != null) {
                     boolean reuseOld = false;
                     for (SelectedKeyframes selectedKeyframes : oldSelectedKeyframesList) {
@@ -1580,6 +1592,10 @@ public class TimelineWindow {
             grabMovementInfo = calculateGrabMovementInfo(totalTicks);
         }
 
+        float timelineScale = availableTicks / timelineWidth;
+        float minTimelineX = x + middleX;
+        float maxTimelineX = x + width;
+
         for (int trackIndex = 0; trackIndex < editorScene.keyframeTracks.size(); trackIndex++) {
             KeyframeTrack keyframeTrack = editorScene.keyframeTracks.get(trackIndex);
 
@@ -1593,7 +1609,13 @@ public class TimelineWindow {
                 }
             }
 
-            for (int tick = minTicks - 10; tick <= minTicks + availableTicks + 10; tick++) {
+            int minKeyframeTick = minTicks - 10;
+
+            if (!keyframeTrack.keyframeType.cullKeyframesInTimelineToTheLeft()) {
+                minKeyframeTick = Integer.MIN_VALUE;
+            }
+
+            for (int tick = minKeyframeTick; tick <= minTicks + availableTicks + 10; tick++) {
                 var entry = keyframeTimes.ceilingEntry(tick);
                 if (entry == null || entry.getKey() > minTicks + availableTicks + 10) {
                     break;
@@ -1622,7 +1644,8 @@ public class TimelineWindow {
 
                     float midX = x + keyframeX;
 
-                    drawKeyframe(drawList, keyframe.interpolationType(), midX, midY, keyframeTrack.enabled ? 0xFF0000FF : 0x800000FF);
+                    keyframe.drawOnTimeline(drawList, keyframeSize, midX, midY, keyframeTrack.enabled ? 0xFF0000FF : 0x800000FF,
+                            timelineScale, minTimelineX, maxTimelineX, tick, keyframeTimes);
                 } else {
                     int keyframeX = replayTickToTimelineX(tick);
 
@@ -1654,7 +1677,8 @@ public class TimelineWindow {
                         colour |= 0x80000000;
                     }
 
-                    drawKeyframe(drawList, keyframe.interpolationType(), midX, midY, colour);
+                    keyframe.drawOnTimeline(drawList, keyframeSize, midX, midY, colour,
+                            timelineScale, minTimelineX, maxTimelineX, tick, keyframeTimes);
                 }
 
                 if ((selectedKeyframesForTrack == null || grabMovementInfo == null) && keyframeTrack.keyframeType == TimelapseKeyframeType.INSTANCE) {
@@ -1704,54 +1728,6 @@ public class TimelineWindow {
                         }
                     }
                 }
-            }
-        }
-    }
-
-    private static void drawKeyframe(ImDrawList drawList, InterpolationType interpolationType, float x, float y, int colour) {
-        int easeSize = keyframeSize / 5;
-        switch (interpolationType) {
-            case SMOOTH -> {
-                drawList.addCircleFilled(x, y, keyframeSize, colour);
-            }
-            case LINEAR -> {
-                drawList.addTriangleFilled(x - keyframeSize, y, x, y - keyframeSize, x, y + keyframeSize, colour);
-                drawList.addTriangleFilled(x + keyframeSize, y, x, y + keyframeSize, x, y - keyframeSize, colour);
-            }
-            case EASE_IN -> {
-                // Left inverted triangle
-                drawList.addTriangleFilled(x - keyframeSize, y - keyframeSize, x - easeSize, y - keyframeSize, x - easeSize, y, colour);
-                drawList.addTriangleFilled(x - keyframeSize, y + keyframeSize, x - easeSize, y, x - easeSize, y + keyframeSize, colour);
-                // Right triangle
-                drawList.addTriangleFilled(x + keyframeSize, y, x + easeSize, y + keyframeSize, x + easeSize, y - keyframeSize, colour);
-                // Center
-                drawList.addRectFilled(x - easeSize, y - keyframeSize, x + easeSize, y + keyframeSize, colour);
-            }
-            case EASE_OUT -> {
-                // Left triangle
-                drawList.addTriangleFilled(x - keyframeSize, y, x - easeSize, y - keyframeSize, x - easeSize, y + keyframeSize, colour);
-                // Right inverted triangle
-                drawList.addTriangleFilled(x + keyframeSize, y - keyframeSize, x + easeSize, y, x + easeSize, y - keyframeSize, colour);
-                drawList.addTriangleFilled(x + keyframeSize, y + keyframeSize, x + easeSize, y + keyframeSize, x + easeSize, y, colour);
-                // Center
-                drawList.addRectFilled(x - easeSize, y - keyframeSize, x + easeSize, y + keyframeSize, colour);
-            }
-            case EASE_IN_OUT -> {
-                // Left inverted triangle
-                drawList.addTriangleFilled(x - keyframeSize, y - keyframeSize, x - easeSize, y - keyframeSize, x - easeSize, y, colour);
-                drawList.addTriangleFilled(x - keyframeSize, y + keyframeSize, x - easeSize, y, x - easeSize, y + keyframeSize, colour);
-                // Right inverted triangle
-                drawList.addTriangleFilled(x + keyframeSize, y - keyframeSize, x + easeSize, y, x + easeSize, y - keyframeSize, colour);
-                drawList.addTriangleFilled(x + keyframeSize, y + keyframeSize, x + easeSize, y + keyframeSize, x + easeSize, y, colour);
-                // Center
-                drawList.addRectFilled(x - easeSize, y - keyframeSize, x + easeSize, y + keyframeSize, colour);
-            }
-            case HOLD -> {
-                drawList.addRectFilled(x - keyframeSize, y - keyframeSize, x + keyframeSize, y + keyframeSize, colour);
-            }
-            case HERMITE -> {
-                drawList.addTriangleFilled(x, y - keyframeSize, x + keyframeSize, y + keyframeSize,
-                        x - keyframeSize, y + keyframeSize, colour);
             }
         }
     }
