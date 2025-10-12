@@ -372,7 +372,7 @@ public class StartExportWindow {
                     if (start < 0) {
                         start = 0;
                     }
-                    if (end < 0) {
+                    if (end < 0 || start == end) {
                         ReplayServer replayServer = Flashback.getReplayServer();
                         if (replayServer != null) {
                             end = replayServer.getTotalReplayTicks();
