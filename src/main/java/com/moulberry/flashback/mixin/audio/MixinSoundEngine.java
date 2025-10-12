@@ -2,12 +2,15 @@ package com.moulberry.flashback.mixin.audio;
 
 import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.playback.ReplayServer;
+import com.moulberry.flashback.sound.FlashbackAudioBuffer;
+import com.moulberry.flashback.sound.FlashbackAudioManager;
 import net.minecraft.client.resources.sounds.SoundInstance;
 import net.minecraft.client.sounds.SoundEngine;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(SoundEngine.class)
@@ -15,6 +18,11 @@ public class MixinSoundEngine {
 
     @Unique
     private boolean wasExportingAudio = false;
+
+    @Inject(method = "destroy", at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/audio/Library;cleanup()V"))
+    public void destroy(CallbackInfo ci) {
+        FlashbackAudioManager.invalidateLoadedBuffers();
+    }
 
     @Inject(method = "shouldChangeDevice", at = @At("HEAD"), cancellable = true)
     public void shouldChangeDevice(CallbackInfoReturnable<Boolean> cir) {
