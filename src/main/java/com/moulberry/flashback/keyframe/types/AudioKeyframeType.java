@@ -1,19 +1,24 @@
 package com.moulberry.flashback.keyframe.types;
 
-import com.moulberry.flashback.Utils;
-import com.moulberry.flashback.editor.ui.ImGuiHelper;
 import com.moulberry.flashback.exporting.AsyncFileDialogs;
+import com.moulberry.flashback.keyframe.Keyframe;
 import com.moulberry.flashback.keyframe.KeyframeType;
 import com.moulberry.flashback.keyframe.change.KeyframeChange;
-import com.moulberry.flashback.keyframe.change.KeyframeChangeTickrate;
-import com.moulberry.flashback.keyframe.impl.TimelapseKeyframe;
+import com.moulberry.flashback.keyframe.change.KeyframeChangePlayAudio;
+import com.moulberry.flashback.keyframe.handler.KeyframeHandler;
+import com.moulberry.flashback.keyframe.handler.MinecraftKeyframeHandler;
+import com.moulberry.flashback.keyframe.impl.AudioKeyframe;
 import imgui.ImGui;
-import imgui.type.ImString;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.resources.language.I18n;
 import org.jetbrains.annotations.Nullable;
 
-public class AudioKeyframeType implements KeyframeType<TimelapseKeyframe> {
+import java.nio.file.Path;
+import java.util.Map;
+import java.util.TreeMap;
+import java.util.concurrent.CompletableFuture;
+
+public class AudioKeyframeType implements KeyframeType<AudioKeyframe> {
 
     public static AudioKeyframeType INSTANCE = new AudioKeyframeType();
 
@@ -21,18 +26,23 @@ public class AudioKeyframeType implements KeyframeType<TimelapseKeyframe> {
     }
 
     @Override
+    public boolean supportsHandler(KeyframeHandler handler) {
+        return MinecraftKeyframeHandler.class.isAssignableFrom(handler.getClass());
+    }
+
+    @Override
     public Class<? extends KeyframeChange> keyframeChangeType() {
-        return KeyframeChangeTickrate.class;
+        return KeyframeChangePlayAudio.class;
     }
 
     @Override
     public @Nullable String icon() {
-        return "\ue422"; // todo nobuild: icon
+        return "\ue3a1";
     }
 
     @Override
     public String name() {
-        return I18n.get("flashback.keyframe.audio");
+        return I18n.get("flashback.keyframe.audio_track");
     }
 
     @Override
@@ -46,31 +56,54 @@ public class AudioKeyframeType implements KeyframeType<TimelapseKeyframe> {
     }
 
     @Override
-    public boolean allowChangingTimelineTick() {
+    public boolean allowApplyingDuplicateKeyframeChanges() {
+        return true;
+    }
+
+    @Override
+    public boolean cullKeyframesInTimelineToTheLeft() {
         return false;
     }
 
     @Override
-    public @Nullable TimelapseKeyframe createDirect() {
+    public boolean hasCustomKeyframeChangeCalculation() {
+        return true;
+    }
+
+    @Override
+    public KeyframeChange customKeyframeChange(TreeMap<Integer, Keyframe> keyframes, float tick) {
+        Map.Entry<Integer, Keyframe> entry = keyframes.floorEntry((int) tick);
+        if (entry == null) {
+            return null;
+        }
+
+        float delta = tick - entry.getKey();
+
+        AudioKeyframe audioKeyframe = (AudioKeyframe) entry.getValue();
+        return audioKeyframe.createAudioChange(entry.getKey(), delta / 20.0f);
+    }
+
+    @Override
+    public @Nullable AudioKeyframe createDirect() {
         return null;
     }
 
     @Override
-    public KeyframeCreatePopup<TimelapseKeyframe> createPopup() {
-        AsyncFileDialogs.openFileDialog(FabricLoader.getInstance().get)
-        ImString timelapseKeyframeInput = ImGuiHelper.createResizableImString("1s");
-        timelapseKeyframeInput.inputData.allowedChars = "0123456789tsmh.";
+    public KeyframeCreatePopup<AudioKeyframe> createPopup() {
+        CompletableFuture<String> pathFuture = AsyncFileDialogs.openFileDialog(FabricLoader.getInstance().getGameDir().toString(), "ogg");
 
         return () -> {
-            ImGui.inputText(I18n.get("flashback.time"), timelapseKeyframeInput);
-            if (ImGui.button(I18n.get("flashback.add"))) {
-                return new TimelapseKeyframe(Utils.stringToTime(ImGuiHelper.getString(timelapseKeyframeInput)));
+            if (!pathFuture.isDone()) {
+                return null;
             }
-            ImGui.sameLine();
-            if (ImGui.button(I18n.get("gui.cancel"))) {
+            String pathStr = pathFuture.join();
+            if (pathStr == null) {
                 ImGui.closeCurrentPopup();
+                return null;
+            } else {
+                Path path = Path.of(pathStr);
+                return new AudioKeyframe(path);
             }
-            return null;
         };
     }
 }

@@ -205,7 +205,7 @@ public class EditorState {
                 Class<? extends KeyframeChange> keyframeChangeType = keyframeTrack.keyframeType.keyframeChangeType();
 
                 // Already applied a keyframe of this type earlier, skip
-                if (keyframeChangeType == null || applied.contains(keyframeChangeType)) {
+                if (keyframeChangeType == null || (!keyframeTrack.keyframeType.allowApplyingDuplicateKeyframeChanges() && applied.contains(keyframeChangeType))) {
                     continue;
                 }
 
@@ -432,7 +432,14 @@ public class EditorState {
                     continue;
                 }
                 int min = keyframeTrack.keyframesByTick.firstKey();
-                int max = keyframeTrack.keyframesByTick.lastKey();
+                var entry = keyframeTrack.keyframesByTick.lastEntry();
+
+                int max = entry.getKey();
+                float lastCustomWidth = entry.getValue().getCustomWidthInTicks();
+                if (lastCustomWidth > 0) {
+                    max = entry.getKey() + (int) Math.ceil(lastCustomWidth);
+                }
+
                 if (start == -1) {
                     start = min;
                 } else {

@@ -2,17 +2,16 @@ package com.moulberry.flashback.mixin;
 
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
-import com.mojang.authlib.yggdrasil.YggdrasilAuthenticationService;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.FreezeSlowdownFormula;
 import com.moulberry.flashback.combo_options.GlowingOverride;
 import com.moulberry.flashback.configuration.FlashbackConfigV1;
-import com.moulberry.flashback.editor.ui.windows.ExportDoneWindow;
 import com.moulberry.flashback.exporting.ExportJob;
 import com.moulberry.flashback.exporting.ExportJobQueue;
 import com.moulberry.flashback.keyframe.handler.MinecraftKeyframeHandler;
 import com.moulberry.flashback.keyframe.handler.TickrateKeyframeCapture;
+import com.moulberry.flashback.sound.FlashbackAudioManager;
 import com.moulberry.flashback.state.EditorState;
 import com.moulberry.flashback.state.EditorStateManager;
 import com.moulberry.flashback.exporting.PerfectFrames;
@@ -47,9 +46,9 @@ import net.minecraft.server.level.progress.StoringChunkProgressListener;
 import net.minecraft.server.packs.repository.PackRepository;
 import net.minecraft.server.players.GameProfileCache;
 import net.minecraft.util.profiling.ProfilerFiller;
+import net.minecraft.util.thread.ReentrantBlockableEventLoop;
 import net.minecraft.world.TickRateManager;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.level.block.entity.SkullBlockEntity;
 import net.minecraft.world.level.storage.LevelStorageSource;
 import org.jetbrains.annotations.Nullable;
 import org.spongepowered.asm.mixin.Final;
@@ -66,11 +65,10 @@ import java.net.SocketAddress;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Queue;
 import java.util.UUID;
 import java.util.concurrent.Executor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
 
 @Mixin(Minecraft.class)
 public abstract class MixinMinecraft implements MinecraftExt {
@@ -260,10 +258,10 @@ public abstract class MixinMinecraft implements MinecraftExt {
 
             EditorState editorState = EditorStateManager.getCurrent();
             if (editorState != null && !replayServer.replayPaused) {
-                float partialReplayTick = replayServer.getPartialReplayTick();
+                double partialReplayTick = replayServer.getPartialReplayTick();
 
                 TickrateKeyframeCapture capture = new TickrateKeyframeCapture();
-                editorState.applyKeyframes(capture, partialReplayTick);
+                editorState.applyKeyframes(capture, (float) partialReplayTick);
 
                 if (capture.frozen && capture.frozenDelay > 0 && this.timer instanceof DeltaTracker.Timer timer) {
                     if (clientTickFreezeDelayStart < 0) {
@@ -390,6 +388,7 @@ public abstract class MixinMinecraft implements MinecraftExt {
     public void runTick_setErrorSection(boolean bl, CallbackInfo ci) {
         ReplayServer replayServer = Flashback.getReplayServer();
         if (replayServer == null) {
+            FlashbackAudioManager.stopAll();
             return;
         }
 
@@ -403,10 +402,24 @@ public abstract class MixinMinecraft implements MinecraftExt {
 
         AccurateEntityPositionHandler.apply(this.level, deltaTracker);
 
+        boolean paused = replayServer.replayPaused;
         boolean forceApplyKeyframes = this.applyKeyframes.compareAndSet(true, false);
-        if (!replayServer.replayPaused || forceApplyKeyframes) {
-            EditorState editorState = EditorStateManager.get(replayServer.getMetadata().replayIdentifier);
-            editorState.applyKeyframes(new MinecraftKeyframeHandler((Minecraft) (Object) this), replayServer.getPartialReplayTick());
+        if (paused) {
+            FlashbackAudioManager.pauseAll();
+        }
+        if (!paused || forceApplyKeyframes) {
+            if (!paused) {
+                FlashbackAudioManager.startHandling();
+            }
+
+            try {
+                EditorState editorState = EditorStateManager.get(replayServer.getMetadata().replayIdentifier);
+                editorState.applyKeyframes(new MinecraftKeyframeHandler((Minecraft) (Object) this), (float) replayServer.getPartialReplayTick());
+            } finally {
+                if (!paused) {
+                    FlashbackAudioManager.finishHandling();
+                }
+            }
         }
         if (!replayServer.doClientRendering()) {
             ci.cancel();
