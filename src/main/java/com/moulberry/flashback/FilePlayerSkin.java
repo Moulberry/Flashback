@@ -24,8 +24,11 @@ public class FilePlayerSkin {
         @Override
         public void run() {
             if (this.skinResourceLocation != null) {
-                System.out.println("Cleaning " + this.skinResourceLocation + " because it's no longer in use!");
-                Minecraft.getInstance().getTextureManager().release(this.skinResourceLocation);
+                ResourceLocation toClean = this.skinResourceLocation;
+                Minecraft.getInstance().execute(() -> {
+                    Flashback.LOGGER.info("Cleaning player skin {} because it's no longer in use!", toClean);
+                    Minecraft.getInstance().getTextureManager().release(toClean);
+                });
                 this.skinResourceLocation = null;
             }
         }
