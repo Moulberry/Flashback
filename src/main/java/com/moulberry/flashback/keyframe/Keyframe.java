@@ -2,22 +2,14 @@ package com.moulberry.flashback.keyframe;
 
 import com.google.gson.*;
 import com.moulberry.flashback.keyframe.change.KeyframeChange;
-import com.moulberry.flashback.keyframe.impl.BlockOverrideKeyframe;
-import com.moulberry.flashback.keyframe.impl.CameraKeyframe;
-import com.moulberry.flashback.keyframe.impl.CameraOrbitKeyframe;
-import com.moulberry.flashback.keyframe.impl.CameraShakeKeyframe;
-import com.moulberry.flashback.keyframe.impl.TrackEntityKeyframe;
-import com.moulberry.flashback.keyframe.impl.FOVKeyframe;
-import com.moulberry.flashback.keyframe.impl.FreezeKeyframe;
-import com.moulberry.flashback.keyframe.impl.TickrateKeyframe;
-import com.moulberry.flashback.keyframe.impl.TimeOfDayKeyframe;
-import com.moulberry.flashback.keyframe.impl.TimelapseKeyframe;
+import com.moulberry.flashback.keyframe.impl.*;
 import com.moulberry.flashback.keyframe.interpolation.InterpolationType;
-import com.moulberry.flashback.state.RealTimeMapping;
+import imgui.ImDrawList;
 
 import java.lang.reflect.Type;
 import java.util.Map;
 import java.util.Objects;
+import java.util.TreeMap;
 import java.util.function.Consumer;
 
 public abstract class Keyframe {
@@ -38,7 +30,60 @@ public abstract class Keyframe {
     public abstract KeyframeChange createSmoothInterpolatedChange(Keyframe p1, Keyframe p2, Keyframe p3, float t0, float t1, float t2, float t3, float amount);
     public abstract KeyframeChange createHermiteInterpolatedChange(Map<Float, Keyframe> keyframes, float tick);
 
+    public float getCustomWidthInTicks() {
+        return -1;
+    }
+
     public void renderEditKeyframe(Consumer<Consumer<Keyframe>> update) {}
+
+    public void drawOnTimeline(ImDrawList drawList, int keyframeSize, float x, float y, int colour, float timelineScale, float minTimelineX, float maxTimelineX,
+                               int tick, TreeMap<Integer, Keyframe> keyframeTimes) {
+        int easeSize = keyframeSize / 5;
+        switch (interpolationType) {
+            case SMOOTH -> {
+                drawList.addCircleFilled(x, y, keyframeSize, colour);
+            }
+            case LINEAR -> {
+                drawList.addTriangleFilled(x - keyframeSize, y, x, y - keyframeSize, x, y + keyframeSize, colour);
+                drawList.addTriangleFilled(x + keyframeSize, y, x, y + keyframeSize, x, y - keyframeSize, colour);
+            }
+            case EASE_IN -> {
+                // Left inverted triangle
+                drawList.addTriangleFilled(x - keyframeSize, y - keyframeSize, x - easeSize, y - keyframeSize, x - easeSize, y, colour);
+                drawList.addTriangleFilled(x - keyframeSize, y + keyframeSize, x - easeSize, y, x - easeSize, y + keyframeSize, colour);
+                // Right triangle
+                drawList.addTriangleFilled(x + keyframeSize, y, x + easeSize, y + keyframeSize, x + easeSize, y - keyframeSize, colour);
+                // Center
+                drawList.addRectFilled(x - easeSize, y - keyframeSize, x + easeSize, y + keyframeSize, colour);
+            }
+            case EASE_OUT -> {
+                // Left triangle
+                drawList.addTriangleFilled(x - keyframeSize, y, x - easeSize, y - keyframeSize, x - easeSize, y + keyframeSize, colour);
+                // Right inverted triangle
+                drawList.addTriangleFilled(x + keyframeSize, y - keyframeSize, x + easeSize, y, x + easeSize, y - keyframeSize, colour);
+                drawList.addTriangleFilled(x + keyframeSize, y + keyframeSize, x + easeSize, y + keyframeSize, x + easeSize, y, colour);
+                // Center
+                drawList.addRectFilled(x - easeSize, y - keyframeSize, x + easeSize, y + keyframeSize, colour);
+            }
+            case EASE_IN_OUT -> {
+                // Left inverted triangle
+                drawList.addTriangleFilled(x - keyframeSize, y - keyframeSize, x - easeSize, y - keyframeSize, x - easeSize, y, colour);
+                drawList.addTriangleFilled(x - keyframeSize, y + keyframeSize, x - easeSize, y, x - easeSize, y + keyframeSize, colour);
+                // Right inverted triangle
+                drawList.addTriangleFilled(x + keyframeSize, y - keyframeSize, x + easeSize, y, x + easeSize, y - keyframeSize, colour);
+                drawList.addTriangleFilled(x + keyframeSize, y + keyframeSize, x + easeSize, y + keyframeSize, x + easeSize, y, colour);
+                // Center
+                drawList.addRectFilled(x - easeSize, y - keyframeSize, x + easeSize, y + keyframeSize, colour);
+            }
+            case HOLD -> {
+                drawList.addRectFilled(x - keyframeSize, y - keyframeSize, x + keyframeSize, y + keyframeSize, colour);
+            }
+            case HERMITE -> {
+                drawList.addTriangleFilled(x, y - keyframeSize, x + keyframeSize, y + keyframeSize,
+                        x - keyframeSize, y + keyframeSize, colour);
+            }
+        }
+    }
 
     public static class TypeAdapter implements JsonSerializer<Keyframe>, JsonDeserializer<Keyframe> {
         @Override
@@ -61,6 +106,7 @@ public abstract class Keyframe {
                 case "time" -> context.deserialize(json, TimeOfDayKeyframe.class);
                 case "camera_shake" -> context.deserialize(json, CameraShakeKeyframe.class);
                 case "block_override" -> context.deserialize(json, BlockOverrideKeyframe.class);
+                case "audio" -> context.deserialize(json, AudioKeyframe.class);
                 default -> throw new IllegalStateException("Unknown keyframe type: " + type);
             };
             keyframe.interpolationType(context.deserialize(jsonObject.get("interpolation_type"), InterpolationType.class));
@@ -102,6 +148,10 @@ public abstract class Keyframe {
                 case BlockOverrideKeyframe blockOverrideKeyframe -> {
                     jsonObject = (JsonObject) context.serialize(blockOverrideKeyframe);
                     jsonObject.addProperty("type", "block_override");
+                }
+                case AudioKeyframe audioKeyframe -> {
+                    jsonObject = (JsonObject) context.serialize(audioKeyframe);
+                    jsonObject.addProperty("type", "audio");
                 }
                 default -> throw new IllegalStateException("Unknown keyframe type: " + src.getClass());
             }

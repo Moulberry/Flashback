@@ -496,7 +496,7 @@ public class ReplayServer extends IntegratedServer {
     private int lastReplayTick;
     private long lastTickTimeNanos;
 
-    public float getPartialReplayTick() {
+    public double getPartialReplayTick() {
         if (this.replayPaused || this.isPaused()) {
             return this.targetTick;
         } else {
@@ -506,7 +506,7 @@ public class ReplayServer extends IntegratedServer {
             double partial = (currentNanos - this.lastTickTimeNanos) / (double) nanosPerTick;
             partial = Math.max(0, Math.min(1, partial));
 
-            return this.lastReplayTick + (float) partial;
+            return this.lastReplayTick + partial;
         }
     }
 

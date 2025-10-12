@@ -398,6 +398,7 @@
   "flashback.weather_override.snowing": "Snowing",
   "flashback.weather_override.thundering": "Thundering",
   "flashback.added_named_keyframe": "Added %s keyframe",
+  "flashback.keyframe.audio_track": "Audio Track",
   "flashback.keyframe.block_override": "Block Override",
   "flashback.keyframe.camera": "Camera",
   "flashback.keyframe.camera_orbit": "Camera Orbit",

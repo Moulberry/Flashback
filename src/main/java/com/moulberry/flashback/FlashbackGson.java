@@ -6,16 +6,7 @@ import com.mojang.authlib.properties.PropertyMap;
 import com.moulberry.flashback.keyframe.Keyframe;
 import com.moulberry.flashback.keyframe.KeyframeRegistry;
 import com.moulberry.flashback.keyframe.KeyframeType;
-import com.moulberry.flashback.keyframe.impl.BlockOverrideKeyframe;
-import com.moulberry.flashback.keyframe.impl.CameraKeyframe;
-import com.moulberry.flashback.keyframe.impl.CameraOrbitKeyframe;
-import com.moulberry.flashback.keyframe.impl.CameraShakeKeyframe;
-import com.moulberry.flashback.keyframe.impl.TrackEntityKeyframe;
-import com.moulberry.flashback.keyframe.impl.FOVKeyframe;
-import com.moulberry.flashback.keyframe.impl.FreezeKeyframe;
-import com.moulberry.flashback.keyframe.impl.TickrateKeyframe;
-import com.moulberry.flashback.keyframe.impl.TimeOfDayKeyframe;
-import com.moulberry.flashback.keyframe.impl.TimelapseKeyframe;
+import com.moulberry.flashback.keyframe.impl.*;
 import com.moulberry.flashback.serialization.QuaterniondTypeAdapater;
 import com.moulberry.flashback.serialization.QuaternionfTypeAdapater;
 import com.moulberry.flashback.serialization.Vector3dTypeAdapater;
@@ -50,6 +41,7 @@ public class FlashbackGson {
             .registerTypeAdapter(TimeOfDayKeyframe.class, new TimeOfDayKeyframe.TypeAdapter())
             .registerTypeAdapter(FreezeKeyframe.class, new FreezeKeyframe.TypeAdapter())
             .registerTypeAdapter(BlockOverrideKeyframe.class, new BlockOverrideKeyframe.TypeAdapter())
+            .registerTypeAdapter(AudioKeyframe.class, new AudioKeyframe.TypeAdapter())
             .registerTypeAdapter(Keyframe.class, new Keyframe.TypeAdapter())
 
             .registerTypeAdapter(EditorSceneHistoryAction.SetKeyframe.class, new EditorSceneHistoryAction.SetKeyframe.TypeAdapter())
