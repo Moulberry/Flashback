@@ -172,3 +172,5 @@ accessible field net/minecraft/client/resources/language/ClientLanguage storage 
 
 accessible class net/minecraft/server/network/config/PrepareSpawnTask$Ready
 mutable field net/minecraft/client/gui/components/debug/DebugScreenEntries PROFILES Ljava/util/Map;
+
+accessible field net/minecraft/world/level/storage/PrimaryLevelData settings Lnet/minecraft/world/level/LevelSettings;
