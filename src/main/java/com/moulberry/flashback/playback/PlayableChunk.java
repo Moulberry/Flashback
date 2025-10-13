@@ -6,6 +6,7 @@ import io.netty.buffer.Unpooled;
 import net.minecraft.core.RegistryAccess;
 
 import java.io.IOException;
+import java.lang.ref.SoftReference;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
@@ -13,7 +14,7 @@ public class PlayableChunk {
 
     public final FlashbackChunkMeta chunkMeta;
     public final Path path;
-    private ReplayReader replayReader;
+    private SoftReference<ReplayReader> replayReader;
 
     public PlayableChunk(FlashbackChunkMeta chunkMeta, Path path) {
         this.chunkMeta = chunkMeta;
@@ -21,17 +22,20 @@ public class PlayableChunk {
     }
 
     public ReplayReader getOrLoadReplayReader(RegistryAccess registryAccess) {
-        if (this.replayReader == null) {
+        ReplayReader replayReader = this.replayReader == null ? null : this.replayReader.get();
+
+        if (replayReader == null) {
             try {
                 byte[] bytes = Files.readAllBytes(this.path);
-                this.replayReader = new ReplayReader(Unpooled.wrappedBuffer(bytes), registryAccess);
+                replayReader = new ReplayReader(Unpooled.wrappedBuffer(bytes), registryAccess);
+                this.replayReader = new SoftReference<>(replayReader);
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
         }
 
-        this.replayReader.changeRegistryAccess(registryAccess);
-        return this.replayReader;
+        replayReader.changeRegistryAccess(registryAccess);
+        return replayReader;
     }
 
 

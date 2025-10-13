@@ -100,6 +100,7 @@ import org.jetbrains.annotations.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.ref.SoftReference;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.FileVisitResult;
@@ -127,7 +128,6 @@ public class ReplayServer extends IntegratedServer {
     private static final Gson GSON = new Gson();
     public static int REPLAY_VIEWER_IDS_START = -981723987;
     public static String REPLAY_VIEWER_NAME = "Replay Viewer";
-    public static final int CHUNK_CACHE_SIZE = 10000;
 
     public volatile int jumpToTick = -1;
     public volatile boolean replayPaused = true;
@@ -168,7 +168,7 @@ public class ReplayServer extends IntegratedServer {
     private final UUID playbackUUID;
     private final FlashbackMeta metadata;
     private final TreeMap<Integer, PlayableChunk> playableChunksByStart = new TreeMap<>();
-    private final Int2ObjectMap<ClientboundLevelChunkWithLightPacket> levelChunkCachedPackets = new Int2ObjectOpenHashMap<>();
+    private ReplayChunkCache replayChunkCache = null;
     private final IntSet loadedChunkCacheFiles = new IntOpenHashSet();
     private ReplayReader currentReplayReader = null;
 
@@ -213,55 +213,10 @@ public class ReplayServer extends IntegratedServer {
 
             this.totalTicks = ticks;
 
-            Path levelChunkCachePath = this.playbackFileSystem.getPath("/level_chunk_cache");
-            if (Files.exists(levelChunkCachePath)) {
-                loadLevelChunkCache(levelChunkCachePath, 0, "/level_chunk_cache");
-            }
+            this.replayChunkCache = new ReplayChunkCache(this.playbackFileSystem);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-    }
-
-    private void loadLevelChunkCache(Path levelChunkCachePath, int chunkCacheIndex, String name) throws IOException {
-        int startIndex = chunkCacheIndex;
-
-        try (InputStream is = Files.newInputStream(levelChunkCachePath)) {
-            while (true) {
-                byte[] sizeBuffer = is.readNBytes(4);
-                if (sizeBuffer.length < 4) {
-                    break;
-                }
-
-                int size = (sizeBuffer[0] & 0xff) << 24 |
-                    (sizeBuffer[1] & 0xff) << 16 |
-                    (sizeBuffer[2] & 0xff) <<  8 |
-                    sizeBuffer[3] & 0xff;
-
-                byte[] chunk = is.readNBytes(size);
-                if (chunk.length < size) {
-                    Flashback.LOGGER.error("Ran out of bytes while reading level_chunk_cache, needed {}, had {}",
-                        size, chunk.length);
-                    break;
-                }
-
-                RegistryFriendlyByteBuf registryFriendlyByteBuf = new RegistryFriendlyByteBuf(Unpooled.wrappedBuffer(chunk), this.registryAccess());
-
-                try {
-                    Packet<?> packet = this.gamePacketCodec.decode(registryFriendlyByteBuf);
-                    if (packet instanceof ClientboundLevelChunkWithLightPacket levelChunkWithLightPacket) {
-                        this.levelChunkCachedPackets.put(chunkCacheIndex, levelChunkWithLightPacket);
-                    } else {
-                        throw new IllegalStateException("Level chunk cache contains wrong packet: " + packet);
-                    }
-                } catch (Exception e) {
-                    Flashback.LOGGER.error("Encountered error while reading level_chunk_cache", e);
-                }
-
-                chunkCacheIndex += 1;
-            }
-        }
-
-        Flashback.LOGGER.info("Loaded {} with {} entries", name, chunkCacheIndex - startIndex);
     }
 
     public FlashbackMeta getMetadata() {
@@ -722,22 +677,7 @@ public class ReplayServer extends IntegratedServer {
     }
 
     public void handleLevelChunkCached(int index) {
-        ClientboundLevelChunkWithLightPacket packet = this.levelChunkCachedPackets.get(index);
-        if (packet == null) {
-            int cacheIndex = index / ReplayServer.CHUNK_CACHE_SIZE;
-            if (this.loadedChunkCacheFiles.add(cacheIndex)) {
-                String pathString = "/level_chunk_caches/" + cacheIndex;
-                Path levelChunkCachePath = this.playbackFileSystem.getPath(pathString);
-                if (Files.exists(levelChunkCachePath)) {
-                    try {
-                        loadLevelChunkCache(levelChunkCachePath, cacheIndex * ReplayServer.CHUNK_CACHE_SIZE, pathString);
-                    } catch (IOException e) {
-                        SneakyThrow.sneakyThrow(e);
-                    }
-                }
-                packet = this.levelChunkCachedPackets.get(index);
-            }
-        }
+        ClientboundLevelChunkWithLightPacket packet = this.replayChunkCache.getOrLoad(index, this.registryAccess(), this.gamePacketCodec);
 
         if (packet != null) {
             this.configurationPacketHandler.flushPendingConfiguration();
@@ -1537,7 +1477,7 @@ public class ReplayServer extends IntegratedServer {
             }
         }
 
-        this.levelChunkCachedPackets.clear();
+        this.replayChunkCache.clear();
         this.playableChunksByStart.clear();
     }
 
