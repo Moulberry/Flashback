@@ -122,6 +122,16 @@ public abstract class MixinGameRenderer {
         }
     }
 
+    @Inject(method = "shouldRenderBlockOutline", at = @At("HEAD"), cancellable = true)
+    public void shouldRenderBlockOutline(CallbackInfoReturnable<Boolean> cir) {
+        if (Flashback.isInReplay()) {
+            var cameraEntity = Minecraft.getInstance().getCameraEntity();
+            if (cameraEntity == this.minecraft.player && cameraEntity.isSpectator()) {
+                cir.setReturnValue(false);
+            }
+        }
+    }
+
     @Inject(method = "getFov", at = @At("HEAD"), cancellable = true)
     public void getFov(Camera camera, float f, boolean bl, CallbackInfoReturnable<Double> cir) {
         if (Flashback.isInReplay()) {
