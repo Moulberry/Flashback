@@ -6,6 +6,7 @@ import com.moulberry.flashback.FlashbackGson;
 import com.moulberry.flashback.action.Action;
 import com.moulberry.flashback.action.ActionLevelChunkCached;
 import com.moulberry.flashback.action.ActionRegistry;
+import com.moulberry.flashback.playback.ReplayChunkCache;
 import com.moulberry.flashback.playback.ReplayServer;
 import com.moulberry.flashback.record.FlashbackChunkMeta;
 import com.moulberry.flashback.record.FlashbackMeta;
@@ -121,7 +122,7 @@ public class ReplayCombiner {
             int lastCacheIndex = -1;
             RegistryFriendlyByteBuf chunkCacheOutput = null;
             for (int i = 0; i < levelChunkPackets.size(); i++) {
-                int cacheIndex = i / ReplayServer.CHUNK_CACHE_SIZE;
+                int cacheIndex = i / ReplayChunkCache.CHUNK_CACHE_SIZE;
 
                 if (chunkCacheOutput == null) {
                     lastCacheIndex = cacheIndex;
@@ -280,7 +281,7 @@ public class ReplayCombiner {
         while (true) {
             levelChunkCachePath = fileSystem.getPath("/level_chunk_caches/"+index);
             if (Files.exists(levelChunkCachePath)) {
-                loadLevelChunkCache(gamePacketCodec, registryAccess, levelChunkCachePath, index * ReplayServer.CHUNK_CACHE_SIZE, packets, levelChunkMappings);
+                loadLevelChunkCache(gamePacketCodec, registryAccess, levelChunkCachePath, index * ReplayChunkCache.CHUNK_CACHE_SIZE, packets, levelChunkMappings);
                 index += 1;
             } else {
                 break;
