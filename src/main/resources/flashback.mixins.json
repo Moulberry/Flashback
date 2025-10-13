@@ -82,6 +82,7 @@
     "playback.MixinChunkHolder",
     "playback.MixinEntity",
     "playback.MixinLevelChunk",
+    "playback.MixinMapItemSavedData",
     "playback.MixinMinecraftServer",
     "playback.MixinPlayerChunkSender",
     "playback.MixinScoreboard",
