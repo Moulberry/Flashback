@@ -169,3 +169,5 @@ accessible field net/minecraft/world/entity/player/Player DATA_PLAYER_MODE_CUSTO
 accessible field net/minecraft/world/entity/player/Player DATA_PLAYER_MAIN_HAND Lnet/minecraft/network/syncher/EntityDataAccessor;
 
 accessible field net/minecraft/client/resources/language/ClientLanguage storage Ljava/util/Map;
+
+accessible field net/minecraft/world/level/storage/PrimaryLevelData settings Lnet/minecraft/world/level/LevelSettings;

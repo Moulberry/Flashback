@@ -48,6 +48,7 @@ import net.minecraft.server.level.ThreadedLevelLightEngine;
 import net.minecraft.server.network.CommonListenerCookie;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.tags.BlockTags;
+import net.minecraft.world.Difficulty;
 import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.*;
@@ -58,11 +59,7 @@ import net.minecraft.world.entity.decoration.Painting;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.ChunkPos;
-import net.minecraft.world.level.GameRules;
-import net.minecraft.world.level.GameType;
-import net.minecraft.world.level.Level;
-import net.minecraft.world.level.LightLayer;
+import net.minecraft.world.level.*;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.biome.Biomes;
 import net.minecraft.world.level.block.Blocks;
@@ -756,6 +753,15 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
                 specialWorldProperty = PrimaryLevelData.SpecialWorldProperty.NONE;
             }
             primaryLevelData.specialWorldProperty = specialWorldProperty;
+            primaryLevelData.settings = new LevelSettings(
+                primaryLevelData.settings.levelName(),
+                primaryLevelData.settings.gameType(),
+                clientboundLoginPacket.hardcore(),
+                Difficulty.NORMAL,
+                true,
+                primaryLevelData.settings.gameRules(),
+                primaryLevelData.settings.getDataConfiguration()
+            );
         }
 
         if (recreatePlayer) {
