@@ -25,6 +25,7 @@ import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import org.jetbrains.annotations.Nullable;
+import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
@@ -65,6 +66,7 @@ public abstract class MixinItemInHandRenderer implements ItemInHandRendererExt {
 
     @Shadow protected abstract void renderArmWithItem(AbstractClientPlayer abstractClientPlayer, float f, float g, InteractionHand interactionHand, float h, ItemStack itemStack, float i, PoseStack poseStack, SubmitNodeCollector submitNodeCollector, int j);
 
+    @Shadow @Final private Minecraft minecraft;
     @Unique
     private static final int RENDER_MAIN_HAND = 1;
     @Unique
@@ -132,6 +134,9 @@ public abstract class MixinItemInHandRenderer implements ItemInHandRendererExt {
             m = 1.0f - Mth.lerp(partialTick, this.oOffHandHeight, this.offHandHeight);
             renderArmWithItem(clientPlayer, partialTick, h, InteractionHand.OFF_HAND, l, this.offHandItem, m, poseStack, submitNodeCollector, i);
         }
+
+        this.minecraft.gameRenderer.getFeatureRenderDispatcher().renderAllFeatures();
+        this.minecraft.renderBuffers().bufferSource().endBatch();
     }
 
     @Inject(method = "renderPlayerArm", at = @At(value = "FIELD", target = "Lnet/minecraft/client/renderer/ItemInHandRenderer;entityRenderDispatcher:Lnet/minecraft/client/renderer/entity/EntityRenderDispatcher;"))
