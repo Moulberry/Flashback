@@ -1,6 +1,7 @@
 package com.moulberry.flashback;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.mojang.blaze3d.platform.InputConstants;
 import com.mojang.brigadier.arguments.BoolArgumentType;
@@ -762,6 +763,25 @@ public class Flashback implements ModInitializer, ClientModInitializer {
                     } else if (filename.endsWith(".json.old")) {
                         withoutExtension = filename.substring(0, filename.length() - 9);
                     }
+
+                    try {
+                        boolean used = false;
+
+                        JsonObject jsonObject = FlashbackGson.COMPRESSED.fromJson(Files.readString(path), JsonObject.class);
+                        if (jsonObject.has("usedByPaths")) {
+                            for (JsonElement usedBy : jsonObject.get("usedByPaths").getAsJsonArray()) {
+                                Path usedByPath = Path.of(usedBy.getAsString());
+                                if (Files.exists(usedByPath)) {
+                                    used = true;
+                                    break;
+                                }
+                            }
+                        }
+
+                        if (used) {
+                            continue;
+                        }
+                    } catch (Exception ignored) {}
 
                     BasicFileAttributeView attributeView = Files.getFileAttributeView(path, BasicFileAttributeView.class);
                     BasicFileAttributes basicFileAttributes = attributeView.readAttributes();
