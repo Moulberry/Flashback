@@ -746,6 +746,8 @@ public class Flashback implements ModInitializer, ClientModInitializer {
             return;
         }
 
+        List<String> recentReplays = new ArrayList<>(Flashback.config.internal.recentReplays);
+
         CompletableFuture.runAsync(() -> {
             long currentTime = System.currentTimeMillis();
             Map<UUID, Path> replayStates = new HashMap<>();
@@ -769,6 +771,12 @@ public class Flashback implements ModInitializer, ClientModInitializer {
                         JsonObject jsonObject = FlashbackGson.COMPRESSED.fromJson(Files.readString(path), JsonObject.class);
                         if (jsonObject.has("usedByPaths")) {
                             for (JsonElement usedBy : jsonObject.get("usedByPaths").getAsJsonArray()) {
+                                String usedByStr = usedBy.getAsString();
+                                if (recentReplays.contains(usedByStr)) {
+                                    used = true;
+                                    break;
+                                }
+
                                 Path usedByPath = Path.of(usedBy.getAsString());
                                 if (Files.exists(usedByPath)) {
                                     used = true;
@@ -810,33 +818,30 @@ public class Flashback implements ModInitializer, ClientModInitializer {
 
             // Find which uuids are still valid because they have replays
             Set<UUID> replayUuids = new HashSet<>();
-            try (DirectoryStream<Path> directoryStream = Files.newDirectoryStream(replayDir)) {
-                for (Path path : directoryStream) {
-                    if (!path.toString().endsWith(".zip")) {
+            Set<Path> checkedReplayPaths = new HashSet<>();
+
+            try {
+                for (String recentReplayStr : recentReplays) {
+                    Path path = Path.of(recentReplayStr);
+                    if (!checkedReplayPaths.add(path)) {
                         continue;
                     }
-
-                    String metadataString = null;
-
-                    try (FileSystem fs = FileSystems.newFileSystem(path)) {
-                        Path metadataPath = fs.getPath("/metadata.json");
-                        if (Files.exists(metadataPath)) {
-                            metadataString = Files.readString(metadataPath);
-                        }
-                    } catch (IOException ignored) {
-                        continue;
-                    }
-
-                    if (metadataString != null) {
-                        JsonObject metadataJson = new Gson().fromJson(metadataString, JsonObject.class);
-                        FlashbackMeta metadata = FlashbackMeta.fromJson(metadataJson);
-                        if (metadata != null) {
-                            replayUuids.add(metadata.replayIdentifier);
-                        }
-                    }
+                    readReplayUuidIntoSet(path, replayUuids);
                 }
             } catch (IOException e) {
-                Flashback.LOGGER.error("Unable to iterate replay directory", e);
+                Flashback.LOGGER.error("Unable read replay uuid", e);
+                return;
+            }
+
+            try (DirectoryStream<Path> directoryStream = Files.newDirectoryStream(replayDir)) {
+                for (Path path : directoryStream) {
+                    if (!checkedReplayPaths.add(path)) {
+                        continue;
+                    }
+                    readReplayUuidIntoSet(path, replayUuids);
+                }
+            } catch (IOException e) {
+                Flashback.LOGGER.error("Unable to iterate replay directory or read replay uuid", e);
                 return;
             }
 
@@ -848,6 +853,29 @@ public class Flashback implements ModInitializer, ClientModInitializer {
                 }
             }
         }, Util.backgroundExecutor());
+    }
+
+    private static void readReplayUuidIntoSet(Path path, Set<UUID> replayUuids) throws IOException {
+        if (!path.toString().endsWith(".zip")) {
+            return;
+        }
+
+        String metadataString = null;
+
+        try (FileSystem fs = FileSystems.newFileSystem(path)) {
+            Path metadataPath = fs.getPath("/metadata.json");
+            if (Files.exists(metadataPath)) {
+                metadataString = Files.readString(metadataPath);
+            }
+        }
+
+        if (metadataString != null) {
+            JsonObject metadataJson = new Gson().fromJson(metadataString, JsonObject.class);
+            FlashbackMeta metadata = FlashbackMeta.fromJson(metadataJson);
+            if (metadata != null) {
+                replayUuids.add(metadata.replayIdentifier);
+            }
+        }
     }
 
     public static FlashbackConfigV1 getConfig() {
