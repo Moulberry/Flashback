@@ -42,6 +42,8 @@ public class EditorState {
     public double zoomMin = 0.0;
     public double zoomMax = 1.0;
 
+    public Set<String> usedByPaths = new HashSet<>();
+
     public UUID audioSourceEntity = null;
     public Set<UUID> hideDuringExport = new HashSet<>();
     public Set<UUID> hideNametags = new HashSet<>();

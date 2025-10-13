@@ -212,6 +212,8 @@ public class ReplayServer extends IntegratedServer {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+
+        this.getEditorState().usedByPaths.add(path.toString());
     }
 
     public FlashbackMeta getMetadata() {
