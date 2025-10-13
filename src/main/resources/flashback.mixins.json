@@ -84,6 +84,7 @@
     "playback.MixinEntity",
     "playback.MixinLevelChunk",
     "playback.MixinLivingEntity",
+    "playback.MixinMapItemSavedData",
     "playback.MixinPlayerChunkSender",
     "playback.MixinScoreboard",
     "playback.MixinServerTickRateManager",
