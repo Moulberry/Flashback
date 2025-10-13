@@ -636,6 +636,9 @@ public class Flashback implements ModInitializer, ClientModInitializer {
         if (FabricLoader.getInstance().isModLoaded("c2me")) {
             incompatible.add("Concurrent Chunk Management Engine (c2me)");
         }
+        if (FabricLoader.getInstance().isModLoaded("viafabricplus")) {
+            incompatible.add("ViaFabricPlus");
+        }
         return incompatible;
     }
 
@@ -643,6 +646,9 @@ public class Flashback implements ModInitializer, ClientModInitializer {
         List<String> incompatible = new ArrayList<>();
         if (FabricLoader.getInstance().isModLoaded("farsight")) {
             incompatible.add("Farsight");
+        }
+        if (FabricLoader.getInstance().isModLoaded("viafabricplus")) {
+            incompatible.add("ViaFabricPlus");
         }
         if (incompatible.isEmpty()) {
             return null;
