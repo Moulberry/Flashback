@@ -199,7 +199,7 @@ public class ExportDoneWindow {
                                 inProgressUpload = entry.completedUpload;
                             }
                         }
-                        ImGuiHelper.tooltip("Upload a clip to medal.tv and generate a link to view the clip");
+                        ImGuiHelper.tooltip("Upload the clip to medal.tv and generate a link to view it");
                     }
                 }
 
@@ -259,6 +259,8 @@ public class ExportDoneWindow {
                 URI shareUrl = inProgressUpload.shareUrl;
                 String shareUrlStr = shareUrl.toString();
 
+                ImGui.text("Video is unlisted and expires after 14 days");
+
                 ImGui.text("Share Link:");
                 ImGui.sameLine();
                 ImGui.textColored(0xFFF4A903, shareUrlStr);
@@ -288,7 +290,9 @@ public class ExportDoneWindow {
             }
 
             if (hasError || (!finished && Math.abs(inProgressUpload.startTime - System.currentTimeMillis()) > 5000)) {
-                ImGui.sameLine();
+                if (!hasError) {
+                    ImGui.sameLine();
+                }
                 if (ImGui.button("Cancel")) {
                     inProgressUpload.shouldCancel = true;
                     inProgressUpload = null;
