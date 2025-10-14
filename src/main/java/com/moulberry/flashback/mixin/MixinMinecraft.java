@@ -2,6 +2,7 @@ package com.moulberry.flashback.mixin;
 
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
+import com.mojang.authlib.yggdrasil.YggdrasilAuthenticationService;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.FreezeSlowdownFormula;
@@ -47,6 +48,7 @@ import net.minecraft.server.players.GameProfileCache;
 import net.minecraft.util.thread.ReentrantBlockableEventLoop;
 import net.minecraft.world.TickRateManager;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.level.block.entity.SkullBlockEntity;
 import net.minecraft.world.level.storage.LevelStorageSource;
 import org.jetbrains.annotations.Nullable;
 import org.spongepowered.asm.mixin.Final;
@@ -63,10 +65,12 @@ import java.net.SocketAddress;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Queue;
 import java.util.UUID;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 @Mixin(Minecraft.class)
 public abstract class MixinMinecraft implements MinecraftExt {
