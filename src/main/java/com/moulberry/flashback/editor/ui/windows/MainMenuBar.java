@@ -74,7 +74,7 @@ public class MainMenuBar {
                     minecraft.level.disconnect();
                 }
                 minecraft.disconnect();
-                minecraft.setScreen(new SelectReplayScreen(new TitleScreen(), Flashback.getReplayFolder()));
+                minecraft.setScreen(new SelectReplayScreen(new TitleScreen()));
             }
             ImGui.endMenu();
         }
