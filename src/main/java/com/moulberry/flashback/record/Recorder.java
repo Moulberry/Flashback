@@ -141,6 +141,7 @@ public class Recorder {
     private volatile boolean closeForWriting = false;
     private volatile boolean isPaused = false;
     private volatile boolean wasPaused = false;
+    private volatile boolean skippedPacketDueToWaitingForWrite = false;
 
     public Recorder(RegistryAccess registryAccess) {
         this.asyncReplaySaver = new AsyncReplaySaver(registryAccess);
@@ -775,6 +776,7 @@ public class Recorder {
 
     public void writePacketAsync(Packet<?> packet, ConnectionProtocol phase) {
         if (!this.readyToWrite()) {
+            this.skippedPacketDueToWaitingForWrite = true;
             return;
         }
 
@@ -815,14 +817,23 @@ public class Recorder {
     }
 
     public void writeSnapshot(boolean asActualSnapshot) {
+        Minecraft minecraft = Minecraft.getInstance();
+
+        if (this.skippedPacketDueToWaitingForWrite) {
+            // If we skipped a packet, we should run all updates to ensure that
+            // the packet changes have been applied to the game state.
+            this.skippedPacketDueToWaitingForWrite = false;
+            while (minecraft.pollTask()) {}
+        }
+
         if (asActualSnapshot) {
             this.asyncReplaySaver.submit(ReplayWriter::startSnapshot);
         }
 
-        ClientLevel level = Minecraft.getInstance().level;
-        LocalPlayer localPlayer = Minecraft.getInstance().player;
-        ClientPacketListener connection = Minecraft.getInstance().getConnection();
-        MultiPlayerGameMode gameMode = Minecraft.getInstance().gameMode;
+        ClientLevel level = minecraft.level;
+        LocalPlayer localPlayer = minecraft.player;
+        ClientPacketListener connection = minecraft.getConnection();
+        MultiPlayerGameMode gameMode = minecraft.gameMode;
         ClientChunkCache clientChunkCache = level.getChunkSource();
 
         AtomicReferenceArray<LevelChunk> chunks = clientChunkCache.storage.chunks;
@@ -866,7 +877,7 @@ public class Recorder {
 
         // Resource packs
         configurationPackets.add(new ClientboundResourcePackPopPacket(Optional.empty()));
-        for (ServerPackManager.ServerPackData pack : Minecraft.getInstance().getDownloadedPackSource().manager.packs) {
+        for (ServerPackManager.ServerPackData pack : minecraft.getDownloadedPackSource().manager.packs) {
             configurationPackets.add(new ClientboundResourcePackPushPacket(pack.id, pack.url.toString(), pack.hash == null ? "" : pack.hash.toString(),
                 true, Optional.empty()));
         }
@@ -879,7 +890,7 @@ public class Recorder {
         CommonPlayerSpawnInfo commonPlayerSpawnInfo = new CommonPlayerSpawnInfo(level.dimensionTypeRegistration(), level.dimension(), hashedSeed,
             gameMode.getPlayerMode(), gameMode.getPreviousPlayerMode(), level.isDebug(), level.getLevelData().isFlat, Optional.empty(), 0);
         var loginPacket = new ClientboundLoginPacket(localPlayer.getId(), level.getLevelData().isHardcore(), connection.levels(),
-            1, Minecraft.getInstance().options.getEffectiveRenderDistance(), level.getServerSimulationDistance(),
+            1, minecraft.options.getEffectiveRenderDistance(), level.getServerSimulationDistance(),
             localPlayer.isReducedDebugInfo(), localPlayer.shouldShowDeathScreen(), localPlayer.getDoLimitedCrafting(), commonPlayerSpawnInfo, false);
         gamePackets.add(loginPacket);
 
@@ -947,14 +958,14 @@ public class Recorder {
         gamePackets.add(infoUpdatePacket);
 
         // Tab list
-        PlayerTabOverlay playerTabOverlay = Minecraft.getInstance().gui.getTabList();
+        PlayerTabOverlay playerTabOverlay = minecraft.gui.getTabList();
         gamePackets.add(new ClientboundTabListPacket(
             playerTabOverlay.header != null ? playerTabOverlay.header : Component.empty(),
             playerTabOverlay.footer != null ? playerTabOverlay.footer : Component.empty()
         ));
 
         // Boss bar
-        BossHealthOverlay bossOverlay = Minecraft.getInstance().gui.getBossOverlay();
+        BossHealthOverlay bossOverlay = minecraft.gui.getBossOverlay();
         for (LerpingBossEvent event : bossOverlay.events.values()) {
             gamePackets.add(ClientboundBossEventPacket.createAddPacket(event));
         }
