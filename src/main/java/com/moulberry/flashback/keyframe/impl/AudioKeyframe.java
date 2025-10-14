@@ -49,7 +49,7 @@ public class AudioKeyframe extends Keyframe {
 
     @Override
     public KeyframeChange createChange() {
-        throw new UnsupportedOperationException();
+        return null;
     }
 
     @Override

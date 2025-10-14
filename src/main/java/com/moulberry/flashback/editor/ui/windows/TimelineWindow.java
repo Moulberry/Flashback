@@ -1129,7 +1129,10 @@ public class TimelineWindow {
                             if (ImGui.isMouseDoubleClicked(ImGuiMouseButton.Left)) {
                                 MinecraftKeyframeHandler minecraftKeyframeHandler = new MinecraftKeyframeHandler(Minecraft.getInstance());
                                 if (closest.getValue().keyframeType().supportsHandler(minecraftKeyframeHandler)) {
-                                    closest.getValue().createChange().apply(minecraftKeyframeHandler);
+                                    var change = closest.getValue().createChange();
+                                    if (change != null) {
+                                        change.apply(minecraftKeyframeHandler);
+                                    }
                                 }
                             } else {
                                 grabbedKeyframe = true;
@@ -1302,7 +1305,10 @@ public class TimelineWindow {
         if (!multiple && editingKeyframe instanceof CameraKeyframe cameraKeyframe) {
             ImGui.sameLine();
             if (ImGui.button(I18n.get("flashback.apply"))) {
-                cameraKeyframe.createChange().apply(new MinecraftKeyframeHandler(Minecraft.getInstance()));
+                var change = cameraKeyframe.createChange();
+                if (change != null) {
+                    change.apply(new MinecraftKeyframeHandler(Minecraft.getInstance()));
+                }
             }
         }
 

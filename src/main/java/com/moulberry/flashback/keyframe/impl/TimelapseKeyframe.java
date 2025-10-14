@@ -64,7 +64,7 @@ public class TimelapseKeyframe extends Keyframe {
 
     @Override
     public KeyframeChange createChange() {
-        throw new UnsupportedOperationException();
+        return null;
     }
 
     @Override
