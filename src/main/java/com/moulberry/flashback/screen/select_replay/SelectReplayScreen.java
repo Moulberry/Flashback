@@ -28,6 +28,10 @@ public class SelectReplayScreen extends Screen {
     private ReplaySelectionList list;
     private LinkedHashMap<String, LinkedHashSet<String>> currentNamespacesForRegistries;
 
+    public SelectReplayScreen(Screen screen) {
+        this(screen, Flashback.getReplayFolder());
+    }
+
     public SelectReplayScreen(Screen screen, Path path) {
         super(Component.translatable("flashback.select_replay"));
         this.lastScreen = screen;
