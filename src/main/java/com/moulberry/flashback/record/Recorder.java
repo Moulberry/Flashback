@@ -1204,11 +1204,17 @@ public class Recorder {
             gamePackets.add(packet);
         }
 
+        writeCustomSnapshot(gamePackets::add);
+
         this.asyncReplaySaver.writeGamePackets(this.gamePacketCodec, gamePackets);
 
         if (asActualSnapshot) {
             this.asyncReplaySaver.submit(ReplayWriter::endSnapshot);
         }
+    }
+
+    public void writeCustomSnapshot(Consumer<Packet<? super ClientGamePacketListener>> consumer) {
+        // Mods can mixin here if they want to add custom actions (using this.asyncReplayServer) or packets
     }
 
 }
