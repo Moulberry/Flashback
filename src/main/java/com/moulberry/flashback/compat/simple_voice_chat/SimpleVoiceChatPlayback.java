@@ -62,7 +62,7 @@ public class SimpleVoiceChatPlayback {
 
             ClientVoicechat client = ClientManager.getClient();
             if (client != null) {
-                client.getTalkCache().updateTalking(sound.source(), whispering);
+                client.getTalkCache().updateLevel(sound.source(), null, whispering, sound.samples());
             }
         } catch (Exception e) {
             Flashback.LOGGER.error("Error while trying to play voice chat sound", e);
