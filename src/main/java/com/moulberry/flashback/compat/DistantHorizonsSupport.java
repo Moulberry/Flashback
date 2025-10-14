@@ -34,7 +34,7 @@ public class DistantHorizonsSupport {
     public static void register() {
         DhApiEventRegister.on(DhApiWorldLoadEvent.class, new DhApiWorldLoadEvent() {
             @Override
-            public void onLevelLoad(DhApiEventParam<EventParam> dhApiEventParam) {
+            public void onWorldLoad(DhApiEventParam<EventParam> dhApiEventParam) {
                 if (Flashback.isInReplay()) {
                     Flashback.LOGGER.info("Forcing Distant Horizons to read-only because we're inside a replay");
                     DhApi.Delayed.worldProxy.setReadOnly(true);
@@ -43,7 +43,11 @@ public class DistantHorizonsSupport {
 
                     ReplayServer replayServer = Flashback.getReplayServer();
                     REPLAY_SAVE_STRUCTURE.pathOverrides.clear();
-                    REPLAY_SAVE_STRUCTURE.pathOverrides.putAll(replayServer.getMetadata().distantHorizonPaths);
+                    for (Map.Entry<String, File> entry : replayServer.getMetadata().distantHorizonPaths.entrySet()) {
+                        if (entry.getValue().exists()) {
+                            REPLAY_SAVE_STRUCTURE.pathOverrides.put(entry.getKey(), entry.getValue());
+                        }
+                    }
 
                     DhApi.overrides.bind(IDhApiSaveStructure.class, REPLAY_SAVE_STRUCTURE);
                     boundReplaySaveStructure = true;
@@ -53,7 +57,7 @@ public class DistantHorizonsSupport {
 
         DhApiEventRegister.on(DhApiWorldUnloadEvent.class, new DhApiWorldUnloadEvent() {
             @Override
-            public void onLevelUnload(DhApiEventParam<EventParam> dhApiEventParam) {
+            public void onWorldUnload(DhApiEventParam<EventParam> dhApiEventParam) {
                 if (boundReplaySaveStructure) {
                     Flashback.LOGGER.info("Unbinding IDhApiSaveStructure from REPLAY_SAVE_STRUCTURE");
                     DhApi.overrides.unbind(IDhApiSaveStructure.class, REPLAY_SAVE_STRUCTURE);
