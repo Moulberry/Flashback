@@ -5,6 +5,7 @@ import com.moulberry.flashback.keyframe.change.KeyframeChange;
 import com.moulberry.flashback.keyframe.impl.*;
 import com.moulberry.flashback.keyframe.interpolation.InterpolationType;
 import imgui.ImDrawList;
+import org.jetbrains.annotations.Nullable;
 
 import java.lang.reflect.Type;
 import java.util.Map;
@@ -26,9 +27,9 @@ public abstract class Keyframe {
 
     public abstract KeyframeType<?> keyframeType();
     public abstract Keyframe copy();
-    public abstract KeyframeChange createChange();
-    public abstract KeyframeChange createSmoothInterpolatedChange(Keyframe p1, Keyframe p2, Keyframe p3, float t0, float t1, float t2, float t3, float amount);
-    public abstract KeyframeChange createHermiteInterpolatedChange(Map<Float, Keyframe> keyframes, float tick);
+    public abstract @Nullable KeyframeChange createChange();
+    public abstract @Nullable KeyframeChange createSmoothInterpolatedChange(Keyframe p1, Keyframe p2, Keyframe p3, float t0, float t1, float t2, float t3, float amount);
+    public abstract @Nullable KeyframeChange createHermiteInterpolatedChange(Map<Float, Keyframe> keyframes, float tick);
 
     public float getCustomWidthInTicks() {
         return -1;
