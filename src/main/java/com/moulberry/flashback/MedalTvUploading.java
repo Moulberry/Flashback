@@ -103,11 +103,7 @@ public class MedalTvUploading {
                 Gson gson = new Gson();
 
                 String uploadUrl = createUploadRequest(gson, httpClient, uploadStatus, titleF, bytes.length, exportSettings);
-                if (uploadUrl == null) {
-                    return;
-                }
-
-                if (uploadStatus.shouldCancel) {
+                if (uploadUrl == null || uploadStatus.shouldCancel) {
                     return;
                 }
 
@@ -146,16 +142,19 @@ public class MedalTvUploading {
         }
 
         if (resultJson.has("error")) {
+            Flashback.LOGGER.error("Error while creating medal upload request: {}", resultJson);
             uploadStatus.errorMessage = "FlashbackUpload Error: " + resultJson.get("error").getAsString();
             return null;
         }
 
         if (!resultJson.has("shareUrl")) {
+            Flashback.LOGGER.error("Incomplete response from medal upload request: {}", resultJson);
             uploadStatus.errorMessage = "FlashbackUpload Error: Missing shareUrl";
             return null;
         }
 
         if (!resultJson.has("signedUrl")) {
+            Flashback.LOGGER.error("Incomplete response from medal upload request: {}", resultJson);
             uploadStatus.errorMessage = "FlashbackUpload Error: Missing signedUrl";
             return null;
         }
@@ -241,6 +240,7 @@ public class MedalTvUploading {
         var response = httpClient.execute(put);
 
         if (response.getStatusLine().getStatusCode() != 200) {
+            Flashback.LOGGER.error("Error response from Google Cloud Storage: {}", EntityUtils.toString(response.getEntity()));
             uploadStatus.errorMessage = "SendContent: Error while sending content to Google Cloud Storage";
             return;
         }
