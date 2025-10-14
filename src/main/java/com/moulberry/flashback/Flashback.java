@@ -1065,6 +1065,22 @@ public class Flashback implements ModInitializer, ClientModInitializer {
         });
     }
 
+    public static GameRules createReplayGameRules(FeatureFlagSet featureFlagSet) {
+        GameRules gameRules = new GameRules(featureFlagSet);
+        gameRules.getRule(GameRules.RULE_DOMOBSPAWNING).set(false, null);
+        gameRules.getRule(GameRules.RULE_DOENTITYDROPS).set(false, null);
+        gameRules.getRule(GameRules.RULE_ANNOUNCE_ADVANCEMENTS).set(false, null);
+        gameRules.getRule(GameRules.RULE_DISABLE_RAIDS).set(true, null);
+        gameRules.getRule(GameRules.RULE_DO_PATROL_SPAWNING).set(false, null);
+        gameRules.getRule(GameRules.RULE_DO_WARDEN_SPAWNING).set(false, null);
+        gameRules.getRule(GameRules.RULE_DO_TRADER_SPAWNING).set(false, null);
+        gameRules.getRule(GameRules.RULE_DO_VINES_SPREAD).set(false, null);
+        gameRules.getRule(GameRules.RULE_DOFIRETICK).set(false, null);
+        gameRules.getRule(GameRules.RULE_WEATHER_CYCLE).set(false, null);
+        gameRules.getRule(GameRules.RULE_RANDOMTICKING).set(0, null);
+        return gameRules;
+    }
+
     public static void openReplayWorld(Path path) {
         // Disconnect
         Minecraft minecraft = Minecraft.getInstance();
@@ -1102,18 +1118,7 @@ public class Flashback implements ModInitializer, ClientModInitializer {
 
             packRepository.reload();
 
-            GameRules gameRules = new GameRules(FeatureFlagSet.of());
-            gameRules.getRule(GameRules.RULE_DOMOBSPAWNING).set(false, null);
-            gameRules.getRule(GameRules.RULE_DOENTITYDROPS).set(false, null);
-            gameRules.getRule(GameRules.RULE_ANNOUNCE_ADVANCEMENTS).set(false, null);
-            gameRules.getRule(GameRules.RULE_DISABLE_RAIDS).set(true, null);
-            gameRules.getRule(GameRules.RULE_DO_PATROL_SPAWNING).set(false, null);
-            gameRules.getRule(GameRules.RULE_DO_WARDEN_SPAWNING).set(false, null);
-            gameRules.getRule(GameRules.RULE_DO_TRADER_SPAWNING).set(false, null);
-            gameRules.getRule(GameRules.RULE_DO_VINES_SPREAD).set(false, null);
-            gameRules.getRule(GameRules.RULE_DOFIRETICK).set(false, null);
-            gameRules.getRule(GameRules.RULE_WEATHER_CYCLE).set(false, null);
-            gameRules.getRule(GameRules.RULE_RANDOMTICKING).set(0, null);
+            GameRules gameRules = createReplayGameRules(FeatureFlags.DEFAULT_FLAGS);
 
             WorldDataConfiguration worldDataConfiguration = new WorldDataConfiguration(new DataPackConfig(List.of(), List.of()), FeatureFlags.DEFAULT_FLAGS);
             LevelSettings levelSettings = new LevelSettings("Replay", GameType.SPECTATOR, false, Difficulty.NORMAL, true, gameRules, worldDataConfiguration);

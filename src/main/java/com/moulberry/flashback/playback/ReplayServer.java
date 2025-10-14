@@ -5,7 +5,6 @@ import com.google.gson.JsonObject;
 import com.mojang.authlib.GameProfile;
 import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.PacketHelper;
-import com.moulberry.flashback.SneakyThrow;
 import com.moulberry.flashback.configuration.FlashbackConfigV1;
 import com.moulberry.flashback.ext.ConnectionExt;
 import com.moulberry.flashback.ext.LevelChunkExt;
@@ -37,10 +36,8 @@ import com.moulberry.flashback.record.FlashbackMeta;
 import com.moulberry.flashback.record.Recorder;
 import com.moulberry.flashback.state.KeyframeTrack;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.DecoderException;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
-import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
@@ -92,19 +89,19 @@ import net.minecraft.world.food.FoodData;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.LevelSettings;
 import net.minecraft.world.level.WorldDataConfiguration;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.chunk.PalettedContainer;
 import net.minecraft.world.level.storage.LevelResource;
 import net.minecraft.world.level.storage.LevelStorageSource;
+import net.minecraft.world.level.storage.PrimaryLevelData;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
-import java.lang.ref.SoftReference;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.FileVisitResult;
@@ -226,10 +223,25 @@ public class ReplayServer extends IntegratedServer {
     public void updateRegistry(FeatureFlagSet featureFlagSet, List<Registry.PendingTags<?>> pendingTags,
                                List<Packet<? super ClientConfigurationPacketListener>> initialPackets,
                                List<ConfigurationTask> configurationTasks) {
-        this.worldData.setDataConfiguration(new WorldDataConfiguration(
-            this.worldData.getDataConfiguration().dataPacks(),
-            featureFlagSet
-        ));
+        if (this.worldData instanceof PrimaryLevelData primaryLevelData) {
+            primaryLevelData.settings = new LevelSettings(
+                primaryLevelData.settings.levelName(),
+                primaryLevelData.settings.gameType(),
+                primaryLevelData.settings.hardcore(),
+                primaryLevelData.settings.difficulty(),
+                primaryLevelData.settings.allowCommands(),
+                Flashback.createReplayGameRules(featureFlagSet),
+                new WorldDataConfiguration(
+                    this.worldData.getDataConfiguration().dataPacks(),
+                    featureFlagSet
+                )
+            );
+        } else {
+            this.worldData.setDataConfiguration(new WorldDataConfiguration(
+                this.worldData.getDataConfiguration().dataPacks(),
+                featureFlagSet
+            ));
+        }
 
         overridePendingTags = pendingTags;
         this.reloadResources(Set.of());
