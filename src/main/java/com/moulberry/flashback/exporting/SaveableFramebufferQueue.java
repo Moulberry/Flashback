@@ -73,32 +73,6 @@ public class SaveableFramebufferQueue implements AutoCloseable {
             renderPass.draw(0, 3);
         }
 
-        // todo nobuild
-//        GlStateManager._colorMask(true, true, true, true);
-//        GlStateManager._disableDepthTest();
-//        GlStateManager._depthMask(false);
-//        GlStateManager._viewport(0, 0, src.width, src.height);
-//        GlStateManager._disableBlend();
-//        RenderSystem.disableCull();
-//
-//        this.flipBuffer.bindWrite(true);
-//        CompiledShaderProgram shaderInstance = Objects.requireNonNull(
-//                RenderSystem.setShader(ShaderManager.blitScreenFlip), "Blit shader not loaded"
-//        );
-//        shaderInstance.bindSampler("InSampler", src.colorTextureId);
-//        shaderInstance.apply();
-//        BufferBuilder bufferBuilder = RenderSystem.renderThreadTesselator().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.BLIT_SCREEN);
-//        bufferBuilder.addVertex(0.0F, 1.0F, 0.0F);
-//        bufferBuilder.addVertex(1.0F, 1.0F, 0.0F);
-//        bufferBuilder.addVertex(1.0F, 0.0F, 0.0F);
-//        bufferBuilder.addVertex(0.0F, 0.0F, 0.0F);
-//        BufferUploader.draw(bufferBuilder.buildOrThrow());
-//        shaderInstance.clear();
-//
-//        GlStateManager._depthMask(true);
-//        GlStateManager._colorMask(true, true, true, true);
-//        RenderSystem.enableCull();
-
         if (supersampling) {
             src.setFilterMode(oldFilterMode);
         }
