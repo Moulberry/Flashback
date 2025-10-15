@@ -13,7 +13,7 @@ import com.moulberry.flashback.keyframe.interpolation.InterpolationType;
 import com.moulberry.flashback.keyframe.types.FOVKeyframeType;
 import com.moulberry.flashback.spline.CatmullRom;
 import com.moulberry.flashback.spline.Hermite;
-import imgui.ImGui;
+import imgui.flashback.ImGui;
 import net.minecraft.client.resources.language.I18n;
 
 import java.lang.reflect.Type;

@@ -4,7 +4,7 @@ import com.google.gson.*;
 import com.moulberry.flashback.keyframe.change.KeyframeChange;
 import com.moulberry.flashback.keyframe.impl.*;
 import com.moulberry.flashback.keyframe.interpolation.InterpolationType;
-import imgui.ImDrawList;
+import imgui.flashback.ImDrawList;
 import org.jetbrains.annotations.Nullable;
 
 import java.lang.reflect.Type;
