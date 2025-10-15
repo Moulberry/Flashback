@@ -90,7 +90,8 @@ public class AudioKeyframeType implements KeyframeType<AudioKeyframe> {
 
     @Override
     public KeyframeCreatePopup<AudioKeyframe> createPopup() {
-        CompletableFuture<String> pathFuture = AsyncFileDialogs.openFileDialog(FabricLoader.getInstance().getGameDir().toString(), "ogg");
+        CompletableFuture<String> pathFuture = AsyncFileDialogs.openFileDialog(FabricLoader.getInstance().getGameDir().toString(),
+                "Audio Files", "mp3", "ogg", "wav", "aiff", "au", "flac", "opus");
 
         return () -> {
             if (!pathFuture.isDone()) {
