@@ -828,6 +828,9 @@ public class Flashback implements ModInitializer, ClientModInitializer {
                     if (!checkedReplayPaths.add(path)) {
                         continue;
                     }
+                    if (!Files.exists(path)) {
+                        continue;
+                    }
                     readReplayUuidIntoSet(path, replayUuids);
                 }
             } catch (IOException e) {
