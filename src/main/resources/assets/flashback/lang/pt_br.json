@@ -248,7 +248,7 @@
   "flashback.glowing": "Brilho",
   "flashback.export_to_video": "Exportar para vídeo",
   "flashback.capture_options": "Opções de captura",
-  "flashback.start_end_tick": "Start/end tick",
+  "flashback.start_end_tick": "Tique de início/fim",
   "flashback.framerate": "Taxa de quadros",
   "flashback.reset_rng": "Redefinir RNG",
   "flashback.reset_rng_tooltip": "Tenta remover a aleatoriedade do replay para produzir saídas mais consistentes ao gravar a mesma cena várias vezes",
