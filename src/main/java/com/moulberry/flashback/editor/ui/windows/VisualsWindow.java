@@ -17,7 +17,7 @@ import com.moulberry.flashback.state.KeyframeTrack;
 import com.moulberry.flashback.visuals.ReplayVisuals;
 import com.moulberry.flashback.combo_options.Sizing;
 import com.moulberry.flashback.editor.ui.ImGuiHelper;
-import imgui.ImGui;
+import imgui.flashback.ImGui;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.FogRenderer;
 import net.minecraft.client.resources.language.I18n;
@@ -46,6 +46,7 @@ public class VisualsWindow {
                 visuals.showChat = !visuals.showChat;
                 editorState.markDirty();
             }
+
             if (ImGui.checkbox(I18n.get("flashback.visuals.gui.boss_bar"), visuals.showBossBar)) {
                 visuals.showBossBar = !visuals.showBossBar;
                 editorState.markDirty();

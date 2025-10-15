@@ -1,6 +1,6 @@
 package com.moulberry.flashback.editor.ui;
 
-import imgui.ImGui;
+import imgui.flashback.ImGui;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.util.Mth;
