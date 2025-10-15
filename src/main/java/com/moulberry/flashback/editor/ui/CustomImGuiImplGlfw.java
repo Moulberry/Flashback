@@ -2,48 +2,37 @@ package com.moulberry.flashback.editor.ui;
 
 import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.exporting.AsyncFileDialogs;
-import imgui.ImGui;
-import imgui.ImGuiIO;
-import imgui.ImGuiPlatformIO;
-import imgui.ImGuiViewport;
-import imgui.ImVec2;
-import imgui.callback.ImPlatformFuncViewport;
-import imgui.callback.ImPlatformFuncViewportFloat;
-import imgui.callback.ImPlatformFuncViewportImVec2;
-import imgui.callback.ImPlatformFuncViewportString;
-import imgui.callback.ImPlatformFuncViewportSuppBoolean;
-import imgui.callback.ImPlatformFuncViewportSuppImVec2;
-import imgui.callback.ImStrConsumer;
-import imgui.callback.ImStrSupplier;
-import imgui.flag.ImGuiBackendFlags;
-import imgui.flag.ImGuiConfigFlags;
-import imgui.flag.ImGuiKey;
-import imgui.flag.ImGuiMouseButton;
-import imgui.flag.ImGuiMouseCursor;
-import imgui.flag.ImGuiNavInput;
-import imgui.flag.ImGuiViewportFlags;
-import imgui.lwjgl3.glfw.ImGuiImplGlfwNative;
+import imgui.flashback.ImGui;
+import imgui.flashback.ImGuiIO;
+import imgui.flashback.ImGuiPlatformIO;
+import imgui.flashback.ImGuiViewport;
+import imgui.flashback.ImVec2;
+import imgui.flashback.callback.ImPlatformFuncViewport;
+import imgui.flashback.callback.ImPlatformFuncViewportFloat;
+import imgui.flashback.callback.ImPlatformFuncViewportImVec2;
+import imgui.flashback.callback.ImPlatformFuncViewportString;
+import imgui.flashback.callback.ImPlatformFuncViewportSuppBoolean;
+import imgui.flashback.callback.ImPlatformFuncViewportSuppImVec2;
+import imgui.flashback.callback.ImStrConsumer;
+import imgui.flashback.callback.ImStrSupplier;
+import imgui.flashback.flag.ImGuiBackendFlags;
+import imgui.flashback.flag.ImGuiConfigFlags;
+import imgui.flashback.flag.ImGuiKey;
+import imgui.flashback.flag.ImGuiMouseButton;
+import imgui.flashback.flag.ImGuiMouseCursor;
+import imgui.flashback.flag.ImGuiViewportFlags;
+import imgui.flashback.glfw.ImGuiImplGlfwNative;
 import net.minecraft.client.KeyMapping;
+import net.minecraft.client.KeyboardHandler;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.phys.Vec2;
 import org.lwjgl.PointerBuffer;
-import org.lwjgl.glfw.GLFW;
-import org.lwjgl.glfw.GLFWCharCallback;
-import org.lwjgl.glfw.GLFWCharModsCallback;
-import org.lwjgl.glfw.GLFWCursorEnterCallback;
-import org.lwjgl.glfw.GLFWCursorPosCallback;
-import org.lwjgl.glfw.GLFWErrorCallback;
-import org.lwjgl.glfw.GLFWKeyCallback;
-import org.lwjgl.glfw.GLFWMonitorCallback;
-import org.lwjgl.glfw.GLFWMouseButtonCallback;
-import org.lwjgl.glfw.GLFWNativeWin32;
-import org.lwjgl.glfw.GLFWScrollCallback;
-import org.lwjgl.glfw.GLFWVidMode;
-import org.lwjgl.glfw.GLFWWindowFocusCallback;
+import org.lwjgl.glfw.*;
 
 import java.nio.ByteBuffer;
 import java.nio.FloatBuffer;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import static org.lwjgl.glfw.GLFW.*;
@@ -56,15 +45,6 @@ public class CustomImGuiImplGlfw {
 
     // Pointer of the current GLFW window
     private long mainWindowPtr;
-
-    // Some features may be available only from a specific version
-    private boolean glfwHawWindowTopmost;
-    private boolean glfwHasWindowAlpha;
-    private boolean glfwHasPerMonitorDpi;
-    private boolean glfwHasFocusWindow;
-    private boolean glfwHasFocusOnShow;
-    private boolean glfwHasMonitorWorkArea;
-    private boolean glfwHasOsxWindowPosFix;
 
     // For application window properties
     private final int[] winWidth = new int[1];
@@ -79,9 +59,6 @@ public class CustomImGuiImplGlfw {
     private final long[] keyOwnerWindows = new long[512];
     private final boolean[] keyPressedGame = new boolean[512];
     // private final int[] physicalToPrintableKeys = new int[GLFW_KEY_LAST - GLFW_KEY_SPACE + 1];
-
-    // Empty array to fill ImGuiIO.NavInputs with zeroes
-    private final float[] emptyNavInputs = new float[ImGuiNavInput.COUNT];
 
     // For mouse tracking
     private final boolean[] mouseJustPressed = new boolean[ImGuiMouseButton.COUNT];
@@ -131,6 +108,22 @@ public class CustomImGuiImplGlfw {
     public double rawMouseY;
 
     public float contentScale = 1.0f;
+
+    // We gather version tests as define in order to easily see which features are version-dependent.
+    protected static final int glfwVersionCombined = GLFW_VERSION_MAJOR * 1000 + GLFW_VERSION_MINOR * 100 + GLFW_VERSION_REVISION;
+    protected static final boolean glfwHawWindowTopmost = glfwVersionCombined >= 3200; // 3.2+ GLFW_FLOATING
+    protected static final boolean glfwHasWindowHovered = glfwVersionCombined >= 3300; // 3.3+ GLFW_HOVERED
+    protected static final boolean glfwHasWindowAlpha = glfwVersionCombined >= 3300; // 3.3+ glfwSetWindowOpacity
+    protected static final boolean glfwHasPerMonitorDpi = glfwVersionCombined >= 3300; // 3.3+ glfwGetMonitorContentScale
+    protected static final boolean glfwHasFocusWindow = glfwVersionCombined >= 3200; // 3.2+ glfwFocusWindow
+    protected static final boolean glfwHasFocusOnShow = glfwVersionCombined >= 3300; // 3.3+ GLFW_FOCUS_ON_SHOW
+    protected static final boolean glfwHasMonitorWorkArea = glfwVersionCombined >= 3300; // 3.3+ glfwGetMonitorWorkarea
+    protected static final boolean glfwHasOsxWindowPosFix = glfwVersionCombined >= 3301; // 3.3.1+ Fixed: Resizing window repositions it on MacOS #1553
+    protected static final boolean glfwHasNewCursors = glfwVersionCombined >= 3400; // 3.4+ GLFW_RESIZE_ALL_CURSOR, GLFW_RESIZE_NESW_CURSOR, GLFW_RESIZE_NWSE_CURSOR, GLFW_NOT_ALLOWED_CURSOR
+    protected static final boolean glfwHasMousePassthrough = glfwVersionCombined >= 3400; // 3.4+ GLFW_MOUSE_PASSTHROUGH
+    protected static final boolean glfwHasGamepadApi = glfwVersionCombined >= 3300; // 3.3+ glfwGetGamepadState() new api
+    protected static final boolean glfwHasGetKeyName = glfwVersionCombined >= 3200; // 3.2+ glfwGetKeyName()
+    protected static final boolean glfwHasGetError = glfwVersionCombined >= 3300; // 3.3+ glfwGetError()
 
     public enum MouseHandledBy {
         EDITOR_GRABBED,
@@ -214,6 +207,257 @@ public class CustomImGuiImplGlfw {
         return delta;
     }
 
+    protected int glfwKeyToImGuiKey(final int glfwKey) {
+        switch (glfwKey) {
+            case GLFW_KEY_TAB:
+                return ImGuiKey.Tab;
+            case GLFW_KEY_LEFT:
+                return ImGuiKey.LeftArrow;
+            case GLFW_KEY_RIGHT:
+                return ImGuiKey.RightArrow;
+            case GLFW_KEY_UP:
+                return ImGuiKey.UpArrow;
+            case GLFW_KEY_DOWN:
+                return ImGuiKey.DownArrow;
+            case GLFW_KEY_PAGE_UP:
+                return ImGuiKey.PageUp;
+            case GLFW_KEY_PAGE_DOWN:
+                return ImGuiKey.PageDown;
+            case GLFW_KEY_HOME:
+                return ImGuiKey.Home;
+            case GLFW_KEY_END:
+                return ImGuiKey.End;
+            case GLFW_KEY_INSERT:
+                return ImGuiKey.Insert;
+            case GLFW_KEY_DELETE:
+                return ImGuiKey.Delete;
+            case GLFW_KEY_BACKSPACE:
+                return ImGuiKey.Backspace;
+            case GLFW_KEY_SPACE:
+                return ImGuiKey.Space;
+            case GLFW_KEY_ENTER:
+                return ImGuiKey.Enter;
+            case GLFW_KEY_ESCAPE:
+                return ImGuiKey.Escape;
+            case GLFW_KEY_APOSTROPHE:
+                return ImGuiKey.Apostrophe;
+            case GLFW_KEY_COMMA:
+                return ImGuiKey.Comma;
+            case GLFW_KEY_MINUS:
+                return ImGuiKey.Minus;
+            case GLFW_KEY_PERIOD:
+                return ImGuiKey.Period;
+            case GLFW_KEY_SLASH:
+                return ImGuiKey.Slash;
+            case GLFW_KEY_SEMICOLON:
+                return ImGuiKey.Semicolon;
+            case GLFW_KEY_EQUAL:
+                return ImGuiKey.Equal;
+            case GLFW_KEY_LEFT_BRACKET:
+                return ImGuiKey.LeftBracket;
+            case GLFW_KEY_BACKSLASH:
+                return ImGuiKey.Backslash;
+            case GLFW_KEY_RIGHT_BRACKET:
+                return ImGuiKey.RightBracket;
+            case GLFW_KEY_GRAVE_ACCENT:
+                return ImGuiKey.GraveAccent;
+            case GLFW_KEY_CAPS_LOCK:
+                return ImGuiKey.CapsLock;
+            case GLFW_KEY_SCROLL_LOCK:
+                return ImGuiKey.ScrollLock;
+            case GLFW_KEY_NUM_LOCK:
+                return ImGuiKey.NumLock;
+            case GLFW_KEY_PRINT_SCREEN:
+                return ImGuiKey.PrintScreen;
+            case GLFW_KEY_PAUSE:
+                return ImGuiKey.Pause;
+            case GLFW_KEY_KP_0:
+                return ImGuiKey.Keypad0;
+            case GLFW_KEY_KP_1:
+                return ImGuiKey.Keypad1;
+            case GLFW_KEY_KP_2:
+                return ImGuiKey.Keypad2;
+            case GLFW_KEY_KP_3:
+                return ImGuiKey.Keypad3;
+            case GLFW_KEY_KP_4:
+                return ImGuiKey.Keypad4;
+            case GLFW_KEY_KP_5:
+                return ImGuiKey.Keypad5;
+            case GLFW_KEY_KP_6:
+                return ImGuiKey.Keypad6;
+            case GLFW_KEY_KP_7:
+                return ImGuiKey.Keypad7;
+            case GLFW_KEY_KP_8:
+                return ImGuiKey.Keypad8;
+            case GLFW_KEY_KP_9:
+                return ImGuiKey.Keypad9;
+            case GLFW_KEY_KP_DECIMAL:
+                return ImGuiKey.KeypadDecimal;
+            case GLFW_KEY_KP_DIVIDE:
+                return ImGuiKey.KeypadDivide;
+            case GLFW_KEY_KP_MULTIPLY:
+                return ImGuiKey.KeypadMultiply;
+            case GLFW_KEY_KP_SUBTRACT:
+                return ImGuiKey.KeypadSubtract;
+            case GLFW_KEY_KP_ADD:
+                return ImGuiKey.KeypadAdd;
+            case GLFW_KEY_KP_ENTER:
+                return ImGuiKey.KeypadEnter;
+            case GLFW_KEY_KP_EQUAL:
+                return ImGuiKey.KeypadEqual;
+            case GLFW_KEY_LEFT_SHIFT:
+                return ImGuiKey.LeftShift;
+            case GLFW_KEY_LEFT_CONTROL:
+                return ImGuiKey.LeftCtrl;
+            case GLFW_KEY_LEFT_ALT:
+                return ImGuiKey.LeftAlt;
+            case GLFW_KEY_LEFT_SUPER:
+                return ImGuiKey.LeftSuper;
+            case GLFW_KEY_RIGHT_SHIFT:
+                return ImGuiKey.RightShift;
+            case GLFW_KEY_RIGHT_CONTROL:
+                return ImGuiKey.RightCtrl;
+            case GLFW_KEY_RIGHT_ALT:
+                return ImGuiKey.RightAlt;
+            case GLFW_KEY_RIGHT_SUPER:
+                return ImGuiKey.RightSuper;
+            case GLFW_KEY_MENU:
+                return ImGuiKey.Menu;
+            case GLFW_KEY_0:
+                return ImGuiKey._0;
+            case GLFW_KEY_1:
+                return ImGuiKey._1;
+            case GLFW_KEY_2:
+                return ImGuiKey._2;
+            case GLFW_KEY_3:
+                return ImGuiKey._3;
+            case GLFW_KEY_4:
+                return ImGuiKey._4;
+            case GLFW_KEY_5:
+                return ImGuiKey._5;
+            case GLFW_KEY_6:
+                return ImGuiKey._6;
+            case GLFW_KEY_7:
+                return ImGuiKey._7;
+            case GLFW_KEY_8:
+                return ImGuiKey._8;
+            case GLFW_KEY_9:
+                return ImGuiKey._9;
+            case GLFW_KEY_A:
+                return ImGuiKey.A;
+            case GLFW_KEY_B:
+                return ImGuiKey.B;
+            case GLFW_KEY_C:
+                return ImGuiKey.C;
+            case GLFW_KEY_D:
+                return ImGuiKey.D;
+            case GLFW_KEY_E:
+                return ImGuiKey.E;
+            case GLFW_KEY_F:
+                return ImGuiKey.F;
+            case GLFW_KEY_G:
+                return ImGuiKey.G;
+            case GLFW_KEY_H:
+                return ImGuiKey.H;
+            case GLFW_KEY_I:
+                return ImGuiKey.I;
+            case GLFW_KEY_J:
+                return ImGuiKey.J;
+            case GLFW_KEY_K:
+                return ImGuiKey.K;
+            case GLFW_KEY_L:
+                return ImGuiKey.L;
+            case GLFW_KEY_M:
+                return ImGuiKey.M;
+            case GLFW_KEY_N:
+                return ImGuiKey.N;
+            case GLFW_KEY_O:
+                return ImGuiKey.O;
+            case GLFW_KEY_P:
+                return ImGuiKey.P;
+            case GLFW_KEY_Q:
+                return ImGuiKey.Q;
+            case GLFW_KEY_R:
+                return ImGuiKey.R;
+            case GLFW_KEY_S:
+                return ImGuiKey.S;
+            case GLFW_KEY_T:
+                return ImGuiKey.T;
+            case GLFW_KEY_U:
+                return ImGuiKey.U;
+            case GLFW_KEY_V:
+                return ImGuiKey.V;
+            case GLFW_KEY_W:
+                return ImGuiKey.W;
+            case GLFW_KEY_X:
+                return ImGuiKey.X;
+            case GLFW_KEY_Y:
+                return ImGuiKey.Y;
+            case GLFW_KEY_Z:
+                return ImGuiKey.Z;
+            case GLFW_KEY_F1:
+                return ImGuiKey.F1;
+            case GLFW_KEY_F2:
+                return ImGuiKey.F2;
+            case GLFW_KEY_F3:
+                return ImGuiKey.F3;
+            case GLFW_KEY_F4:
+                return ImGuiKey.F4;
+            case GLFW_KEY_F5:
+                return ImGuiKey.F5;
+            case GLFW_KEY_F6:
+                return ImGuiKey.F6;
+            case GLFW_KEY_F7:
+                return ImGuiKey.F7;
+            case GLFW_KEY_F8:
+                return ImGuiKey.F8;
+            case GLFW_KEY_F9:
+                return ImGuiKey.F9;
+            case GLFW_KEY_F10:
+                return ImGuiKey.F10;
+            case GLFW_KEY_F11:
+                return ImGuiKey.F11;
+            case GLFW_KEY_F12:
+                return ImGuiKey.F12;
+            case GLFW_KEY_F13:
+                return ImGuiKey.F13;
+            case GLFW_KEY_F14:
+                return ImGuiKey.F14;
+            case GLFW_KEY_F15:
+                return ImGuiKey.F15;
+            case GLFW_KEY_F16:
+                return ImGuiKey.F16;
+            case GLFW_KEY_F17:
+                return ImGuiKey.F17;
+            case GLFW_KEY_F18:
+                return ImGuiKey.F18;
+            case GLFW_KEY_F19:
+                return ImGuiKey.F19;
+            case GLFW_KEY_F20:
+                return ImGuiKey.F20;
+            case GLFW_KEY_F21:
+                return ImGuiKey.F21;
+            case GLFW_KEY_F22:
+                return ImGuiKey.F22;
+            case GLFW_KEY_F23:
+                return ImGuiKey.F23;
+            case GLFW_KEY_F24:
+                return ImGuiKey.F24;
+            default:
+                return ImGuiKey.None;
+        }
+    }
+
+    // X11 does not include current pressed/released modifier key in 'mods' flags submitted by GLFW
+    // See https://github.com/ocornut/imgui/issues/6034 and https://github.com/glfw/glfw/issues/1630
+    protected void updateKeyModifiers(final long window) {
+        final ImGuiIO io = ReplayUI.getIO();
+        io.addKeyEvent(ImGuiKey.ModCtrl, (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS) || (glfwGetKey(window, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS));
+        io.addKeyEvent(ImGuiKey.ModShift, (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) || (glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS));
+        io.addKeyEvent(ImGuiKey.ModAlt, (glfwGetKey(window, GLFW_KEY_LEFT_ALT) == GLFW_PRESS) || (glfwGetKey(window, GLFW_KEY_RIGHT_ALT) == GLFW_PRESS));
+        io.addKeyEvent(ImGuiKey.ModSuper, (glfwGetKey(window, GLFW_KEY_LEFT_SUPER) == GLFW_PRESS) || (glfwGetKey(window, GLFW_KEY_RIGHT_SUPER) == GLFW_PRESS));
+    }
+
     /**
      * Method to set the {@link GLFWMouseButtonCallback}.
      *
@@ -231,6 +475,8 @@ public class CustomImGuiImplGlfw {
             }
             return;
         }
+
+        updateKeyModifiers(windowId);
 
         if (this.grabbed != null && this.grabLinkedKey < 0 && button == -this.grabLinkedKey-1) {
             if ((action == GLFW_RELEASE) == this.releaseGrabOnUp) {
@@ -290,6 +536,8 @@ public class CustomImGuiImplGlfw {
             return;
         }
 
+        updateKeyModifiers(windowId);
+
         boolean shiftMod = (mods & GLFW_MOD_SHIFT) != 0;
         boolean ctrlMod = (mods & GLFW_MOD_CONTROL) != 0;
         boolean altMod = (mods & GLFW_MOD_ALT) != 0;
@@ -305,8 +553,11 @@ public class CustomImGuiImplGlfw {
 
         if (!ReplayUI.isActive() || Minecraft.getInstance().screen != null) {
             if (action == GLFW_RELEASE && key >= 0 && key < this.keyOwnerWindows.length) {
-                io.setKeysDown(key, false);
-                this.keyOwnerWindows[key] = 0;
+                if (this.keyOwnerWindows[key] != -1) {
+                    final int imguiKey = glfwKeyToImGuiKey(key);
+                    io.addKeyEvent(imguiKey, false);
+                    this.keyOwnerWindows[key] = -1;
+                }
             }
             if (this.prevUserCallbackKey != null && windowId == this.mainWindowPtr) {
                 if (keyInBoundsForGame) this.keyPressedGame[minecraftKey] = action != GLFW_RELEASE;
@@ -348,7 +599,7 @@ public class CustomImGuiImplGlfw {
             if (keyInBoundsForGame && this.keyPressedGame[minecraftKey]) {
                 passToMinecraft = true;
             }
-            if (key >= 0 && key < this.keyOwnerWindows.length) {
+            if (key >= 0 && key < this.keyOwnerWindows.length && this.keyOwnerWindows[key] != -1) {
                 passToImGui = true;
             }
         } else {
@@ -383,12 +634,15 @@ public class CustomImGuiImplGlfw {
         }
 
         if (passToImGui && key >= 0 && key < this.keyOwnerWindows.length) {
+            final int imguiKey = glfwKeyToImGuiKey(key);
             if (action == GLFW_PRESS || action == GLFW_REPEAT) {
-                io.setKeysDown(key, true);
+                io.addKeyEvent(imguiKey, true);
+                io.setKeyEventNativeData(imguiKey, key, scancode);
                 this.keyOwnerWindows[key] = windowId;
             } else if (action == GLFW_RELEASE) {
-                io.setKeysDown(key, false);
-                this.keyOwnerWindows[key] = 0;
+                io.addKeyEvent(imguiKey, false);
+                io.setKeyEventNativeData(imguiKey, key, scancode);
+                this.keyOwnerWindows[key] = -1;
             }
         }
     }
@@ -494,42 +748,6 @@ public class CustomImGuiImplGlfw {
         this.wantUpdateMonitors = true;
     }
 
-    private final int[] keyMap = new int[ImGuiKey.COUNT];
-    {
-        this.keyMap[ImGuiKey.Tab] = -1; // Note: Tab input forcibly unhooked
-        this.keyMap[ImGuiKey.LeftArrow] = GLFW_KEY_LEFT;
-        this.keyMap[ImGuiKey.RightArrow] = GLFW_KEY_RIGHT;
-        this.keyMap[ImGuiKey.UpArrow] = GLFW_KEY_UP;
-        this.keyMap[ImGuiKey.DownArrow] = GLFW_KEY_DOWN;
-        this.keyMap[ImGuiKey.PageUp] = GLFW_KEY_PAGE_UP;
-        this.keyMap[ImGuiKey.PageDown] = GLFW_KEY_PAGE_DOWN;
-        this.keyMap[ImGuiKey.Home] = GLFW_KEY_HOME;
-        this.keyMap[ImGuiKey.End] = GLFW_KEY_END;
-        this.keyMap[ImGuiKey.Insert] = GLFW_KEY_INSERT;
-        this.keyMap[ImGuiKey.Delete] = GLFW_KEY_DELETE;
-        this.keyMap[ImGuiKey.Backspace] = GLFW_KEY_BACKSPACE;
-        this.keyMap[ImGuiKey.Space] = GLFW_KEY_SPACE;
-        this.keyMap[ImGuiKey.Enter] = GLFW_KEY_ENTER;
-        this.keyMap[ImGuiKey.Escape] = GLFW_KEY_ESCAPE;
-        this.keyMap[ImGuiKey.KeyPadEnter] = GLFW_KEY_KP_ENTER;
-        this.keyMap[ImGuiKey.A] = GLFW_KEY_A;
-        this.keyMap[ImGuiKey.C] = GLFW_KEY_C;
-        this.keyMap[ImGuiKey.V] = GLFW_KEY_V;
-        this.keyMap[ImGuiKey.X] = GLFW_KEY_X;
-        this.keyMap[ImGuiKey.Y] = GLFW_KEY_Y;
-        this.keyMap[ImGuiKey.Z] = GLFW_KEY_Z;
-    }
-
-    public void enableTabInput() {
-        this.keyMap[ImGuiKey.Tab] = GLFW_KEY_TAB;
-        ReplayUI.getIO().setKeyMap(this.keyMap);
-    }
-
-    public void disableTabInput() {
-        this.keyMap[ImGuiKey.Tab] = -1;
-        ReplayUI.getIO().setKeyMap(this.keyMap);
-    }
-
     /**
      * Method to do an initialization of the {@link imgui.glfw.ImGuiImplGlfw} state. It SHOULD be called before calling the {@link imgui.glfw.ImGuiImplGlfw#newFrame()} method.
      * <p>
@@ -542,42 +760,46 @@ public class CustomImGuiImplGlfw {
     public boolean init(final long windowId, final boolean installCallbacks) {
         this.mainWindowPtr = windowId;
 
-        this.detectGlfwVersionAndEnabledFeatures();
-
         final ImGuiIO io = ReplayUI.getIO();
 
         io.addBackendFlags(ImGuiBackendFlags.HasMouseCursors | ImGuiBackendFlags.HasSetMousePos | ImGuiBackendFlags.PlatformHasViewports);
         io.setBackendPlatformName("imgui_java_impl_glfw");
 
-        // Keyboard mapping. ImGui will use those indices to peek into the io.KeysDown[] array.
-        io.setKeyMap(this.keyMap);
-
+        KeyboardHandler keyboardHandler = Minecraft.getInstance().keyboardHandler;
         io.setGetClipboardTextFn(new ImStrSupplier() {
             @Override
             public String get() {
-                final String clipboardString = glfwGetClipboardString(windowId);
-                return clipboardString != null ? clipboardString : "";
+                return keyboardHandler.getClipboard();
             }
         });
-
         io.setSetClipboardTextFn(new ImStrConsumer() {
             @Override
-            public void accept(final String str) {
-                glfwSetClipboardString(windowId, str);
+            public void accept(String s) {
+                keyboardHandler.setClipboard(s);
             }
         });
 
-        // Mouse cursors mapping. Disable errors whilst setting due to X11.
+        // Create mouse cursors
+        // (By design, on X11 cursors are user configurable and some cursors may be missing. When a cursor doesn't exist,
+        // GLFW will emit an error which will often be printed by the app, so we temporarily disable error reporting.
+        // Missing cursors will return NULL and our _UpdateMouseCursor() function will use the Arrow cursor instead.)
         final GLFWErrorCallback prevErrorCallback = glfwSetErrorCallback(null);
         this.mouseCursors[ImGuiMouseCursor.Arrow] = glfwCreateStandardCursor(GLFW_ARROW_CURSOR);
         this.mouseCursors[ImGuiMouseCursor.TextInput] = glfwCreateStandardCursor(GLFW_IBEAM_CURSOR);
-        this.mouseCursors[ImGuiMouseCursor.ResizeAll] = glfwCreateStandardCursor(GLFW_RESIZE_ALL_CURSOR);
         this.mouseCursors[ImGuiMouseCursor.ResizeNS] = glfwCreateStandardCursor(GLFW_RESIZE_NS_CURSOR);
         this.mouseCursors[ImGuiMouseCursor.ResizeEW] = glfwCreateStandardCursor(GLFW_RESIZE_EW_CURSOR);
-        this.mouseCursors[ImGuiMouseCursor.ResizeNESW] = glfwCreateStandardCursor(GLFW_ARROW_CURSOR);
-        this.mouseCursors[ImGuiMouseCursor.ResizeNWSE] = glfwCreateStandardCursor(GLFW_ARROW_CURSOR);
-        this.mouseCursors[ImGuiMouseCursor.Hand] = glfwCreateStandardCursor(GLFW_POINTING_HAND_CURSOR);
-        this.mouseCursors[ImGuiMouseCursor.NotAllowed] = glfwCreateStandardCursor(GLFW_ARROW_CURSOR);
+        this.mouseCursors[ImGuiMouseCursor.Hand] = glfwCreateStandardCursor(GLFW_HAND_CURSOR);
+        if (glfwHasNewCursors) {
+            this.mouseCursors[ImGuiMouseCursor.ResizeAll] = glfwCreateStandardCursor(GLFW_RESIZE_ALL_CURSOR);
+            this.mouseCursors[ImGuiMouseCursor.ResizeNESW] = glfwCreateStandardCursor(GLFW_RESIZE_NESW_CURSOR);
+            this.mouseCursors[ImGuiMouseCursor.ResizeNWSE] = glfwCreateStandardCursor(GLFW_RESIZE_NWSE_CURSOR);
+            this.mouseCursors[ImGuiMouseCursor.NotAllowed] = glfwCreateStandardCursor(GLFW_NOT_ALLOWED_CURSOR);
+        } else {
+            this.mouseCursors[ImGuiMouseCursor.ResizeAll] = glfwCreateStandardCursor(GLFW_ARROW_CURSOR);
+            this.mouseCursors[ImGuiMouseCursor.ResizeNESW] = glfwCreateStandardCursor(GLFW_ARROW_CURSOR);
+            this.mouseCursors[ImGuiMouseCursor.ResizeNWSE] = glfwCreateStandardCursor(GLFW_ARROW_CURSOR);
+            this.mouseCursors[ImGuiMouseCursor.NotAllowed] = glfwCreateStandardCursor(GLFW_ARROW_CURSOR);
+        }
         glfwSetErrorCallback(prevErrorCallback);
 
         if (installCallbacks) {
@@ -607,18 +829,18 @@ public class CustomImGuiImplGlfw {
             this.contentScale = Math.max(this.windowScaleX[0] / scaleX, windowScaleY[0] / scaleY);
         }
 
-        // Update monitors the first time (note: monitor callback are broken in GLFW 3.2 and earlier, see github.com/glfw/glfw/issues/784)
+        // Update monitors the first time
         this.updateMonitors();
-        glfwSetMonitorCallback(this::monitorCallback);
 
         // Our mouse update function expect PlatformHandle to be filled for the main viewport
         final ImGuiViewport mainViewport = ImGui.getMainViewport();
         mainViewport.setPlatformHandle(this.mainWindowPtr);
-
         if (IS_WINDOWS) {
             mainViewport.setPlatformHandleRaw(GLFWNativeWin32.glfwGetWin32Window(windowId));
         }
-
+        if (IS_APPLE) {
+            mainViewport.setPlatformHandleRaw(GLFWNativeCocoa.glfwGetCocoaWindow(windowId));
+        }
         if (io.hasConfigFlags(ImGuiConfigFlags.ViewportsEnable)) {
             this.initPlatformInterface();
         }
@@ -660,16 +882,15 @@ public class CustomImGuiImplGlfw {
                 // Release for game
                 for (int key = 0; key < this.keyPressedGame.length; key++) {
                     if (this.keyPressedGame[key]) {
+                        this.keyPressedGame[key] = false;
                         int scancode = GLFW.glfwGetKeyScancode(key);
                         this.prevUserCallbackKey.invoke(this.mainWindowPtr, key, scancode, GLFW_RELEASE, 0);
                     }
                 }
 
                 // Release for imgui
-                for (int key = 0; key < this.keyOwnerWindows.length; key++) {
-                    io.setKeysDown(key, false);
-                    this.keyOwnerWindows[key] = 0;
-                }
+                Arrays.fill(this.keyOwnerWindows, -1);
+                io.clearInputKeys();
 
                 io.setKeyCtrl(false);
                 io.setKeyShift(false);
@@ -718,10 +939,8 @@ public class CustomImGuiImplGlfw {
 
                 var io = ReplayUI.getIO();
 
-                for (int key = 0; key < this.keyOwnerWindows.length; key++) {
-                    io.setKeysDown(key, false);
-                    this.keyOwnerWindows[key] = 0;
-                }
+                Arrays.fill(this.keyOwnerWindows, -1);
+                io.clearInputKeys();
 
                 io.setKeyCtrl(false);
                 io.setKeyShift(false);
@@ -739,22 +958,6 @@ public class CustomImGuiImplGlfw {
         } else {
             this.releasedAllKeysBecauseOfDisable = false;
         }
-    }
-
-    private void detectGlfwVersionAndEnabledFeatures() {
-        final int[] major = new int[1];
-        final int[] minor = new int[1];
-        final int[] rev = new int[1];
-        glfwGetVersion(major, minor, rev);
-
-        final int version = major[0] * 1000 + minor[0] * 100 + rev[0] * 10;
-
-        this.glfwHawWindowTopmost = version >= 3200;
-        this.glfwHasWindowAlpha = version >= 3300;
-        this.glfwHasPerMonitorDpi = version >= 3300;
-        this.glfwHasFocusWindow = version >= 3200;
-        this.glfwHasFocusOnShow = version >= 3300;
-        this.glfwHasMonitorWorkArea = version >= 3300;
     }
 
     private void updateMousePosAndButtons() {
@@ -847,90 +1050,116 @@ public class CustomImGuiImplGlfw {
         }
     }
 
+    @FunctionalInterface
+    private interface MapButton {
+        void run(int keyNo, int buttonNo, int _unused);
+    }
+
+    @FunctionalInterface
+    private interface MapAnalog {
+        void run(int keyNo, int axisNo, int _unused, float v0, float v1);
+    }
+
+    @SuppressWarnings("ManualMinMaxCalculation")
+    private float saturate(final float v) {
+        return v < 0.0f ? 0.0f : v > 1.0f ? 1.0f : v;
+    }
+
     private void updateGamepads() {
         if (AsyncFileDialogs.hasDialog()) return;
+        final ImGuiIO io = ReplayUI.getIO();
 
-        var io = ReplayUI.getIO();
         if (!io.hasConfigFlags(ImGuiConfigFlags.NavEnableGamepad)) {
             return;
         }
 
-        io.setNavInputs(this.emptyNavInputs);
+        io.removeBackendFlags(ImGuiBackendFlags.HasGamepad);
 
-        final ByteBuffer buttons = glfwGetJoystickButtons(GLFW_JOYSTICK_1);
-        final int buttonsCount = buttons.limit();
+        final CustomImGuiImplGlfw.MapButton mapButton;
+        final CustomImGuiImplGlfw.MapAnalog mapAnalog;
 
-        final FloatBuffer axis = glfwGetJoystickAxes(GLFW_JOYSTICK_1);
-        final int axisCount = axis.limit();
-
-        this.mapButton(ImGuiNavInput.Activate, 0, buttons, buttonsCount, io);   // Cross / A
-        this.mapButton(ImGuiNavInput.Cancel, 1, buttons, buttonsCount, io);     // Circle / B
-        this.mapButton(ImGuiNavInput.Menu, 2, buttons, buttonsCount, io);       // Square / X
-        this.mapButton(ImGuiNavInput.Input, 3, buttons, buttonsCount, io);      // Triangle / Y
-        this.mapButton(ImGuiNavInput.DpadLeft, 13, buttons, buttonsCount, io);  // D-Pad Left
-        this.mapButton(ImGuiNavInput.DpadRight, 11, buttons, buttonsCount, io); // D-Pad Right
-        this.mapButton(ImGuiNavInput.DpadUp, 10, buttons, buttonsCount, io);    // D-Pad Up
-        this.mapButton(ImGuiNavInput.DpadDown, 12, buttons, buttonsCount, io);  // D-Pad Down
-        this.mapButton(ImGuiNavInput.FocusPrev, 4, buttons, buttonsCount, io);  // L1 / LB
-        this.mapButton(ImGuiNavInput.FocusNext, 5, buttons, buttonsCount, io);  // R1 / RB
-        this.mapButton(ImGuiNavInput.TweakSlow, 4, buttons, buttonsCount, io);  // L1 / LB
-        this.mapButton(ImGuiNavInput.TweakFast, 5, buttons, buttonsCount, io);  // R1 / RB
-        this.mapAnalog(ImGuiNavInput.LStickLeft, 0, -0.3f, -0.9f, axis, axisCount, io);
-        this.mapAnalog(ImGuiNavInput.LStickRight, 0, +0.3f, +0.9f, axis, axisCount, io);
-        this.mapAnalog(ImGuiNavInput.LStickUp, 1, +0.3f, +0.9f, axis, axisCount, io);
-        this.mapAnalog(ImGuiNavInput.LStickDown, 1, -0.3f, -0.9f, axis, axisCount, io);
-
-        if (axisCount > 0 && buttonsCount > 0) {
-            io.addBackendFlags(ImGuiBackendFlags.HasGamepad);
+        if (glfwHasGamepadApi) {
+            try (GLFWGamepadState gamepad = GLFWGamepadState.create()) {
+                if (!glfwGetGamepadState(GLFW_JOYSTICK_1, gamepad)) {
+                    return;
+                }
+                mapButton = (keyNo, buttonNo, _unused) -> io.addKeyEvent(keyNo, gamepad.buttons(buttonNo) != 0);
+                mapAnalog = (keyNo, axisNo, _unused, v0, v1) -> {
+                    float v = gamepad.axes(axisNo);
+                    v = (v - v0) / (v1 - v0);
+                    io.addKeyAnalogEvent(keyNo, v > 0.10f, saturate(v));
+                };
+            }
         } else {
-            io.removeBackendFlags(ImGuiBackendFlags.HasGamepad);
+            final FloatBuffer axes = glfwGetJoystickAxes(GLFW_JOYSTICK_1);
+            final ByteBuffer buttons = glfwGetJoystickButtons(GLFW_JOYSTICK_1);
+            if (axes == null || axes.limit() == 0 || buttons == null || buttons.limit() == 0) {
+                return;
+            }
+            mapButton = (keyNo, buttonNo, _unused) -> io.addKeyEvent(keyNo, (buttons.limit() > buttonNo && buttons.get(buttonNo) == GLFW_PRESS));
+            mapAnalog = (keyNo, axisNo, _unused, v0, v1) -> {
+                float v = (axes.limit() > axisNo) ? axes.get(axisNo) : v0;
+                v = (v - v0) / (v1 - v0);
+                io.addKeyAnalogEvent(keyNo, v > 0.10f, saturate(v));
+            };
         }
+
+        io.addBackendFlags(ImGuiBackendFlags.HasGamepad);
+        mapButton.run(ImGuiKey.GamepadStart, GLFW_GAMEPAD_BUTTON_START, 7);
+        mapButton.run(ImGuiKey.GamepadBack, GLFW_GAMEPAD_BUTTON_BACK, 6);
+        mapButton.run(ImGuiKey.GamepadFaceLeft, GLFW_GAMEPAD_BUTTON_X, 2);     // Xbox X, PS Square
+        mapButton.run(ImGuiKey.GamepadFaceRight, GLFW_GAMEPAD_BUTTON_B, 1);     // Xbox B, PS Circle
+        mapButton.run(ImGuiKey.GamepadFaceUp, GLFW_GAMEPAD_BUTTON_Y, 3);     // Xbox Y, PS Triangle
+        mapButton.run(ImGuiKey.GamepadFaceDown, GLFW_GAMEPAD_BUTTON_A, 0);     // Xbox A, PS Cross
+        mapButton.run(ImGuiKey.GamepadDpadLeft, GLFW_GAMEPAD_BUTTON_DPAD_LEFT, 13);
+        mapButton.run(ImGuiKey.GamepadDpadRight, GLFW_GAMEPAD_BUTTON_DPAD_RIGHT, 11);
+        mapButton.run(ImGuiKey.GamepadDpadUp, GLFW_GAMEPAD_BUTTON_DPAD_UP, 10);
+        mapButton.run(ImGuiKey.GamepadDpadDown, GLFW_GAMEPAD_BUTTON_DPAD_DOWN, 12);
+        mapButton.run(ImGuiKey.GamepadL1, GLFW_GAMEPAD_BUTTON_LEFT_BUMPER, 4);
+        mapButton.run(ImGuiKey.GamepadR1, GLFW_GAMEPAD_BUTTON_RIGHT_BUMPER, 5);
+        mapAnalog.run(ImGuiKey.GamepadL2, GLFW_GAMEPAD_AXIS_LEFT_TRIGGER, 4, -0.75f, +1.0f);
+        mapAnalog.run(ImGuiKey.GamepadR2, GLFW_GAMEPAD_AXIS_RIGHT_TRIGGER, 5, -0.75f, +1.0f);
+        mapButton.run(ImGuiKey.GamepadL3, GLFW_GAMEPAD_BUTTON_LEFT_THUMB, 8);
+        mapButton.run(ImGuiKey.GamepadR3, GLFW_GAMEPAD_BUTTON_RIGHT_THUMB, 9);
+        mapAnalog.run(ImGuiKey.GamepadLStickLeft, GLFW_GAMEPAD_AXIS_LEFT_X, 0, -0.25f, -1.0f);
+        mapAnalog.run(ImGuiKey.GamepadLStickRight, GLFW_GAMEPAD_AXIS_LEFT_X, 0, +0.25f, +1.0f);
+        mapAnalog.run(ImGuiKey.GamepadLStickUp, GLFW_GAMEPAD_AXIS_LEFT_Y, 1, -0.25f, -1.0f);
+        mapAnalog.run(ImGuiKey.GamepadLStickDown, GLFW_GAMEPAD_AXIS_LEFT_Y, 1, +0.25f, +1.0f);
+        mapAnalog.run(ImGuiKey.GamepadRStickLeft, GLFW_GAMEPAD_AXIS_RIGHT_X, 2, -0.25f, -1.0f);
+        mapAnalog.run(ImGuiKey.GamepadRStickRight, GLFW_GAMEPAD_AXIS_RIGHT_X, 2, +0.25f, +1.0f);
+        mapAnalog.run(ImGuiKey.GamepadRStickUp, GLFW_GAMEPAD_AXIS_RIGHT_Y, 3, -0.25f, -1.0f);
+        mapAnalog.run(ImGuiKey.GamepadRStickDown, GLFW_GAMEPAD_AXIS_RIGHT_Y, 3, +0.25f, +1.0f);
     }
 
-    private void mapButton(final int navNo, final int buttonNo, final ByteBuffer buttons, final int buttonsCount, final ImGuiIO io) {
-        if (buttonsCount > buttonNo && buttons.get(buttonNo) == GLFW_PRESS) {
-            io.setNavInputs(navNo, 1.0f);
-        }
-    }
-
-    private void mapAnalog(
-            final int navNo,
-            final int axisNo,
-            final float v0,
-            final float v1,
-            final FloatBuffer axis,
-            final int axisCount,
-            final ImGuiIO io
-    ) {
-        float v = axisCount > axisNo ? axis.get(axisNo) : v0;
-        v = (v - v0) / (v1 - v0);
-        if (v > 1.0f) {
-            v = 1.0f;
-        }
-        if (io.getNavInputs(navNo) < v) {
-            io.setNavInputs(navNo, v);
-        }
-    }
-
-    private void updateMonitors() {
+    protected void updateMonitors() {
         final ImGuiPlatformIO platformIO = ImGui.getPlatformIO();
+        this.wantUpdateMonitors = false;
+
         final PointerBuffer monitors = glfwGetMonitors();
+        if (monitors == null) {
+            System.err.println("Unable to get monitors!");
+            return;
+        }
+        if (monitors.limit() == 0) { // Preserve existing monitor list if there are none. Happens on macOS sleeping (#5683)
+            return;
+        }
 
         platformIO.resizeMonitors(0);
 
         for (int n = 0; n < monitors.limit(); n++) {
             final long monitor = monitors.get(n);
 
-            glfwGetMonitorPos(monitor, this.monitorX, this.monitorY);
             final GLFWVidMode vidMode = glfwGetVideoMode(monitor);
+            if (vidMode == null) {
+                continue;
+            }
+
+            glfwGetMonitorPos(monitor, this.monitorX, this.monitorY);
+
             final float mainPosX = this.monitorX[0];
             final float mainPosY = this.monitorY[0];
             final float mainSizeX = vidMode.width();
             final float mainSizeY = vidMode.height();
-
-            if (this.glfwHasMonitorWorkArea) {
-                glfwGetMonitorWorkarea(monitor, this.monitorWorkAreaX, this.monitorWorkAreaY, this.monitorWorkAreaWidth, this.monitorWorkAreaHeight);
-            }
 
             float workPosX = 0;
             float workPosY = 0;
@@ -938,24 +1167,27 @@ public class CustomImGuiImplGlfw {
             float workSizeY = 0;
 
             // Workaround a small GLFW issue reporting zero on monitor changes: https://github.com/glfw/glfw/pull/1761
-            if (this.glfwHasMonitorWorkArea && this.monitorWorkAreaWidth[0] > 0 && this.monitorWorkAreaHeight[0] > 0) {
-                workPosX = this.monitorWorkAreaX[0];
-                workPosY = this.monitorWorkAreaY[0];
-                workSizeX = this.monitorWorkAreaWidth[0];
-                workSizeY = this.monitorWorkAreaHeight[0];
+            if (glfwHasMonitorWorkArea) {
+                glfwGetMonitorWorkarea(monitor, this.monitorWorkAreaX, this.monitorWorkAreaY, this.monitorWorkAreaWidth, this.monitorWorkAreaHeight);
+                if (this.monitorWorkAreaWidth[0] > 0 && this.monitorWorkAreaHeight[0] > 0) {
+                    workPosX = this.monitorWorkAreaX[0];
+                    workPosY = this.monitorWorkAreaY[0];
+                    workSizeX = this.monitorWorkAreaWidth[0];
+                    workSizeY = this.monitorWorkAreaHeight[0];
+                }
             }
+
+            float dpiScale = 0;
 
             // Warning: the validity of monitor DPI information on Windows depends on the application DPI awareness settings,
             // which generally needs to be set in the manifest or at runtime.
-            if (this.glfwHasPerMonitorDpi) {
+            if (glfwHasPerMonitorDpi) {
                 glfwGetMonitorContentScale(monitor, this.monitorContentScaleX, this.monitorContentScaleY);
+                dpiScale = this.monitorContentScaleX[0];
             }
-            final float dpiScale = this.monitorContentScaleX[0];
 
-            platformIO.pushMonitors(mainPosX, mainPosY, mainSizeX, mainSizeY, workPosX, workPosY, workSizeX, workSizeY, dpiScale);
+            platformIO.pushMonitors(monitor, mainPosX, mainPosY, mainSizeX, mainSizeY, workPosX, workPosY, workSizeX, workSizeY, dpiScale);
         }
-
-        this.wantUpdateMonitors = false;
     }
 
     //--------------------------------------------------------------------------------------------------------

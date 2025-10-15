@@ -9,7 +9,7 @@ import com.moulberry.flashback.keyframe.interpolation.InterpolationType;
 import com.moulberry.flashback.keyframe.types.AudioKeyframeType;
 import com.moulberry.flashback.sound.FlashbackAudioBuffer;
 import com.moulberry.flashback.sound.FlashbackAudioManager;
-import imgui.ImDrawList;
+import imgui.flashback.ImDrawList;
 import org.jetbrains.annotations.Nullable;
 
 import java.lang.reflect.Type;
