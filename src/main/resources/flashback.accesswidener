@@ -48,8 +48,6 @@ accessible field net/minecraft/server/MinecraftServer levels Ljava/util/Map;
 accessible field net/minecraft/server/MinecraftServer worldData Lnet/minecraft/world/level/storage/WorldData;
 accessible field net/minecraft/server/MinecraftServer executor Ljava/util/concurrent/Executor;
 accessible field net/minecraft/server/MinecraftServer storageSource Lnet/minecraft/world/level/storage/LevelStorageSource$LevelStorageAccess;
-# todo nobuild
-#accessible field net/minecraft/server/MinecraftServer progressListenerFactory Lnet/minecraft/server/level/progress/ChunkProgressListenerFactory;
 accessible field net/minecraft/server/MinecraftServer nextTickTimeNanos J
 
 accessible field net/minecraft/world/level/storage/PrimaryLevelData specialWorldProperty Lnet/minecraft/world/level/storage/PrimaryLevelData$SpecialWorldProperty;
