@@ -1,6 +1,8 @@
 package com.moulberry.flashback.exporting;
 
 import com.mojang.blaze3d.pipeline.RenderTarget;
+import com.mojang.blaze3d.pipeline.TextureTarget;
+import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.blaze3d.platform.Window;
 import com.mojang.blaze3d.systems.RenderSystem;
@@ -93,6 +95,9 @@ public class ExportJob {
     private NativeImage firstFrame = null;
     private int writtenFrames = 0;
 
+    // 1.21 only
+    private TextureTarget infoRenderTarget;
+
     public static final int SRC_PIXEL_FORMAT = avutil.AV_PIX_FMT_RGBA;
 
     public ExportJob(ExportSettings settings) {
@@ -166,6 +171,9 @@ public class ExportJob {
         try {
             Files.createDirectories(exportTempFolder);
 
+            RenderTarget mainTarget = Minecraft.getInstance().mainRenderTarget;
+            this.infoRenderTarget = new TextureTarget(mainTarget.width, mainTarget.height, false, Minecraft.ON_OSX);
+
             try (VideoWriter encoder = createVideoWriter(this.settings, tempFileName);
                  SaveableFramebufferQueue downloader = new SaveableFramebufferQueue(this.settings.resolutionX(), this.settings.resolutionY())) {
                 doExport(encoder, downloader);
@@ -207,6 +215,11 @@ public class ExportJob {
             Minecraft.getInstance().getSoundManager().stop();
             Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.NOTE_BLOCK_CHIME, 1.0f));
             Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.NOTE_BLOCK_BELL, 1.0f));
+
+            if (this.infoRenderTarget != null) {
+                this.infoRenderTarget.destroyBuffers();
+                this.infoRenderTarget = null;
+            }
 
             if (this.firstFrame != null) {
                 this.firstFrame.close();
@@ -399,7 +412,7 @@ public class ExportJob {
             }
 
             this.shouldChangeFramebufferSize = false;
-            cancel = finishFrame(renderTarget, infoRenderTarget, tickIndex, ticks.size());
+            cancel = finishFrame(renderTarget, this.infoRenderTarget, tickIndex, ticks.size());
             this.shouldChangeFramebufferSize = true;
 
             submitDownloadedFrames(videoWriter, downloader, false);
