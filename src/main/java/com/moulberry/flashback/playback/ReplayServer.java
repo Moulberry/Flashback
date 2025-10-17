@@ -369,9 +369,14 @@ public class ReplayServer extends IntegratedServer {
                 serverPlayer.connection.send(new ClientboundInitializeBorderPacket(serverLevel.getWorldBorder()));
 
                 // Send custom payloads found during snapshot
-                for (ClientboundCustomPayloadPacket customPayload : ReplayServer.this.customPacketsInSnapshot) {
-                    serverPlayer.connection.send(customPayload);
-                }
+                ReplayServer.this.customPacketsInSnapshot.removeIf(packet -> {
+                    try {
+                        serverPlayer.connection.send(packet);
+                        return false;
+                    } catch (Exception e) {
+                        return true;
+                    }
+                });
             }
 
             @Override
