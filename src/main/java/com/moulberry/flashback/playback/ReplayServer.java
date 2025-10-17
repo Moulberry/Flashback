@@ -153,6 +153,7 @@ public class ReplayServer extends IntegratedServer {
     private final List<ReplayPlayer> replayViewers = new ArrayList<>();
     public boolean followLocalPlayerNextTickIfWrongDimension = false;
     public boolean isProcessingSnapshot = false;
+    public List<ClientboundCustomPayloadPacket> customPacketsInSnapshot = new ArrayList<>();
     private boolean processedSnapshot = false;
     public volatile boolean fastForwarding = false;
     public volatile boolean hasServerResourcePack = false;
@@ -366,6 +367,11 @@ public class ReplayServer extends IntegratedServer {
 
                 // Send world border
                 serverPlayer.connection.send(new ClientboundInitializeBorderPacket(serverLevel.getWorldBorder()));
+
+                // Send custom payloads found during snapshot
+                for (ClientboundCustomPayloadPacket customPayload : ReplayServer.this.customPacketsInSnapshot) {
+                    serverPlayer.connection.send(customPayload);
+                }
             }
 
             @Override

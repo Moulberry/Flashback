@@ -1598,6 +1598,14 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
 
     @Override
     public void handleCustomPayload(ClientboundCustomPayloadPacket clientboundCustomPayloadPacket) {
+        if (clientboundCustomPayloadPacket.type().id().getNamespace().startsWith("fabric-screen-handler-api")) {
+            return;
+        }
+
+        if (this.replayServer.isProcessingSnapshot) {
+            this.replayServer.customPacketsInSnapshot.add(clientboundCustomPayloadPacket);
+        }
+
         forward(clientboundCustomPayloadPacket);
     }
 
