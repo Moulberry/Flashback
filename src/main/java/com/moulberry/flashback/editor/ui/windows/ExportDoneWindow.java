@@ -1,6 +1,5 @@
 package com.moulberry.flashback.editor.ui.windows;
 
-import com.mojang.blaze3d.opengl.GlTexture;
 import com.mojang.blaze3d.platform.NativeImage;
 import com.moulberry.flashback.MedalTvUploading;
 import com.moulberry.flashback.Utils;
@@ -52,10 +51,10 @@ public class ExportDoneWindow {
             Objects.requireNonNull(this.thumbnail);
 
             if (this.uploaded == null) {
-                this.uploaded = new DynamicTexture(() -> "flashback export thumbnail", this.thumbnail);;
+                this.uploaded = new DynamicTexture(this.thumbnail);;
             }
 
-            return ((GlTexture)this.uploaded.getTexture()).glId();
+            return this.uploaded.getId();
         }
     }
 
