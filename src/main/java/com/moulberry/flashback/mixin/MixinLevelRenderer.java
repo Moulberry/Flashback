@@ -11,7 +11,6 @@ import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.BufferUploader;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.VertexFormat;
 import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.playback.ReplayServer;
 import com.moulberry.flashback.state.EditorState;
@@ -40,6 +39,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.TickRateManager;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Matrix4f;
 import org.spongepowered.asm.mixin.Final;
@@ -65,13 +65,20 @@ public abstract class MixinLevelRenderer {
     @Shadow
     private int ticks;
 
-    @Inject(method = "tick", at = @At("HEAD"), cancellable = true)
+    @Inject(method = "tick", at = @At("HEAD"))
     public void tick(CallbackInfo ci) {
         ReplayServer replayServer = Flashback.getReplayServer();
         if (replayServer != null) {
             this.ticks = replayServer.getReplayTick();
-            ci.cancel();
         }
+    }
+
+    @WrapOperation(method = "tick", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/TickRateManager;runsNormally()Z"))
+    public boolean tick_runsNormally(TickRateManager instance, Operation<Boolean> original) {
+        if (Flashback.isInReplay()) {
+            return false;
+        }
+        return original.call(instance);
     }
 
     @Inject(method = "renderLevel", at = @At("HEAD"))
