@@ -1630,6 +1630,10 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
             return;
         }
 
+        if (this.replayServer.isProcessingSnapshot) {
+            this.replayServer.customPacketsInSnapshot.add(clientboundCustomPayloadPacket);
+        }
+
         forward(clientboundCustomPayloadPacket);
     }
 
