@@ -14,3 +14,4 @@ Authors/contributors:
 - ja_jp.json: hqnkuh
 - fr_fr.json: MazeWave
 - cs_cz.json: Madeleaan
+- pt_br.json: Draacoun
