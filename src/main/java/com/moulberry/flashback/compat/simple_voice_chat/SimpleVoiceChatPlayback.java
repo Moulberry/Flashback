@@ -23,6 +23,9 @@ public class SimpleVoiceChatPlayback {
     private static final Cache<UUID, ClientLocationalAudioChannel> locationAudioChannelCache = CacheBuilder.newBuilder().expireAfterAccess(Duration.ofMinutes(1)).build();
     private static final Cache<UUID, ClientEntityAudioChannel> entityAudioChannelCache = CacheBuilder.newBuilder().expireAfterAccess(Duration.ofMinutes(1)).build();
 
+    private static final int ERROR_LOG_MAX = 8;
+    private static int errorLogCount = 0;
+
     public static void play(FlashbackVoiceChatSound sound) {
         try {
             UUID source = sound.source();
@@ -60,12 +63,22 @@ public class SimpleVoiceChatPlayback {
                 }
             }
 
-            ClientVoicechat client = ClientManager.getClient();
-            if (client != null) {
-                client.getTalkCache().updateLevel(sound.source(), null, whispering, sound.samples());
+            try {
+                ClientVoicechat client = ClientManager.getClient();
+                if (client != null) {
+                    client.getTalkCache().updateLevel(sound.source(), null, whispering, sound.samples());
+                }
+            } catch (NoSuchMethodError ignored) {
             }
-        } catch (Exception e) {
-            Flashback.LOGGER.error("Error while trying to play voice chat sound", e);
+        } catch (Exception | NoSuchMethodError e) {
+            if (errorLogCount < ERROR_LOG_MAX) {
+                Flashback.LOGGER.error("Error while trying to play voice chat sound", e);
+
+                errorLogCount += 1;
+                if (errorLogCount == ERROR_LOG_MAX) {
+                    Flashback.LOGGER.error("Stopping logging voice chat playback errors since there are too many");
+                }
+            }
         }
     }
 
