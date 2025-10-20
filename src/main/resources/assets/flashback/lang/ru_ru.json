@@ -9,7 +9,7 @@
   "flashback.select_replay.replay": "Повтор",
   "flashback.select_replay.data_read": "Чтение данных повтора...",
   "flashback.select_replay.delete_question": "Вы уверены, что хотите удалить этот повтор?",
-  "flashback.select_replay.duration": "Длительность: %с",
+  "flashback.select_replay.duration": "Длительность: %s",
 
   "flashback.option.per_second": "%s/с",
 
@@ -73,7 +73,7 @@
   "flashback.advanced.synchronize_ticking.description": "Синхронизирует клиент и интегрированный сервер. Работает только в одиночном режиме. Полезно при записи ниже 20 TPS. Может привести к тупиковым ситуациям.",
 
   "flashback.mark.added_with_description": "Добавлен \"%s\" маркер",
-  "flashback.mark.added_with_color": "Добавлен #%s marker",
+  "flashback.mark.added_with_color": "Добавлен #%s маркер",
   "flashback.mark.added": "Добавлен маркер",
   "flashback.mark.added_at": " в %.2f, %.2f, %.2f",
 
@@ -85,7 +85,7 @@
   "flashback.save_replay": "Сохранить повтор",
   "flashback.edit_replay": "Редактировать повтор",
   "flashback.replay_name": "Название повтора",
-  "flashback.filename": "Размер файла",
+  "flashback.filename": "Имя файла",
   "flashback.delete_replay": "Удалить повтор",
   "flashback.confirm_delete_replay": "Подтвердить удаление записи",
   "flashback.confirm_delete_replay_message": "Вы уверены, что хотите удалить запись? Вы не сможете восстановить ее.",
