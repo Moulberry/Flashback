@@ -3,6 +3,7 @@ package com.moulberry.flashback.compat.simple_voice_chat;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.moulberry.flashback.Flashback;
+import com.moulberry.flashback.editor.ui.ReplayUI;
 import com.moulberry.flashback.packet.FlashbackVoiceChatSound;
 import com.moulberry.flashback.state.EditorState;
 import com.moulberry.flashback.state.EditorStateManager;
@@ -63,14 +64,13 @@ public class SimpleVoiceChatPlayback {
                 }
             }
 
-            try {
-                ClientVoicechat client = ClientManager.getClient();
-                if (client != null) {
-                    client.getTalkCache().updateLevel(sound.source(), null, whispering, sound.samples());
-                }
-            } catch (NoSuchMethodError ignored) {
+            ClientVoicechat client = ClientManager.getClient();
+            if (client != null) {
+                client.getTalkCache().updateLevel(sound.source(), null, whispering, sound.samples());
             }
         } catch (Exception | NoSuchMethodError e) {
+            ReplayUI.setInfoOverlay("Error while playing Simple Voice Chat audio. Ensure that both Simple Voice Chat and Flashback are up-to-date");
+
             if (errorLogCount < ERROR_LOG_MAX) {
                 Flashback.LOGGER.error("Error while trying to play voice chat sound", e);
 
