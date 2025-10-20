@@ -62,6 +62,10 @@ public class ReplayReader {
         this.registryAccess = registryAccess;
     }
 
+    public boolean isAtStart() {
+        return this.friendlyByteBuf.readerIndex() <= this.replayActionsOffset;
+    }
+
     public void resetToStart() {
         this.friendlyByteBuf.readerIndex(this.replayActionsOffset);
     }
