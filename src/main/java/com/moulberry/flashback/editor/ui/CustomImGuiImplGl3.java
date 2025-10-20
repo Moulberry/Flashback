@@ -24,6 +24,7 @@ import static org.lwjgl.opengl.GL20.glDetachShader;
 import static org.lwjgl.opengl.GL20.glGetAttribLocation;
 import static org.lwjgl.opengl.GL20.glGetProgramiv;
 import static org.lwjgl.opengl.GL20.glGetUniformLocation;
+import static org.lwjgl.opengl.GL30.*;
 import static org.lwjgl.opengl.GL32.GL_ACTIVE_TEXTURE;
 import static org.lwjgl.opengl.GL32.GL_ARRAY_BUFFER;
 import static org.lwjgl.opengl.GL32.GL_ARRAY_BUFFER_BINDING;
@@ -185,6 +186,7 @@ public class CustomImGuiImplGl3 {
     private static final class Properties {
         private final ImVec4 clipRect = new ImVec4();
         private final float[] orthoProjMatrix = new float[4 * 4];
+        private final int[] lastFramebuffer = new int[1];
         private final int[] lastActiveTexture = new int[1];
         private final int[] lastProgram = new int[1];
         private final int[] lastTexture = new int[1];
@@ -403,6 +405,7 @@ public class CustomImGuiImplGl3 {
         }
 
         glBindVertexArray(gVertexArrayObject);
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
         // Bind vertex/index buffers and setup attributes for ImDrawVert
         glBindBuffer(GL_ARRAY_BUFFER, data.vboHandle);
@@ -434,6 +437,7 @@ public class CustomImGuiImplGl3 {
             return;
         }
 
+        glGetIntegerv(GL_FRAMEBUFFER_BINDING, props.lastFramebuffer);
         glGetIntegerv(GL_ACTIVE_TEXTURE, props.lastActiveTexture);
         glActiveTexture(GL_TEXTURE0);
         glGetIntegerv(GL_CURRENT_PROGRAM, props.lastProgram);
@@ -547,6 +551,7 @@ public class CustomImGuiImplGl3 {
         }
         glActiveTexture(props.lastActiveTexture[0]);
         glBindVertexArray(props.lastVertexArrayObject[0]);
+        glBindFramebuffer(GL_FRAMEBUFFER, props.lastFramebuffer[0]);
         glBindBuffer(GL_ARRAY_BUFFER, props.lastArrayBuffer[0]);
         glBlendEquationSeparate(props.lastBlendEquationRgb[0], props.lastBlendEquationAlpha[0]);
         glBlendFuncSeparate(props.lastBlendSrcRgb[0], props.lastBlendDstRgb[0], props.lastBlendSrcAlpha[0], props.lastBlendDstAlpha[0]);
