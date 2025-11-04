@@ -85,7 +85,7 @@
   "flashback.save_replay": "Salvar replay",
   "flashback.edit_replay": "Editar replay",
   "flashback.replay_name": "Nome do replay",
-  "flashback.filename": "Tamanho do arquivo",
+  "flashback.filename": "Nome do arquivo",
   "flashback.delete_replay": "Apagar replay",
   "flashback.confirm_delete_replay": "Confirmar exclusão de gravação",
   "flashback.confirm_delete_replay_message": "Deseja mesmo apagar esse replay? Você não poderá recuperá-lo",
