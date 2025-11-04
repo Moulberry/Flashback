@@ -18,7 +18,7 @@ import com.moulberry.flashback.keyframe.interpolation.InterpolationType;
 import com.moulberry.flashback.keyframe.types.FreezeKeyframeType;
 import com.moulberry.flashback.keyframe.types.SpeedKeyframeType;
 import com.moulberry.flashback.spline.CatmullRom;
-import imgui.ImGui;
+import imgui.flashback.ImGui;
 import net.minecraft.client.resources.language.I18n;
 
 import java.lang.reflect.Type;

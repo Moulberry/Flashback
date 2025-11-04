@@ -149,6 +149,7 @@ public class ReplayServer extends IntegratedServer {
     private final List<ReplayPlayer> replayViewers = new ArrayList<>();
     public boolean followLocalPlayerNextTickIfWrongDimension = false;
     public boolean isProcessingSnapshot = false;
+    public List<ClientboundCustomPayloadPacket> customPacketsInSnapshot = new ArrayList<>();
     private boolean processedSnapshot = false;
     public volatile boolean fastForwarding = false;
     public volatile boolean hasServerResourcePack = false;
@@ -380,6 +381,16 @@ public class ReplayServer extends IntegratedServer {
 
                 // Send world border
                 serverPlayer.connection.send(new ClientboundInitializeBorderPacket(serverLevel.getWorldBorder()));
+
+                // Send custom payloads found during snapshot
+                ReplayServer.this.customPacketsInSnapshot.removeIf(packet -> {
+                    try {
+                        serverPlayer.connection.send(packet);
+                        return false;
+                    } catch (Exception e) {
+                        return true;
+                    }
+                });
             }
 
             @Override
@@ -1269,15 +1280,8 @@ public class ReplayServer extends IntegratedServer {
         }
 
         if (shouldJump) {
-            this.processedSnapshot = true;
-
-            this.clearDataForPlayingSnapshot();
-
             Map.Entry<Integer, PlayableChunk> entry = this.playableChunksByStart.floorEntry(this.targetTick);
-            ReplayReader replayReader = entry.getValue().getOrLoadReplayReader(this.registryAccess());
-            replayReader.handleSnapshot(this);
-            this.gamePacketHandler.flushPendingEntities();
-            entry.getValue().getOrLoadReplayReader(this.registryAccess()).resetToStart();
+            this.playSnapshot(entry.getValue().getOrLoadReplayReader(this.registryAccess()));
             this.currentTick = entry.getKey();
         }
 
@@ -1287,14 +1291,17 @@ public class ReplayServer extends IntegratedServer {
         }
 
         this.currentReplayReader = entry.getValue().getOrLoadReplayReader(this.registryAccess());
+        if (this.currentReplayReader.isAtStart() && this.currentTick != entry.getKey()) {
+            String message = "Replay reader is at wrong position. Should be at start (" + entry.getKey() + ") but instead is at " + this.currentTick;
+            Flashback.LOGGER.error(message);
+            this.stopWithReason(Component.literal(message));
+            return;
+        }
         if (this.currentTick == entry.getKey()) {
             this.currentReplayReader.resetToStart();
 
             if (!this.processedSnapshot && entry.getValue().chunkMeta.forcePlaySnapshot) {
-                this.processedSnapshot = true;
-                this.clearDataForPlayingSnapshot();
-                this.currentReplayReader.handleSnapshot(this);
-                this.gamePacketHandler.flushPendingEntities();
+                this.playSnapshot(this.currentReplayReader);
             }
         }
 
@@ -1344,10 +1351,7 @@ public class ReplayServer extends IntegratedServer {
                     this.currentReplayReader.resetToStart();
 
                     if (entry.getValue().chunkMeta.forcePlaySnapshot) {
-                        this.processedSnapshot = true;
-                        this.clearDataForPlayingSnapshot();
-                        this.currentReplayReader.handleSnapshot(this);
-                        this.gamePacketHandler.flushPendingEntities();
+                        this.playSnapshot(this.currentReplayReader);
                     }
                 }
 
@@ -1357,6 +1361,7 @@ public class ReplayServer extends IntegratedServer {
                     Flashback.LOGGER.error("PlayableChunk tick base: {}", entry.getKey());
                     Flashback.LOGGER.error("PlayableChunk duration: {}", entry.getValue().chunkMeta.duration);
                     this.stopWithReason(Component.literal("Error processing replay: actual duration of PlayableChunk inconsistent with recorded duration"));
+                    return;
                 }
             }
 
@@ -1370,8 +1375,17 @@ public class ReplayServer extends IntegratedServer {
             if (stamp != 0) {
                 editorState.release(stamp);
             }
-            this.currentReplayReader = null;
         }
+    }
+
+    private void playSnapshot(ReplayReader replayReader) {
+        this.processedSnapshot = true;
+
+        this.clearDataForPlayingSnapshot();
+        replayReader.handleSnapshot(this);
+        this.gamePacketHandler.flushPendingEntities();
+
+        replayReader.resetToStart();
     }
 
     private void applyBlockOverrideKeyframes(Map<Integer, Keyframe> blockOverrideKeyframes, int tick) {

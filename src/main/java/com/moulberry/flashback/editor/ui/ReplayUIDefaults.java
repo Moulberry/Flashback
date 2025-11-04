@@ -1,8 +1,8 @@
 package com.moulberry.flashback.editor.ui;
 
-import imgui.ImGui;
-import imgui.ImGuiStyle;
-import imgui.flag.ImGuiCol;
+import imgui.flashback.ImGui;
+import imgui.flashback.ImGuiStyle;
+import imgui.flashback.flag.ImGuiCol;
 import net.minecraft.client.Minecraft;
 import org.lwjgl.glfw.GLFW;
 
@@ -22,11 +22,11 @@ public class ReplayUIDefaults {
             DockId=0x00000004,0
 
             [Docking][Data]
-            DockSpace     ID=0x8B93E3BD Window=0xA787BDB4 Pos=0,22 Size=1920,1080 Split=Y Selected=0x1F1A625A
-              DockNode    ID=0x00000001 Parent=0x8B93E3BD SizeRef=1920,830 Split=X Selected=0x1F1A625A
+            DockSpace     ID=0x7C6B3D9B Window=0xA787BDB4 Pos=0,22 Size=1920,1080 Split=Y Selected=0x1F1A625A
+              DockNode    ID=0x00000001 Parent=0x7C6B3D9B SizeRef=1920,830 Split=X Selected=0x1F1A625A
                 DockNode  ID=0x00000003 Parent=0x00000001 SizeRef=1670,830 CentralNode=1 NoTabBar=1 Selected=0x1F1A625A
                 DockNode  ID=0x00000004 Parent=0x00000001 SizeRef=250,830 Selected=0x595032EA
-              DockNode    ID=0x00000002 Parent=0x8B93E3BD SizeRef=1920,250 Selected=0xBF88A430
+              DockNode    ID=0x00000002 Parent=0x7C6B3D9B SizeRef=1920,250 Selected=0xBF88A430
             """;
 
     public static void applyStyle(ImGuiStyle style) {
@@ -70,13 +70,15 @@ public class ReplayUIDefaults {
 
         style.setColor(ImGuiCol.MenuBarBg, windowBg);
 
-        style.setColor(ImGuiCol.TabUnfocusedActive, 0xCC383030);
-        style.setColor(ImGuiCol.TabActive, 0xFF484040);
+        style.setColor(ImGuiCol.Tab, 0xFF302828);
+        style.setColor(ImGuiCol.TabSelected, 0xFF584040);
+        style.setColor(ImGuiCol.TabHovered, 0xFF685050);
+        style.setColor(ImGuiCol.TabDimmed, 0xAA302828);
+        style.setColor(ImGuiCol.TabDimmedSelected, 0xAA584040);
         style.setColor(ImGuiCol.ModalWindowDimBg, 0x58CCCCCC);
 
-        if (GLFW.glfwGetKey(Minecraft.getInstance().getWindow().handle(), GLFW.GLFW_KEY_K) != 0) {
-            ImGui.styleColorsDark(style);
-        }
+        style.setColor(ImGuiCol.TabSelectedOverline, 0);
+        style.setColor(ImGuiCol.TabDimmedSelectedOverline, 0);
     }
 
     private static int brighten(int abgr) {

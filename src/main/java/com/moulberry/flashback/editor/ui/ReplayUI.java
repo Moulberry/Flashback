@@ -18,9 +18,10 @@ import com.moulberry.flashback.editor.ui.windows.MainMenuBar;
 import com.moulberry.flashback.editor.ui.windows.StartExportWindow;
 import com.moulberry.flashback.editor.ui.windows.TimelineWindow;
 import com.moulberry.flashback.editor.ui.windows.VisualsWindow;
-import imgui.*;
-import imgui.flag.*;
-import imgui.internal.ImGuiContext;
+import imgui.flashback.*;
+import imgui.flashback.flag.*;
+import imgui.flashback.internal.ImGuiContext;
+import imgui.flashback.type.ImInt;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.LevelLoadingScreen;
@@ -48,11 +49,14 @@ import org.lwjgl.glfw.GLFW;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
+
+import static org.lwjgl.opengl.GL11.*;
 
 public class ReplayUI {
 
@@ -132,6 +136,10 @@ public class ReplayUI {
                     imguiIni = imguiIni.replace("[Window][Visuals]", "[Window][###Visuals]");
                     modified = true;
                 }
+                if (imguiIni.contains("0x8B93E3BD")) {
+                    imguiIni = imguiIni.replace("0x8B93E3BD", "0x7C6B3D9B");
+                    modified = true;
+                }
                 if (modified) {
                     Files.writeString(path, imguiIni);
                 }
@@ -145,12 +153,10 @@ public class ReplayUI {
         imGuiIO = new ImGuiIO(ImGui.getIO().ptr);
 
         Path relativePath = FabricLoader.getInstance().getGameDir().relativize(path);
-        ReplayUI.getIO().setIniFilename(relativePath.toString());
+        imGuiIO.setIniFilename(relativePath.toString());
 
-        // ImGui.getIO().addConfigFlags(ImGuiConfigFlags.NavEnableKeyboard);
-        ImGui.getIO().addConfigFlags(ImGuiConfigFlags.DockingEnable);
-        // ImGui.getIO().addConfigFlags(ImGuiConfigFlags.ViewportsEnable);
-        ImGui.getIO().setConfigMacOSXBehaviors(InputQuirks.REPLACE_CTRL_KEY_WITH_CMD_KEY);
+        imGuiIO.addConfigFlags(ImGuiConfigFlags.DockingEnable);
+        imGuiIO.setConfigMacOSXBehaviors(InputQuirks.REPLACE_CTRL_KEY_WITH_CMD_KEY);
 
         imguiGlfw.init(Minecraft.getInstance().getWindow().handle(), true);
         imguiGl3.init("#version 150");
@@ -575,11 +581,12 @@ public class ReplayUI {
         }
 
         imguiGlfw.newFrame();
+        imguiGl3.newFrame();
         ImGui.newFrame();
 
         hasAnyPopupOpen = ImGui.isPopupOpen("", ImGuiPopupFlags.AnyPopup);
 
-        navClose = hasAnyPopupOpen && ReplayUI.getIO().getNavInputs(ImGuiNavInput.Cancel) != 0.0f;
+        navClose = hasAnyPopupOpen && ImGui.isKeyPressed(ImGuiKey.Escape);
         if (wasNavClose != navClose) {
             wasNavClose = navClose;
         } else if (wasNavClose) {
@@ -607,15 +614,13 @@ public class ReplayUI {
 
         // Setup docking
         ImGui.setNextWindowBgAlpha(0);
-        int mainDock = ImGui.dockSpaceOverViewport(ImGui.getMainViewport(), ImGuiDockNodeFlags.NoDockingInCentralNode);
-        imgui.internal.ImGui.dockBuilderGetCentralNode(mainDock).addLocalFlags(imgui.internal.flag.ImGuiDockNodeFlags.NoTabBar);
+        int mainDock = ImGui.dockSpaceOverViewport(0, ImGui.getMainViewport(), ImGuiDockNodeFlags.NoDockingInCentralNode);
+        imgui.flashback.internal.ImGui.dockBuilderGetCentralNode(mainDock).addLocalFlags(imgui.flashback.internal.flag.ImGuiDockNodeFlags.NoTabBar);
 
         isFrameFocused = false;
         isFrameHovered = false;
         ImGui.setNextWindowDockID(mainDock);
         ImGuiHelper.pushStyleVar(ImGuiStyleVar.WindowPadding, 0, 0);
-
-        boolean fireCancelNavInput = false;
 
         if (ImGui.begin("Main", ImGuiWindowFlags.NoMove | ImGuiWindowFlags.NoNavInputs | ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoBackground | ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoCollapse |
                 ImGuiWindowFlags.NoSavedSettings)) {
@@ -715,20 +720,20 @@ public class ReplayUI {
             if (Minecraft.getInstance().screen == null && Minecraft.getInstance().getOverlay() == null) {
                 if (editorState != null && editorState.replayVisuals.ruleOfThirdsGuide) {
                     ImDrawList drawList = ImGui.getBackgroundDrawList();
-                    drawList.removeImDrawListFlags(ImDrawListFlags.AntiAliasedLines);
+                    drawList.removeFlags(ImDrawListFlags.AntiAliasedLines);
                     drawList.addLine(frameX + frameWidth/3, frameY, frameX + frameWidth/3, frameY+frameHeight, 0xAAFFFFFF, 2);
                     drawList.addLine(frameX + frameWidth*2/3, frameY, frameX + frameWidth*2/3, frameY+frameHeight, 0xAAFFFFFF, 2);
                     drawList.addLine(frameX, frameY + frameHeight/3, frameX + frameWidth, frameY + frameHeight/3, 0xAAFFFFFF, 2);
                     drawList.addLine(frameX, frameY + frameHeight*2/3, frameX + frameWidth, frameY + frameHeight*2/3, 0xAAFFFFFF, 2);
-                    drawList.addImDrawListFlags(ImDrawListFlags.AntiAliasedLines);
+                    drawList.addFlags(ImDrawListFlags.AntiAliasedLines);
                 }
 
                 if (editorState != null && editorState.replayVisuals.centerGuide) {
                     ImDrawList drawList = ImGui.getBackgroundDrawList();
-                    drawList.removeImDrawListFlags(ImDrawListFlags.AntiAliasedLines);
+                    drawList.removeFlags(ImDrawListFlags.AntiAliasedLines);
                     drawList.addLine(frameX + frameWidth/2, frameY, frameX + frameWidth/2, frameY+frameHeight, 0xAAFFFFFF, 2);
                     drawList.addLine(frameX, frameY + frameHeight/2, frameX + frameWidth, frameY + frameHeight/2, 0xAAFFFFFF, 2);
-                    drawList.addImDrawListFlags(ImDrawListFlags.AntiAliasedLines);
+                    drawList.addFlags(ImDrawListFlags.AntiAliasedLines);
                 }
             }
 
@@ -837,7 +842,7 @@ public class ReplayUI {
                 isFrameHovered = true;
 
                 if (Minecraft.getInstance().screen != null) {
-                    ImGui.captureMouseFromApp(false);
+                    ImGui.setNextFrameWantCaptureMouse(false);
                 } else {
                     boolean isMovingCamera = isMovingCamera();
                     if (isFrameFocused || isMovingCamera) {
@@ -854,7 +859,7 @@ public class ReplayUI {
                         }
                     }
                     if (!isMovingCamera && ReplayUI.getIO().getWantCaptureMouse() && !popupOpenLastFrame && !ImGui.isPopupOpen("", ImGuiPopupFlags.AnyPopup)) {
-                        fireCancelNavInput |= handleBasicInputs();
+                        handleBasicInputs();
                     }
                 }
             }
@@ -912,11 +917,6 @@ public class ReplayUI {
         ImGui.render();
         ImGuiHelper.endFrame();
 
-        if (fireCancelNavInput) {
-            ReplayUI.getIO().setNavInputs(ImGuiNavInput.Input, 1.0f);
-            ReplayUI.getIO().setNavInputs(ImGuiNavInput.Cancel, 1.0f);
-        }
-
         long ctx = GLFW.glfwGetCurrentContext();
         ImGui.updatePlatformWindows();
         ImGui.renderPlatformWindowsDefault();
@@ -938,7 +938,7 @@ public class ReplayUI {
         return isFrameFocused;
     }
 
-    private static boolean handleBasicInputs() {
+    private static void handleBasicInputs() {
         if (ImGui.isMouseClicked(GLFW.GLFW_MOUSE_BUTTON_RIGHT)) {
             HitResult result = getLookTarget();
             if (result instanceof EntityHitResult entityHitResult) {
@@ -948,7 +948,7 @@ public class ReplayUI {
                 selectedEntity = entityHitResult.getEntity().getUUID();
                 openSelectedEntityPopup = true;
             }
-            return true;
+            return;
         }
 
         if (ImGui.isMouseClicked(GLFW.GLFW_MOUSE_BUTTON_LEFT)) {
@@ -956,10 +956,7 @@ public class ReplayUI {
             if (key != 0) {
                 imguiGlfw.setGrabbed(true, key, true, frameX + frameWidth / 2f, frameY + frameHeight / 2f);
             }
-            return true;
         }
-
-        return false;
     }
 
     @Nullable

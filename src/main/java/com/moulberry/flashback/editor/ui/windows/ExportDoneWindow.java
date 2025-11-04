@@ -6,13 +6,13 @@ import com.moulberry.flashback.MedalTvUploading;
 import com.moulberry.flashback.Utils;
 import com.moulberry.flashback.editor.ui.ImGuiHelper;
 import com.moulberry.flashback.exporting.ExportSettings;
-import imgui.ImGui;
-import imgui.ImGuiViewport;
-import imgui.ImVec2;
-import imgui.flag.ImGuiCond;
-import imgui.flag.ImGuiHoveredFlags;
-import imgui.flag.ImGuiWindowFlags;
-import imgui.type.ImBoolean;
+import imgui.flashback.ImGui;
+import imgui.flashback.ImGuiViewport;
+import imgui.flashback.ImVec2;
+import imgui.flashback.flag.ImGuiCond;
+import imgui.flashback.flag.ImGuiHoveredFlags;
+import imgui.flashback.flag.ImGuiWindowFlags;
+import imgui.flashback.type.ImBoolean;
 import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.texture.DynamicTexture;
@@ -125,7 +125,7 @@ public class ExportDoneWindow {
                         height = DESIRED_H;
                     }
 
-                    if (ImGui.imageButton(id, width, height)) {
+                    if (ImGui.imageButton("ExportThumbnail", id, new ImVec2(width, height))) {
                         Util.getPlatform().openPath(output);
                     }
                 } else if (ImGui.button(I18n.get("flashback.export_done.missing_thumbnail"), DESIRED_W+padding.x*2, DESIRED_H+padding.y*2)) {

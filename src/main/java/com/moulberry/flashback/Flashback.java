@@ -202,7 +202,7 @@ public class Flashback implements ModInitializer, ClientModInitializer {
     }
 
     @Override
-	public void onInitializeClient() {
+    public void onInitializeClient() {
         Path configFolder = FabricLoader.getInstance().getConfigDir().resolve("flashback");
 
         try {
@@ -567,7 +567,7 @@ public class Flashback implements ModInitializer, ClientModInitializer {
                 Flashback.LOGGER.error("DistantHorizons is installed, but API version is too low ({}). Disabling integration.", DhApi.getApiMajorVersion());
             }
         }
-	}
+    }
 
     private static void openNewScreen(AtomicReference<String> unsupportedLoader, Screen currentScreen) {
         if (unsupportedLoader.get() != null) {
@@ -837,6 +837,9 @@ public class Flashback implements ModInitializer, ClientModInitializer {
                 for (String recentReplayStr : recentReplays) {
                     Path path = Path.of(recentReplayStr);
                     if (!checkedReplayPaths.add(path)) {
+                        continue;
+                    }
+                    if (!Files.exists(path)) {
                         continue;
                     }
                     readReplayUuidIntoSet(path, replayUuids);

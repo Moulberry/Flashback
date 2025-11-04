@@ -28,19 +28,19 @@ import com.moulberry.flashback.playback.ReplayServer;
 import com.moulberry.flashback.editor.ui.ImGuiHelper;
 import com.moulberry.flashback.record.FlashbackMeta;
 import com.moulberry.flashback.state.KeyframeTrack;
-import imgui.ImDrawList;
-import imgui.ImGui;
-import imgui.ImVec4;
-import imgui.flag.ImGuiCol;
-import imgui.flag.ImGuiComboFlags;
-import imgui.flag.ImGuiHoveredFlags;
-import imgui.flag.ImGuiInputTextFlags;
-import imgui.flag.ImGuiMouseButton;
-import imgui.flag.ImGuiMouseCursor;
-import imgui.flag.ImGuiPopupFlags;
-import imgui.flag.ImGuiStyleVar;
-import imgui.flag.ImGuiWindowFlags;
-import imgui.type.ImString;
+import imgui.flashback.ImDrawList;
+import imgui.flashback.ImGui;
+import imgui.flashback.ImVec4;
+import imgui.flashback.flag.ImGuiCol;
+import imgui.flashback.flag.ImGuiComboFlags;
+import imgui.flashback.flag.ImGuiHoveredFlags;
+import imgui.flashback.flag.ImGuiInputTextFlags;
+import imgui.flashback.flag.ImGuiMouseButton;
+import imgui.flashback.flag.ImGuiMouseCursor;
+import imgui.flashback.flag.ImGuiPopupFlags;
+import imgui.flashback.flag.ImGuiStyleVar;
+import imgui.flashback.flag.ImGuiWindowFlags;
+import imgui.flashback.type.ImString;
 import it.unimi.dsi.fastutil.ints.*;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
@@ -1130,7 +1130,10 @@ public class TimelineWindow {
                             if (ImGui.isMouseDoubleClicked(ImGuiMouseButton.Left)) {
                                 MinecraftKeyframeHandler minecraftKeyframeHandler = new MinecraftKeyframeHandler(Minecraft.getInstance());
                                 if (closest.getValue().keyframeType().supportsHandler(minecraftKeyframeHandler)) {
-                                    closest.getValue().createChange().apply(minecraftKeyframeHandler);
+                                    var change = closest.getValue().createChange();
+                                    if (change != null) {
+                                        change.apply(minecraftKeyframeHandler);
+                                    }
                                 }
                             } else {
                                 grabbedKeyframe = true;
@@ -1303,7 +1306,10 @@ public class TimelineWindow {
         if (!multiple && editingKeyframe instanceof CameraKeyframe cameraKeyframe) {
             ImGui.sameLine();
             if (ImGui.button(I18n.get("flashback.apply"))) {
-                cameraKeyframe.createChange().apply(new MinecraftKeyframeHandler(Minecraft.getInstance()));
+                var change = cameraKeyframe.createChange();
+                if (change != null) {
+                    change.apply(new MinecraftKeyframeHandler(Minecraft.getInstance()));
+                }
             }
         }
 
@@ -1952,7 +1958,7 @@ public class TimelineWindow {
                         colour = ImGui.getColorU32(ImGuiCol.Text);
                     }
                     ImVec4 imVec4 = new ImVec4();
-                    ImGui.colorConvertU32ToFloat4(colour, imVec4);
+                    ImGui.colorConvertU32ToFloat4(imVec4, colour);
                     float[] colourArray = new float[]{imVec4.x, imVec4.y, imVec4.z};
                     if (ImGui.colorPicker3(I18n.get("flashback.track_colour"), colourArray)) {
                         keyframeTrack.customColour = ImGui.colorConvertFloat4ToU32(colourArray[0], colourArray[1], colourArray[2], 1.0f);

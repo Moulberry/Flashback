@@ -3,7 +3,6 @@ package com.moulberry.flashback.mixin;
 import com.llamalad7.mixinextras.injector.v2.WrapWithCondition;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
-import com.mojang.blaze3d.buffers.GpuBuffer;
 import com.mojang.blaze3d.buffers.GpuBufferSlice;
 import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.resource.GraphicsResourceAllocator;
@@ -13,7 +12,6 @@ import com.mojang.blaze3d.textures.GpuTexture;
 import com.mojang.blaze3d.textures.GpuTextureView;
 import com.mojang.blaze3d.textures.TextureFormat;
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.VertexFormat;
 import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.playback.ReplayServer;
 import com.moulberry.flashback.state.EditorState;
@@ -35,10 +33,9 @@ import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
 import net.minecraft.client.renderer.entity.state.AvatarRenderState;
 import net.minecraft.client.renderer.entity.state.EntityRenderState;
 import net.minecraft.client.renderer.state.CameraRenderState;
-import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.TickRateManager;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Matrix4f;
-import org.joml.Vector3f;
 import org.joml.Vector4f;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
@@ -64,13 +61,20 @@ public abstract class MixinLevelRenderer {
 
     @Shadow @Final private LevelTargetBundle targets;
 
-    @Inject(method = "tick", at = @At("HEAD"), cancellable = true)
+    @Inject(method = "tick", at = @At("HEAD"))
     public void tick(CallbackInfo ci) {
         ReplayServer replayServer = Flashback.getReplayServer();
         if (replayServer != null) {
             this.ticks = replayServer.getReplayTick();
-            ci.cancel();
         }
+    }
+
+    @WrapOperation(method = "tick", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/TickRateManager;runsNormally()Z"))
+    public boolean tick_runsNormally(TickRateManager instance, Operation<Boolean> original) {
+        if (Flashback.isInReplay()) {
+            return false;
+        }
+        return original.call(instance);
     }
 
     @Inject(method = "renderLevel", at = @At("HEAD"))

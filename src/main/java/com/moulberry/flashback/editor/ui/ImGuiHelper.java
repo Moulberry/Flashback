@@ -1,16 +1,16 @@
 package com.moulberry.flashback.editor.ui;
 
 import com.moulberry.flashback.combo_options.ComboOption;
-import imgui.ImGui;
-import imgui.ImVec2;
-import imgui.flag.ImGuiCol;
-import imgui.flag.ImGuiComboFlags;
-import imgui.flag.ImGuiHoveredFlags;
-import imgui.flag.ImGuiWindowFlags;
-import imgui.type.ImBoolean;
-import imgui.type.ImFloat;
-import imgui.type.ImInt;
-import imgui.type.ImString;
+import imgui.flashback.ImGui;
+import imgui.flashback.ImVec2;
+import imgui.flashback.flag.ImGuiCol;
+import imgui.flashback.flag.ImGuiComboFlags;
+import imgui.flashback.flag.ImGuiHoveredFlags;
+import imgui.flashback.flag.ImGuiWindowFlags;
+import imgui.flashback.type.ImBoolean;
+import imgui.flashback.type.ImFloat;
+import imgui.flashback.type.ImInt;
+import imgui.flashback.type.ImString;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.HashMap;

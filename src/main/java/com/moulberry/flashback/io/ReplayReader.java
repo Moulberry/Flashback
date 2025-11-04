@@ -62,6 +62,10 @@ public class ReplayReader {
         this.registryAccess = registryAccess;
     }
 
+    public boolean isAtStart() {
+        return this.friendlyByteBuf.readerIndex() <= this.replayActionsOffset;
+    }
+
     public void resetToStart() {
         this.friendlyByteBuf.readerIndex(this.replayActionsOffset);
     }
@@ -70,6 +74,7 @@ public class ReplayReader {
         this.friendlyByteBuf.readerIndex(this.replaySnapshotOffset);
 
         replayServer.isProcessingSnapshot = true;
+        replayServer.customPacketsInSnapshot.clear();
 
         while (this.friendlyByteBuf.readerIndex() < this.replayActionsOffset) {
             int id = this.friendlyByteBuf.readVarInt();

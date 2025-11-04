@@ -68,7 +68,8 @@ public class ReplayChunkCache {
             }
         }
 
-        return index < packets.size() ? packets.get(index) : null;
+        int indexInCache = index - cacheIndex * CHUNK_CACHE_SIZE;
+        return indexInCache < packets.size() ? packets.get(indexInCache) : null;
     }
 
     private static List<ClientboundLevelChunkWithLightPacket> loadLevelChunkCache(Path levelChunkCachePath, RegistryAccess registryAccess, StreamCodec<ByteBuf, Packet<? super ClientGamePacketListener>> gamePacketCodec) throws IOException {

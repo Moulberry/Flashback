@@ -8,7 +8,7 @@ import com.moulberry.flashback.keyframe.change.KeyframeChangePlayAudio;
 import com.moulberry.flashback.keyframe.handler.KeyframeHandler;
 import com.moulberry.flashback.keyframe.handler.MinecraftKeyframeHandler;
 import com.moulberry.flashback.keyframe.impl.AudioKeyframe;
-import imgui.ImGui;
+import imgui.flashback.ImGui;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.resources.language.I18n;
 import org.jetbrains.annotations.Nullable;
@@ -90,7 +90,8 @@ public class AudioKeyframeType implements KeyframeType<AudioKeyframe> {
 
     @Override
     public KeyframeCreatePopup<AudioKeyframe> createPopup() {
-        CompletableFuture<String> pathFuture = AsyncFileDialogs.openFileDialog(FabricLoader.getInstance().getGameDir().toString(), "ogg");
+        CompletableFuture<String> pathFuture = AsyncFileDialogs.openFileDialog(FabricLoader.getInstance().getGameDir().toString(),
+                "Audio Files", "mp3", "ogg", "wav", "aiff", "au", "flac", "opus");
 
         return () -> {
             if (!pathFuture.isDone()) {
