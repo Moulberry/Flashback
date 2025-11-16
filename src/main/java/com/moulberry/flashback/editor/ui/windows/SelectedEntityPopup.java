@@ -174,7 +174,9 @@ public class SelectedEntityPopup {
                 }
 
                 showGlowingDropdown(entity, editorState);
+            }
 
+            if (entity instanceof AbstractClientPlayer || entity instanceof ClientMannequin) {
                 ImGuiHelper.separatorWithText(I18n.get("flashback.change_skin_and_cape"));
                 ImGui.setNextItemWidth(320);
                 ImGui.inputTextWithHint("##SetSkinInput", "e.g. d0e05de7-6067-454d-beae-c6d19d886191", changeSkinInput);
