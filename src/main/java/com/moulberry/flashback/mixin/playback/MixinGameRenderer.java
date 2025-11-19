@@ -29,6 +29,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.GameType;
+import net.minecraft.world.level.Level;
 import org.joml.Quaternionf;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
@@ -87,12 +88,12 @@ public abstract class MixinGameRenderer {
         }
     }
 
-    @WrapOperation(method = "renderLevel", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/Camera;setup(Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/world/entity/Entity;ZZF)V"))
-    public void renderLevel_setupCamera(Camera instance, BlockGetter blockGetter, Entity entity, boolean bl, boolean bl2, float f, Operation<Void> original) {
+    @WrapOperation(method = "renderLevel", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/Camera;setup(Lnet/minecraft/world/level/Level;Lnet/minecraft/world/entity/Entity;ZZF)V"))
+    public void renderLevel_setupCamera(Camera instance, Level level, Entity entity, boolean bl, boolean bl2, float f, Operation<Void> original) {
         if (Flashback.isInReplay()) {
             f = ((MinecraftExt)this.minecraft).flashback$getLocalPlayerPartialTick(f);
         }
-        original.call(instance, blockGetter, entity, bl, bl2, f);
+        original.call(instance, level, entity, bl, bl2, f);
     }
 
     @Inject(method = "getNightVisionScale", at = @At("HEAD"), cancellable = true)

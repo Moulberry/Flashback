@@ -50,9 +50,8 @@ public class SelectReplayScreen extends Screen {
 
         FlashbackConfigV1 config = Flashback.getConfig();
 
-        this.addRenderableWidget(CycleButton.builder(ReplaySorting::component)
+        this.addRenderableWidget(CycleButton.builder(ReplaySorting::component, config.internal.replaySorting)
             .withValues(ReplaySorting.values())
-            .withInitialValue(config.internal.replaySorting)
             .create(this.width / 2 + 2, 22, 125, 20, Component.translatable("flashback.sort"), (button, sorting) -> {
                 FlashbackConfigV1 configuration = Flashback.getConfig();
                 configuration.internal.replaySorting = sorting;

@@ -85,6 +85,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.*;
 import net.minecraft.server.packs.repository.PackRepository;
 import net.minecraft.server.packs.repository.ServerPacksSource;
+import net.minecraft.server.permissions.PermissionSet;
 import net.minecraft.world.Difficulty;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
@@ -215,7 +216,7 @@ public class Flashback implements ModInitializer, ClientModInitializer {
         configElements = LatticeElements.fromAnnotations(FlashbackTextComponents.FLASHBACK_OPTIONS, config);
 
         if (FabricLoader.getInstance().isDevelopmentEnvironment()) {
-            Minecraft.getInstance().schedule(() -> Lattice.performTest(configElements));
+//            Minecraft.getInstance().schedule(() -> Lattice.performTest(configElements));
         }
 
         TempFolderProvider.tryDeleteStaleFolders(TempFolderProvider.TempFolderType.SERVER);
@@ -374,7 +375,7 @@ public class Flashback implements ModInitializer, ClientModInitializer {
         Map<DebugScreenProfile, Map<ResourceLocation, DebugScreenEntryStatus>> newProfiles = new LinkedHashMap<>();
         for (Map.Entry<DebugScreenProfile, Map<ResourceLocation, DebugScreenEntryStatus>> entry : DebugScreenEntries.PROFILES.entrySet()) {
             var newMap = new LinkedHashMap<>(entry.getValue());
-            newMap.put(RECORDING_INFO_DEBUG_SCREEN_ID, DebugScreenEntryStatus.IN_F3);
+            newMap.put(RECORDING_INFO_DEBUG_SCREEN_ID, DebugScreenEntryStatus.IN_OVERLAY);
             newProfiles.put(entry.getKey(), Collections.unmodifiableMap(newMap));
         }
         DebugScreenEntries.PROFILES = Collections.unmodifiableMap(newProfiles);
@@ -1126,7 +1127,7 @@ public class Flashback implements ModInitializer, ClientModInitializer {
             WorldDataConfiguration worldDataConfiguration = new WorldDataConfiguration(new DataPackConfig(List.of(), List.of()), FeatureFlags.DEFAULT_FLAGS);
             LevelSettings levelSettings = new LevelSettings("Replay", GameType.SPECTATOR, false, Difficulty.NORMAL, true, gameRules, worldDataConfiguration);
             WorldLoader.PackConfig packConfig = new WorldLoader.PackConfig(packRepository, worldDataConfiguration, false, true);
-            WorldLoader.InitConfig initConfig = new WorldLoader.InitConfig(packConfig, Commands.CommandSelection.DEDICATED, 4);
+            WorldLoader.InitConfig initConfig = new WorldLoader.InitConfig(packConfig, Commands.CommandSelection.DEDICATED, PermissionSet.ALL_PERMISSIONS);
 
             WorldStem worldStem = Util.blockUntilDone(executor -> WorldLoader.load(initConfig, dataLoadContext -> {
                 Registry<LevelStem> registry = new MappedRegistry<>(Registries.LEVEL_STEM, Lifecycle.stable()).freeze();

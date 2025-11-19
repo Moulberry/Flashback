@@ -27,8 +27,8 @@ public class SortDirectionButton extends Button {
     }
 
     @Override
-    protected void renderWidget(GuiGraphics guiGraphics, int i, int j, float f) {
-        super.renderWidget(guiGraphics, i, j, f);
+    protected void renderContents(GuiGraphics guiGraphics, int i, int j, float f) {
+        this.renderDefaultSprite(guiGraphics);
 
         final int size = 16;
         int paddingX = (this.getWidth() - size) / 2;
@@ -44,8 +44,8 @@ public class SortDirectionButton extends Button {
         }
     }
 
-    @Override
-    public void renderString(GuiGraphics guiGraphics, Font font, int i) {
-    }
+//    @Override
+//    public void renderString(GuiGraphics guiGraphics, Font font, int i) {
+//    }
 
 }

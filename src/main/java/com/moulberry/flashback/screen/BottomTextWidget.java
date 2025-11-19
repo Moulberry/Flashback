@@ -1,7 +1,9 @@
 package com.moulberry.flashback.screen;
 
+import net.minecraft.client.gui.ActiveTextCollector;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.TextAlignment;
 import net.minecraft.client.gui.components.AbstractStringWidget;
 import net.minecraft.network.chat.Component;
 
@@ -19,7 +21,8 @@ public class BottomTextWidget extends AbstractStringWidget {
         return this;
     }
 
-    public void renderWidget(GuiGraphics guiGraphics, int i, int j, float f) {
+    @Override
+    public void visitLines(ActiveTextCollector activeTextCollector) {
         Component component = this.getMessage();
 
         Font font = this.getFont();
@@ -29,7 +32,7 @@ public class BottomTextWidget extends AbstractStringWidget {
         int x = this.getX() + Math.round((width - textWidth) * this.horizontalAlignment);
         int y = this.getY() + this.getHeight() - this.getFont().lineHeight + 1;
 
-        guiGraphics.drawString(font, component.getVisualOrderText(), x, y, this.getColor());
+        activeTextCollector.accept(x, y, component);
     }
 
 }

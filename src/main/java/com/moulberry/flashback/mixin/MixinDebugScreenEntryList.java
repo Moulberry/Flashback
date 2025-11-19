@@ -29,7 +29,7 @@ public class MixinDebugScreenEntryList {
             if (!(this.allStatuses instanceof HashMap<ResourceLocation, DebugScreenEntryStatus>)) {
                 this.allStatuses = new HashMap<>(this.allStatuses);
             }
-            this.allStatuses.put(Flashback.RECORDING_INFO_DEBUG_SCREEN_ID, DebugScreenEntryStatus.IN_F3);
+            this.allStatuses.put(Flashback.RECORDING_INFO_DEBUG_SCREEN_ID, DebugScreenEntryStatus.IN_OVERLAY);
         }
     }
 

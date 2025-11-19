@@ -9,6 +9,7 @@ import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.pipeline.TextureTarget;
 import com.mojang.blaze3d.systems.RenderPass;
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.textures.FilterMode;
 import com.mojang.blaze3d.textures.GpuTexture;
 import com.mojang.blaze3d.textures.GpuTextureView;
 import com.mojang.blaze3d.vertex.BufferBuilder;
@@ -84,7 +85,7 @@ public class FramebufferUtils {
             GpuBuffer vertexBuffer = DefaultVertexFormat.POSITION_TEX.uploadImmediateVertexBuffer(meshData.vertexBuffer());
 
             GpuBufferSlice gpuBufferSlice = RenderSystem.getDynamicUniforms().writeTransform(RenderSystem.getModelViewMatrix(), new Vector4f(1.0F, 1.0F, 1.0F, 1.0F),
-                new Vector3f(), RenderSystem.getTextureMatrix(), RenderSystem.getShaderLineWidth());
+                new Vector3f(), RenderSystem.getTextureMatrix());
 
             try (RenderPass renderPass = RenderSystem.getDevice().createCommandEncoder().createRenderPass(() -> "flashback blit", to.getColorTextureView(), OptionalInt.empty())) {
                 renderPass.setPipeline(ShaderManager.BLIT_SCREEN_WITH_UV);
@@ -92,7 +93,7 @@ public class FramebufferUtils {
                 renderPass.setUniform("DynamicTransforms", gpuBufferSlice);
                 renderPass.setVertexBuffer(0, vertexBuffer);
                 renderPass.setIndexBuffer(gpuBuffer, autoStorageIndexBuffer.type());
-                renderPass.bindSampler("InSampler", from);
+                renderPass.bindTexture("InSampler", from, RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST));
                 renderPass.drawIndexed(0, 0, 6, 1);
             }
         }

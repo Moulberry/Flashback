@@ -68,7 +68,7 @@ public class CameraPath {
                 lastCameraPathArgs = cameraPathArgs;
 
                 BufferBuilder bufferBuilder = Tesselator.getInstance().begin(VertexFormat.Mode.LINES, DefaultVertexFormat.POSITION_COLOR_NORMAL);
-                Vector3d basePosition = new Vector3d(camera.getPosition().x, camera.getPosition().y, camera.getPosition().z);
+                Vector3d basePosition = new Vector3d(camera.position().x, camera.position().y, camera.position().z);
                 buildCameraPath(state, basePosition.mul(-1, new Vector3d()), cameraPathArgs, bufferBuilder);
 
                 if (cameraPathVertexBuffer != null) {
@@ -96,11 +96,10 @@ public class CameraPath {
         RenderSystem.setShaderFog(Minecraft.getInstance().gameRenderer.fogRenderer.getBuffer(FogRenderer.FogMode.NONE));
 
         poseStack.pushPose();
-        poseStack.translate(basePosition.x-camera.getPosition().x,
-            basePosition.y-camera.getPosition().y + camera.eyeHeight, basePosition.z-camera.getPosition().z);
+        poseStack.translate(basePosition.x-camera.position().x,
+            basePosition.y-camera.position().y + camera.eyeHeight, basePosition.z-camera.position().z);
 
         RenderType.lines().setupRenderState();
-        RenderSystem.lineWidth(2f);
 
         var stack = RenderSystem.getModelViewStack();
         stack.pushMatrix();

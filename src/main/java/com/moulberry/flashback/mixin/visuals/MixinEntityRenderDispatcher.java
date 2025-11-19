@@ -16,7 +16,7 @@ import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
 import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.state.EntityRenderState;
 import net.minecraft.client.renderer.entity.state.HitboxRenderState;
-import net.minecraft.client.renderer.entity.state.HitboxesRenderState;
+//import net.minecraft.client.renderer.entity.state.HitboxesRenderState;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.LevelReader;
 import net.minecraft.world.phys.AABB;
@@ -67,14 +67,14 @@ public abstract class MixinEntityRenderDispatcher {
                     HitboxRenderState hitboxRenderState = new HitboxRenderState(aABB.minX - entity.getX(), aABB.minY - entity.getY(), aABB.minZ - entity.getZ(),
                             aABB.maxX - entity.getX(), aABB.maxY - entity.getY(), aABB.maxZ - entity.getZ(), 1.0F, 1.0F, 0.0F);
                     Vec3 view = entity.getViewVector(partialTick);
-                    renderState.hitboxesRenderState = new HitboxesRenderState(view.x, view.y, view.z, ImmutableList.of(hitboxRenderState));
+//                    renderState.hitboxesRenderState = new HitboxesRenderState(view.x, view.y, view.z, ImmutableList.of(hitboxRenderState));
                 } else if (entity.getUUID().equals(editorState.audioSourceEntity)) {
                     // Add a cyan outline to audio source entity
                     AABB aABB = entity.getBoundingBox();
                     HitboxRenderState hitboxRenderState = new HitboxRenderState(aABB.minX - entity.getX(), aABB.minY - entity.getY(), aABB.minZ - entity.getZ(),
                             aABB.maxX - entity.getX(), aABB.maxY - entity.getY(), aABB.maxZ - entity.getZ(), 0.0F, 1.0F, 1.0F);
                     Vec3 view = entity.getViewVector(partialTick);
-                    renderState.hitboxesRenderState = new HitboxesRenderState(view.x, view.y, view.z, ImmutableList.of(hitboxRenderState));
+//                    renderState.hitboxesRenderState = new HitboxesRenderState(view.x, view.y, view.z, ImmutableList.of(hitboxRenderState));
                 }
             }
 

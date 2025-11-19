@@ -45,7 +45,6 @@ public class SaveableFramebufferQueue implements AutoCloseable {
         this.height = height;
 
         this.flipBuffer = RenderSystem.getDevice().createTexture(() -> "flip buffer", GpuTexture.USAGE_COPY_DST | GpuTexture.USAGE_RENDER_ATTACHMENT, TextureFormat.RGBA8, width, height, 1, 1);
-        this.flipBuffer.setAddressMode(AddressMode.CLAMP_TO_EDGE);
         this.flipBufferView = RenderSystem.getDevice().createTextureView(this.flipBuffer);
 
         for (int i = 0; i < CAPACITY; i++) {
@@ -61,20 +60,16 @@ public class SaveableFramebufferQueue implements AutoCloseable {
     }
 
     private void blitFlip(RenderTarget src, boolean supersampling) {
-        FilterMode oldFilterMode = src.filterMode;
+        FilterMode filterMode = FilterMode.NEAREST;
         if (supersampling) {
-            src.setFilterMode(FilterMode.LINEAR);
+            filterMode = FilterMode.LINEAR;
         }
 
         try (RenderPass renderPass = RenderSystem.getDevice().createCommandEncoder().createRenderPass(() -> "flashback flip pass", this.flipBufferView, OptionalInt.empty())) {
             renderPass.setPipeline(ShaderManager.BLIT_SCREEN_FLIP);
             RenderSystem.bindDefaultUniforms(renderPass);
-            renderPass.bindSampler("InSampler", src.getColorTextureView());
+            renderPass.bindTexture("InSampler", src.getColorTextureView(), RenderSystem.getSamplerCache().getClampToEdge(filterMode));
             renderPass.draw(0, 3);
-        }
-
-        if (supersampling) {
-            src.setFilterMode(oldFilterMode);
         }
     }
 

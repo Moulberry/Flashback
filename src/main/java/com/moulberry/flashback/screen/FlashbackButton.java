@@ -30,8 +30,8 @@ public class FlashbackButton extends Button {
     }
 
     @Override
-    protected void renderWidget(GuiGraphics guiGraphics, int i, int j, float f) {
-        super.renderWidget(guiGraphics, i, j, f);
+    protected void renderContents(GuiGraphics guiGraphics, int i, int j, float f) {
+        this.renderDefaultSprite(guiGraphics);
 
         final int size = 16;
         int paddingX = (this.getWidth() - size) / 2;
@@ -41,11 +41,10 @@ public class FlashbackButton extends Button {
         int y = this.getY() + paddingY;
 
         guiGraphics.blit(RenderPipelines.GUI_TEXTURED, this.icon, x, y, 0f, 0f, size, size, size, size, ((int)(this.alpha * 0xFF) << 24) | 0xFFFFFF);
-
     }
 
-    @Override
-    public void renderString(GuiGraphics guiGraphics, Font font, int i) {
-    }
+//    @Override
+//    public void renderString(GuiGraphics guiGraphics, Font font, int i) {
+//    }
 
 }

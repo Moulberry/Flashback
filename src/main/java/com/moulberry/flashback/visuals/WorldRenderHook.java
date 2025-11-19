@@ -25,7 +25,7 @@ public class WorldRenderHook {
     private static final RenderType MARKER_CIRCLE_RENDER_TYPE = RenderType.create("flashback:marker_circle",
         1536, RenderPipelines.GUI_TEXTURED,
         RenderType.CompositeState.builder()
-                                 .setTextureState(new RenderStateShard.TextureStateShard(ResourceLocation.parse("flashback:world_marker_circle.png"), true))
+                                 .setTextureState(new RenderStateShard.TextureStateShard(ResourceLocation.parse("flashback:world_marker_circle.png")))
                                  .createCompositeState(false)
     );
 
@@ -61,9 +61,9 @@ public class WorldRenderHook {
 
                 poseStack.pushPose();
                 poseStack.translate(
-                    position.position().x - camera.getPosition().x,
-                    position.position().y - camera.getPosition().y,
-                    position.position().z - camera.getPosition().z
+                    position.position().x - camera.position().x,
+                    position.position().y - camera.position().y,
+                    position.position().z - camera.position().z
                 );
                 poseStack.mulPose(camera.rotation());
 

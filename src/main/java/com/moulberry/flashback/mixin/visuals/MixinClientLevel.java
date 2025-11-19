@@ -4,6 +4,7 @@ import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.state.EditorState;
 import com.moulberry.flashback.state.EditorStateManager;
 import com.moulberry.flashback.visuals.ReplayVisuals;
+import net.minecraft.client.Camera;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
@@ -20,7 +21,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 public class MixinClientLevel {
 
     @Inject(method = "getSkyColor", at = @At("HEAD"), cancellable = true)
-    public void getSkyColor(Vec3 vec3, float f, CallbackInfoReturnable<Integer> cir) {
+    public void getSkyColor(CallbackInfoReturnable<Integer> cir) {
         EditorState editorState = EditorStateManager.getCurrent();
         if (editorState != null) {
             ReplayVisuals visuals = editorState.replayVisuals;

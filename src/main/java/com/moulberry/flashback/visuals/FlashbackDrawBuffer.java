@@ -64,7 +64,7 @@ public class FlashbackDrawBuffer implements AutoCloseable {
         VertexFormat.IndexType indexType = autoStorageIndexBuffer.type();
 
         GpuBufferSlice gpuBufferSlice = RenderSystem.getDynamicUniforms().writeTransform(RenderSystem.getModelViewMatrix(), new Vector4f(1.0F, 1.0F, 1.0F, 1.0F),
-            new Vector3f(), RenderSystem.getTextureMatrix(), RenderSystem.getShaderLineWidth());
+            new Vector3f(), RenderSystem.getTextureMatrix());
 
         var commandEncoder = RenderSystem.getDevice().createCommandEncoder();
         try (RenderPass renderPass = commandEncoder.createRenderPass(() -> "flashback draw", renderTarget.getColorTextureView(), OptionalInt.empty(), renderTarget.useDepth ? renderTarget.getDepthTextureView() : null, OptionalDouble.empty())) {
@@ -75,9 +75,9 @@ public class FlashbackDrawBuffer implements AutoCloseable {
             renderPass.setVertexBuffer(0, this.vertexBuffer);
 
             for (int i = 0; i < 12; i++) {
-                GpuTextureView gpuTexture = RenderSystem.getShaderTexture(i);
-                if (gpuTexture != null) {
-                    renderPass.bindSampler("Sampler" + i, gpuTexture);
+                RenderSystem.TextureAndSampler textureAndSampler = RenderSystem.getShaderTexture(i);
+                if (textureAndSampler != null) {
+                    renderPass.bindTexture("Sampler" + i, textureAndSampler.view(), textureAndSampler.sampler());
                 }
             }
 
