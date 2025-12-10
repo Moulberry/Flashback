@@ -33,6 +33,7 @@ import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
 import net.minecraft.client.renderer.entity.state.AvatarRenderState;
 import net.minecraft.client.renderer.entity.state.EntityRenderState;
 import net.minecraft.client.renderer.state.CameraRenderState;
+import net.minecraft.client.renderer.state.ParticlesRenderState;
 import net.minecraft.world.TickRateManager;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Matrix4f;
@@ -60,6 +61,10 @@ public abstract class MixinLevelRenderer {
     private int ticks;
 
     @Shadow @Final private LevelTargetBundle targets;
+
+    @Shadow
+    @Final
+    private ParticlesRenderState particlesRenderState;
 
     @Inject(method = "tick", at = @At("HEAD"))
     public void tick(CallbackInfo ci) {
@@ -199,6 +204,7 @@ public abstract class MixinLevelRenderer {
         EditorState editorState = EditorStateManager.getCurrent();
         if (editorState != null && !editorState.replayVisuals.renderParticles) {
             ci.cancel();
+            this.particlesRenderState.reset();
         }
     }
 

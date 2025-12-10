@@ -38,4 +38,12 @@ public class MixinParticleEngine {
         }
     }
 
+    @Inject(method = "extract", at = @At("HEAD"), cancellable = true)
+    public void extract(CallbackInfo ci) {
+        EditorState editorState = EditorStateManager.getCurrent();
+        if (editorState != null && !editorState.replayVisuals.renderParticles) {
+            ci.cancel();
+        }
+    }
+
 }
