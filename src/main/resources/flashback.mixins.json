@@ -37,6 +37,7 @@
     "ui.MixinTitleScreen",
     "visuals.MixinAbstractClientPlayer",
     "visuals.MixinAvatar",
+    "visuals.MixinBeaconRenderer",
     "visuals.MixinBossHealthOverlay",
     "visuals.MixinClientLevel",
     "visuals.MixinClientLevelData",

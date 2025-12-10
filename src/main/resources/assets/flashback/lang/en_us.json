@@ -290,6 +290,7 @@
   "flashback.visuals.world.render_sky": "Render Sky",
   "flashback.visuals.world.sky_colour": "Sky Colour",
   "flashback.visuals.world.render_nametags": "Render Nametags",
+  "flashback.visuals.world.render_beacon_beams": "Render Beacon Beams",
   "flashback.visuals.overrides": "Overrides",
   "flashback.visuals.overrides.override_fog": "Override Fog",
   "flashback.fog_start": "Start",
