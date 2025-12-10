@@ -32,7 +32,7 @@ public class SimpleVoiceChatPlayback {
             UUID source = sound.source();
 
             EditorState editorState = EditorStateManager.getCurrent();
-            if (editorState == null || editorState.hideDuringExport.contains(source)) {
+            if (editorState == null || editorState.hideDuringExport.contains(source) || editorState.muteVoice.contains(source)) {
                 return;
             }
 

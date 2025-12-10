@@ -48,6 +48,7 @@ public class EditorState {
 
     public UUID audioSourceEntity = null;
     public Set<UUID> hideDuringExport = new HashSet<>();
+    public Set<UUID> muteVoice = new HashSet<>();
     public Set<UUID> hideNametags = new HashSet<>();
     public Map<UUID, GameProfile> skinOverride = new HashMap<>();
     public Map<UUID, FilePlayerSkin> skinOverrideFromFile = new HashMap<>();
