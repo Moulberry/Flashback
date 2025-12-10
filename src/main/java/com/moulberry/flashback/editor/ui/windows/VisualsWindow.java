@@ -115,6 +115,11 @@ public class VisualsWindow {
                 editorState.markDirty();
             }
 
+            if (ImGui.checkbox(I18n.get("flashback.visuals.world.render_beacon_beams"), visuals.renderBeaconBeams)) {
+                visuals.renderBeaconBeams = !visuals.renderBeaconBeams;
+                editorState.markDirty();
+            }
+
             ImGuiHelper.separatorWithText(I18n.get("flashback.visuals.overrides"));
 
             // Fog distance
