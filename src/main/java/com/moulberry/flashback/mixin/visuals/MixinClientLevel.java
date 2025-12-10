@@ -19,25 +19,25 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Mixin(ClientLevel.class)
 public class MixinClientLevel {
 
-    @Inject(method = "getSkyColor", at = @At("HEAD"), cancellable = true)
-    public void getSkyColor(Vec3 vec3, float f, CallbackInfoReturnable<Integer> cir) {
-        EditorState editorState = EditorStateManager.getCurrent();
-        if (editorState != null) {
-            ReplayVisuals visuals = editorState.replayVisuals;
-
-            if (!visuals.renderSky) {
-                if (Flashback.isExporting() && Flashback.EXPORT_JOB.getSettings().transparent()) {
-                    cir.setReturnValue(0);
-                } else {
-                    float[] skyColour = visuals.skyColour;
-                    int r = (int)(skyColour[0] * 255);
-                    int g = (int)(skyColour[1] * 255);
-                    int b = (int)(skyColour[2] * 255);
-                    cir.setReturnValue(0xFF000000 | (r << 16) | (g << 8) | b);
-                }
-            }
-        }
-    }
+//    @Inject(method = "getSkyColor", at = @At("HEAD"), cancellable = true)
+//    public void getSkyColor(Vec3 vec3, float f, CallbackInfoReturnable<Integer> cir) {
+//        EditorState editorState = EditorStateManager.getCurrent();
+//        if (editorState != null) {
+//            ReplayVisuals visuals = editorState.replayVisuals;
+//
+//            if (!visuals.renderSky) {
+//                if (Flashback.isExporting() && Flashback.EXPORT_JOB.getSettings().transparent()) {
+//                    cir.setReturnValue(0);
+//                } else {
+//                    float[] skyColour = visuals.skyColour;
+//                    int r = (int)(skyColour[0] * 255);
+//                    int g = (int)(skyColour[1] * 255);
+//                    int b = (int)(skyColour[2] * 255);
+//                    cir.setReturnValue(0xFF000000 | (r << 16) | (g << 8) | b);
+//                }
+//            }
+//        }
+//    }
 
     /*
      * Some entities have weird behaviour when rotating in a replay

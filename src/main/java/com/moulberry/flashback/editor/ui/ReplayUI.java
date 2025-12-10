@@ -321,7 +321,7 @@ public class ReplayUI {
 
     private static byte[] loadFont(String name) {
         try {
-            var resource = Minecraft.getInstance().getResourceManager().getResource(Flashback.createResourceLocation(name));
+            var resource = Minecraft.getInstance().getResourceManager().getResource(Flashback.createIdentifier(name));
             if (resource.isEmpty()) throw new MissingResourceException("Missing font: " + name, "Font", "");
             try (InputStream is = resource.get().open()) {
                 return is.readAllBytes();

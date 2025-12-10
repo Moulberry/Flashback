@@ -21,7 +21,7 @@ import imgui.flashback.ImGui;
 import imgui.flashback.flag.ImGuiWindowFlags;
 import imgui.flashback.type.ImString;
 import net.fabricmc.loader.api.FabricLoader;
-import net.minecraft.FileUtil;
+import net.minecraft.util.FileUtil;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.resources.language.I18n;

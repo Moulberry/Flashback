@@ -25,8 +25,9 @@ import com.moulberry.flashback.state.KeyframeTrack;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.RenderPipelines;
-import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.fog.FogRenderer;
+import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Matrix4f;
 import org.joml.Quaterniond;
@@ -67,8 +68,8 @@ public class CameraPath {
             if (lastEditorStateModCount != state.modCount || !cameraPathArgs.equals(lastCameraPathArgs)) {
                 lastCameraPathArgs = cameraPathArgs;
 
-                BufferBuilder bufferBuilder = Tesselator.getInstance().begin(VertexFormat.Mode.LINES, DefaultVertexFormat.POSITION_COLOR_NORMAL);
-                Vector3d basePosition = new Vector3d(camera.getPosition().x, camera.getPosition().y, camera.getPosition().z);
+                BufferBuilder bufferBuilder = Tesselator.getInstance().begin(VertexFormat.Mode.LINES, DefaultVertexFormat.POSITION_COLOR_NORMAL_LINE_WIDTH);
+                Vector3d basePosition = new Vector3d(camera.position().x, camera.position().y, camera.position().z);
                 buildCameraPath(state, basePosition.mul(-1, new Vector3d()), cameraPathArgs, bufferBuilder);
 
                 if (cameraPathVertexBuffer != null) {
@@ -96,11 +97,8 @@ public class CameraPath {
         RenderSystem.setShaderFog(Minecraft.getInstance().gameRenderer.fogRenderer.getBuffer(FogRenderer.FogMode.NONE));
 
         poseStack.pushPose();
-        poseStack.translate(basePosition.x-camera.getPosition().x,
-            basePosition.y-camera.getPosition().y + camera.eyeHeight, basePosition.z-camera.getPosition().z);
-
-        RenderType.lines().setupRenderState();
-        RenderSystem.lineWidth(2f);
+        poseStack.translate(basePosition.x-camera.position().x,
+            basePosition.y-camera.position().y + camera.eyeHeight, basePosition.z-camera.position().z);
 
         var stack = RenderSystem.getModelViewStack();
         stack.pushMatrix();
@@ -116,10 +114,10 @@ public class CameraPath {
             state.applyKeyframes(handler, replayTick);
             state.applyKeyframes(fovHandler, replayTick);
             if (handler.position != null) {
-                BufferBuilder bufferBuilder = Tesselator.getInstance().begin(VertexFormat.Mode.LINES, DefaultVertexFormat.POSITION_COLOR_NORMAL);
+                BufferBuilder bufferBuilder = Tesselator.getInstance().begin(VertexFormat.Mode.LINES, DefaultVertexFormat.POSITION_COLOR_NORMAL_LINE_WIDTH);
                 renderCamera(bufferBuilder, handler.position.sub(basePosition, new Vector3d()), handler.angle, fovHandler.fov,
                     getCameraColour(false, true), 1.0f);
-                RenderType.lines().draw(bufferBuilder.buildOrThrow());
+                RenderTypes.LINES.draw(bufferBuilder.buildOrThrow());
             }
         }
 
@@ -128,7 +126,6 @@ public class CameraPath {
         poseStack.popPose();
 
         RenderSystem.setShaderFog(oldFog);
-        RenderType.lines().clearRenderState();
     }
 
     private record CameraPathArgs(int lastLastCameraTick, int lastCameraTick, int nextCameraTick, int nextNextCameraTick) {}
@@ -255,9 +252,11 @@ public class CameraPath {
                 dz *= distanceInv;
 
                 bufferBuilder.addVertex((float) lastPosition.x, (float) lastPosition.y, (float) lastPosition.z).setColor(1.0f, 1.0f, 0.1f, 0.0f)
-                             .setNormal((float) dx, (float) dy, (float) dz);
+                             .setNormal((float) dx, (float) dy, (float) dz)
+                             .setLineWidth(2f);
                 bufferBuilder.addVertex((float) position.x, (float) position.y, (float) position.z).setColor(1.0f, 1.0f, 0.1f, opacity)
-                             .setNormal((float) dx, (float) dy, (float) dz);
+                             .setNormal((float) dx, (float) dy, (float) dz)
+                             .setLineWidth(2f);
             }
 
             lastPosition = position;

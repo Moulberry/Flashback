@@ -9,7 +9,7 @@ import net.minecraft.util.ExtraCodecs;
 import net.minecraft.world.item.ItemStack;
 
 public record FlashbackRemoteSetSlot(int entityId, int slot, ItemStack itemStack) implements CustomPacketPayload {
-    public static final Type<FlashbackRemoteSetSlot> TYPE = new Type<>(Flashback.createResourceLocation("remote_set_slot"));
+    public static final Type<FlashbackRemoteSetSlot> TYPE = new Type<>(Flashback.createIdentifier("remote_set_slot"));
 
     public static final StreamCodec<RegistryFriendlyByteBuf, FlashbackRemoteSetSlot> STREAM_CODEC = new RemoteSetSlotStreamCodec();
 

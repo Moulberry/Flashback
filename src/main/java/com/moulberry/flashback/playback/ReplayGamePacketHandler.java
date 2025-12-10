@@ -57,7 +57,7 @@ import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.AttributeMap;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
-import net.minecraft.world.entity.decoration.Painting;
+import net.minecraft.world.entity.decoration.painting.Painting;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -73,6 +73,7 @@ import net.minecraft.world.level.chunk.DataLayer;
 import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.chunk.status.ChunkStatus;
 import net.minecraft.world.level.dimension.LevelStem;
+import net.minecraft.world.level.gamerules.GameRules;
 import net.minecraft.world.level.lighting.LevelLightEngine;
 import net.minecraft.world.level.saveddata.maps.MapItemSavedData;
 import net.minecraft.world.level.storage.DerivedLevelData;
@@ -144,7 +145,6 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
                         existingEntity.setYRot(pendingEntity.getYRot());
                         existingEntity.setYHeadRot(pendingEntity.getYHeadRot());
                         existingEntity.setDeltaMovement(pendingEntity.getDeltaMovement());
-                        existingEntity.hasImpulse = pendingEntity.hasImpulse;
                         if (pendingEntity instanceof LivingEntity pendingLiving) {
                             existingEntity.setYBodyRot(pendingLiving.yBodyRot);
                         }
@@ -444,8 +444,8 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
     }
 
     @Override
-    public void handleHorseScreenOpen(ClientboundHorseScreenOpenPacket clientboundHorseScreenOpenPacket) {
-        throw new UnsupportedPacketException(clientboundHorseScreenOpenPacket);
+    public void handleMountScreenOpen(ClientboundMountScreenOpenPacket clientboundMountScreenOpenPacket) {
+        throw new UnsupportedPacketException(clientboundMountScreenOpenPacket);
     }
 
     @Override
@@ -1193,8 +1193,8 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
         }
 
         for (ServerLevel level : this.replayServer.getAllLevels()) {
-            if (level.getGameRules().getBoolean(GameRules.RULE_DAYLIGHT) != updateTime) {
-                level.getGameRules().getRule(GameRules.RULE_DAYLIGHT).set(updateTime, this.replayServer);
+            if (level.getGameRules().get(GameRules.ADVANCE_TIME) != updateTime) {
+                level.getGameRules().set(GameRules.ADVANCE_TIME, updateTime, this.replayServer);
             }
 
             level.setDayTime(dayTime);
@@ -1357,7 +1357,7 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
         worldBorder.setCenter(clientboundInitializeBorderPacket.getNewCenterX(), clientboundInitializeBorderPacket.getNewCenterZ());
         long lerpTime = clientboundInitializeBorderPacket.getLerpTime();
         if (lerpTime > 0L) {
-            worldBorder.lerpSizeBetween(clientboundInitializeBorderPacket.getOldSize(), clientboundInitializeBorderPacket.getNewSize(), lerpTime);
+            worldBorder.lerpSizeBetween(clientboundInitializeBorderPacket.getOldSize(), clientboundInitializeBorderPacket.getNewSize(), lerpTime, this.level().getGameTime());
         } else {
             worldBorder.setSize(clientboundInitializeBorderPacket.getNewSize());
         }
@@ -1372,7 +1372,7 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
 
         long lerpTime = clientboundSetBorderLerpSizePacket.getLerpTime();
         if (lerpTime > 0L) {
-            worldBorder.lerpSizeBetween(clientboundSetBorderLerpSizePacket.getOldSize(), clientboundSetBorderLerpSizePacket.getNewSize(), lerpTime);
+            worldBorder.lerpSizeBetween(clientboundSetBorderLerpSizePacket.getOldSize(), clientboundSetBorderLerpSizePacket.getNewSize(), lerpTime, this.level().getGameTime());
         } else {
             worldBorder.setSize(clientboundSetBorderLerpSizePacket.getNewSize());
         }

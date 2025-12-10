@@ -6,7 +6,7 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 
 public record FlashbackRemoteFoodData(int entityId, int foodLevel, float saturationLevel) implements CustomPacketPayload {
-    public static final Type<FlashbackRemoteFoodData> TYPE = new Type<>(Flashback.createResourceLocation("remote_food_data"));
+    public static final Type<FlashbackRemoteFoodData> TYPE = new Type<>(Flashback.createIdentifier("remote_food_data"));
 
     public static final StreamCodec<FriendlyByteBuf, FlashbackRemoteFoodData> STREAM_CODEC = new FlashbackRemoteFoodDataStreamCodec();
 

@@ -51,7 +51,7 @@ public class ReplayWriter {
         List<Action> actions = ActionRegistry.getActions();
         this.dataBuffer.writeVarInt(actions.size());
         for (Action action : actions) {
-            this.dataBuffer.writeResourceLocation(action.name());
+            this.dataBuffer.writeIdentifier(action.name());
             this.registeredActions.put(action, this.registeredActions.size());
         }
 

@@ -3,7 +3,7 @@ package com.moulberry.flashback.mixin;
 import com.moulberry.flashback.Flashback;
 import net.minecraft.client.gui.components.debug.DebugScreenEntryList;
 import net.minecraft.client.gui.components.debug.DebugScreenEntryStatus;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
@@ -21,15 +21,15 @@ public class MixinDebugScreenEntryList {
      * even when the player loads a profile that didn't have Flashback originally
      */
 
-    @Shadow private Map<ResourceLocation, DebugScreenEntryStatus> allStatuses;
+    @Shadow private Map<Identifier, DebugScreenEntryStatus> allStatuses;
 
     @Inject(method = "rebuildCurrentList", at = @At("HEAD"))
     public void rebuildCurrentList(CallbackInfo ci) {
         if (!this.allStatuses.containsKey(Flashback.RECORDING_INFO_DEBUG_SCREEN_ID)) {
-            if (!(this.allStatuses instanceof HashMap<ResourceLocation, DebugScreenEntryStatus>)) {
+            if (!(this.allStatuses instanceof HashMap<Identifier, DebugScreenEntryStatus>)) {
                 this.allStatuses = new HashMap<>(this.allStatuses);
             }
-            this.allStatuses.put(Flashback.RECORDING_INFO_DEBUG_SCREEN_ID, DebugScreenEntryStatus.IN_F3);
+            this.allStatuses.put(Flashback.RECORDING_INFO_DEBUG_SCREEN_ID, DebugScreenEntryStatus.IN_OVERLAY);
         }
     }
 

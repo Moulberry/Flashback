@@ -87,6 +87,7 @@ public class SelectedEntityPopup {
         } else if (ImGui.button(I18n.get("flashback.set_audio_source"))) {
             editorState.audioSourceEntity = entity.getUUID();
             editorState.markDirty();
+            Minecraft.getInstance().levelRenderer.debugRenderer.refreshRendererList();
         }
         boolean isHiddenDuringExport = editorState.hideDuringExport.contains(entity.getUUID());
         if (ImGui.checkbox(I18n.get("flashback.hide_during_export"), isHiddenDuringExport)) {

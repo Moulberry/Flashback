@@ -9,7 +9,7 @@ import com.moulberry.flashback.screen.EditReplayScreen;
 import com.moulberry.flashback.screen.ReplaySummary;
 import it.unimi.dsi.fastutil.booleans.BooleanConsumer;
 import net.minecraft.ChatFormatting;
-import net.minecraft.Util;
+import net.minecraft.util.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.ObjectSelectionList;
@@ -23,17 +23,14 @@ import net.minecraft.client.gui.screens.ProgressScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.renderer.RenderPipelines;
-import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.resources.language.I18n;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.sounds.SoundEvents;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.math3.analysis.function.Min;
-import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 
 import java.io.IOException;
@@ -48,13 +45,13 @@ import java.util.Locale;
 
 public abstract class ReplaySelectionEntry extends ObjectSelectionList.Entry<ReplaySelectionEntry> implements AutoCloseable {
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofLocalizedDateTime(FormatStyle.SHORT).withZone(ZoneId.systemDefault());
-    private static final ResourceLocation FOLDER_SPRITE = Flashback.createResourceLocation("folder");
-    private static final ResourceLocation ERROR_HIGHLIGHTED_SPRITE = ResourceLocation.withDefaultNamespace("world_list/error_highlighted");
-    private static final ResourceLocation ERROR_SPRITE = ResourceLocation.withDefaultNamespace("world_list/error");
-    private static final ResourceLocation WARNING_HIGHLIGHTED_SPRITE = ResourceLocation.withDefaultNamespace("world_list/warning_highlighted");
-    static private final ResourceLocation WARNING_SPRITE = ResourceLocation.withDefaultNamespace("world_list/warning");
-    private static final ResourceLocation JOIN_HIGHLIGHTED_SPRITE = ResourceLocation.withDefaultNamespace("world_list/join_highlighted");
-    private static final ResourceLocation JOIN_SPRITE = ResourceLocation.withDefaultNamespace("world_list/join");
+    private static final Identifier FOLDER_SPRITE = Flashback.createIdentifier("folder");
+    private static final Identifier ERROR_HIGHLIGHTED_SPRITE = Identifier.withDefaultNamespace("world_list/error_highlighted");
+    private static final Identifier ERROR_SPRITE = Identifier.withDefaultNamespace("world_list/error");
+    private static final Identifier WARNING_HIGHLIGHTED_SPRITE = Identifier.withDefaultNamespace("world_list/warning_highlighted");
+    static private final Identifier WARNING_SPRITE = Identifier.withDefaultNamespace("world_list/warning");
+    private static final Identifier JOIN_HIGHLIGHTED_SPRITE = Identifier.withDefaultNamespace("world_list/join_highlighted");
+    private static final Identifier JOIN_SPRITE = Identifier.withDefaultNamespace("world_list/join");
     private static final Logger LOGGER = LogUtils.getLogger();
 
     @Override
@@ -63,8 +60,8 @@ public abstract class ReplaySelectionEntry extends ObjectSelectionList.Entry<Rep
 
     public static class LoadFromDeviceHeader extends ReplaySelectionEntry {
         private static final Component LOAD_REPLAY_LABEL = Component.translatable("flashback.select_replay.load_replay_from_file");
-        private static final WidgetSprites SPRITES = new WidgetSprites(ResourceLocation.withDefaultNamespace("widget/button"), ResourceLocation.withDefaultNamespace("widget/button_disabled"),
-            ResourceLocation.withDefaultNamespace("widget/button_highlighted"));
+        private static final WidgetSprites SPRITES = new WidgetSprites(Identifier.withDefaultNamespace("widget/button"), Identifier.withDefaultNamespace("widget/button_disabled"),
+            Identifier.withDefaultNamespace("widget/button_highlighted"));
         private final Minecraft minecraft;
 
         public LoadFromDeviceHeader(Minecraft minecraft) {
@@ -163,7 +160,7 @@ public abstract class ReplaySelectionEntry extends ObjectSelectionList.Entry<Rep
                 int q = mouseX - x;
                 boolean hoveredIcon = q < 32;
 
-                ResourceLocation iconOverlay = hoveredIcon ? JOIN_HIGHLIGHTED_SPRITE : JOIN_SPRITE;
+                Identifier iconOverlay = hoveredIcon ? JOIN_HIGHLIGHTED_SPRITE : JOIN_SPRITE;
                 guiGraphics.blitSprite(RenderPipelines.GUI_TEXTURED, iconOverlay, x, y, ICON_WIDTH, ICON_HEIGHT);
             }
         }
@@ -251,7 +248,7 @@ public abstract class ReplaySelectionEntry extends ObjectSelectionList.Entry<Rep
                     guiGraphics.setTooltipForNextFrame(this.minecraft.font, this.minecraft.font.split(this.summary.getHoverInfo(), 240), mouseX, mouseY);
                 }
 
-                ResourceLocation iconOverlay;
+                Identifier iconOverlay;
                 if (!this.summary.canOpen()) {
                     iconOverlay = hoveredIcon ? ERROR_HIGHLIGHTED_SPRITE : ERROR_SPRITE;
                 } else if (this.summary.hasWarning()) {

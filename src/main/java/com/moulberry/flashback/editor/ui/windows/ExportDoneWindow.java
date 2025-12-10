@@ -13,7 +13,7 @@ import imgui.flashback.flag.ImGuiCond;
 import imgui.flashback.flag.ImGuiHoveredFlags;
 import imgui.flashback.flag.ImGuiWindowFlags;
 import imgui.flashback.type.ImBoolean;
-import net.minecraft.Util;
+import net.minecraft.util.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.client.resources.language.I18n;

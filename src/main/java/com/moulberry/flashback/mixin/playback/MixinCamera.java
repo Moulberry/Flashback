@@ -8,6 +8,7 @@ import net.minecraft.client.Camera;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.Level;
 import org.joml.Vector2f;
 import org.joml.Vector3d;
 import org.spongepowered.asm.mixin.Mixin;
@@ -32,7 +33,7 @@ public abstract class MixinCamera {
     protected abstract void setPosition(double d, double e, double f);
 
     @Inject(method = "setup", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/Camera;setPosition(DDD)V", ordinal = 0, shift = At.Shift.AFTER))
-    public void afterSetPosition(BlockGetter blockGetter, Entity entity, boolean bl, boolean bl2, float partialTick, CallbackInfo ci)  {
+    public void afterSetPosition(Level level, Entity entity, boolean bl, boolean bl2, float partialTick, CallbackInfo ci)  {
         Vector2f rotation = AccurateEntityPositionHandler.getAccurateRotation(entity, partialTick);
         if (rotation != null) {
             this.setRotation(rotation.y, rotation.x);

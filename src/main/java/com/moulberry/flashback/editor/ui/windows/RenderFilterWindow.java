@@ -18,7 +18,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.resources.language.I18n;
 import net.minecraft.core.particles.ParticleType;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.EntityType;
 
 import java.util.ArrayList;
@@ -35,7 +35,7 @@ public class RenderFilterWindow {
 
     private static ImString particleSearch = ImGuiHelper.createResizableImString("");
     private static String lastParticleSearch = null;
-    private static List<ResourceLocation> searchedParticleTypes = new ArrayList<>();
+    private static List<Identifier> searchedParticleTypes = new ArrayList<>();
 
     public static void render(ImBoolean open, boolean newlyOpened) {
         if (newlyOpened) {
@@ -104,7 +104,7 @@ public class RenderFilterWindow {
                                 @Override
                                 public void accept(int i) {
                                     EntityType<?> entityType = searchedEntityTypes.get(i);
-                                    ResourceLocation resourceLocation = BuiltInRegistries.ENTITY_TYPE.getKey(entityType);
+                                    Identifier resourceLocation = BuiltInRegistries.ENTITY_TYPE.getKey(entityType);
 
                                     boolean filtered = editorState.filteredEntities.contains(resourceLocation.toString());
 
@@ -127,7 +127,7 @@ public class RenderFilterWindow {
                         ImGui.sameLine();
                         if (ImGui.smallButton(I18n.get("flashback.disable_all"))) {
                             for (EntityType<?> entityType : BuiltInRegistries.ENTITY_TYPE) {
-                                ResourceLocation resourceLocation = BuiltInRegistries.ENTITY_TYPE.getKey(entityType);
+                                Identifier resourceLocation = BuiltInRegistries.ENTITY_TYPE.getKey(entityType);
                                 editorState.filteredEntities.add(resourceLocation.toString());
                             }
                         }
@@ -142,10 +142,10 @@ public class RenderFilterWindow {
                         lastParticleSearch = searchString;
                         searchedParticleTypes = new ArrayList<>();
 
-                        List<ResourceLocation> contains = new ArrayList<>();
+                        List<Identifier> contains = new ArrayList<>();
 
                         for (ParticleType<?> particleType : BuiltInRegistries.PARTICLE_TYPE) {
-                            ResourceLocation resourceLocation = BuiltInRegistries.PARTICLE_TYPE.getKey(particleType);
+                            Identifier resourceLocation = BuiltInRegistries.PARTICLE_TYPE.getKey(particleType);
                             if (resourceLocation == null) {
                                 continue;
                             }
@@ -174,7 +174,7 @@ public class RenderFilterWindow {
                             ImGuiListClipper.forEach(searchedParticleTypes.size(), new ImListClipperCallback() {
                                 @Override
                                 public void accept(int i) {
-                                    ResourceLocation particleType = searchedParticleTypes.get(i);
+                                    Identifier particleType = searchedParticleTypes.get(i);
 
                                     boolean filtered = editorState.filteredParticles.contains(particleType.toString());
 
@@ -203,7 +203,7 @@ public class RenderFilterWindow {
                         ImGui.sameLine();
                         if (ImGui.smallButton(I18n.get("flashback.disable_all"))) {
                             for (ParticleType<?> particleType : BuiltInRegistries.PARTICLE_TYPE) {
-                                ResourceLocation resourceLocation = BuiltInRegistries.PARTICLE_TYPE.getKey(particleType);
+                                Identifier resourceLocation = BuiltInRegistries.PARTICLE_TYPE.getKey(particleType);
                                 if (resourceLocation == null) {
                                     continue;
                                 }

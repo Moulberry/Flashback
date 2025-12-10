@@ -13,6 +13,7 @@ import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.RenderPipelines;
 import org.jetbrains.annotations.Nullable;
+import org.joml.Matrix4f;
 import org.joml.Vector3f;
 import org.joml.Vector4f;
 
@@ -64,7 +65,7 @@ public class FlashbackDrawBuffer implements AutoCloseable {
         VertexFormat.IndexType indexType = autoStorageIndexBuffer.type();
 
         GpuBufferSlice gpuBufferSlice = RenderSystem.getDynamicUniforms().writeTransform(RenderSystem.getModelViewMatrix(), new Vector4f(1.0F, 1.0F, 1.0F, 1.0F),
-            new Vector3f(), RenderSystem.getTextureMatrix(), RenderSystem.getShaderLineWidth());
+            new Vector3f(), new Matrix4f());
 
         var commandEncoder = RenderSystem.getDevice().createCommandEncoder();
         try (RenderPass renderPass = commandEncoder.createRenderPass(() -> "flashback draw", renderTarget.getColorTextureView(), OptionalInt.empty(), renderTarget.useDepth ? renderTarget.getDepthTextureView() : null, OptionalDouble.empty())) {
@@ -73,13 +74,6 @@ public class FlashbackDrawBuffer implements AutoCloseable {
             RenderSystem.bindDefaultUniforms(renderPass);
             renderPass.setUniform("DynamicTransforms", gpuBufferSlice);
             renderPass.setVertexBuffer(0, this.vertexBuffer);
-
-            for (int i = 0; i < 12; i++) {
-                GpuTextureView gpuTexture = RenderSystem.getShaderTexture(i);
-                if (gpuTexture != null) {
-                    renderPass.bindSampler("Sampler" + i, gpuTexture);
-                }
-            }
 
             renderPass.setIndexBuffer(indexBuffer, indexType);
             renderPass.drawIndexed(0, 0, this.indexCount, 1);

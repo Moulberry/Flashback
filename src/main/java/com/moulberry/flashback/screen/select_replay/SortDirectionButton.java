@@ -4,16 +4,15 @@ import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.renderer.RenderPipelines;
-import net.minecraft.client.renderer.RenderType;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 import java.util.function.Consumer;
 
 public class SortDirectionButton extends Button {
 
-    private static final ResourceLocation DOWN_ARROW = ResourceLocation.parse("flashback:down_arrow.png");
-    private static final ResourceLocation UP_ARROW = ResourceLocation.parse("flashback:up_arrow.png");
+    private static final Identifier DOWN_ARROW = Identifier.parse("flashback:down_arrow.png");
+    private static final Identifier UP_ARROW = Identifier.parse("flashback:up_arrow.png");
 
     public boolean sortDescending;
 
@@ -27,8 +26,8 @@ public class SortDirectionButton extends Button {
     }
 
     @Override
-    protected void renderWidget(GuiGraphics guiGraphics, int i, int j, float f) {
-        super.renderWidget(guiGraphics, i, j, f);
+    protected void renderContents(GuiGraphics guiGraphics, int i, int j, float f) {
+        super.renderDefaultSprite(guiGraphics);
 
         final int size = 16;
         int paddingX = (this.getWidth() - size) / 2;
@@ -42,10 +41,6 @@ public class SortDirectionButton extends Button {
         } else {
             guiGraphics.blit(RenderPipelines.GUI_TEXTURED, UP_ARROW, x, y, 0f, 0f, size, size, size, size);
         }
-    }
-
-    @Override
-    public void renderString(GuiGraphics guiGraphics, Font font, int i) {
     }
 
 }

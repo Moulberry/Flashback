@@ -12,7 +12,7 @@ import it.unimi.dsi.fastutil.ints.IntSet;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.RegistryFriendlyByteBuf;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 public class ReplayReader {
 
@@ -20,9 +20,9 @@ public class ReplayReader {
     private final int replaySnapshotOffset;
     private final int replayActionsOffset;
     private RegistryAccess registryAccess;
-    private ResourceLocation lastActionName = null;
+    private Identifier lastActionName = null;
     private final Int2ObjectMap<Action> actions = new Int2ObjectOpenHashMap<>();
-    private final Int2ObjectMap<ResourceLocation> ignoredActions = new Int2ObjectOpenHashMap<>();
+    private final Int2ObjectMap<Identifier> ignoredActions = new Int2ObjectOpenHashMap<>();
 
     public ReplayReader(ByteBuf byteBuf, RegistryAccess registryAccess) {
         this.friendlyByteBuf = new FriendlyByteBuf(byteBuf);
@@ -35,7 +35,7 @@ public class ReplayReader {
 
         int actions = this.friendlyByteBuf.readVarInt();
         for (int i = 0; i < actions; i++) {
-            ResourceLocation actionName = this.friendlyByteBuf.readResourceLocation();
+            Identifier actionName = this.friendlyByteBuf.readIdentifier();
             Action action = ActionRegistry.getAction(actionName);
 
             if (action == null) {

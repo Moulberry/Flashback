@@ -44,7 +44,7 @@ import it.unimi.dsi.fastutil.ints.IntSet;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerWorldEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
-import net.minecraft.Util;
+import net.minecraft.util.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.server.IntegratedServer;
 import net.minecraft.core.BlockPos;
@@ -417,7 +417,7 @@ public class ReplayServer extends IntegratedServer {
             public ServerStatsCounter getPlayerStats(Player player) {
                 File statsDir = this.getServer().getWorldPath(LevelResource.PLAYER_STATS_DIR).toFile();
                 File statsFile = new File(statsDir, player.getUUID() + ".json");
-                return new ServerStatsCounter(this.getServer(), statsFile);
+                return new ServerStatsCounter(this.getServer(), statsFile.toPath());
             }
         });
 

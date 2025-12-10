@@ -6,7 +6,7 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 
 public record FlashbackRemoteSelectHotbarSlot(int entityId, int slot) implements CustomPacketPayload {
-    public static final Type<FlashbackRemoteSelectHotbarSlot> TYPE = new Type<>(Flashback.createResourceLocation("remote_select_hotbar_slot"));
+    public static final Type<FlashbackRemoteSelectHotbarSlot> TYPE = new Type<>(Flashback.createIdentifier("remote_select_hotbar_slot"));
 
     public static final StreamCodec<FriendlyByteBuf, FlashbackRemoteSelectHotbarSlot> STREAM_CODEC = new RemoteSelectHotbarSlotStreamCodec();
 

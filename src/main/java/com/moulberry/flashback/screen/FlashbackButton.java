@@ -5,21 +5,20 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.renderer.RenderPipelines;
-import net.minecraft.client.renderer.RenderType;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 public class FlashbackButton extends Button {
 
-    private static final ResourceLocation ICON_PIXELATED = ResourceLocation.parse("flashback:icon_pixelated.png");
+    private static final Identifier ICON_PIXELATED = Identifier.parse("flashback:icon_pixelated.png");
 
-    private final ResourceLocation icon;
+    private final Identifier icon;
 
     public FlashbackButton(int x, int y, int width, int height, Component component, OnPress onPress) {
         this(x, y, width, height, component, onPress, ICON_PIXELATED);
     }
 
-    public FlashbackButton(int x, int y, int width, int height, Component component, OnPress onPress, ResourceLocation icon) {
+    public FlashbackButton(int x, int y, int width, int height, Component component, OnPress onPress, Identifier icon) {
         super(x, y, width, height, component, onPress, DEFAULT_NARRATION);
         this.icon = icon;
     }
@@ -30,8 +29,8 @@ public class FlashbackButton extends Button {
     }
 
     @Override
-    protected void renderWidget(GuiGraphics guiGraphics, int i, int j, float f) {
-        super.renderWidget(guiGraphics, i, j, f);
+    protected void renderContents(GuiGraphics guiGraphics, int i, int j, float f) {
+        super.renderDefaultSprite(guiGraphics);
 
         final int size = 16;
         int paddingX = (this.getWidth() - size) / 2;
@@ -41,11 +40,6 @@ public class FlashbackButton extends Button {
         int y = this.getY() + paddingY;
 
         guiGraphics.blit(RenderPipelines.GUI_TEXTURED, this.icon, x, y, 0f, 0f, size, size, size, size, ((int)(this.alpha * 0xFF) << 24) | 0xFFFFFF);
-
-    }
-
-    @Override
-    public void renderString(GuiGraphics guiGraphics, Font font, int i) {
     }
 
 }

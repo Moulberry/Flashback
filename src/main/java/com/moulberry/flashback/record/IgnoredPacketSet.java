@@ -71,7 +71,7 @@ public class IgnoredPacketSet {
         ClientboundMoveMinecartPacket.class,
         ClientboundContainerClosePacket.class,
         ClientboundContainerSetContentPacket.class,
-        ClientboundHorseScreenOpenPacket.class,
+        ClientboundMountScreenOpenPacket.class,
         ClientboundContainerSetDataPacket.class,
         ClientboundContainerSetSlotPacket.class,
         ClientboundForgetLevelChunkPacket.class,

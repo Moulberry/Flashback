@@ -4,7 +4,7 @@ import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.FlashbackTextComponents;
 import com.moulberry.flashback.exporting.AsyncFileDialogs;
 import com.moulberry.flashback.record.ReplayExporter;
-import net.minecraft.FileUtil;
+import net.minecraft.util.FileUtil;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;

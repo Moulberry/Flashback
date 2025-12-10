@@ -45,7 +45,7 @@ public class EnhancedFlight {
         if (movementY != 0) {
             player.move(MoverType.SELF, new Vec3(0, flyingSpeed * movementY * 0.98, 0));
 
-            if (movementY < 0 && !Minecraft.getInstance().gameMode.isAlwaysFlying()) {
+            if (movementY < 0 && !Minecraft.getInstance().gameMode.isSpectator()) {
                 double expectedY = oldY + flyingSpeed * movementY * 0.98;
                 if (Math.abs(player.getY() - expectedY) > 1E-5) {
                     player.setOnGround(true);

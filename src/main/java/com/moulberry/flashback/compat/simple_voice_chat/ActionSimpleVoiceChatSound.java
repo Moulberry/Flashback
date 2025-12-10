@@ -7,16 +7,16 @@ import com.moulberry.flashback.playback.ReplayPlayer;
 import com.moulberry.flashback.playback.ReplayServer;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.network.RegistryFriendlyByteBuf;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 public class ActionSimpleVoiceChatSound implements Action {
-    private static final ResourceLocation NAME = Flashback.createResourceLocation("action/simple_voice_chat_sound_optional");
+    private static final Identifier NAME = Flashback.createIdentifier("action/simple_voice_chat_sound_optional");
     public static final ActionSimpleVoiceChatSound INSTANCE = new ActionSimpleVoiceChatSound();
     private ActionSimpleVoiceChatSound() {
     }
 
     @Override
-    public ResourceLocation name() {
+    public Identifier name() {
         return NAME;
     }
 

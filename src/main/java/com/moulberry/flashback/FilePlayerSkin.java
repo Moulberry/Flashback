@@ -5,7 +5,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.client.resources.DefaultPlayerSkin;
 import net.minecraft.core.ClientAsset;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.PlayerModelType;
 import net.minecraft.world.entity.player.PlayerSkin;
 
@@ -17,21 +17,21 @@ import java.util.UUID;
 public class FilePlayerSkin {
 
     private static class CleanState implements Runnable {
-        private ResourceLocation skinResourceLocation;
+        private Identifier skinIdentifier;
 
-        public CleanState(ResourceLocation skinResourceLocation) {
-            this.skinResourceLocation = skinResourceLocation;
+        public CleanState(Identifier skinIdentifier) {
+            this.skinIdentifier = skinIdentifier;
         }
 
         @Override
         public void run() {
-            if (this.skinResourceLocation != null) {
-                ResourceLocation toClean = this.skinResourceLocation;
+            if (this.skinIdentifier != null) {
+                Identifier toClean = this.skinIdentifier;
                 Minecraft.getInstance().execute(() -> {
                     Flashback.LOGGER.info("Cleaning player skin {} because it's no longer in use!", toClean);
                     Minecraft.getInstance().getTextureManager().release(toClean);
                 });
-                this.skinResourceLocation = null;
+                this.skinIdentifier = null;
             }
         }
     }
@@ -64,7 +64,7 @@ public class FilePlayerSkin {
 
             DynamicTexture dynamicTexture = new DynamicTexture(() -> "file player skin", nativeImage);
 
-            ResourceLocation resourceLocation = ResourceLocation.fromNamespaceAndPath("flashback", "skin_from_file/" + UUID.randomUUID());
+            Identifier resourceLocation = Identifier.fromNamespaceAndPath("flashback", "skin_from_file/" + UUID.randomUUID());
             Minecraft.getInstance().getTextureManager().register(resourceLocation, dynamicTexture);
             GlobalCleaner.INSTANCE.register(this, new CleanState(resourceLocation));
 

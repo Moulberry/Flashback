@@ -11,7 +11,7 @@ import net.minecraft.world.phys.Vec3;
 import java.util.UUID;
 
 public interface FlashbackVoiceChatSound extends CustomPacketPayload {
-    Type<FlashbackVoiceChatSound> TYPE = new Type<>(Flashback.createResourceLocation("voice_chat_sound"));
+    Type<FlashbackVoiceChatSound> TYPE = new Type<>(Flashback.createIdentifier("voice_chat_sound"));
     StreamCodec<FriendlyByteBuf, FlashbackVoiceChatSound> STREAM_CODEC = new FlashbackVoiceChatSoundStreamCodec();
 
     @Override

@@ -12,7 +12,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public record FlashbackAccurateEntityPosition(int entityId, List<PositionAndAngle> positionAndAngles) implements CustomPacketPayload {
-    public static final Type<FlashbackAccurateEntityPosition> TYPE = new Type<>(Flashback.createResourceLocation("accurate_entity_position"));
+    public static final Type<FlashbackAccurateEntityPosition> TYPE = new Type<>(Flashback.createIdentifier("accurate_entity_position"));
 
     public static final StreamCodec<FriendlyByteBuf, FlashbackAccurateEntityPosition> STREAM_CODEC = new AccurateEntityPositionStreamCodec();
 

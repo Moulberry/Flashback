@@ -12,21 +12,18 @@ import com.moulberry.flashback.state.EditorStateManager;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.RenderPipelines;
-import net.minecraft.client.renderer.RenderStateShard;
-import net.minecraft.client.renderer.RenderType;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.util.TriState;
+import net.minecraft.client.renderer.rendertype.RenderSetup;
+import net.minecraft.client.renderer.rendertype.RenderType;
+import net.minecraft.resources.Identifier;
 import org.joml.Matrix4f;
 
 public class WorldRenderHook {
 
-    private static final RenderType MARKER_CIRCLE_RENDER_TYPE = RenderType.create("flashback:marker_circle",
-        1536, RenderPipelines.GUI_TEXTURED,
-        RenderType.CompositeState.builder()
-                                 .setTextureState(new RenderStateShard.TextureStateShard(ResourceLocation.parse("flashback:world_marker_circle.png"), true))
-                                 .createCompositeState(false)
+    private static final RenderType MARKER_CIRCLE_RENDER_TYPE = RenderType.create("flashback:marker_circle", RenderSetup
+        .builder(RenderPipelines.GUI_TEXTURED)
+        .withTexture("Sampler0", Identifier.parse("flashback:world_marker_circle.png"))
+        .createRenderSetup()
     );
 
     public static void renderHook(PoseStack poseStack, Camera camera) {
@@ -61,9 +58,9 @@ public class WorldRenderHook {
 
                 poseStack.pushPose();
                 poseStack.translate(
-                    position.position().x - camera.getPosition().x,
-                    position.position().y - camera.getPosition().y,
-                    position.position().z - camera.getPosition().z
+                    position.position().x - camera.position().x,
+                    position.position().y - camera.position().y,
+                    position.position().z - camera.position().z
                 );
                 poseStack.mulPose(camera.rotation());
 

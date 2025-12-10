@@ -9,7 +9,7 @@ import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.SneakyThrow;
 import com.moulberry.flashback.record.FlashbackMeta;
 import com.moulberry.flashback.screen.ReplaySummary;
-import net.minecraft.Util;
+import net.minecraft.util.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.ObjectSelectionList;

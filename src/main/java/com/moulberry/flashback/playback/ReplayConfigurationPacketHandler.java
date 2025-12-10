@@ -187,7 +187,7 @@ public class ReplayConfigurationPacketHandler implements ClientConfigurationPack
 
                                     var mapped = new MappedRegistry<>(Registries.LEVEL_STEM, Lifecycle.stable());
                                     for (var key : dimensions.registryKeySet()) {
-                                        var stemKey = ResourceKey.create(Registries.LEVEL_STEM, key.location());
+                                        var stemKey = ResourceKey.create(Registries.LEVEL_STEM, key.identifier());
                                         var stem = new LevelStem(dimensions.getOrThrow(key), new EmptyLevelSource(plains));
                                         mapped.register(stemKey, stem, RegistrationInfo.BUILT_IN);
                                     }

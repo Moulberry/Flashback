@@ -63,8 +63,9 @@ import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.ChatFormatting;
-import net.minecraft.FileUtil;
-import net.minecraft.Util;
+import net.minecraft.server.permissions.PermissionSet;
+import net.minecraft.util.FileUtil;
+import net.minecraft.util.Util;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.debug.*;
@@ -81,7 +82,7 @@ import net.minecraft.core.*;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.*;
 import net.minecraft.server.packs.repository.PackRepository;
 import net.minecraft.server.packs.repository.ServerPacksSource;
@@ -97,6 +98,7 @@ import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.dimension.BuiltinDimensionTypes;
 import net.minecraft.world.level.dimension.DimensionType;
 import net.minecraft.world.level.dimension.LevelStem;
+import net.minecraft.world.level.gamerules.GameRules;
 import net.minecraft.world.level.levelgen.WorldDimensions;
 import net.minecraft.world.level.levelgen.WorldOptions;
 import net.minecraft.world.level.storage.LevelStorageSource;
@@ -147,7 +149,7 @@ public class Flashback implements ModInitializer, ClientModInitializer {
 
     public static long worldBorderLerpStartTime = -1L;
 
-    private static final KeyMapping.Category category = KeyMapping.Category.register(createResourceLocation("keybind"));
+    private static final KeyMapping.Category category = KeyMapping.Category.register(createIdentifier("keybind"));
     public static final KeyMapping createMarker1KeyBind = KeyBindingHelper.registerKeyBinding(new KeyMapping("flashback.keybind.create_marker_1",
         InputConstants.Type.KEYSYM, InputConstants.UNKNOWN.getValue(), category));
     public static final KeyMapping createMarker2KeyBind = KeyBindingHelper.registerKeyBinding(new KeyMapping("flashback.keybind.create_marker_2",
@@ -157,10 +159,10 @@ public class Flashback implements ModInitializer, ClientModInitializer {
     public static final KeyMapping createMarker4KeyBind = KeyBindingHelper.registerKeyBinding(new KeyMapping("flashback.keybind.create_marker_4",
         InputConstants.Type.KEYSYM, InputConstants.UNKNOWN.getValue(), category));
 
-    public static final ResourceLocation RECORDING_INFO_DEBUG_SCREEN_ID = createResourceLocation("recording_info");
+    public static final Identifier RECORDING_INFO_DEBUG_SCREEN_ID = createIdentifier("recording_info");
 
-    public static ResourceLocation createResourceLocation(String value) {
-        return ResourceLocation.fromNamespaceAndPath("flashback", value);
+    public static Identifier createIdentifier(String value) {
+        return Identifier.fromNamespaceAndPath("flashback", value);
     }
 
     public static Path getDataDirectory() {
@@ -371,10 +373,10 @@ public class Flashback implements ModInitializer, ClientModInitializer {
                 }
             }
         });
-        Map<DebugScreenProfile, Map<ResourceLocation, DebugScreenEntryStatus>> newProfiles = new LinkedHashMap<>();
-        for (Map.Entry<DebugScreenProfile, Map<ResourceLocation, DebugScreenEntryStatus>> entry : DebugScreenEntries.PROFILES.entrySet()) {
+        Map<DebugScreenProfile, Map<Identifier, DebugScreenEntryStatus>> newProfiles = new LinkedHashMap<>();
+        for (Map.Entry<DebugScreenProfile, Map<Identifier, DebugScreenEntryStatus>> entry : DebugScreenEntries.PROFILES.entrySet()) {
             var newMap = new LinkedHashMap<>(entry.getValue());
-            newMap.put(RECORDING_INFO_DEBUG_SCREEN_ID, DebugScreenEntryStatus.IN_F3);
+            newMap.put(RECORDING_INFO_DEBUG_SCREEN_ID, DebugScreenEntryStatus.IN_OVERLAY);
             newProfiles.put(entry.getKey(), Collections.unmodifiableMap(newMap));
         }
         DebugScreenEntries.PROFILES = Collections.unmodifiableMap(newProfiles);
@@ -1070,17 +1072,17 @@ public class Flashback implements ModInitializer, ClientModInitializer {
 
     public static GameRules createReplayGameRules(FeatureFlagSet featureFlagSet) {
         GameRules gameRules = new GameRules(featureFlagSet);
-        gameRules.getRule(GameRules.RULE_DOMOBSPAWNING).set(false, null);
-        gameRules.getRule(GameRules.RULE_DOENTITYDROPS).set(false, null);
-        gameRules.getRule(GameRules.RULE_ANNOUNCE_ADVANCEMENTS).set(false, null);
-        gameRules.getRule(GameRules.RULE_DISABLE_RAIDS).set(true, null);
-        gameRules.getRule(GameRules.RULE_DO_PATROL_SPAWNING).set(false, null);
-        gameRules.getRule(GameRules.RULE_DO_WARDEN_SPAWNING).set(false, null);
-        gameRules.getRule(GameRules.RULE_DO_TRADER_SPAWNING).set(false, null);
-        gameRules.getRule(GameRules.RULE_DO_VINES_SPREAD).set(false, null);
-        gameRules.getRule(GameRules.RULE_DOFIRETICK).set(false, null);
-        gameRules.getRule(GameRules.RULE_WEATHER_CYCLE).set(false, null);
-        gameRules.getRule(GameRules.RULE_RANDOMTICKING).set(0, null);
+        gameRules.set(GameRules.SPAWN_MOBS, false, null);
+        gameRules.set(GameRules.ENTITY_DROPS, false, null);
+        gameRules.set(GameRules.SHOW_ADVANCEMENT_MESSAGES, false, null);
+        gameRules.set(GameRules.RAIDS, false, null);
+        gameRules.set(GameRules.SPAWN_PATROLS, false, null);
+        gameRules.set(GameRules.SPAWN_WARDENS, false, null);
+        gameRules.set(GameRules.SPAWN_WANDERING_TRADERS, false, null);
+        gameRules.set(GameRules.SPREAD_VINES, false, null);
+        gameRules.set(GameRules.FIRE_SPREAD_RADIUS_AROUND_PLAYER, 0, null);
+        gameRules.set(GameRules.ADVANCE_WEATHER, false, null);
+        gameRules.set(GameRules.RANDOM_TICK_SPEED, 0, null);
         return gameRules;
     }
 
@@ -1126,7 +1128,7 @@ public class Flashback implements ModInitializer, ClientModInitializer {
             WorldDataConfiguration worldDataConfiguration = new WorldDataConfiguration(new DataPackConfig(List.of(), List.of()), FeatureFlags.DEFAULT_FLAGS);
             LevelSettings levelSettings = new LevelSettings("Replay", GameType.SPECTATOR, false, Difficulty.NORMAL, true, gameRules, worldDataConfiguration);
             WorldLoader.PackConfig packConfig = new WorldLoader.PackConfig(packRepository, worldDataConfiguration, false, true);
-            WorldLoader.InitConfig initConfig = new WorldLoader.InitConfig(packConfig, Commands.CommandSelection.DEDICATED, 4);
+            WorldLoader.InitConfig initConfig = new WorldLoader.InitConfig(packConfig, Commands.CommandSelection.DEDICATED, PermissionSet.ALL_PERMISSIONS);
 
             WorldStem worldStem = Util.blockUntilDone(executor -> WorldLoader.load(initConfig, dataLoadContext -> {
                 Registry<LevelStem> registry = new MappedRegistry<>(Registries.LEVEL_STEM, Lifecycle.stable()).freeze();

@@ -4,7 +4,7 @@ import com.moulberry.flashback.Flashback;
 import com.moulberry.mixinconstraints.annotations.IfModLoaded;
 import de.maxhenkel.voicechat.voice.client.RenderEvents;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Pseudo;
 import org.spongepowered.asm.mixin.injection.At;
@@ -25,7 +25,7 @@ public class MixinVoiceChatRenderEvents {
     }
 
     @Inject(method = "renderIcon", at = @At("HEAD"), cancellable = true)
-    public void renderIcon(GuiGraphics guiGraphics, ResourceLocation texture, CallbackInfo ci) {
+    public void renderIcon(GuiGraphics guiGraphics, Identifier texture, CallbackInfo ci) {
         if (Flashback.isInReplay()) {
             ci.cancel();
         }

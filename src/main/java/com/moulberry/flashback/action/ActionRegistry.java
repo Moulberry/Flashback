@@ -1,6 +1,6 @@
 package com.moulberry.flashback.action;
 
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
@@ -14,7 +14,7 @@ import java.util.Set;
 public class ActionRegistry {
 
     private static final List<Action> actions = new ArrayList<>();
-    private static final Map<ResourceLocation, Action> resourceToAction = new HashMap<>();
+    private static final Map<Identifier, Action> resourceToAction = new HashMap<>();
     private static final Set<Class<? extends Action>> registeredActions = new HashSet<>();
 
     public static void register(Action action) {
@@ -33,7 +33,7 @@ public class ActionRegistry {
         return Collections.unmodifiableList(actions);
     }
 
-    public static @Nullable Action getAction(ResourceLocation actionName) {
+    public static @Nullable Action getAction(Identifier actionName) {
         return resourceToAction.get(actionName);
     }
 

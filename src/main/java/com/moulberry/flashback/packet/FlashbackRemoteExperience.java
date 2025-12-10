@@ -6,7 +6,7 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 
 public record FlashbackRemoteExperience(int entityId, float experienceProgress, int totalExperience, int experienceLevel) implements CustomPacketPayload {
-    public static final Type<FlashbackRemoteExperience> TYPE = new Type<>(Flashback.createResourceLocation("remote_experience"));
+    public static final Type<FlashbackRemoteExperience> TYPE = new Type<>(Flashback.createIdentifier("remote_experience"));
 
     public static final StreamCodec<FriendlyByteBuf, FlashbackRemoteExperience> STREAM_CODEC = new FlashbackRemoteExperienceStreamCodec();
 
