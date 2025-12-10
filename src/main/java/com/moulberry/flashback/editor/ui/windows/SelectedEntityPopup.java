@@ -21,6 +21,7 @@ import net.minecraft.client.resources.language.I18n;
 import net.minecraft.commands.arguments.EntityAnchorArgument;
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.entity.Avatar;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
@@ -219,7 +220,6 @@ public class SelectedEntityPopup {
             } else {
                 showGlowingDropdown(entity, editorState);
             }
-
             if (entity instanceof LivingEntity) {
                 if (ImGui.collapsingHeader("Equipment")) {
                     EnumSet<EquipmentSlot> hiddenEquipment = editorState.hiddenEquipment.get(entity.getUUID());
@@ -252,6 +252,58 @@ public class SelectedEntityPopup {
                             editorState.hiddenEquipment.remove(entity.getUUID());
                         } else {
                             editorState.hiddenEquipment.put(entity.getUUID(), hiddenEquipment);
+                        }
+                    }
+                }
+            }
+            if (entity instanceof Avatar avatar) {
+                if (ImGui.collapsingHeader("Model Parts")) {
+                    EnumSet<PlayerModelPart> hiddenModelParts = editorState.hiddenModelParts.get(entity.getUUID());
+
+                    boolean changed = false;
+
+                    EnumSet<PlayerModelPart> actualHiddenModelParts = EnumSet.noneOf(PlayerModelPart.class);
+                    for (PlayerModelPart value : PlayerModelPart.values()) {
+                        if (!avatar.isModelPartShown(value)) {
+                            actualHiddenModelParts.add(value);
+                        }
+                    }
+
+                    boolean overriding = hiddenModelParts != null;
+                    if (ImGui.checkbox("Override", overriding)) {
+                        if (overriding) {
+                            hiddenModelParts = null;
+                        } else {
+                            hiddenModelParts = actualHiddenModelParts;
+                        }
+                        changed = true;
+                    }
+
+                    if (hiddenModelParts != null) {
+                        for (PlayerModelPart value : PlayerModelPart.values()) {
+                            boolean hidden = hiddenModelParts.contains(value);
+                            if (ImGui.checkbox(value.getName().getString(), !hidden)) {
+                                if (hidden) {
+                                    hiddenModelParts.remove(value);
+                                } else {
+                                    hiddenModelParts.add(value);
+                                }
+                                changed = true;
+                            }
+                        }
+                    } else {
+                        ImGui.beginDisabled();
+                        for (PlayerModelPart value : PlayerModelPart.values()) {
+                            ImGui.checkbox(value.getName().getString(), !actualHiddenModelParts.contains(value));
+                        }
+                        ImGui.endDisabled();
+                    }
+
+                    if (changed) {
+                        if (hiddenModelParts == null) {
+                            editorState.hiddenModelParts.remove(entity.getUUID());
+                        } else {
+                            editorState.hiddenModelParts.put(entity.getUUID(), hiddenModelParts);
                         }
                     }
                 }
