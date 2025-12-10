@@ -1,6 +1,8 @@
 package com.moulberry.flashback;
 
 import com.moulberry.flashback.playback.ReplayServer;
+import com.moulberry.flashback.state.EditorState;
+import com.moulberry.flashback.state.EditorStateManager;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
@@ -226,10 +228,23 @@ public class Utils {
             replay = replayServer.getMetadata().name;
         }
 
+        String sceneName = "unknown";
+        EditorState editorState = EditorStateManager.getCurrent();
+        if (editorState != null) {
+            long stamp = editorState.acquireRead();
+            try {
+                var scene = editorState.getCurrentScene(stamp);
+                sceneName = scene.name;
+            } finally {
+                editorState.release(stamp);
+            }
+        }
+
         return template
             .replace("%date%", date)
             .replace("%time%", time)
             .replace("%replay%", replay)
+            .replace("%scene%", sceneName)
             .replace("%seq%", ""+exportSequenceCount);
     }
 
