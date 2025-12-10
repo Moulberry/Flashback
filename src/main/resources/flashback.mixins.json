@@ -36,6 +36,7 @@
     "ui.MixinPauseScreen",
     "ui.MixinTitleScreen",
     "visuals.MixinAbstractClientPlayer",
+    "visuals.MixinBeaconRenderer",
     "visuals.MixinBossHealthOverlay",
     "visuals.MixinClientLevel",
     "visuals.MixinClientLevelData",
