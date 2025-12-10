@@ -40,6 +40,9 @@ public abstract class MixinServerConfigurationPacketListenerImpl extends ServerC
     @Shadow
     private @Nullable SynchronizeRegistriesTask synchronizeRegistriesTask;
 
+    @Shadow
+    public abstract void returnToWorld();
+
     public MixinServerConfigurationPacketListenerImpl(MinecraftServer minecraftServer, Connection connection, CommonListenerCookie commonListenerCookie) {
         super(minecraftServer, connection, commonListenerCookie);
     }
@@ -60,7 +63,7 @@ public abstract class MixinServerConfigurationPacketListenerImpl extends ServerC
         }
 
         this.configurationTasks.addAll(tasks);
-        this.startNextTask();
+        this.returnToWorld();
     }
 
 }
