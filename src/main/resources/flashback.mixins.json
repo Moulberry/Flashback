@@ -36,6 +36,7 @@
     "record.MixinMultiPlayerGameMode",
     "ui.MixinPauseScreen",
     "ui.MixinTitleScreen",
+    "visuals.MixinBeaconRenderer",
     "visuals.MixinBossHealthOverlay",
     "visuals.MixinCapeLayer",
     "visuals.MixinClientLevel",
