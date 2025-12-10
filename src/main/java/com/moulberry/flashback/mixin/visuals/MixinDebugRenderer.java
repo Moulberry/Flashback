@@ -16,6 +16,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.UUID;
 
 @Mixin(DebugRenderer.class)
 public class MixinDebugRenderer {
@@ -36,10 +37,11 @@ public class MixinDebugRenderer {
                 return;
             }
 
-            if (ReplayUI.selectedEntity != null) {
-                this.renderers.add(new FlashbackEntityHighlightDebugRenderer(Minecraft.getInstance(), ReplayUI.selectedEntity, 0xFFFFFF00));
+            UUID selectedEntity = ReplayUI.getSelectedEntity();
+            if (selectedEntity != null) {
+                this.renderers.add(new FlashbackEntityHighlightDebugRenderer(Minecraft.getInstance(), selectedEntity, 0xFFFFFF00));
             }
-            if (editorState.audioSourceEntity != null && !Objects.equals(editorState.audioSourceEntity, ReplayUI.selectedEntity)) {
+            if (editorState.audioSourceEntity != null && !Objects.equals(editorState.audioSourceEntity, selectedEntity)) {
                 this.renderers.add(new FlashbackEntityHighlightDebugRenderer(Minecraft.getInstance(), editorState.audioSourceEntity, 0xFF00FFFF));
             }
         }
