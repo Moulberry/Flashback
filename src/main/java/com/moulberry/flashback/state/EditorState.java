@@ -15,6 +15,7 @@ import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EquipmentSlot;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.Nullable;
 
@@ -57,6 +58,7 @@ public class EditorState {
     public Set<UUID> hideCape = new HashSet<>();
     public Set<String> filteredEntities = new HashSet<>();
     public Set<String> filteredParticles = new HashSet<>();
+    public Map<UUID, EnumSet<EquipmentSlot>> hiddenEquipment = new HashMap<>();
 
     public EditorState() {
         this.scenes = new ArrayList<>();
