@@ -404,6 +404,14 @@ public class ReplayUI {
         return isActive() && uuid.equals(selectedEntity);
     }
 
+    public static UUID getSelectedEntity() {
+        return selectedEntity;
+    }
+
+    private static void setSelectedEntity(UUID uuid) {
+        selectedEntity = uuid;
+    }
+
     public static boolean isMovingCamera() {
         return imguiGlfw.isGrabbed() && imguiGlfw.getMouseHandledBy() == CustomImGuiImplGlfw.MouseHandledBy.GAME;
     }
@@ -814,11 +822,11 @@ public class ReplayUI {
             if (selectedEntity != null) {
                 Entity entity = Minecraft.getInstance().level.getEntities().get(selectedEntity);
                 if (entity == null || editorState == null) {
-                    selectedEntity = null;
+                    setSelectedEntity(null);
                 } else if (entity instanceof Player && !editorState.replayVisuals.renderPlayers) {
-                    selectedEntity = null;
+                    setSelectedEntity(null);
                 } else if (!(entity instanceof Player) && !editorState.replayVisuals.renderEntities) {
-                    selectedEntity = null;
+                    setSelectedEntity(null);
                 } else {
                     if (openSelectedEntityPopup) {
                         ImGui.openPopup("###EntityPopup");
@@ -831,7 +839,7 @@ public class ReplayUI {
                     }
 
                     if (!ImGui.isPopupOpen("###EntityPopup")) {
-                        selectedEntity = null;
+                        setSelectedEntity(null);
                     }
                 }
             }
@@ -945,7 +953,7 @@ public class ReplayUI {
                 if (Minecraft.getInstance().player == Minecraft.getInstance().getCameraEntity()) {
                     Minecraft.getInstance().player.setDeltaMovement(Vec3.ZERO);
                 }
-                selectedEntity = entityHitResult.getEntity().getUUID();
+                setSelectedEntity(entityHitResult.getEntity().getUUID());
                 openSelectedEntityPopup = true;
             }
             return;
