@@ -22,6 +22,8 @@ import net.minecraft.commands.arguments.EntityAnchorArgument;
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.player.PlayerModelPart;
 import net.minecraft.world.scores.DisplaySlot;
@@ -32,6 +34,7 @@ import net.minecraft.world.scores.Team;
 import org.lwjgl.glfw.GLFW;
 
 import java.nio.file.Path;
+import java.util.EnumSet;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
@@ -214,6 +217,43 @@ public class SelectedEntityPopup {
                 }
             } else {
                 showGlowingDropdown(entity, editorState);
+            }
+
+            if (entity instanceof LivingEntity) {
+                if (ImGui.collapsingHeader("Equipment")) {
+                    EnumSet<EquipmentSlot> hiddenEquipment = editorState.hiddenEquipment.get(entity.getUUID());
+                    if (hiddenEquipment == null) {
+                        hiddenEquipment = EnumSet.noneOf(EquipmentSlot.class);
+                    } else {
+                        hiddenEquipment = hiddenEquipment.clone();
+                    }
+
+                    boolean changed = false;
+
+                    for (EquipmentSlot value : EquipmentSlot.values()) {
+                        if (entity instanceof Player && (value == EquipmentSlot.BODY || value == EquipmentSlot.SADDLE)) {
+                            continue;
+                        }
+
+                        boolean hidden = hiddenEquipment.contains(value);
+                        if (ImGui.checkbox(value.getName(), !hidden)) {
+                            if (hidden) {
+                                hiddenEquipment.remove(value);
+                            } else {
+                                hiddenEquipment.add(value);
+                            }
+                            changed = true;
+                        }
+                    }
+
+                    if (changed) {
+                        if (hiddenEquipment.isEmpty()) {
+                            editorState.hiddenEquipment.remove(entity.getUUID());
+                        } else {
+                            editorState.hiddenEquipment.put(entity.getUUID(), hiddenEquipment);
+                        }
+                    }
+                }
             }
         }
     }

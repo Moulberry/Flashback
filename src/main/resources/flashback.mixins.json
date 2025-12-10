@@ -50,6 +50,7 @@
     "visuals.MixinLevel",
     "visuals.MixinLevelRenderer",
     "visuals.MixinLightTexture",
+    "visuals.MixinLivingEntity",
     "visuals.MixinLoadingOverlay",
     "visuals.MixinMouseHandler",
     "visuals.MixinOptions",
