@@ -22,7 +22,6 @@ import net.minecraft.server.RegistryLayer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ConfigurationTask;
-import net.minecraft.server.network.config.JoinWorldTask;
 import net.minecraft.server.network.config.SynchronizeRegistriesTask;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.tags.TagLoader;
@@ -111,8 +110,6 @@ public class ReplayConfigurationPacketHandler implements ClientConfigurationPack
         if (initialPackets.isEmpty() && configurationTasks.isEmpty()) {
             return;
         }
-
-        configurationTasks.add(new JoinWorldTask());
 
         this.replayServer.updateRegistry(currentFeatureFlags, pendingTags, initialPackets, configurationTasks);
 
