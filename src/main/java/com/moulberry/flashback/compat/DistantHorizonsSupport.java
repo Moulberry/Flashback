@@ -79,10 +79,8 @@ public class DistantHorizonsSupport {
     public static Map<String, File> getDimensionPaths() {
         Map<String, File> paths = new HashMap<>();
 
-        for (IDhLevel level : SharedApi.getIDhClientWorld().getAllLoadedLevels()) {
-            File file = level.getSaveStructure().getSaveFolder(level.getLevelWrapper());
-            String dimensionName = level.getLevelWrapper().getDimensionName();
-            paths.put(dimensionName, file);
+        for (IDhApiLevelWrapper level : DhApi.Delayed.worldProxy.getAllLoadedLevelWrappers()) {
+            paths.put(level.getDimensionName(), level.getDhSaveFolder());
         }
 
         return paths;
