@@ -236,6 +236,7 @@
   "flashback.unset_audio_source": "Unset Audio Source",
   "flashback.set_audio_source": "Set Audio Source",
   "flashback.hide_during_export": "Hide During Export",
+  "flashback.mute_voice": "Mute Voice",
   "flashback.hide_cape": "Hide Cape",
   "flashback.render_nametag": "Render Nametag",
   "flashback.hide_team_prefix": "Hide Team Prefix",

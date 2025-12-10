@@ -92,6 +92,19 @@ public class SelectedEntityPopup {
             editorState.audioSourceEntity = entity.getUUID();
             editorState.markDirty();
         }
+
+        if (FabricLoader.getInstance().isModLoaded("voicechat")) {
+            boolean isMuted = editorState.muteVoice.contains(entity.getUUID());
+            if (ImGui.checkbox(I18n.get("flashback.mute_voice"), isMuted)) {
+                if (isMuted) {
+                    editorState.muteVoice.remove(entity.getUUID());
+                } else {
+                    editorState.muteVoice.add(entity.getUUID());
+                }
+                editorState.markDirty();
+            }
+        }
+
         boolean isHiddenDuringExport = editorState.hideDuringExport.contains(entity.getUUID());
         if (ImGui.checkbox(I18n.get("flashback.hide_during_export"), isHiddenDuringExport)) {
             if (isHiddenDuringExport) {
