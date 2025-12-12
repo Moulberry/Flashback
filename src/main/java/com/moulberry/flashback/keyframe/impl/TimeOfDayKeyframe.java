@@ -14,8 +14,8 @@ import com.moulberry.flashback.keyframe.interpolation.InterpolationType;
 import com.moulberry.flashback.keyframe.types.TimeOfDayKeyframeType;
 import com.moulberry.flashback.spline.CatmullRom;
 import com.moulberry.flashback.spline.Hermite;
-import imgui.flashback.ImGui;
-import imgui.flashback.type.ImInt;
+import imgui.moulberry90.ImGui;
+import imgui.moulberry90.type.ImInt;
 import net.minecraft.client.resources.language.I18n;
 
 import java.lang.reflect.Type;

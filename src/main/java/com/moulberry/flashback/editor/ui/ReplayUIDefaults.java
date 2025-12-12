@@ -1,8 +1,8 @@
 package com.moulberry.flashback.editor.ui;
 
-import imgui.flashback.ImGui;
-import imgui.flashback.ImGuiStyle;
-import imgui.flashback.flag.ImGuiCol;
+import imgui.moulberry90.ImGui;
+import imgui.moulberry90.ImGuiStyle;
+import imgui.moulberry90.flag.ImGuiCol;
 import net.minecraft.client.Minecraft;
 import net.minecraft.util.FastColor;
 import org.lwjgl.glfw.GLFW;
