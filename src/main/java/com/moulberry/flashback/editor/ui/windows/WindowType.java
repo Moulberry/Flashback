@@ -3,7 +3,7 @@ package com.moulberry.flashback.editor.ui.windows;
 import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.configuration.FlashbackConfigV1;
 import com.moulberry.flashback.editor.ui.WindowOpenState;
-import imgui.flashback.type.ImBoolean;
+import imgui.moulberry90.type.ImBoolean;
 
 import java.util.Set;
 

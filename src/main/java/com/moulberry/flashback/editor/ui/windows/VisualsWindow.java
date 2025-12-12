@@ -17,7 +17,7 @@ import com.moulberry.flashback.state.KeyframeTrack;
 import com.moulberry.flashback.visuals.ReplayVisuals;
 import com.moulberry.flashback.combo_options.Sizing;
 import com.moulberry.flashback.editor.ui.ImGuiHelper;
-import imgui.flashback.ImGui;
+import imgui.moulberry90.ImGui;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.resources.language.I18n;
 

@@ -4,11 +4,11 @@ import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.configuration.FlashbackConfigV1;
 import com.moulberry.flashback.editor.ui.ImGuiHelper;
 import com.moulberry.flashback.editor.ui.ReplayUI;
-import imgui.flashback.ImGui;
-import imgui.flashback.ImVec2;
-import imgui.flashback.flag.ImGuiCond;
-import imgui.flashback.flag.ImGuiWindowFlags;
-import imgui.flashback.type.ImString;
+import imgui.moulberry90.ImGui;
+import imgui.moulberry90.ImVec2;
+import imgui.moulberry90.flag.ImGuiCond;
+import imgui.moulberry90.flag.ImGuiWindowFlags;
+import imgui.moulberry90.type.ImString;
 import net.minecraft.client.resources.language.I18n;
 
 public class PreferencesWindow {

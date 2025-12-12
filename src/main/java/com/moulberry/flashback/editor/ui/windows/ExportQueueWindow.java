@@ -5,11 +5,11 @@ import com.moulberry.flashback.editor.ui.ImGuiHelper;
 import com.moulberry.flashback.exporting.ExportJob;
 import com.moulberry.flashback.exporting.ExportJobQueue;
 import com.moulberry.flashback.exporting.ExportSettings;
-import imgui.flashback.ImGui;
-import imgui.flashback.flag.ImGuiCol;
-import imgui.flashback.flag.ImGuiTableColumnFlags;
-import imgui.flashback.flag.ImGuiTableFlags;
-import imgui.flashback.flag.ImGuiWindowFlags;
+import imgui.moulberry90.ImGui;
+import imgui.moulberry90.flag.ImGuiCol;
+import imgui.moulberry90.flag.ImGuiTableColumnFlags;
+import imgui.moulberry90.flag.ImGuiTableFlags;
+import imgui.moulberry90.flag.ImGuiWindowFlags;
 import net.minecraft.client.resources.language.I18n;
 
 public class ExportQueueWindow {
