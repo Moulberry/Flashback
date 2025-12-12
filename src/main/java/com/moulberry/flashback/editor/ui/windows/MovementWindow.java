@@ -4,11 +4,11 @@ import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.combo_options.MovementDirection;
 import com.moulberry.flashback.configuration.FlashbackConfigV1;
 import com.moulberry.flashback.editor.ui.ImGuiHelper;
-import imgui.flashback.ImGui;
-import imgui.flashback.ImGuiViewport;
-import imgui.flashback.flag.ImGuiCond;
-import imgui.flashback.flag.ImGuiWindowFlags;
-import imgui.flashback.type.ImBoolean;
+import imgui.moulberry90.ImGui;
+import imgui.moulberry90.ImGuiViewport;
+import imgui.moulberry90.flag.ImGuiCond;
+import imgui.moulberry90.flag.ImGuiWindowFlags;
+import imgui.moulberry90.type.ImBoolean;
 import net.minecraft.client.resources.language.I18n;
 
 public class MovementWindow {
