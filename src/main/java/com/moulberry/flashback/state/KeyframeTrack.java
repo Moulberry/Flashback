@@ -12,7 +12,7 @@ import com.moulberry.flashback.keyframe.interpolation.InterpolationType;
 import com.moulberry.flashback.keyframe.interpolation.SidedInterpolationType;
 import com.moulberry.flashback.keyframe.types.AudioKeyframeType;
 import com.moulberry.flashback.keyframe.types.TimelapseKeyframeType;
-import imgui.flashback.type.ImString;
+import imgui.moulberry90.type.ImString;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.HashMap;

@@ -1,6 +1,6 @@
 package com.moulberry.flashback.editor.ui.windows;
 
-import imgui.flashback.type.ImBoolean;
+import imgui.moulberry90.type.ImBoolean;
 
 @FunctionalInterface
 public interface ImGuiWindowRenderer {

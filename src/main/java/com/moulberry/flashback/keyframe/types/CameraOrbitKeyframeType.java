@@ -9,8 +9,8 @@ import com.moulberry.flashback.keyframe.change.KeyframeChangeCameraPositionOrbit
 import com.moulberry.flashback.keyframe.handler.KeyframeHandler;
 import com.moulberry.flashback.keyframe.impl.CameraKeyframe;
 import com.moulberry.flashback.keyframe.impl.CameraOrbitKeyframe;
-import imgui.flashback.ImGui;
-import imgui.flashback.type.ImFloat;
+import imgui.moulberry90.ImGui;
+import imgui.moulberry90.type.ImFloat;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.resources.language.I18n;
