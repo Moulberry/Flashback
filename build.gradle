@@ -63,8 +63,10 @@ dependencies {
         }
     }
 
-    // Commons math
-    shadow(implementation("org.apache.commons:commons-math3:3.6.1"))
+    // Apache stuff
+    include(implementation("org.apache.commons:commons-math3:3.6.1"))
+    include(implementation("org.apache.httpcomponents:httpclient:4.5.14"))
+    include(implementation("org.apache.httpcomponents:httpcore:4.4.16"))
 
     // Mod compatibility
     modCompileOnly("maven.modrinth:distanthorizons:Mt9bDAs6")
