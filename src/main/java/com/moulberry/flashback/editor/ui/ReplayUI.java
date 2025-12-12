@@ -21,10 +21,10 @@ import com.moulberry.flashback.editor.ui.windows.MainMenuBar;
 import com.moulberry.flashback.editor.ui.windows.StartExportWindow;
 import com.moulberry.flashback.editor.ui.windows.TimelineWindow;
 import com.moulberry.flashback.editor.ui.windows.VisualsWindow;
-import imgui.flashback.*;
-import imgui.flashback.flag.*;
-import imgui.flashback.internal.ImGuiContext;
-import imgui.flashback.type.ImInt;
+import imgui.moulberry90.*;
+import imgui.moulberry90.flag.*;
+import imgui.moulberry90.internal.ImGuiContext;
+import imgui.moulberry90.type.ImInt;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntList;
 import net.fabricmc.loader.api.FabricLoader;
@@ -660,7 +660,7 @@ public class ReplayUI {
         // Setup docking
         ImGui.setNextWindowBgAlpha(0);
         int mainDock = ImGui.dockSpaceOverViewport(0, ImGui.getMainViewport(), ImGuiDockNodeFlags.NoDockingInCentralNode);
-        imgui.flashback.internal.ImGui.dockBuilderGetCentralNode(mainDock).addLocalFlags(imgui.flashback.internal.flag.ImGuiDockNodeFlags.NoTabBar);
+        imgui.moulberry90.internal.ImGui.dockBuilderGetCentralNode(mainDock).addLocalFlags(imgui.moulberry90.internal.flag.ImGuiDockNodeFlags.NoTabBar);
 
         isFrameFocused = false;
         isFrameHovered = false;

@@ -21,7 +21,7 @@ import com.moulberry.flashback.spline.CatmullRom;
 import com.moulberry.flashback.spline.Hermite;
 import com.moulberry.flashback.state.EditorState;
 import com.moulberry.flashback.state.EditorStateManager;
-import imgui.flashback.ImGui;
+import imgui.moulberry90.ImGui;
 import net.minecraft.client.resources.language.I18n;
 
 import java.lang.reflect.Type;

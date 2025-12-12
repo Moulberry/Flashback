@@ -8,8 +8,8 @@ import com.moulberry.flashback.keyframe.change.KeyframeChangeCameraPosition;
 import com.moulberry.flashback.keyframe.change.KeyframeChangeTickrate;
 import com.moulberry.flashback.keyframe.handler.KeyframeHandler;
 import com.moulberry.flashback.keyframe.impl.TimelapseKeyframe;
-import imgui.flashback.ImGui;
-import imgui.flashback.type.ImString;
+import imgui.moulberry90.ImGui;
+import imgui.moulberry90.type.ImString;
 import net.minecraft.client.resources.language.I18n;
 import org.jetbrains.annotations.Nullable;
 

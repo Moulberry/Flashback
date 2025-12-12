@@ -6,8 +6,8 @@ import com.moulberry.flashback.keyframe.change.KeyframeChange;
 import com.moulberry.flashback.keyframe.change.KeyframeChangeFreeze;
 import com.moulberry.flashback.keyframe.impl.BlockOverrideKeyframe;
 import com.moulberry.flashback.keyframe.impl.FreezeKeyframe;
-import imgui.flashback.ImGui;
-import imgui.flashback.type.ImBoolean;
+import imgui.moulberry90.ImGui;
+import imgui.moulberry90.type.ImBoolean;
 import net.minecraft.client.resources.language.I18n;
 import org.jetbrains.annotations.Nullable;
 

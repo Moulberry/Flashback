@@ -14,8 +14,8 @@ import com.moulberry.flashback.keyframe.KeyframeType;
 import com.moulberry.flashback.keyframe.change.KeyframeChange;
 import com.moulberry.flashback.keyframe.interpolation.InterpolationType;
 import com.moulberry.flashback.keyframe.types.TimelapseKeyframeType;
-import imgui.flashback.ImGui;
-import imgui.flashback.type.ImString;
+import imgui.moulberry90.ImGui;
+import imgui.moulberry90.type.ImString;
 import net.minecraft.client.resources.language.I18n;
 
 import java.lang.reflect.Type;
