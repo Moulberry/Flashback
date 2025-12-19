@@ -290,8 +290,8 @@ public abstract class MixinMinecraft extends ReentrantBlockableEventLoop<Runnabl
         }
     }
 
-    @Inject(method = "disconnect(Lnet/minecraft/client/gui/screens/Screen;Z)V", at = @At("HEAD"))
-    public void disconnectHead(Screen screen, boolean isTransferring, CallbackInfo ci) {
+    @Inject(method = "disconnect(Lnet/minecraft/client/gui/screens/Screen;ZZ)V", at = @At("HEAD"))
+    public void disconnectHead(Screen screen, boolean isTransferring, boolean stopSounds, CallbackInfo ci) {
         try {
             if (Flashback.getConfig().recordingControls.automaticallyFinish && Flashback.RECORDER != null && !isTransferring) {
                 Flashback.finishRecordingReplay();
@@ -301,8 +301,8 @@ public abstract class MixinMinecraft extends ReentrantBlockableEventLoop<Runnabl
         }
     }
 
-    @Inject(method = "disconnect(Lnet/minecraft/client/gui/screens/Screen;Z)V", at = @At("RETURN"))
-    public void disconnectReturn(Screen screen, boolean bl, CallbackInfo ci) {
+    @Inject(method = "disconnect(Lnet/minecraft/client/gui/screens/Screen;ZZ)V", at = @At("RETURN"))
+    public void disconnectReturn(Screen screen, boolean bl, boolean bl2, CallbackInfo ci) {
         Flashback.updateIsInReplay();
     }
 
