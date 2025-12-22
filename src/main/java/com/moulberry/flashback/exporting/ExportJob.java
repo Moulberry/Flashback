@@ -509,6 +509,9 @@ public class ExportJob {
         minecraft.packetProcessor().processQueuedPackets();
         while (minecraft.pollTask()) {}
         this.updateClientFreeze(frozen);
+        if (!frozen) {
+            minecraft.getTextureManager().tick();
+        }
         minecraft.tick();
         this.updateSoundSource(minecraft);
 
