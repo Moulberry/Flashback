@@ -241,7 +241,7 @@ public class SelectedEntityPopup {
                     boolean changed = false;
 
                     for (EquipmentSlot value : EquipmentSlot.values()) {
-                        if (entity instanceof Player && (value == EquipmentSlot.BODY || value == EquipmentSlot.SADDLE)) {
+                        if (entity instanceof Player && value == EquipmentSlot.BODY) {
                             continue;
                         }
 
