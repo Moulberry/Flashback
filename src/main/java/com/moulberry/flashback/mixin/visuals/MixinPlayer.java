@@ -10,9 +10,11 @@ import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.player.PlayerModelPart;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.scores.PlayerTeam;
 import net.minecraft.world.scores.Team;
@@ -71,5 +73,21 @@ public abstract class MixinPlayer extends LivingEntity {
         return original.call(team, component);
     }
 
+    // This isn't ideal. Ideally we'd only do this during rendering, but unfortunately
+    // there isn't a specific method to override when rendering. I also don't want to have
+    // to manually wrap every getItemBySlot call inside the model rendering code, so here we are
+
+    @Inject(method = "getItemBySlot", at = @At("HEAD"), cancellable = true)
+    public void getItemBySlot(EquipmentSlot equipmentSlot, CallbackInfoReturnable<ItemStack> cir) {
+        if (this.level().isClientSide()) {
+            EditorState editorState = EditorStateManager.getCurrent();
+            if (editorState != null) {
+                var hidden = editorState.hiddenEquipment.get(this.uuid);
+                if (hidden != null && hidden.contains(equipmentSlot)) {
+                    cir.setReturnValue(ItemStack.EMPTY);
+                }
+            }
+        }
+    }
 
 }
