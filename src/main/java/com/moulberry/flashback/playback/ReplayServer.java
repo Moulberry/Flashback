@@ -222,7 +222,8 @@ public class ReplayServer extends IntegratedServer {
 
     public void updateRegistry(FeatureFlagSet featureFlagSet, List<Registry.PendingTags<?>> pendingTags,
                                List<Packet<? super ClientConfigurationPacketListener>> initialPackets,
-                               List<ConfigurationTask> configurationTasks) {
+                               List<ConfigurationTask> configurationTasks,
+                               @Nullable Set<String> knownPackIds) {
         if (this.worldData instanceof PrimaryLevelData primaryLevelData) {
             primaryLevelData.settings = new LevelSettings(
                 primaryLevelData.settings.levelName(),
@@ -244,7 +245,7 @@ public class ReplayServer extends IntegratedServer {
         }
 
         overridePendingTags = pendingTags;
-        this.reloadResources(Set.of());
+        this.reloadResources(knownPackIds != null ? knownPackIds : this.getPackRepository().getSelectedIds());
 
         this.gamePacketCodec = GameProtocols.CLIENTBOUND_TEMPLATE.bind(RegistryFriendlyByteBuf.decorator(this.registryAccess())).codec();
 
