@@ -223,13 +223,13 @@ public class ReplayServer extends IntegratedServer {
         return this.metadata;
     }
 
-    public void updateRegistry(FeatureFlagSet featureFlagSet, Collection<String> selectedPacks, List<Packet<? super ClientConfigurationPacketListener>> initialPackets,
-            List<ConfigurationTask> configurationTasks) {
+    public void updateRegistry(FeatureFlagSet featureFlagSet, List<Packet<? super ClientConfigurationPacketListener>> initialPackets,
+            List<ConfigurationTask> configurationTasks, @Nullable Collection<String> knownPackIds) {
         this.worldData.setDataConfiguration(new WorldDataConfiguration(
             this.worldData.getDataConfiguration().dataPacks(),
             featureFlagSet
         ));
-        this.reloadResources(selectedPacks);
+        this.reloadResources(knownPackIds != null ? knownPackIds : this.getPackRepository().getSelectedIds());
 
         this.gamePacketCodec = GameProtocols.CLIENTBOUND_TEMPLATE.bind(RegistryFriendlyByteBuf.decorator(this.registryAccess())).codec();
 
