@@ -12,10 +12,11 @@ import net.minecraft.client.renderer.entity.player.PlayerRenderer;
 import net.minecraft.world.scores.DisplaySlot;
 import net.minecraft.world.scores.Objective;
 import net.minecraft.world.scores.Scoreboard;
-import net.minecraft.client.renderer.entity.state.PlayerRenderState;
 import net.minecraft.world.entity.player.PlayerModelPart;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.EnumSet;
 
@@ -32,9 +33,9 @@ public class MixinPlayerRenderer {
     }
 
 
-    @Inject(method = "extractRenderState(Lnet/minecraft/client/player/AbstractClientPlayer;Lnet/minecraft/client/renderer/entity/state/PlayerRenderState;F)V", at = @At("HEAD"))
-    public void extractRenderStateHead(AbstractClientPlayer player, PlayerRenderState playerRenderState, float f, CallbackInfo ci,
-        @Share(value = "hiddenModelParts", namespace = "flashback") LocalRef<EnumSet<PlayerModelPart>> hiddenPartsRef) {
+    @Inject(method = "setModelProperties", at = @At("HEAD"))
+    public void setModelPropertiesHead(AbstractClientPlayer player, CallbackInfo ci,
+            @Share(value = "hiddenModelParts", namespace = "flashback") LocalRef<EnumSet<PlayerModelPart>> hiddenPartsRef) {
         EnumSet<PlayerModelPart> hiddenParts = null;
 
         EditorState editorState = EditorStateManager.getCurrent();
@@ -45,9 +46,9 @@ public class MixinPlayerRenderer {
         hiddenPartsRef.set(hiddenParts);
     }
 
-    @WrapOperation(method = "extractRenderState(Lnet/minecraft/client/player/AbstractClientPlayer;Lnet/minecraft/client/renderer/entity/state/PlayerRenderState;F)V", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/player/AbstractClientPlayer;isModelPartShown(Lnet/minecraft/world/entity/player/PlayerModelPart;)Z"))
-    public boolean extractRenderState_isModelPartShown(AbstractClientPlayer instance, PlayerModelPart playerModelPart, Operation<Boolean> original,
-        @Share(value = "hiddenModelParts", namespace = "flashback") LocalRef<EnumSet<PlayerModelPart>> hiddenPartsRef) {
+    @WrapOperation(method = "setModelProperties", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/player/AbstractClientPlayer;isModelPartShown(Lnet/minecraft/world/entity/player/PlayerModelPart;)Z"))
+    public boolean setModelProperties_isModelPartShown(AbstractClientPlayer instance, PlayerModelPart playerModelPart, Operation<Boolean> original,
+            @Share(value = "hiddenModelParts", namespace = "flashback") LocalRef<EnumSet<PlayerModelPart>> hiddenPartsRef) {
         var hiddenParts = hiddenPartsRef.get();
         return hiddenParts == null ? original.call(instance, playerModelPart) : !hiddenParts.contains(playerModelPart);
     }
