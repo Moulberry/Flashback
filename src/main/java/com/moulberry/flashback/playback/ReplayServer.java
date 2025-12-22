@@ -376,6 +376,9 @@ public class ReplayServer extends IntegratedServer {
                     }
                 }
 
+                // Tick resource packs to prevent race condition with pack being loaded in between now and tick
+                ReplayServer.this.tickResourcePacks(editorState);
+
                 // Send tab list customization
                 serverPlayer.connection.send(new ClientboundTabListPacket(tabListHeader, tabListFooter));
 
@@ -1003,7 +1006,19 @@ public class ReplayServer extends IntegratedServer {
             }
         }
 
-        // Update resourcepacks
+        tickResourcePacks(editorState);
+
+        if (this.sendFinishedServerTick.compareAndExchange(true, false)) {
+            for (ReplayPlayer replayViewer : this.replayViewers) {
+                ServerPlayNetworking.send(replayViewer, FinishedServerTick.INSTANCE);
+            }
+            if (this.replayViewers.isEmpty() && Flashback.EXPORT_JOB != null) {
+                Flashback.EXPORT_JOB.onFinishedServerTick();
+            }
+        }
+    }
+
+    private void tickResourcePacks(EditorState editorState) {
         if (this.remotePacks.isEmpty() || editorState.replayVisuals.disableServerResourcePack) {
             if (!this.oldRemotePacks.isEmpty()) {
                 this.oldRemotePacks.clear();
@@ -1033,15 +1048,6 @@ public class ReplayServer extends IntegratedServer {
             });
         }
         this.hasServerResourcePack = !this.remotePacks.isEmpty();
-
-        if (this.sendFinishedServerTick.compareAndExchange(true, false)) {
-            for (ReplayPlayer replayViewer : this.replayViewers) {
-                ServerPlayNetworking.send(replayViewer, FinishedServerTick.INSTANCE);
-            }
-            if (this.replayViewers.isEmpty() && Flashback.EXPORT_JOB != null) {
-                Flashback.EXPORT_JOB.onFinishedServerTick();
-            }
-        }
     }
 
     private void runUpdates(BooleanSupplier booleanSupplier) {
