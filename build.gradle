@@ -51,7 +51,7 @@ dependencies {
     modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
 
     // Login in dev environment
-    // modRuntimeOnly("me.djtheredstoner:DevAuth-fabric:1.1.2")
+    modRuntimeOnly("me.djtheredstoner:DevAuth-fabric:1.1.2")
 
     // MixinConstraints
     include(implementation("com.moulberry:mixinconstraints:1.0.8"))
