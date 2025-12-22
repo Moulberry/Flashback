@@ -46,8 +46,7 @@ public class MixinFogRenderer {
 
 
     @Inject(method = "setupFog", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/fog/FogRenderer;updateBuffer(Ljava/nio/ByteBuffer;ILorg/joml/Vector4f;FFFFFF)V"))
-    public void setupFog_updateBufferInject(Camera camera, int i, DeltaTracker deltaTracker, float f, ClientLevel clientLevel, CallbackInfoReturnable<Vector4f> cir,
-        @Local FogData fogData, @Local Vector4f fogColour) {
+    public void setupFog_updateBufferInject(CallbackInfoReturnable<Vector4f> cir, @Local FogData fogData, @Local Vector4f fogColour) {
         EditorState editorState = EditorStateManager.getCurrent();
         if (editorState != null) {
             ReplayVisuals visuals = editorState.replayVisuals;
