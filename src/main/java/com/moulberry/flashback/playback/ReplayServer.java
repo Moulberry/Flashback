@@ -224,7 +224,7 @@ public class ReplayServer extends IntegratedServer {
     public void updateRegistry(FeatureFlagSet featureFlagSet, List<Registry.PendingTags<?>> pendingTags,
                                List<Packet<? super ClientConfigurationPacketListener>> initialPackets,
                                List<ConfigurationTask> configurationTasks,
-                               @Nullable Set<String> knownPackIds) {
+                               @Nullable Collection<String> knownPackIds) {
         if (this.worldData instanceof PrimaryLevelData primaryLevelData) {
             primaryLevelData.settings = new LevelSettings(
                 primaryLevelData.settings.levelName(),
