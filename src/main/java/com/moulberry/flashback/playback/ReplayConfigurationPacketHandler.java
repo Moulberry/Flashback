@@ -52,7 +52,8 @@ public class ReplayConfigurationPacketHandler implements ClientConfigurationPack
     private Map<ResourceKey<? extends Registry<?>>, List<RegistrySynchronization.PackedRegistryEntry>> pendingRegistryMap = null;
     private Map<ResourceKey<? extends Registry<?>>, TagNetworkSerialization.NetworkPayload> pendingTags = null;
     private PackRepository packRepository = null;
-    private Set<String> knownPackIds = null;
+    private List<KnownPack> knownPacks = null;
+    private List<String> knownPackIds = null;
     private FeatureFlagSet pendingFeatureFlags = null;
     private boolean pendingResetChat = false;
     private boolean dirty = false;
@@ -111,7 +112,7 @@ public class ReplayConfigurationPacketHandler implements ClientConfigurationPack
         }
 
         if (synchronizeRegistries) {
-            configurationTasks.add(new SynchronizeRegistriesTask(List.of(), this.replayServer.registries));
+            configurationTasks.add(new SynchronizeRegistriesTask(this.knownPacks != null ? this.knownPacks : List.of(), this.replayServer.registries));
         } else if (sendTags) {
             this.replayServer.getPlayerList().broadcastAll(new ClientboundUpdateTagsPacket(TagNetworkSerialization.serializeTagsToNetwork(this.replayServer.registries)));
         }
@@ -267,11 +268,13 @@ public class ReplayConfigurationPacketHandler implements ClientConfigurationPack
             location.knownPackInfo().ifPresent(knownPack -> packToId.put(knownPack, location.id()));
         });
 
-        this.knownPackIds = new LinkedHashSet<>();
+        this.knownPacks = new ArrayList<>();
+        this.knownPackIds = new ArrayList<>();
 
         for (KnownPack knownPack : clientboundSelectKnownPacks.knownPacks()) {
             String id = packToId.get(knownPack);
             if (id != null) {
+                this.knownPacks.add(knownPack);
                 this.knownPackIds.add(id);
             }
         }
