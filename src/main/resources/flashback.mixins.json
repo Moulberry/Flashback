@@ -93,6 +93,7 @@
     "playback.MixinServerTickRateManager",
     "playback.MixinTickRateManager",
     "playback.lenient_registry.MixinHolderSetCodec",
+    "playback.lenient_registry.MixinMappedRegistry",
     "playback.lenient_registry.MixinRegistry",
     "playback.lenient_registry.MixinRegistryFileCodec",
     "playback.lenient_registry.MixinRegistryFixedCodec",

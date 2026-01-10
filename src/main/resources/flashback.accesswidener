@@ -65,6 +65,7 @@ accessible field net/minecraft/core/LayeredRegistryAccess composite Lnet/minecra
 mutable field net/minecraft/core/LayeredRegistryAccess composite Lnet/minecraft/core/RegistryAccess$Frozen;
 accessible field net/minecraft/core/RegistryAccess$ImmutableRegistryAccess registries Ljava/util/Map;
 mutable field net/minecraft/core/RegistryAccess$ImmutableRegistryAccess registries Ljava/util/Map;
+accessible method net/minecraft/core/HolderSet$Named bind (Ljava/util/List;)V
 
 accessible field net/minecraft/server/network/ServerCommonPacketListenerImpl connection Lnet/minecraft/network/Connection;
 
