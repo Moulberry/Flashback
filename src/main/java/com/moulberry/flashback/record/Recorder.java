@@ -879,23 +879,10 @@ public class Recorder {
 
         // Tags
         Map<ResourceKey<? extends Registry<?>>, TagNetworkSerialization.NetworkPayload> serializedTags = new HashMap<>();
-        RegistryLayer.createRegistryAccess().compositeAccess().registries().forEach(entry -> {
-            if (entry.value().size() > 0) {
-                var tags = TagNetworkSerialization.serializeToNetwork(entry.value());
-                if (!tags.isEmpty()) {
-                    serializedTags.put(entry.key(), tags);
-                }
-            }
-        });
         localPlayer.registryAccess().registries().forEach(entry -> {
-            if (serializedTags.containsKey(entry.key())) {
-                return;
-            }
-            if (RegistrySynchronization.isNetworkable(entry.key()) && entry.value().size() > 0) {
+            if (RegistrySynchronization.isNetworkable(entry.key())) {
                 var tags = TagNetworkSerialization.serializeToNetwork(entry.value());
-                if (!tags.isEmpty()) {
-                    serializedTags.put(entry.key(), tags);
-                }
+                serializedTags.put(entry.key(), tags);
             }
         });
 
