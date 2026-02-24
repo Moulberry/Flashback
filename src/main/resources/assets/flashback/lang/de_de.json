@@ -291,7 +291,7 @@
   "flashback.visuals.world.render_sky": "Himmel rendern",
   "flashback.visuals.world.sky_colour": "Himmelsfarbe",
   "flashback.visuals.world.render_nametags": "Namensschilder rendern",
-  "flashback.visuals.world.render_beacon_beams": "Leuchtfeuer rendern",
+  "flashback.visuals.world.render_beacon_beams": "Leuchtfeuerstrahlen rendern",
   "flashback.visuals.overrides": "Überschreibungen",
   "flashback.visuals.overrides.override_fog": "Nebel überschreiben",
   "flashback.fog_start": "Start",
@@ -441,4 +441,5 @@
   "flashback.recording_controls_location.left": "Links",
   "flashback.recording_controls_location.hidden": "Ausgeblendet",
   "flashback.disable_server_resource_packs": "Server-Ressourcenpakete deaktivieren"
+
 }
