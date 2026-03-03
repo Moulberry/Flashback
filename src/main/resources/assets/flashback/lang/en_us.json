@@ -40,6 +40,8 @@
   "flashback.option.recording.local_player_updates_per_second.description": "The update rate per second for the position/angle of the first-person player. If you are planning to export your own first-person perspective, you should increase this to the framerate you want to export at",
   "flashback.option.recording.record_voice_chat": "Record Voice Chat",
   "flashback.option.recording.record_voice_chat.description": "Adds voice chat from SimpleVoiceChat into the replay",
+  "flashback.option.recording.record_bobby_chunks": "Record Bobby Chunks",
+  "flashback.option.recording.record_bobby_chunks.description": "Records visible Bobby chunks directly into the replay",
 
   "flashback.option.exporting": "Exporting",
   "flashback.export_filename": "Export Filename",
