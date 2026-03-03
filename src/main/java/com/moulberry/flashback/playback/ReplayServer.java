@@ -780,11 +780,6 @@ public class ReplayServer extends IntegratedServer {
         }
     }
 
-    @Override
-    public boolean haveTime() {
-        return super.haveTime() && this.jumpToTick < 0;
-    }
-
     public EditorState getEditorState() {
         if (Flashback.isExporting()) {
             return Flashback.EXPORT_JOB.getSettings().editorState();
