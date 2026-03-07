@@ -2,6 +2,7 @@ package com.moulberry.flashback.keyframe;
 
 import com.moulberry.flashback.keyframe.change.KeyframeChange;
 import com.moulberry.flashback.keyframe.handler.KeyframeHandler;
+import com.moulberry.flashback.state.RealTimeMapping;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.TreeMap;
@@ -43,7 +44,7 @@ public interface KeyframeType<T extends Keyframe> {
     default boolean hasCustomKeyframeChangeCalculation() {
         return false;
     }
-    default KeyframeChange customKeyframeChange(TreeMap<Integer, Keyframe> keyframes, float tick) {
+    default KeyframeChange customKeyframeChange(TreeMap<Integer, Keyframe> keyframes, float tick, @Nullable RealTimeMapping realTimeMapping) {
         throw new UnsupportedOperationException();
     }
 

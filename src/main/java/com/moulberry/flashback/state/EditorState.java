@@ -201,6 +201,9 @@ public class EditorState {
 
         updateRealtimeMappingsIfNeeded();
 
+        FlashbackConfigV1 config = Flashback.getConfig();
+        RealTimeMapping interpolationMapping = config.keyframes.useRealtimeInterpolation ? this.realTimeMapping : null;
+
         long stamp = this.sceneLock.readLock();
         try {
             for (KeyframeTrack keyframeTrack : this.currentScene().keyframeTracks) {
@@ -222,7 +225,7 @@ public class EditorState {
 
                 // Try to apply keyframes, mark applied if successful
 
-                KeyframeChange change = keyframeTrack.createKeyframeChange(tick, this.realTimeMapping);
+                KeyframeChange change = keyframeTrack.createKeyframeChange(tick, interpolationMapping, this.realTimeMapping);
                 if (change == null) {
                     if (keyframeHandler.alwaysApplyLastKeyframe() && !keyframeTrack.keyframeType.neverApplyLastKeyframe() && !keyframeTrack.keyframesByTick.isEmpty()) {
                         if (keyframeTrack.keyframesByTick.lastKey() <= tick) {
@@ -247,7 +250,7 @@ public class EditorState {
             if (keyframeHandler.alwaysApplyLastKeyframe() && !maybeApplyLastTick.isEmpty()) {
                 for (Map.Entry<Class<? extends KeyframeChange>, KeyframeTrack> entry : maybeApplyLastTick.entrySet()) {
                     KeyframeTrack keyframeTrack = entry.getValue();
-                    KeyframeChange change = keyframeTrack.createKeyframeChange(keyframeTrack.keyframesByTick.lastKey(), this.realTimeMapping);
+                    KeyframeChange change = keyframeTrack.createKeyframeChange(keyframeTrack.keyframesByTick.lastKey(), interpolationMapping, this.realTimeMapping);
 
                     if (change == null) {
                         continue;
@@ -268,14 +271,7 @@ public class EditorState {
     private void updateRealtimeMappingsIfNeeded() {
         long stamp = this.sceneLock.readLock();
         try {
-            FlashbackConfigV1 config = Flashback.getConfig();
-            if (!config.keyframes.useRealtimeInterpolation) {
-                this.sceneLock.unlock(stamp);
-                stamp = this.sceneLock.writeLock();
-
-                this.lastRealTimeMappingModCount = this.modCount;
-                this.realTimeMapping = null;
-            } else if (this.realTimeMapping == null || this.lastRealTimeMappingModCount != this.modCount) {
+            if (this.realTimeMapping == null || this.lastRealTimeMappingModCount != this.modCount) {
                 this.sceneLock.unlock(stamp);
                 stamp = this.sceneLock.writeLock();
 

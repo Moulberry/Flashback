@@ -37,8 +37,13 @@ public class KeyframeTrack {
 
     @Nullable
     public KeyframeChange createKeyframeChange(float tick, @Nullable RealTimeMapping realTimeMapping) {
+        return createKeyframeChange(tick, realTimeMapping, realTimeMapping);
+    }
+
+    @Nullable
+    public KeyframeChange createKeyframeChange(float tick, @Nullable RealTimeMapping realTimeMapping, @Nullable RealTimeMapping customRealTimeMapping) {
         if (this.keyframeType.hasCustomKeyframeChangeCalculation()) {
-            return this.keyframeType.customKeyframeChange(this.keyframesByTick, tick);
+            return this.keyframeType.customKeyframeChange(this.keyframesByTick, tick, customRealTimeMapping);
         }
         if (this.keyframeType == TimelapseKeyframeType.INSTANCE) {
             return this.tryApplyKeyframesTimelapse(tick);

@@ -8,6 +8,7 @@ import com.moulberry.flashback.keyframe.change.KeyframeChangePlayAudio;
 import com.moulberry.flashback.keyframe.handler.KeyframeHandler;
 import com.moulberry.flashback.keyframe.handler.MinecraftKeyframeHandler;
 import com.moulberry.flashback.keyframe.impl.AudioKeyframe;
+import com.moulberry.flashback.state.RealTimeMapping;
 import imgui.moulberry90.ImGui;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.resources.language.I18n;
@@ -71,16 +72,21 @@ public class AudioKeyframeType implements KeyframeType<AudioKeyframe> {
     }
 
     @Override
-    public KeyframeChange customKeyframeChange(TreeMap<Integer, Keyframe> keyframes, float tick) {
+    public KeyframeChange customKeyframeChange(TreeMap<Integer, Keyframe> keyframes, float tick, @Nullable RealTimeMapping realTimeMapping) {
         Map.Entry<Integer, Keyframe> entry = keyframes.floorEntry((int) tick);
         if (entry == null) {
             return null;
         }
 
-        float delta = tick - entry.getKey();
+        float seconds;
+        if (realTimeMapping != null) {
+            seconds = (realTimeMapping.getRealTime(tick) - realTimeMapping.getRealTime(entry.getKey())) / 20.0f;
+        } else {
+            seconds = (tick - entry.getKey()) / 20.0f;
+        }
 
         AudioKeyframe audioKeyframe = (AudioKeyframe) entry.getValue();
-        return audioKeyframe.createAudioChange(entry.getKey(), delta / 20.0f);
+        return audioKeyframe.createAudioChange(entry.getKey(), seconds);
     }
 
     @Override
