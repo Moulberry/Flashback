@@ -145,6 +145,11 @@ public class EditorState {
         return dummyCamera;
     }
 
+    public @Nullable RealTimeMapping getRealTimeMapping() {
+        updateRealtimeMappingsIfNeeded();
+        return this.realTimeMapping;
+    }
+
     public void markDirty() {
         this.dirty = true;
         this.modCount += 1;
@@ -328,9 +333,10 @@ public class EditorState {
             return;
         }
 
-        float lastSpeed = Float.NaN;
+        float lastSpeed = 1.0f;
 
         for (int tick = start; tick <= end; tick++) {
+            boolean foundTickrate = false;
             for (KeyframeTrack keyframeTrack : applicableTracks) {
                 KeyframeChange change = keyframeTrack.createKeyframeChange(tick, this.realTimeMapping);
                 if (!(change instanceof KeyframeChangeTickrate changeTickrate)) {
@@ -342,7 +348,12 @@ public class EditorState {
                     lastSpeed = newSpeed;
                     this.realTimeMapping.addMapping(tick, newSpeed);
                 }
+                foundTickrate = true;
                 break;
+            }
+            if (!foundTickrate && lastSpeed != 1.0f) {
+                lastSpeed = 1.0f;
+                this.realTimeMapping.addMapping(tick, 1.0f);
             }
         }
 

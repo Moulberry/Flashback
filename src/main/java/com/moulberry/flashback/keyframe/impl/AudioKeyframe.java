@@ -9,6 +9,9 @@ import com.moulberry.flashback.keyframe.interpolation.InterpolationType;
 import com.moulberry.flashback.keyframe.types.AudioKeyframeType;
 import com.moulberry.flashback.sound.FlashbackAudioBuffer;
 import com.moulberry.flashback.sound.FlashbackAudioManager;
+import com.moulberry.flashback.state.EditorState;
+import com.moulberry.flashback.state.EditorStateManager;
+import com.moulberry.flashback.state.RealTimeMapping;
 import imgui.moulberry90.ImDrawList;
 import org.jetbrains.annotations.Nullable;
 
@@ -102,6 +105,18 @@ public class AudioKeyframe extends Keyframe {
         }
 
         float durationInTicks = this.audioBuffer.durationInSeconds() * 20.0f;
+
+        // Adjust duration to account for tickrate changes (timelapse)
+        EditorState editorState = EditorStateManager.getCurrent();
+        if (editorState != null) {
+            RealTimeMapping mapping = editorState.getRealTimeMapping();
+            if (mapping != null) {
+                float startRealTime = mapping.getRealTime(tick);
+                float endRealTime = startRealTime + this.audioBuffer.durationInSeconds() * 20.0f;
+                durationInTicks = mapping.getTickForRealTime(endRealTime) - tick;
+            }
+        }
+
         int waveformLength = (int)(durationInTicks / timelineScale);
         int drawLength = waveformLength;
 
