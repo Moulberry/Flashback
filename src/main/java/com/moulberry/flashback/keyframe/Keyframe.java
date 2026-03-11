@@ -36,10 +36,6 @@ public abstract class Keyframe {
         return this.getCustomWidthInTicks(null, 0);
     }
 
-    public float getCustomWidthInTicks(int tick) {
-        return this.getCustomWidthInTicks(null, tick);
-    }
-
     public float getCustomWidthInTicks(@Nullable RealTimeMapping realTimeMapping, int tick) {
         return -1;
     }

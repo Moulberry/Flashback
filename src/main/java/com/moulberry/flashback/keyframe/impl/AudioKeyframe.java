@@ -95,6 +95,7 @@ public class AudioKeyframe extends Keyframe {
         float endRealTime = startRealTime + durationInTicks;
         return mapping.getTickForRealTime(endRealTime) - tick;
     }
+
     @Override
     public float getCustomWidthInTicks(@Nullable RealTimeMapping mapping, int tick) {
         return this.getDurationInTicks(mapping, tick);
