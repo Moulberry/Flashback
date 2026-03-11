@@ -4,6 +4,7 @@ import com.google.gson.*;
 import com.moulberry.flashback.keyframe.change.KeyframeChange;
 import com.moulberry.flashback.keyframe.impl.*;
 import com.moulberry.flashback.keyframe.interpolation.InterpolationType;
+import com.moulberry.flashback.state.RealTimeMapping;
 import imgui.moulberry90.ImDrawList;
 import org.jetbrains.annotations.Nullable;
 
@@ -32,10 +33,14 @@ public abstract class Keyframe {
     public abstract @Nullable KeyframeChange createHermiteInterpolatedChange(Map<Float, Keyframe> keyframes, float tick);
 
     public float getCustomWidthInTicks() {
-        return this.getCustomWidthInTicks(0);
+        return this.getCustomWidthInTicks(null, 0);
     }
 
     public float getCustomWidthInTicks(int tick) {
+        return this.getCustomWidthInTicks(null, tick);
+    }
+
+    public float getCustomWidthInTicks(@Nullable RealTimeMapping realTimeMapping, int tick) {
         return -1;
     }
 
@@ -166,4 +171,5 @@ public abstract class Keyframe {
     }
 
 }
+
 

@@ -102,6 +102,11 @@ public class AudioKeyframe extends Keyframe {
     public float getCustomWidthInTicks(int tick) {
         EditorState editorState = EditorStateManager.getCurrent();
         RealTimeMapping mapping = editorState == null ? null : editorState.getRealTimeMapping();
+        return this.getCustomWidthInTicks(mapping, tick);
+    }
+
+    @Override
+    public float getCustomWidthInTicks(@Nullable RealTimeMapping mapping, int tick) {
         return this.getDurationInTicks(mapping, tick);
     }
 
@@ -161,4 +166,5 @@ public class AudioKeyframe extends Keyframe {
         }
     }
 }
+
 

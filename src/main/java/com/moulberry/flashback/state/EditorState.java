@@ -438,6 +438,7 @@ public class EditorState {
     public StartAndEnd getFirstAndLastTicksInTracks() {
         int start = -1;
         int end = -1;
+        RealTimeMapping realTimeMapping = this.getRealTimeMapping();
 
         long stamp = this.sceneLock.readLock();
         try {
@@ -449,7 +450,7 @@ public class EditorState {
                 var entry = keyframeTrack.keyframesByTick.lastEntry();
 
                 int max = entry.getKey();
-                float lastCustomWidth = entry.getValue().getCustomWidthInTicks(entry.getKey());
+                float lastCustomWidth = entry.getValue().getCustomWidthInTicks(realTimeMapping, entry.getKey());
                 if (lastCustomWidth > 0) {
                     max = entry.getKey() + (int) Math.ceil(lastCustomWidth);
                 }
@@ -473,4 +474,5 @@ public class EditorState {
     }
 
 }
+
 
