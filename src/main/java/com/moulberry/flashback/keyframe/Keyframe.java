@@ -47,7 +47,7 @@ public abstract class Keyframe {
     public void renderEditKeyframe(Consumer<Consumer<Keyframe>> update) {}
 
     public void drawOnTimeline(ImDrawList drawList, int keyframeSize, float x, float y, int colour, float timelineScale, float minTimelineX, float maxTimelineX,
-                               int tick, TreeMap<Integer, Keyframe> keyframeTimes) {
+                               @Nullable RealTimeMapping realTimeMapping, int tick, TreeMap<Integer, Keyframe> keyframeTimes) {
         int easeSize = keyframeSize / 5;
         switch (interpolationType) {
             case SMOOTH -> {

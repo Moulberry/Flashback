@@ -28,6 +28,7 @@ import com.moulberry.flashback.playback.ReplayServer;
 import com.moulberry.flashback.editor.ui.ImGuiHelper;
 import com.moulberry.flashback.record.FlashbackMeta;
 import com.moulberry.flashback.state.KeyframeTrack;
+import com.moulberry.flashback.state.RealTimeMapping;
 import imgui.moulberry90.ImDrawList;
 import imgui.moulberry90.ImGui;
 import imgui.moulberry90.ImVec4;
@@ -167,12 +168,13 @@ public class TimelineWindow {
         if (timelineVisible) {
             FlashbackMeta metadata = replayServer.getMetadata();
             editorState = EditorStateManager.get(metadata.replayIdentifier);
+            RealTimeMapping realTimeMapping = editorState.getRealTimeMapping();
 
             editorSceneStamp = editorState.acquireRead();
             editorSceneStampIsWrite = false;
             try {
                 editorScene = editorState.getCurrentScene(editorSceneStamp);
-                renderInner(replayServer, metadata);
+                renderInner(replayServer, metadata, realTimeMapping);
             } finally {
                 editorState.release(editorSceneStamp);
                 editorSceneStamp = 0L;
@@ -183,7 +185,7 @@ public class TimelineWindow {
         ImGui.end();
     }
 
-    private static void renderInner(ReplayServer replayServer, FlashbackMeta metadata) {
+    private static void renderInner(ReplayServer replayServer, FlashbackMeta metadata, @Nullable RealTimeMapping realTimeMapping) {
         ImDrawList drawList = ImGui.getWindowDrawList();
 
         float maxX = ImGui.getWindowContentRegionMaxX();
@@ -336,7 +338,7 @@ public class TimelineWindow {
         renderKeyframeElements(x, contentY, cursorTicks, middleX);
 
         childDrawList.pushClipRect(x + middleX + 1, y + middleY, x + width, y + height);
-        renderKeyframes(x, contentY, mouseX, minTicks, availableTicks, totalTicks);
+        renderKeyframes(x, contentY, mouseX, minTicks, availableTicks, totalTicks, realTimeMapping);
         childDrawList.popClipRect();
 
         ImGui.endChild();
@@ -550,7 +552,7 @@ public class TimelineWindow {
                     }
                 }
             } else if (mouseX < x + width - 2 && (leftClicked || rightClicked)) {
-                handleClick(replayServer, totalTicks, contentY);
+                handleClick(replayServer, totalTicks, contentY, realTimeMapping);
                 if (leftClicked) {
                     draggingMouseButton = ImGuiMouseButton.Left;
                 } else {
@@ -924,7 +926,7 @@ public class TimelineWindow {
         editorState.markDirty();
     }
 
-    private static void handleClick(ReplayServer replayServer, int totalTicks, float contentY) {
+    private static void handleClick(ReplayServer replayServer, int totalTicks, float contentY, @Nullable RealTimeMapping realTimeMapping) {
         releaseGrabbed(replayServer, totalTicks, contentY);
         List<SelectedKeyframes> oldSelectedKeyframesList = new ArrayList<>(selectedKeyframesList);
         selectedKeyframesList.clear();
@@ -1066,7 +1068,7 @@ public class TimelineWindow {
                 Map.Entry<Integer, Keyframe> closest = null;
 
                 Map.Entry<Integer, Keyframe> floor = keyframeTrack.keyframesByTick.floorEntry(tick);
-                float floorCustomWidth = floor == null ? -1 : floor.getValue().getCustomWidthInTicks(floor.getKey());
+                float floorCustomWidth = floor == null ? -1 : floor.getValue().getCustomWidthInTicks(realTimeMapping, floor.getKey());
 
                 if (floor != null && floorCustomWidth > 0) {
                     int tickMax = floor.getKey() + (int) Math.ceil(floorCustomWidth);
@@ -1589,7 +1591,8 @@ public class TimelineWindow {
         return new GrabMovementInfo(grabbedDelta, grabbedScalePivotTick, grabbedScaleFactor);
     }
 
-    private static void renderKeyframes(float x, float y, float mouseX, int minTicks, float availableTicks, int totalTicks) {
+    private static void renderKeyframes(float x, float y, float mouseX, int minTicks, float availableTicks, int totalTicks,
+                                        @Nullable RealTimeMapping realTimeMapping) {
         float lineHeight = ImGui.getTextLineHeightWithSpacing() + ImGui.getStyle().getItemSpacingY();
 
         ImDrawList drawList = ImGui.getWindowDrawList();
@@ -1652,7 +1655,7 @@ public class TimelineWindow {
                     float midX = x + keyframeX;
 
                     keyframe.drawOnTimeline(drawList, keyframeSize, midX, midY, keyframeTrack.enabled ? 0xFF0000FF : 0x800000FF,
-                            timelineScale, minTimelineX, maxTimelineX, tick, keyframeTimes);
+                            timelineScale, minTimelineX, maxTimelineX, realTimeMapping, tick, keyframeTimes);
                 } else {
                     int keyframeX = replayTickToTimelineX(tick);
 
@@ -1685,7 +1688,7 @@ public class TimelineWindow {
                     }
 
                     keyframe.drawOnTimeline(drawList, keyframeSize, midX, midY, colour,
-                            timelineScale, minTimelineX, maxTimelineX, tick, keyframeTimes);
+                            timelineScale, minTimelineX, maxTimelineX, realTimeMapping, tick, keyframeTimes);
                 }
 
                 if ((selectedKeyframesForTrack == null || grabMovementInfo == null) && keyframeTrack.keyframeType == TimelapseKeyframeType.INSTANCE) {

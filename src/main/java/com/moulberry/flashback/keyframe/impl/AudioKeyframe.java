@@ -9,8 +9,6 @@ import com.moulberry.flashback.keyframe.interpolation.InterpolationType;
 import com.moulberry.flashback.keyframe.types.AudioKeyframeType;
 import com.moulberry.flashback.sound.FlashbackAudioBuffer;
 import com.moulberry.flashback.sound.FlashbackAudioManager;
-import com.moulberry.flashback.state.EditorState;
-import com.moulberry.flashback.state.EditorStateManager;
 import com.moulberry.flashback.state.RealTimeMapping;
 import imgui.moulberry90.ImDrawList;
 import org.jetbrains.annotations.Nullable;
@@ -97,14 +95,6 @@ public class AudioKeyframe extends Keyframe {
         float endRealTime = startRealTime + durationInTicks;
         return mapping.getTickForRealTime(endRealTime) - tick;
     }
-
-    @Override
-    public float getCustomWidthInTicks(int tick) {
-        EditorState editorState = EditorStateManager.getCurrent();
-        RealTimeMapping mapping = editorState == null ? null : editorState.getRealTimeMapping();
-        return this.getCustomWidthInTicks(mapping, tick);
-    }
-
     @Override
     public float getCustomWidthInTicks(@Nullable RealTimeMapping mapping, int tick) {
         return this.getDurationInTicks(mapping, tick);
@@ -112,7 +102,8 @@ public class AudioKeyframe extends Keyframe {
 
     @Override
     public void drawOnTimeline(ImDrawList drawList, int keyframeSize, float x, float y, int colour,
-                               float timelineScale, float minTimelineX, float maxTimelineX, int tick, TreeMap<Integer, Keyframe> keyframeTimes) {
+                               float timelineScale, float minTimelineX, float maxTimelineX, @Nullable RealTimeMapping realTimeMapping,
+                               int tick, TreeMap<Integer, Keyframe> keyframeTimes) {
         this.ensureAudioBufferLoaded();
 
         int alpha = colour & 0xFF000000;
@@ -123,9 +114,7 @@ public class AudioKeyframe extends Keyframe {
             return;
         }
 
-        EditorState editorState = EditorStateManager.getCurrent();
-        RealTimeMapping mapping = editorState == null ? null : editorState.getRealTimeMapping();
-        float durationInTicks = this.getDurationInTicks(mapping, tick);
+        float durationInTicks = this.getDurationInTicks(realTimeMapping, tick);
 
         int waveformLength = (int)(durationInTicks / timelineScale);
         int drawLength = waveformLength;
