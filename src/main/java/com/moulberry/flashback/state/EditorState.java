@@ -449,7 +449,7 @@ public class EditorState {
                 var entry = keyframeTrack.keyframesByTick.lastEntry();
 
                 int max = entry.getKey();
-                float lastCustomWidth = entry.getValue().getCustomWidthInTicks();
+                float lastCustomWidth = entry.getValue().getCustomWidthInTicks(entry.getKey());
                 if (lastCustomWidth > 0) {
                     max = entry.getKey() + (int) Math.ceil(lastCustomWidth);
                 }
@@ -473,3 +473,4 @@ public class EditorState {
     }
 
 }
+

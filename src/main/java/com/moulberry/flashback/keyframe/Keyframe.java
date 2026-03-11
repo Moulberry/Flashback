@@ -32,6 +32,10 @@ public abstract class Keyframe {
     public abstract @Nullable KeyframeChange createHermiteInterpolatedChange(Map<Float, Keyframe> keyframes, float tick);
 
     public float getCustomWidthInTicks() {
+        return this.getCustomWidthInTicks(0);
+    }
+
+    public float getCustomWidthInTicks(int tick) {
         return -1;
     }
 
@@ -162,3 +166,4 @@ public abstract class Keyframe {
     }
 
 }
+

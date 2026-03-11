@@ -82,13 +82,27 @@ public class AudioKeyframe extends Keyframe {
         return new KeyframeChangePlayAudio(this.audioBuffer, startTick, seconds);
     }
 
-    @Override
-    public float getCustomWidthInTicks() {
+    private float getDurationInTicks(@Nullable RealTimeMapping mapping, int tick) {
         this.ensureAudioBufferLoaded();
         if (this.audioBuffer == FlashbackAudioBuffer.EMPTY) {
             return -1;
         }
-        return this.audioBuffer.durationInSeconds() * 20.0f;
+
+        float durationInTicks = this.audioBuffer.durationInSeconds() * 20.0f;
+        if (mapping == null) {
+            return durationInTicks;
+        }
+
+        float startRealTime = mapping.getRealTime(tick);
+        float endRealTime = startRealTime + durationInTicks;
+        return mapping.getTickForRealTime(endRealTime) - tick;
+    }
+
+    @Override
+    public float getCustomWidthInTicks(int tick) {
+        EditorState editorState = EditorStateManager.getCurrent();
+        RealTimeMapping mapping = editorState == null ? null : editorState.getRealTimeMapping();
+        return this.getDurationInTicks(mapping, tick);
     }
 
     @Override
@@ -104,18 +118,9 @@ public class AudioKeyframe extends Keyframe {
             return;
         }
 
-        float durationInTicks = this.audioBuffer.durationInSeconds() * 20.0f;
-
-        // Adjust duration to account for tickrate changes (timelapse)
         EditorState editorState = EditorStateManager.getCurrent();
-        if (editorState != null) {
-            RealTimeMapping mapping = editorState.getRealTimeMapping();
-            if (mapping != null) {
-                float startRealTime = mapping.getRealTime(tick);
-                float endRealTime = startRealTime + this.audioBuffer.durationInSeconds() * 20.0f;
-                durationInTicks = mapping.getTickForRealTime(endRealTime) - tick;
-            }
-        }
+        RealTimeMapping mapping = editorState == null ? null : editorState.getRealTimeMapping();
+        float durationInTicks = this.getDurationInTicks(mapping, tick);
 
         int waveformLength = (int)(durationInTicks / timelineScale);
         int drawLength = waveformLength;
@@ -156,3 +161,4 @@ public class AudioKeyframe extends Keyframe {
         }
     }
 }
+

@@ -1066,7 +1066,7 @@ public class TimelineWindow {
                 Map.Entry<Integer, Keyframe> closest = null;
 
                 Map.Entry<Integer, Keyframe> floor = keyframeTrack.keyframesByTick.floorEntry(tick);
-                float floorCustomWidth = floor == null ? -1 : floor.getValue().getCustomWidthInTicks();
+                float floorCustomWidth = floor == null ? -1 : floor.getValue().getCustomWidthInTicks(floor.getKey());
 
                 if (floor != null && floorCustomWidth > 0) {
                     int tickMax = floor.getKey() + (int) Math.ceil(floorCustomWidth);
@@ -2265,3 +2265,4 @@ public class TimelineWindow {
     }
 
 }
+
