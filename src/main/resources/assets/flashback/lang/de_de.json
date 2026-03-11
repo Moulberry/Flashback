@@ -429,7 +429,7 @@
   "flashback.registry_warning_description": "Ein Fehler ist beim Laden der Registrierungsdaten aufgetreten, das Replay ist wahrscheinlich beschädigt... Siehe Logs für Stacktrace",
   "flashback.player_spawn_warning": "KRITISCHER FEHLER: SPIELER KONNTE NICHT GESPAWNT WERDEN",
   "flashback.player_spawn_warning_description": "Beim Versuch, einen Spieler zu spawnen, ist ein Fehler aufgetreten. Höchstwahrscheinlich liegt dies an einer Mod-Inkompatibilität... siehe Logs für Stacktrace",
-  "flashback.interpolation_type.smooth": "Weich",
+  "flashback.interpolation_type.smooth": "Geschmeidig",
   "flashback.interpolation_type.linear": "Linear",
   "flashback.interpolation_type.ease_in": "Ease In (Linear Out)",
   "flashback.interpolation_type.ease_out": "Ease Out (Linear In)",
@@ -443,3 +443,4 @@
   "flashback.disable_server_resource_packs": "Server-Ressourcenpakete deaktivieren"
 
 }
+
