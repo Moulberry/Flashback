@@ -70,7 +70,7 @@
     "compat.axiom.MixinAxiomServerIntegration",
     "compat.bobby.FakeChunkManagerAccessor",
     "compat.bobby.MixinBobby",
-    "compat.bobby.MixinBobbyConfig",
+    "compat.bobby.MixinIntegratedServer",
     "compat.bobby.MixinBobbyFakeChunkManager",
     "compat.fabric.MixinFabricBiomeModificationImpl",
     "compat.fabric.MixinFabricServerPlayNetworking",
