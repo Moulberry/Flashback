@@ -1,8 +1,11 @@
 package com.moulberry.flashback.mixin.replay_server;
 
+import com.llamalad7.mixinextras.injector.v2.WrapWithCondition;
 import com.mojang.authlib.GameProfile;
-import com.mojang.authlib.properties.Property;
+import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.playback.ReplayServer;
+import com.moulberry.flashback.screen.select_replay.PendingSelectionEntry;
+import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.login.ServerboundHelloPacket;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerLoginPacketListenerImpl;
@@ -43,4 +46,10 @@ public abstract class MixinServerLoginPacketListenerImpl {
         }
     }
 
+
+    @WrapWithCondition(method = "tick", at = @At(value = "INVOKE", target = "Lnet/minecraft/server/network/ServerLoginPacketListenerImpl;disconnect(Lnet/minecraft/network/chat/Component;)V"))
+    public boolean dontDisconnectInReplay(ServerLoginPacketListenerImpl instance, Component component) {
+        Flashback.updateIsInReplay();
+        return !Flashback.isInReplay();
+    }
 }
