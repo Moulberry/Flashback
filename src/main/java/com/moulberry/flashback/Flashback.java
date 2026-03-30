@@ -149,6 +149,8 @@ public class Flashback implements ModInitializer, ClientModInitializer {
 
     public static boolean supportsDistantHorizons = false;
 
+    public static boolean isBobbyLoaded = false;
+
     private static final List<Path> pendingReplaySave = new ArrayList<>();
     private static final List<Path> pendingReplayRecovery = new ArrayList<>();
     private static List<String> pendingUnsupportedModsForRecording = null;
@@ -597,6 +599,10 @@ public class Flashback implements ModInitializer, ClientModInitializer {
             } else {
                 Flashback.LOGGER.error("DistantHorizons is installed, but API version is too low ({}). Disabling integration.", DhApi.getApiMajorVersion());
             }
+        }
+
+        if (FabricLoader.getInstance().isModLoaded("bobby")) {
+            isBobbyLoaded = true;
         }
     }
 

@@ -100,6 +100,15 @@ public class FlashbackConfigV1 {
         public boolean hasSimpleVoiceChat() {
             return FabricLoader.getInstance().isModLoaded("voicechat");
         }
+
+        @LatticeOption(title = "flashback.option.recording.record_bobby_chunks", description = "!!.description")
+        @LatticeWidgetButton
+        @LatticeShowIf(function = "hasBobby")
+        public boolean recordBobbyIntoReplay = false;
+
+        public boolean hasBobby() {
+            return Flashback.isBobbyLoaded;
+        }
     }
 
     @LatticeCategory(name = "flashback.option.exporting")
