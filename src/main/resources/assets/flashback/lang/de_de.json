@@ -28,8 +28,8 @@
   "flashback.option.recording_controls.automatically_finish.description": "Automatisch eine Replay-Aufnahme beim Verlassen einer Welt/einem Server fertigstellen",
   "flashback.option.recording_controls.show_recording_toasts": "Aufnahme-Toasts anzeigen",
   "flashback.option.recording_controls.show_recording_toasts.description": "Toasts oben rechts anzeigen wenn eine Replay-Aufnahme gestartet/gestoppt wird",
-  "flashback.option.recording_controls.quicksave": "Quicksave",
-  "flashback.option.recording_controls.quicksave.description": "Die Wiederholung mit den Standardwerten speichern anstatt den Wiederholung speichern Bildschirm zu öffnen.",
+  "flashback.option.recording_controls.quicksave": "Schnellspeichern",
+  "flashback.option.recording_controls.quicksave.description": "Das Replay mit den Standardwerten speichern anstatt den Replay speichern Bildschirm zu öffnen.",
 
   "flashback.option.recording": "Aufnahme",
   "flashback.option.recording.mark_dimension_changes": "Dimensionsänderungen markieren",
@@ -40,6 +40,8 @@
   "flashback.option.recording.local_player_updates_per_second.description": "Die Aktualisierungsrate pro Sekunde für die Position/den Winkel des First-Person-Spielers. Wenn du vorhast, deine eigene First-Person-Perspektive zu exportieren, solltest du diesen Wert auf die gewünschte Export-Framerate erhöhen.",
   "flashback.option.recording.record_voice_chat": "Sprachchat aufnehmen",
   "flashback.option.recording.record_voice_chat.description": "Fügt dem Replay Sprachchat von SimpleVoiceChat hinzu",
+  "flashback.option.recording.record_bobby_chunks": "Bobby-Chunks aufnehmen",
+  "flashback.option.recording.record_bobby_chunks.description": "Nimmt sichtbare Bobby-Chunks direkt in das Replay auf",
 
   "flashback.option.exporting": "Exportieren",
   "flashback.export_filename": "Export-Dateiname",
