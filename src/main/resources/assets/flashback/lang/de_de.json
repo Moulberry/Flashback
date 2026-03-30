@@ -33,7 +33,7 @@
 
   "flashback.option.recording": "Aufnahme",
   "flashback.option.recording.mark_dimension_changes": "Dimensionsänderungen markieren",
-  "flashback.option.recording.mark_dimension_changes.description": "Beim Wechseln der Dimension automatisch einen Markier zum Replay hinzufügen",
+  "flashback.option.recording.mark_dimension_changes.description": "Beim Wechseln der Dimension automatisch einen Marker zum Replay hinzufügen",
   "flashback.option.recording.record_hotbar": "Schnellzugriffsleiste aufnehmen",
   "flashback.option.recording.record_hotbar.description": "Fügt dem Replay First-Person Hotbarinformationen hinzu",
   "flashback.option.recording.local_player_updates_per_second": "First-Person Updates",
@@ -96,7 +96,7 @@
   "flashback.unable_to_edit_replay": "Replay kann nicht bearbeitet werden",
   "flashback.registry.mismatch1": "Abweichung zwischen aktuellen Registrierungsdaten und Registrierungsdaten zum Zeitpunkt der Aufnahme",
   "flashback.registry.mismatch2": "Wenn Mods hinzugefügt/entfernt wurden, funktioniert das Replay möglicherweise nicht!",
-  "flashback.registry.mismatch3": "Wenn du sicher bist, dass du dieses Replay laden möchten, klicke auf \"%s\", andernfalls gehe zurück",
+  "flashback.registry.mismatch3": "Wenn du sicher bist, dass du dieses Replay laden möchtest, klicke auf \"%s\", andernfalls gehe zurück",
   "flashback.command_only_inside_replay": "/%s ist nur in einem Flashback-Replay verfügbar",
   "flashback.hide_command.n_entities_hidden": "%s Entitäten werden nun beim Export ausgeblendet",
   "flashback.show_command.n_entities_shown": "%s Entitäten werden beim Export nicht mehr ausgeblendet",
@@ -110,7 +110,7 @@
   "flashback.recovery5": "Möchtest du versuchen, die Aufzeichnung wiederherzustellen?",
   "flashback.incompatible_with_recording_description": "Du hast Mods, die bekanntermaßen Probleme bei der Aufzeichnung von Replays verursachen. Bitte entferne die folgenden Mods, um Replays aufzeichnen zu können:\n\n",
   "flashback.incompatible_with_recording": "Inkompatible Mods",
-  "flashback.mark_command.not_recording": "Keine Aufahme",
+  "flashback.mark_command.not_recording": "Keine Aufnahme",
   "flashback.toast.already_recording": "Nimmt bereits auf",
   "flashback.toast.already_recording_description": "Neue Aufnahme kann nicht gestartet werden, wenn bereits eine Aufnahme läuft",
   "flashback.flashback": "Flashback",
@@ -120,7 +120,7 @@
   "flashback.toast.cancelled_recording": "Aufnahme abgebrochen",
   "flashback.toast.finished_recording": "Aufnahme abgeschlossen",
   "flashback.toast.not_recording": "Keine Aufnahme",
-  "flashback.toast.cant_finish_when_not_recording": "Kann Aufnahme nicht abschließen wenn nicht aufgenommen wird",
+  "flashback.toast.cant_finish_when_not_recording": "Kann Aufnahme nicht abschließen, wenn nicht aufgenommen wird",
   "flashback.i_understand": "Ich verstehe",
   "flashback.i_understand_countdown": "Ich verstehe (%s)",
   "flashback.recording_controls.start": "Aufnahme starten",
@@ -441,6 +441,4 @@
   "flashback.recording_controls_location.left": "Links",
   "flashback.recording_controls_location.hidden": "Ausgeblendet",
   "flashback.disable_server_resource_packs": "Server-Ressourcenpakete deaktivieren"
-
 }
-
