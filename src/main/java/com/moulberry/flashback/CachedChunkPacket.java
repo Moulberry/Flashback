@@ -92,7 +92,6 @@ public class CachedChunkPacket {
                 digest.update("NO_TAG".getBytes(StandardCharsets.UTF_8));
             }
         }
-        frenBuffer.release();
 
         return digest.digest();
     }
