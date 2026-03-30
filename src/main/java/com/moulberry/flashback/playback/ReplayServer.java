@@ -19,6 +19,7 @@ import com.moulberry.flashback.packet.FlashbackClearEntities;
 import com.moulberry.flashback.packet.FlashbackClearParticles;
 import com.moulberry.flashback.packet.FlashbackForceClientTick;
 import com.moulberry.flashback.packet.FlashbackInstantlyLerp;
+import com.moulberry.flashback.packet.FlashbackRawCustomPayload;
 import com.moulberry.flashback.packet.FlashbackRemoteExperience;
 import com.moulberry.flashback.packet.FlashbackRemoteFoodData;
 import com.moulberry.flashback.packet.FlashbackRemoteSelectHotbarSlot;
@@ -36,12 +37,14 @@ import com.moulberry.flashback.record.FlashbackMeta;
 import com.moulberry.flashback.record.Recorder;
 import com.moulberry.flashback.state.KeyframeTrack;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.handler.codec.DecoderException;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerWorldEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.Util;
@@ -149,7 +152,7 @@ public class ReplayServer extends IntegratedServer {
     private final List<ReplayPlayer> replayViewers = new ArrayList<>();
     public boolean followLocalPlayerNextTickIfWrongDimension = false;
     public boolean isProcessingSnapshot = false;
-    public List<ClientboundCustomPayloadPacket> customPacketsInSnapshot = new ArrayList<>();
+    public List<FlashbackRawCustomPayload> customPacketsInSnapshot = new ArrayList<>();
     private boolean processedSnapshot = false;
     public volatile boolean fastForwarding = false;
     public volatile boolean hasServerResourcePack = false;
@@ -389,7 +392,7 @@ public class ReplayServer extends IntegratedServer {
                 // Send custom payloads found during snapshot
                 ReplayServer.this.customPacketsInSnapshot.removeIf(packet -> {
                     try {
-                        serverPlayer.connection.send(packet);
+                        ServerPlayNetworking.send(serverPlayer, packet);
                         return false;
                     } catch (Exception e) {
                         return true;
@@ -605,6 +608,7 @@ public class ReplayServer extends IntegratedServer {
     public void handleGamePacket(RegistryFriendlyByteBuf friendlyByteBuf) {
         this.configurationPacketHandler.flushPendingConfiguration();
 
+        int start = friendlyByteBuf.readerIndex();
         Packet<? super ClientGamePacketListener> packet;
         try {
             packet = this.gamePacketCodec.decode(friendlyByteBuf);
@@ -619,9 +623,42 @@ public class ReplayServer extends IntegratedServer {
             friendlyByteBuf.readerIndex(friendlyByteBuf.writerIndex());
             return;
         }
+        int end = friendlyByteBuf.readerIndex();
+
         if (!AllowPendingEntityPacketSet.allowPendingEntity(packet)) {
             this.gamePacketHandler.flushPendingEntities();
         }
+
+        // Special case for custom payloads to avoid reserialization
+        // This is necessary because some mods are poorly written and
+        // the packet != encode(decode(packet))
+        if (packet instanceof ClientboundCustomPayloadPacket custom) {
+            try {
+                var id = custom.payload().type().id();
+                if (id.getNamespace().startsWith("fabric-screen-handler-api")) {
+                    return;
+                }
+
+                friendlyByteBuf.readerIndex(start);
+                friendlyByteBuf.readVarInt(); // skip packet id
+                int dataSize = end - friendlyByteBuf.readerIndex();
+                if (dataSize < 0) return;
+                byte[] rawBytes = ByteBufUtil.getBytes(friendlyByteBuf.readBytes(dataSize));
+
+                var rawCustomPayload = new FlashbackRawCustomPayload(rawBytes, false);
+
+                if (this.isProcessingSnapshot) {
+                    this.customPacketsInSnapshot.add(rawCustomPayload);
+                }
+
+                for (ServerPlayer replayViewer : this.getReplayViewers()) {
+                    ServerPlayNetworking.send(replayViewer, rawCustomPayload);
+                }
+            } catch (Exception ignored) {}
+            friendlyByteBuf.readerIndex(end);
+            return;
+        }
+
         packet.handle(this.gamePacketHandler);
     }
 
