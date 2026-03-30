@@ -33,7 +33,7 @@
 
   "flashback.option.recording": "Aufnahme",
   "flashback.option.recording.mark_dimension_changes": "Dimensionsänderungen markieren",
-  "flashback.option.recording.mark_dimension_changes.description": "Beim Wechseln der Dimension automatisch einen Markier zum Replay hinzufügen",
+  "flashback.option.recording.mark_dimension_changes.description": "Beim Wechseln der Dimension automatisch einen Marker zum Replay hinzufügen",
   "flashback.option.recording.record_hotbar": "Schnellzugriffsleiste aufnehmen",
   "flashback.option.recording.record_hotbar.description": "Fügt dem Replay First-Person Hotbarinformationen hinzu",
   "flashback.option.recording.local_player_updates_per_second": "First-Person Updates",
