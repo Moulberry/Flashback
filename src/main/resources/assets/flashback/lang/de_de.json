@@ -235,7 +235,7 @@
   "flashback.entity_label": "Entität: %s",
   "flashback.look_at": "Anschauen",
   "flashback.copy_uuid": "UUID kopieren",
-  "flashback.unset_audio_source": "Audioquelle deaktivieren",
+  "flashback.unset_audio_source": "Audioquelle aufheben",
   "flashback.set_audio_source": "Audioquelle festlegen",
   "flashback.hide_during_export": "Während Export ausblenden",
   "flashback.mute_voice": "Sprachchat stummschalten",
