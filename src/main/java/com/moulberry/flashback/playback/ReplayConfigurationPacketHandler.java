@@ -58,8 +58,6 @@ public class ReplayConfigurationPacketHandler implements ClientConfigurationPack
     private boolean pendingResetChat = false;
     private boolean dirty = false;
 
-    public static ThreadLocal<Boolean> LENIENT_REGISTRY_LOADING = new ThreadLocal<>();
-
     public ReplayConfigurationPacketHandler(ReplayServer replayServer) {
         this.replayServer = replayServer;
     }
@@ -145,7 +143,6 @@ public class ReplayConfigurationPacketHandler implements ClientConfigurationPack
         RegistryAccess accessForLoading = this.replayServer.registries().getAccessForLoading(RegistryLayer.WORLDGEN);
 
         RegistryAccess.Frozen synchronizedRegistries;
-        LENIENT_REGISTRY_LOADING.set(Boolean.TRUE);
         try {
             synchronizedRegistries = RegistryDataLoader.load(entries, resourceProvider, accessForLoading,
                 RegistryDataLoader.SYNCHRONIZED_REGISTRIES);
@@ -153,8 +150,6 @@ public class ReplayConfigurationPacketHandler implements ClientConfigurationPack
             this.replayServer.failedToLoadRegistryDataWarning = true;
             Flashback.LOGGER.error("Error while trying to load registry data. Skipping... this might cause other issues", e);
             return false;
-        } finally {
-            LENIENT_REGISTRY_LOADING.set(Boolean.FALSE);
         }
 
         boolean hasRegistriesChanged = !RegistryHelper.equals(this.replayServer.registryAccess(), synchronizedRegistries, RegistryDataLoader.SYNCHRONIZED_REGISTRIES);
