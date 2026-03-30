@@ -15,3 +15,4 @@ Authors/contributors:
 - fr_fr.json: MazeWave
 - cs_cz.json: Madeleaan
 - pt_br.json: Draacoun
+- id_id.json: moonbrooke
