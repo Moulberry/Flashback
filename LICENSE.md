@@ -17,3 +17,4 @@ Authors/contributors:
 - pt_br.json: Draacoun
 - id_id.json: moonbrooke
 - pl_pl.json: samswi
+- de_de.json: GulutGames
