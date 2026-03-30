@@ -1,5 +1,6 @@
 package com.moulberry.flashback.mixin.playback.lenient_registry;
 
+import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.playback.ReplayConfigurationPacketHandler;
 import net.minecraft.core.HolderSet;
 import net.minecraft.core.MappedRegistry;
@@ -28,7 +29,7 @@ public abstract class MixinMappedRegistry {
 
     @Inject(method = "freeze", at = @At("HEAD"))
     public void freeze(CallbackInfoReturnable<Registry> cir) {
-        if (!this.frozen && ReplayConfigurationPacketHandler.LENIENT_REGISTRY_LOADING.get() == Boolean.TRUE) {
+        if (!this.frozen && Flashback.isInReplay()) {
             for (Map.Entry<TagKey, HolderSet.Named> entry : this.frozenTags.entrySet()) {
                 if (!entry.getValue().isBound()) {
                     entry.getValue().bind(List.of());
