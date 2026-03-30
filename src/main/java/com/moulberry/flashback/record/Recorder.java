@@ -1036,81 +1036,7 @@ public class Recorder {
             }
         }
 
-
-        {// Chunk data
-
-            //Generate the list of chunks we need to save
-            ArrayDeque<LevelChunk> chunks = new ArrayDeque<>(chunksList.length());
-            LongOpenHashSet seenChunkPositions = new LongOpenHashSet(chunksList.length());
-            for (int i = 0; i < chunksList.length(); i++) {
-                LevelChunk chunk = chunksList.get(i);
-                if (chunk != null) {
-                    chunks.add(chunk);
-                    seenChunkPositions.add(chunk.getPos().toLong());
-                }
-            }
-
-            if (Flashback.isBobbyLoaded && Flashback.getConfig().recording.recordBobbyIntoReplay) {
-                BobbyUtil.addBobbyChunks(clientChunkCache, chunks, seenChunkPositions);
-            }
-
-            if (Runtime.getRuntime().availableProcessors() <= 1) {
-                List<ClientboundLevelChunkWithLightPacket> levelChunkPackets = new ArrayList<>();
-
-                while(!chunks.isEmpty()) {
-                    levelChunkPackets.add(new ClientboundLevelChunkWithLightPacket(chunks.poll(), level.getLightEngine(), null, null));
-                }
-
-                int centerX = localPlayer.getBlockX() >> 4;
-                int centerZ = localPlayer.getBlockZ() >> 4;
-                levelChunkPackets.sort(Comparator.comparingInt(task -> {
-                    int dx = task.getX() - centerX;
-                    int dz = task.getZ() - centerZ;
-                    return dx*dx + dz*dz;
-                }));
-
-                gamePackets.addAll(levelChunkPackets);
-            } else {
-                try (ForkJoinPool pool = new ForkJoinPool()) {
-                    final class PositionedTask {
-                        private final ChunkPos pos;
-                        private final ForkJoinTask<ClientboundLevelChunkWithLightPacket> task;
-                        private ClientboundLightUpdatePacketData lightData = null;
-
-                        PositionedTask(ChunkPos pos, ForkJoinTask<ClientboundLevelChunkWithLightPacket> task) {
-                            this.pos = pos;
-                            this.task = task;
-                        }
-                    }
-                    List<PositionedTask> levelChunkPacketTasks = new ArrayList<>();
-
-                    while(!chunks.isEmpty()) {
-                        LevelChunk chunk = chunks.poll();
-                        var task = pool.submit(() -> new ClientboundLevelChunkWithLightPacket(chunk, level.getLightEngine(), new BitSet(), new BitSet()));
-                        levelChunkPacketTasks.add(new PositionedTask(chunk.getPos(), task));
-                    }
-
-                    int centerX = localPlayer.getBlockX() >> 4;
-                    int centerZ = localPlayer.getBlockZ() >> 4;
-                    levelChunkPacketTasks.sort(Comparator.comparingInt(task -> {
-                        int dx = task.pos.x - centerX;
-                        int dz = task.pos.z - centerZ;
-                        return dx*dx + dz*dz;
-                    }));
-
-                    // We get the light data on this thread to avoid slowdown due to synchronization
-                    for (PositionedTask positionedTask : levelChunkPacketTasks) {
-                        positionedTask.lightData = new ClientboundLightUpdatePacketData(positionedTask.pos, level.getLightEngine(), null, null);
-                    }
-
-                    for (PositionedTask positionedTask : levelChunkPacketTasks) {
-                        ClientboundLevelChunkWithLightPacket levelChunkWithLightPacket = positionedTask.task.join();
-                        levelChunkWithLightPacket.lightData = positionedTask.lightData;
-                        gamePackets.add(levelChunkWithLightPacket);
-                    }
-                }
-            }
-        }
+        writeChunkDataSnapshot(chunksList, clientChunkCache, level, localPlayer, gamePackets);
 
         if (Flashback.getConfig().recording.recordHotbar) {
             this.lastExperienceProgress = localPlayer.experienceProgress;
@@ -1212,6 +1138,79 @@ public class Recorder {
 
         if (asActualSnapshot) {
             this.asyncReplaySaver.submit(ReplayWriter::endSnapshot);
+        }
+    }
+
+    private void writeChunkDataSnapshot(AtomicReferenceArray<LevelChunk> chunksList, ClientChunkCache clientChunkCache, ClientLevel level, LocalPlayer localPlayer, List<Packet<? super ClientGamePacketListener>> gamePackets) {
+        // Generate the list of chunks we need to save
+        List<LevelChunk> chunks = new ArrayList<>(chunksList.length());
+        LongOpenHashSet seenChunkPositions = new LongOpenHashSet(chunksList.length());
+        for (int i = 0; i < chunksList.length(); i++) {
+            LevelChunk chunk = chunksList.get(i);
+            if (chunk != null) {
+                chunks.add(chunk);
+                seenChunkPositions.add(chunk.getPos().toLong());
+            }
+        }
+
+        if (Flashback.isBobbyLoaded && Flashback.getConfig().recording.recordBobbyIntoReplay) {
+            BobbyUtil.addBobbyChunks(clientChunkCache, chunks, seenChunkPositions);
+        }
+
+        if (Runtime.getRuntime().availableProcessors() <= 1) {
+            List<ClientboundLevelChunkWithLightPacket> levelChunkPackets = new ArrayList<>();
+
+            for (var chunk : chunks) {
+                levelChunkPackets.add(new ClientboundLevelChunkWithLightPacket(chunk, level.getLightEngine(), null, null));
+            }
+
+            int centerX = localPlayer.getBlockX() >> 4;
+            int centerZ = localPlayer.getBlockZ() >> 4;
+            levelChunkPackets.sort(Comparator.comparingInt(task -> {
+                int dx = task.getX() - centerX;
+                int dz = task.getZ() - centerZ;
+                return dx*dx + dz*dz;
+            }));
+
+            gamePackets.addAll(levelChunkPackets);
+        } else {
+            try (ForkJoinPool pool = new ForkJoinPool()) {
+                final class PositionedTask {
+                    private final ChunkPos pos;
+                    private final ForkJoinTask<ClientboundLevelChunkWithLightPacket> task;
+                    private ClientboundLightUpdatePacketData lightData = null;
+
+                    PositionedTask(ChunkPos pos, ForkJoinTask<ClientboundLevelChunkWithLightPacket> task) {
+                        this.pos = pos;
+                        this.task = task;
+                    }
+                }
+                List<PositionedTask> levelChunkPacketTasks = new ArrayList<>();
+
+                for (var chunk : chunks) {
+                    var task = pool.submit(() -> new ClientboundLevelChunkWithLightPacket(chunk, level.getLightEngine(), new BitSet(), new BitSet()));
+                    levelChunkPacketTasks.add(new PositionedTask(chunk.getPos(), task));
+                }
+
+                int centerX = localPlayer.getBlockX() >> 4;
+                int centerZ = localPlayer.getBlockZ() >> 4;
+                levelChunkPacketTasks.sort(Comparator.comparingInt(task -> {
+                    int dx = task.pos.x - centerX;
+                    int dz = task.pos.z - centerZ;
+                    return dx*dx + dz*dz;
+                }));
+
+                // We get the light data on this thread to avoid slowdown due to synchronization
+                for (PositionedTask positionedTask : levelChunkPacketTasks) {
+                    positionedTask.lightData = new ClientboundLightUpdatePacketData(positionedTask.pos, level.getLightEngine(), null, null);
+                }
+
+                for (PositionedTask positionedTask : levelChunkPacketTasks) {
+                    ClientboundLevelChunkWithLightPacket levelChunkWithLightPacket = positionedTask.task.join();
+                    levelChunkWithLightPacket.lightData = positionedTask.lightData;
+                    gamePackets.add(levelChunkWithLightPacket);
+                }
+            }
         }
     }
 
