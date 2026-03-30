@@ -28,6 +28,7 @@ import com.moulberry.flashback.packet.FlashbackClearParticles;
 import com.moulberry.flashback.packet.FinishedServerTick;
 import com.moulberry.flashback.packet.FlashbackForceClientTick;
 import com.moulberry.flashback.packet.FlashbackInstantlyLerp;
+import com.moulberry.flashback.packet.FlashbackRawCustomPayload;
 import com.moulberry.flashback.packet.FlashbackRemoteExperience;
 import com.moulberry.flashback.packet.FlashbackRemoteFoodData;
 import com.moulberry.flashback.packet.FlashbackRemoteSelectHotbarSlot;
@@ -50,6 +51,8 @@ import com.moulberry.flashback.visuals.ShaderManager;
 import com.moulberry.lattice.Lattice;
 import com.moulberry.lattice.element.LatticeElements;
 import com.seibel.distanthorizons.api.DhApi;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
@@ -64,6 +67,11 @@ import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.ChatFormatting;
+import net.minecraft.client.multiplayer.ClientPacketListener;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.protocol.common.ClientCommonPacketListener;
+import net.minecraft.network.protocol.common.ClientboundCustomPayloadPacket;
+import net.minecraft.network.protocol.configuration.ClientConfigurationPacketListener;
 import net.minecraft.FileUtil;
 import net.minecraft.Util;
 import net.minecraft.client.KeyMapping;
@@ -205,6 +213,7 @@ public class Flashback implements ModInitializer, ClientModInitializer {
         PayloadTypeRegistry.playS2C().register(FlashbackVoiceChatSound.TYPE, FlashbackVoiceChatSound.STREAM_CODEC);
         PayloadTypeRegistry.playS2C().register(FlashbackAccurateEntityPosition.TYPE, FlashbackAccurateEntityPosition.STREAM_CODEC);
         PayloadTypeRegistry.playS2C().register(FlashbackSetBorderLerpStartTime.TYPE, FlashbackSetBorderLerpStartTime.STREAM_CODEC);
+        PayloadTypeRegistry.playS2C().register(FlashbackRawCustomPayload.TYPE, FlashbackRawCustomPayload.STREAM_CODEC);
     }
 
     @Override
@@ -363,6 +372,26 @@ public class Flashback implements ModInitializer, ClientModInitializer {
         ClientPlayNetworking.registerGlobalReceiver(FlashbackSetBorderLerpStartTime.TYPE, (payload, context) -> {
             if (Flashback.isInReplay()) {
                 worldBorderLerpStartTime = payload.time();
+            }
+        });
+
+        ClientPlayNetworking.registerGlobalReceiver(FlashbackRawCustomPayload.TYPE, (payload, context) -> {
+            if (Flashback.isInReplay()) {
+                var connection = context.client().getConnection();
+                if (connection == null) return;
+
+                if (connection.getConnection().getPacketListener() instanceof ClientCommonPacketListener listener) {
+                    var buffer = new RegistryFriendlyByteBuf(Unpooled.wrappedBuffer(payload.packetBytes()), connection.registryAccess());
+                    if (payload.configPhase()) {
+                        if (listener instanceof ClientConfigurationPacketListener) {
+                            var customPayloadPacket = ClientboundCustomPayloadPacket.CONFIG_STREAM_CODEC.decode(buffer);
+                            customPayloadPacket.handle(listener);
+                        }
+                    } else if (listener instanceof ClientPacketListener) {
+                        var customPayloadPacket = ClientboundCustomPayloadPacket.GAMEPLAY_STREAM_CODEC.decode(buffer);
+                        customPayloadPacket.handle(listener);
+                    }
+                }
             }
         });
 
