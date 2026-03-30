@@ -19,7 +19,7 @@ public interface MixinRegistry {
         if (original.isSuccess()) {
             return original;
         }
-        if (Flashback.isInReplay() && ReplayConfigurationPacketHandler.LENIENT_REGISTRY_LOADING.get() == Boolean.TRUE) {
+        if (Flashback.isInReplay()) {
             if (this == BuiltInRegistries.PARTICLE_TYPE) {
                 return DataResult.success(ParticleTypes.ASH);
             } else if (this instanceof DefaultedRegistry<?> defaultedRegistry) {
