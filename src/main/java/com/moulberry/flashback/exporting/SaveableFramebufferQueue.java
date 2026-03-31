@@ -1,5 +1,7 @@
 package com.moulberry.flashback.exporting;
 
+import com.mojang.blaze3d.buffers.GpuBuffer;
+import com.mojang.blaze3d.buffers.GpuBufferSlice;
 import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.blaze3d.systems.RenderSystem;
@@ -7,9 +9,10 @@ import com.mojang.blaze3d.textures.AddressMode;
 import com.mojang.blaze3d.textures.FilterMode;
 import com.mojang.blaze3d.textures.GpuTexture;
 import com.mojang.blaze3d.textures.TextureFormat;
+import com.mojang.blaze3d.vertex.VertexFormat;
 import com.moulberry.flashback.visuals.ShaderManager;
 import org.jetbrains.annotations.Nullable;
-import org.lwjgl.opengl.GL11;
+import org.joml.Vector4f;
 
 import java.nio.FloatBuffer;
 import java.util.ArrayList;
