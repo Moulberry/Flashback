@@ -12,13 +12,6 @@ public class MixinLivingEntity {
 
     // Prevent invisible/glowing state from being updated based on potion effects inside a replay
 
-    @Inject(method = "updateDirtyEffects", at = @At("HEAD"), cancellable = true)
-    public void updateDirtyEffects(CallbackInfo ci) {
-        if (Flashback.isInReplay()) {
-            ci.cancel();
-        }
-    }
-
     @Inject(method = "updateInvisibilityStatus", at = @At("HEAD"), cancellable = true)
     public void updateInvisibilityStatus(CallbackInfo ci) {
         if (Flashback.isInReplay()) {
