@@ -18,3 +18,4 @@ Authors/contributors:
 - id_id.json: moonbrooke
 - pl_pl.json: samswi
 - de_de.json: GulutGames
+- nl_nl.json: DjJj123dj
