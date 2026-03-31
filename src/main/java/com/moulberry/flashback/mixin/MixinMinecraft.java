@@ -2,6 +2,7 @@ package com.moulberry.flashback.mixin;
 
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
+import com.llamalad7.mixinextras.sugar.Local;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.FreezeSlowdownFormula;
@@ -20,29 +21,21 @@ import com.moulberry.flashback.ext.MinecraftExt;
 import com.moulberry.flashback.editor.ui.ReplayUI;
 import com.moulberry.flashback.visuals.AccurateEntityPositionHandler;
 import it.unimi.dsi.fastutil.floats.FloatUnaryOperator;
-import net.minecraft.CrashReport;
-import net.minecraft.ReportedException;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.progress.LevelLoadListener;
 import net.minecraft.util.Util;
 import net.minecraft.client.*;
-import net.minecraft.client.gui.screens.LevelLoadingScreen;
 import net.minecraft.client.gui.screens.Overlay;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.multiplayer.ClientHandshakePacketListenerImpl;
 import net.minecraft.client.multiplayer.ClientLevel;
-import net.minecraft.client.multiplayer.LevelLoadTracker;
 import net.minecraft.client.multiplayer.chat.report.ReportEnvironment;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.client.server.IntegratedServer;
 import net.minecraft.client.sounds.SoundManager;
 import net.minecraft.network.Connection;
-import net.minecraft.network.protocol.login.ServerboundHelloPacket;
-import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.Services;
 import net.minecraft.server.WorldStem;
-import net.minecraft.server.level.ChunkLevel;
-import net.minecraft.server.level.progress.LevelLoadListener;
-import net.minecraft.server.level.progress.LoggingLevelLoadListener;
 import net.minecraft.server.packs.repository.PackRepository;
 import net.minecraft.util.thread.ReentrantBlockableEventLoop;
 import net.minecraft.world.TickRateManager;
@@ -59,13 +52,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import java.io.File;
-import java.net.SocketAddress;
-import java.nio.file.Path;
-import java.time.Duration;
-import java.time.Instant;
-import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Function;
 
 @Mixin(Minecraft.class)
 public abstract class MixinMinecraft extends ReentrantBlockableEventLoop<Runnable> implements MinecraftExt {
@@ -137,6 +125,9 @@ public abstract class MixinMinecraft extends ReentrantBlockableEventLoop<Runnabl
     @Shadow @Final private Services services;
 
     @Shadow @Nullable public abstract Entity getCameraEntity();
+
+    @Shadow
+    public abstract void doWorldLoad(LevelStorageSource.LevelStorageAccess levelStorageAccess, PackRepository packRepository, WorldStem worldStem, boolean bl);
 
     @Inject(method = "pauseGame", at = @At("HEAD"), cancellable = true)
     public void pauseGame(boolean bl, CallbackInfo ci) {
@@ -405,56 +396,29 @@ public abstract class MixinMinecraft extends ReentrantBlockableEventLoop<Runnabl
         }
     }
 
+    @Unique
+    private final ThreadLocal<StartReplayServerInfo> info = new ThreadLocal<>();
+
+    @WrapOperation(method = "doWorldLoad", at = @At(value = "INVOKE", target = "Lnet/minecraft/server/MinecraftServer;spin(Ljava/util/function/Function;)Lnet/minecraft/server/MinecraftServer;"))
+    public MinecraftServer doWorldLoad_spin(Function<Thread, MinecraftServer> function, Operation<MinecraftServer> original,
+            @Local(argsOnly = true) LevelStorageSource.LevelStorageAccess levelStorageAccess, @Local(argsOnly = true) PackRepository packRepository, @Local(argsOnly = true) WorldStem stem,
+            @Local LevelLoadListener levelLoadListener) {
+        StartReplayServerInfo info = this.info.get();
+        if (info != null) {
+            function = thread -> new ReplayServer(thread, (Minecraft) (Object) this,
+                levelStorageAccess, packRepository, stem, this.services, levelLoadListener, info.playbackUUID(), info.path());
+        }
+        return original.call(function);
+    }
+
     @Override
-    public void flashback$startReplayServer(LevelStorageSource.LevelStorageAccess levelStorageAccess, PackRepository packRepository, WorldStem stem,
-                                            UUID playbackUUID, Path path) {
-        this.disconnectWithProgressScreen();
-        Instant instant = Instant.now();
-        LevelLoadTracker levelLoadTracker = new LevelLoadTracker(0L);
-        LevelLoadingScreen levelLoadingScreen = new LevelLoadingScreen(levelLoadTracker, LevelLoadingScreen.Reason.OTHER);
-        this.setScreen(levelLoadingScreen);
-        int i = ChunkLevel.RADIUS_AROUND_FULL_CHUNK + 6;
-
+    public void flashback$startReplayServer(LevelStorageSource.LevelStorageAccess levelStorageAccess, PackRepository packRepository, WorldStem stem, StartReplayServerInfo info) {
+        this.info.set(info);
         try {
-//            levelStorageAccess.saveDataTag((RegistryAccess)worldStem.registries().compositeAccess(), worldStem.worldData());
-            LevelLoadListener levelLoadListener = LevelLoadListener.compose(levelLoadTracker, LoggingLevelLoadListener.forSingleplayer());
-            this.singleplayerServer = MinecraftServer.spin(thread -> new ReplayServer(thread, (Minecraft) (Object) this,
-                levelStorageAccess, packRepository, stem, this.services, levelLoadListener, playbackUUID, path));
-            Flashback.updateIsInReplay();
-            levelLoadTracker.setServerChunkStatusView(this.singleplayerServer.createChunkLoadStatusView(i));
-            this.isLocalServer = true;
-            this.updateReportEnvironment(ReportEnvironment.local());
-//            this.quickPlayLog.setWorldData(QuickPlayLog.Type.SINGLEPLAYER, levelStorageAccess.getLevelId(), worldStem.worldData().getLevelName());
-        } catch (Throwable throwable) {
-            CrashReport crashReport = CrashReport.forThrowable(throwable, "Starting replay server");
-//            CrashReportCategory crashReportCategory = crashReport.addCategory("Starting integrated server");
-//            crashReportCategory.setDetail("Level ID", (Object)levelStorageAccess.getLevelId());
-//            crashReportCategory.setDetail("Level Name", () -> worldStem.worldData().getLevelName());
-            throw new ReportedException(crashReport);
+            this.doWorldLoad(levelStorageAccess, packRepository, stem, false);
+        } finally {
+            this.info.remove();
         }
-
-        long delay = TimeUnit.SECONDS.toNanos(1L) / 60L;
-
-        while (!this.singleplayerServer.isReady() || this.overlay != null) {
-            long end = Util.getNanos() + delay;
-            levelLoadingScreen.tick();
-            if (this.overlay != null) {
-                this.overlay.tick();
-            }
-
-            this.runTick(false);
-            this.runAllTasks();
-            this.managedBlock(() -> Util.getNanos() > end);
-            this.handleDelayedCrash();
-        }
-
-        Duration duration = Duration.between(instant, Instant.now());
-        SocketAddress socketAddress = this.singleplayerServer.getConnection().startMemoryChannel();
-        Connection connection = Connection.connectToLocalServer(socketAddress);
-        connection.initiateServerboundPlayConnection(socketAddress.toString(), 0, new ClientHandshakePacketListenerImpl(connection,
-            (Minecraft) (Object) this, null, null, false, duration, component -> {}, levelLoadTracker, null));
-        connection.send(new ServerboundHelloPacket(this.getUser().getName(), this.getUser().getProfileId()));
-        this.pendingConnection = connection;
     }
 
 }
