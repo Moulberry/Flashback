@@ -4,6 +4,7 @@ import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.llamalad7.mixinextras.injector.v2.WrapWithCondition;
 import com.mojang.authlib.GameProfile;
+import com.mojang.authlib.properties.Property;
 import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.playback.ReplayServer;
 import net.minecraft.network.protocol.login.ClientboundGameProfilePacket;
