@@ -5,7 +5,7 @@ import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.moulberry.flashback.playback.FakePlayer;
 import com.moulberry.flashback.playback.ReplayServer;
-import net.fabricmc.fabric.impl.event.interaction.FakePlayerNetworkHandler;
+import net.fabricmc.fabric.impl.event.interaction.FakePlayerPacketListener;
 import net.minecraft.network.Connection;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
@@ -33,7 +33,7 @@ public class MixinPlayerList {
     @WrapOperation(method = "placeNewPlayer", at = @At(value = "NEW", target = "(Lnet/minecraft/server/MinecraftServer;Lnet/minecraft/network/Connection;Lnet/minecraft/server/level/ServerPlayer;Lnet/minecraft/server/network/CommonListenerCookie;)Lnet/minecraft/server/network/ServerGamePacketListenerImpl;"))
     public ServerGamePacketListenerImpl placeNewPlayer_newServerGamePacketListener(MinecraftServer minecraftServer, Connection connection, ServerPlayer serverPlayer, CommonListenerCookie commonListenerCookie, Operation<ServerGamePacketListenerImpl> original) {
         if (serverPlayer instanceof FakePlayer) {
-            return new FakePlayerNetworkHandler(serverPlayer);
+            return new FakePlayerPacketListener(serverPlayer);
         }
         return original.call(minecraftServer, connection, serverPlayer, commonListenerCookie);
     }

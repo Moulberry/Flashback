@@ -25,9 +25,11 @@ import net.minecraft.server.packs.repository.PackRepository;
 import net.minecraft.server.packs.repository.ServerPacksSource;
 import net.minecraft.server.packs.resources.CloseableResourceManager;
 import net.minecraft.server.packs.resources.MultiPackResourceManager;
+import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.server.packs.resources.ResourceProvider;
 import net.minecraft.tags.TagLoader;
 import net.minecraft.tags.TagNetworkSerialization;
+import net.minecraft.util.Util;
 import net.minecraft.world.flag.FeatureFlagSet;
 import net.minecraft.world.flag.FeatureFlags;
 import net.minecraft.world.level.biome.Biome;
@@ -146,7 +148,7 @@ public class ReplayConfigurationPacketHandler implements ClientConfigurationPack
         RegistryAccess.Frozen synchronizedRegistries;
         try {
             synchronizedRegistries = RegistryDataLoader.load(entries, resourceProvider, updatedLookups,
-                RegistryDataLoader.SYNCHRONIZED_REGISTRIES);
+                RegistryDataLoader.SYNCHRONIZED_REGISTRIES, Util.backgroundExecutor()).join();
         } catch (Exception e) {
             this.replayServer.failedToLoadRegistryDataWarning = true;
             Flashback.LOGGER.error("Error while trying to load registry data. Skipping... this might cause other issues", e);

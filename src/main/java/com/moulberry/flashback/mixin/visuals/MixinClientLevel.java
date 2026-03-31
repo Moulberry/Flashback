@@ -44,6 +44,8 @@ public class MixinClientLevel {
      * This code here ensures that the interpolation of yRotO -> yRot will always be the shortest path
      */
 
+
+
     @Inject(method = "tickNonPassenger", at = @At("RETURN"), require = 0)
     public void tickNonPassengerEnd(Entity entity, CallbackInfo ci) {
         if (Flashback.isInReplay()) {

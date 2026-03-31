@@ -5,6 +5,7 @@ import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.moulberry.flashback.Flashback;
+import com.moulberry.flashback.ext.WindowExt;
 import com.moulberry.flashback.state.EditorState;
 import com.moulberry.flashback.state.EditorStateManager;
 import com.moulberry.flashback.editor.ui.ReplayUI;
@@ -43,15 +44,6 @@ import java.util.Objects;
 
 @Mixin(GameRenderer.class)
 public abstract class MixinGameRenderer {
-
-    @WrapOperation(method = "render", at=@At(value = "FIELD", target = "Lnet/minecraft/client/Options;pauseOnLostFocus:Z"))
-    public boolean getPauseOnLostFocus(Options instance, Operation<Boolean> original) {
-        if (ReplayUI.isActive() || Flashback.EXPORT_JOB != null) {
-            return false;
-        }
-        return original.call(instance);
-    }
-
     /*
      * Render item in hand for spectators in a replay
      */
@@ -59,6 +51,11 @@ public abstract class MixinGameRenderer {
     @Shadow
     @Final
     Minecraft minecraft;
+
+    @Inject(method = "extract", at = @At("HEAD"))
+    public void extractHead(CallbackInfo ci) {
+        ((WindowExt)(Object)this.minecraft.getWindow()).flashback$checkForOverrideResize();
+    }
 
     @Inject(method = "render", at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/systems/CommandEncoder;clearDepthTexture(Lcom/mojang/blaze3d/textures/GpuTexture;D)V", remap = false, ordinal = 0), cancellable = true)
     public void render_noGui(DeltaTracker deltaTracker, boolean bl, CallbackInfo ci) {
@@ -88,25 +85,12 @@ public abstract class MixinGameRenderer {
         }
     }
 
-    @WrapOperation(method = "updateCamera", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/Camera;setup(Lnet/minecraft/world/level/Level;Lnet/minecraft/world/entity/Entity;ZZF)V"))
-    public void updateCamera_setupCamera(Camera instance, Level level, Entity entity, boolean bl, boolean bl2, float f, Operation<Void> original) {
-        if (Flashback.isInReplay()) {
-            f = ((MinecraftExt)this.minecraft).flashback$getLocalPlayerPartialTick(f);
-        }
-        original.call(instance, level, entity, bl, bl2, f);
-    }
-
     @Inject(method = "getNightVisionScale", at = @At("HEAD"), cancellable = true)
     private static void getNightVisionScale(LivingEntity livingEntity, float f, CallbackInfoReturnable<Float> cir) {
         EditorState editorState = EditorStateManager.getCurrent();
         if (editorState != null && editorState.replayVisuals.overrideNightVision) {
             cir.setReturnValue(1.0f);
         }
-    }
-
-    @WrapOperation(method = "renderLevel", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/Camera;rotation()Lorg/joml/Quaternionf;"))
-    public Quaternionf renderLevel(Camera instance, Operation<Quaternionf> original) {
-        return CameraRotation.modifyViewQuaternion(original.call(instance));
     }
 
     @Inject(method = "tryTakeScreenshotIfNeeded", at = @At("HEAD"), cancellable = true)
@@ -122,23 +106,6 @@ public abstract class MixinGameRenderer {
             var cameraEntity = Minecraft.getInstance().getCameraEntity();
             if (cameraEntity == this.minecraft.player && cameraEntity.isSpectator()) {
                 cir.setReturnValue(false);
-            }
-        }
-    }
-
-    @Inject(method = "getFov", at = @At("HEAD"), cancellable = true)
-    public void getFov(Camera camera, float f, boolean bl, CallbackInfoReturnable<Float> cir) {
-        if (Flashback.isInReplay()) {
-            if (!bl) {
-                cir.setReturnValue(70.0f);
-                return;
-            }
-            EditorState editorState = EditorStateManager.getCurrent();
-            if (editorState != null && editorState.replayVisuals.overrideFov) {
-                cir.setReturnValue(editorState.replayVisuals.overrideFovAmount);
-            } else {
-                int fov = this.minecraft.options.fov().get().intValue();
-                cir.setReturnValue((float) fov);
             }
         }
     }

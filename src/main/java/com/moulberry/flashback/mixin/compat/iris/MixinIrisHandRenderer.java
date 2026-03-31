@@ -11,11 +11,8 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.MultiPlayerGameMode;
 import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.player.LocalPlayer;
-import net.minecraft.client.renderer.ItemBlockRenderTypes;
 import net.minecraft.client.renderer.ItemInHandRenderer;
-import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.SubmitNodeCollector;
-import net.minecraft.client.renderer.chunk.ChunkSectionLayer;
+import net.minecraft.client.renderer.SubmitNodeStorage;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.item.BlockItem;
@@ -49,7 +46,7 @@ public abstract class MixinIrisHandRenderer {
             var item = spectatingPlayer.getItemBySlot(hand == InteractionHand.OFF_HAND ? EquipmentSlot.OFFHAND : EquipmentSlot.MAINHAND).getItem();
 
             if (item instanceof BlockItem blockItem) {
-                cir.setReturnValue(ItemBlockRenderTypes.getChunkRenderType(blockItem.getBlock().defaultBlockState()) == ChunkSectionLayer.TRANSLUCENT);
+                cir.setReturnValue(Minecraft.getInstance().getModelManager().getBlockStateModelSet().get(blockItem.getBlock().defaultBlockState()).hasMaterialFlag(1));
             } else {
                 cir.setReturnValue(false);
             }
@@ -65,33 +62,33 @@ public abstract class MixinIrisHandRenderer {
         return original.call(instance);
     }
 
-    @WrapOperation(method = "renderSolid", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/ItemInHandRenderer;renderHandsWithItems(FLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;Lnet/minecraft/client/player/LocalPlayer;I)V"), require = 0)
-    public void renderSolid_renderHandsWithItems(ItemInHandRenderer instance, float f, PoseStack poseStack, SubmitNodeCollector submitNodeCollector, LocalPlayer localPlayer, int i, Operation<Void> original) {
+    @WrapOperation(method = "renderSolid", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/ItemInHandRenderer;iris$renderHandsWithCustomRenderer(Lnet/irisshaders/iris/pathways/HandRenderer;FLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeStorage;Lnet/minecraft/client/player/LocalPlayer;I)V"), require = 0)
+    public void renderSolid_renderHandsWithItems(ItemInHandRenderer instance, HandRenderer handRenderer, float tickDelta, PoseStack poseStack, SubmitNodeStorage submitNodeStorage, LocalPlayer localPlayer, int i, Operation<Void> original) {
         AbstractClientPlayer spectatingPlayer = Flashback.getSpectatingPlayer();
         if (spectatingPlayer != null) {
             EnumSet<InteractionHand> renderableArms = EnumSet.noneOf(InteractionHand.class);
             for (InteractionHand hand : HANDS) {
                 if (!this.isHandTranslucent(hand)) renderableArms.add(hand);
             }
-            float frozenPartialTick = Minecraft.getInstance().level.tickRateManager().isEntityFrozen(spectatingPlayer) ? 1.0f : f;
-            ((ItemInHandRendererExt)instance).flashback$renderHandsWithItems(frozenPartialTick, poseStack, submitNodeCollector, spectatingPlayer, i, renderableArms);
+            float frozenPartialTick = Minecraft.getInstance().level.tickRateManager().isEntityFrozen(spectatingPlayer) ? 1.0f : tickDelta;
+            ((ItemInHandRendererExt)instance).flashback$renderHandsWithItems(frozenPartialTick, poseStack, submitNodeStorage, spectatingPlayer, i, renderableArms);
         } else {
-            original.call(instance, f, poseStack, submitNodeCollector, localPlayer, i);
+            original.call(instance, handRenderer, tickDelta, poseStack, submitNodeStorage, localPlayer, i);
         }
     }
 
-    @WrapOperation(method = "renderTranslucent", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/ItemInHandRenderer;renderHandsWithItems(FLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;Lnet/minecraft/client/player/LocalPlayer;I)V"), require = 0)
-    public void renderTranslucent_renderHandsWithItems(ItemInHandRenderer instance, float f, PoseStack poseStack, SubmitNodeCollector submitNodeCollector, LocalPlayer localPlayer, int i, Operation<Void> original) {
+    @WrapOperation(method = "renderTranslucent", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/ItemInHandRenderer;iris$renderHandsWithCustomRenderer(Lnet/irisshaders/iris/pathways/HandRenderer;FLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeStorage;Lnet/minecraft/client/player/LocalPlayer;I)V"), require = 0)
+    public void renderTranslucent_renderHandsWithItems(ItemInHandRenderer instance, HandRenderer handRenderer, float tickDelta, PoseStack poseStack, SubmitNodeStorage submitNodeStorage, LocalPlayer localPlayer, int i, Operation<Void> original) {
         AbstractClientPlayer spectatingPlayer = Flashback.getSpectatingPlayer();
         if (spectatingPlayer != null) {
             EnumSet<InteractionHand> renderableArms = EnumSet.noneOf(InteractionHand.class);
             for (InteractionHand hand : HANDS) {
                 if (this.isHandTranslucent(hand)) renderableArms.add(hand);
             }
-            float frozenPartialTick = Minecraft.getInstance().level.tickRateManager().isEntityFrozen(spectatingPlayer) ? 1.0f : f;
-            ((ItemInHandRendererExt)instance).flashback$renderHandsWithItems(frozenPartialTick, poseStack, submitNodeCollector, spectatingPlayer, i, renderableArms);
+            float frozenPartialTick = Minecraft.getInstance().level.tickRateManager().isEntityFrozen(spectatingPlayer) ? 1.0f : tickDelta;
+            ((ItemInHandRendererExt)instance).flashback$renderHandsWithItems(frozenPartialTick, poseStack, submitNodeStorage, spectatingPlayer, i, renderableArms);
         } else {
-            original.call(instance, f, poseStack, submitNodeCollector, localPlayer, i);
+            original.call(instance, handRenderer, tickDelta, poseStack, submitNodeStorage, localPlayer, i);
         }
     }
 

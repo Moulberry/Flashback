@@ -17,7 +17,7 @@ public class MixinMapItemSavedData {
         target = "Lnet/minecraft/world/level/saveddata/maps/MapItemSavedData;mapMatcher(Lnet/minecraft/world/item/ItemStack;)Ljava/util/function/Predicate;",
         shift = At.Shift.BEFORE
     ), cancellable = true)
-    public void tickCarriedBy(Player player, ItemStack itemStack, CallbackInfo ci) {
+    public void tickCarriedBy(CallbackInfo ci) {
         if (Flashback.isInReplay()) {
             ci.cancel();
         }

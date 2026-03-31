@@ -45,7 +45,7 @@ import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerWorldEvents;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLevelEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.util.Util;
 import net.minecraft.client.Minecraft;
@@ -97,6 +97,7 @@ import net.minecraft.world.level.WorldDataConfiguration;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.chunk.PalettedContainer;
+import net.minecraft.world.level.gamerules.GameRules;
 import net.minecraft.world.level.storage.LevelResource;
 import net.minecraft.world.level.storage.LevelStorageSource;
 import net.minecraft.world.level.storage.PrimaryLevelData;
@@ -181,9 +182,9 @@ public class ReplayServer extends IntegratedServer {
     private FileSystem playbackFileSystem = null;
     private boolean initializedWithSnapshot = false;
 
-    public ReplayServer(Thread thread, Minecraft minecraft, LevelStorageSource.LevelStorageAccess levelStorageAccess, PackRepository packRepository, WorldStem worldStem, Services services,
-                        LevelLoadListener levelLoadListener, UUID playbackUUID, Path path) {
-        super(thread, minecraft, levelStorageAccess, packRepository, worldStem, services, levelLoadListener);
+    public ReplayServer(Thread thread, Minecraft minecraft, LevelStorageSource.LevelStorageAccess levelStorageAccess, PackRepository packRepository, WorldStem worldStem,
+                        Optional<GameRules> gameRules, Services services, LevelLoadListener levelLoadListener, UUID playbackUUID, Path path) {
+        super(thread, minecraft, levelStorageAccess, packRepository, worldStem, gameRules, services, levelLoadListener);
         this.playbackUUID = playbackUUID;
         this.gamePacketHandler = new ReplayGamePacketHandler(this);
         this.configurationPacketHandler = new ReplayConfigurationPacketHandler(this);
@@ -232,10 +233,8 @@ public class ReplayServer extends IntegratedServer {
             primaryLevelData.settings = new LevelSettings(
                 primaryLevelData.settings.levelName(),
                 primaryLevelData.settings.gameType(),
-                primaryLevelData.settings.hardcore(),
-                primaryLevelData.settings.difficulty(),
+                primaryLevelData.settings.difficultySettings(),
                 primaryLevelData.settings.allowCommands(),
-                Flashback.createReplayGameRules(featureFlagSet),
                 new WorldDataConfiguration(
                     this.worldData.getDataConfiguration().dataPacks(),
                     featureFlagSet
@@ -250,6 +249,7 @@ public class ReplayServer extends IntegratedServer {
 
         overridePendingTags = pendingTags;
         this.reloadResources(knownPackIds != null ? knownPackIds : this.getPackRepository().getSelectedIds());
+        this.clockManager().init(this);
 
         this.gamePacketCodec = GameProtocols.CLIENTBOUND_TEMPLATE.bind(RegistryFriendlyByteBuf.decorator(this.registryAccess())).codec();
 
@@ -757,7 +757,7 @@ public class ReplayServer extends IntegratedServer {
                 int z = packet.getZ();
                 LevelChunk chunk = this.gamePacketHandler.level().getChunk(x, z);
 
-                if (Flashback.EXPORT_JOB != null || !doesCachedChunkIdMatch(chunk, index) || this.gamePacketHandler.forceSendChunksDueToMovingPistonShenanigans.contains(ChunkPos.asLong(x, z))) {
+                if (Flashback.EXPORT_JOB != null || !doesCachedChunkIdMatch(chunk, index) || this.gamePacketHandler.forceSendChunksDueToMovingPistonShenanigans.contains(ChunkPos.pack(x, z))) {
                     packet.handle(this.gamePacketHandler);
 
                     if (chunk instanceof LevelChunkExt ext) {
@@ -796,7 +796,7 @@ public class ReplayServer extends IntegratedServer {
             return;
         }
         this.clearLevel(serverLevel);
-        ServerWorldEvents.UNLOAD.invoker().onWorldUnload(this, serverLevel);
+        ServerLevelEvents.UNLOAD.invoker().onLevelUnload(this, serverLevel);
         try {
             serverLevel.close();
         } catch (IOException e) {
@@ -827,7 +827,6 @@ public class ReplayServer extends IntegratedServer {
                 entity.discard();
             }
         }
-        serverLevel.setDayTime(0);
 
         for (ServerPlayer player : serverLevel.players()) {
             if (player instanceof ReplayPlayer replayPlayer) {
@@ -1130,7 +1129,7 @@ public class ReplayServer extends IntegratedServer {
         // Add tickets for keeping entities loaded
         for (ServerLevel level : this.getAllLevels()) {
             for (Entity entity : level.getAllEntities()) {
-                ChunkPos chunkPos = new ChunkPos(entity.blockPosition());
+                ChunkPos chunkPos = ChunkPos.containing(entity.blockPosition());
                 level.getChunkSource().addTicketWithRadius(ENTITY_LOAD_TICKET, chunkPos, 3);
             }
         }
@@ -1280,10 +1279,6 @@ public class ReplayServer extends IntegratedServer {
         } finally {
             editorState.release(stamp);
         }
-    }
-
-    @Override
-    public void synchronizeTime(ServerLevel level) {
     }
 
     private void handleActions() {
@@ -1504,6 +1499,22 @@ public class ReplayServer extends IntegratedServer {
         }
 
         this.followLocalPlayerNextTickIfWrongDimension = false;
+    }
+
+    @Override
+    public boolean haveTime() {
+        // When jumping to a tick, we want to tick asap
+        return super.haveTime() && this.jumpToTick == -1;
+    }
+
+    @Override
+    protected void waitForTasks() {
+        if (this.jumpToTick != -1 || Flashback.EXPORT_JOB != null) {
+            // When jumping to a tick in an export, don't wait for the full tick
+            LockSupport.parkNanos("waiting for tasks", 100000L);
+        } else {
+            super.waitForTasks();
+        }
     }
 
     private void stopWithReason(Component reason) {

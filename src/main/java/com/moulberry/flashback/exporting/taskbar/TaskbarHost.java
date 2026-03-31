@@ -1,7 +1,6 @@
 package com.moulberry.flashback.exporting.taskbar;
 
 import com.moulberry.flashback.Flashback;
-import com.replaymod.lib.com.googlecode.mp4parser.util.Logger;
 import com.sun.jna.Pointer;
 import com.sun.jna.platform.win32.*;
 import com.sun.jna.ptr.PointerByReference;

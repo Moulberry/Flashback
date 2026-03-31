@@ -3,6 +3,7 @@ package com.moulberry.flashback.mixin;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.llamalad7.mixinextras.sugar.Local;
+import com.mojang.blaze3d.platform.Window;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.FreezeSlowdownFormula;
@@ -40,6 +41,7 @@ import net.minecraft.server.packs.repository.PackRepository;
 import net.minecraft.util.thread.ReentrantBlockableEventLoop;
 import net.minecraft.world.TickRateManager;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.level.gamerules.GameRules;
 import net.minecraft.world.level.storage.LevelStorageSource;
 import org.jetbrains.annotations.Nullable;
 import org.spongepowered.asm.mixin.Final;
@@ -52,46 +54,19 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import java.io.File;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 
 @Mixin(Minecraft.class)
 public abstract class MixinMinecraft extends ReentrantBlockableEventLoop<Runnable> implements MinecraftExt {
 
-    @Shadow
-    @Final
-    public File gameDirectory;
-
-    @Shadow
-    private @Nullable IntegratedServer singleplayerServer;
-
-    @Shadow
-    private boolean isLocalServer;
-
     public MixinMinecraft(String string) {
-        super(string);
+        super(string, true);
     }
 
     @Shadow
-    public abstract void updateReportEnvironment(ReportEnvironment reportEnvironment);
-
-    @Shadow
     public abstract void setScreen(@Nullable Screen screen);
-
-    @Shadow
-    private @Nullable Overlay overlay;
-
-    @Shadow
-    protected abstract void runTick(boolean bl);
-
-    @Shadow
-    protected abstract void handleDelayedCrash();
-
-    @Shadow
-    public abstract User getUser();
-
-    @Shadow
-    private @Nullable Connection pendingConnection;
 
     @Shadow
     @Nullable
@@ -100,10 +75,6 @@ public abstract class MixinMinecraft extends ReentrantBlockableEventLoop<Runnabl
     @Shadow
     @Nullable
     public LocalPlayer player;
-
-    @Shadow
-    @Nullable
-    public Entity cameraEntity;
 
     @Shadow
     @Final
@@ -119,15 +90,16 @@ public abstract class MixinMinecraft extends ReentrantBlockableEventLoop<Runnabl
     @Shadow
     protected abstract float getTickTargetMillis(float f);
 
-    @Shadow
-    public abstract void disconnectWithProgressScreen();
-
     @Shadow @Final private Services services;
 
     @Shadow @Nullable public abstract Entity getCameraEntity();
 
     @Shadow
-    public abstract void doWorldLoad(LevelStorageSource.LevelStorageAccess levelStorageAccess, PackRepository packRepository, WorldStem worldStem, boolean bl);
+    public abstract void doWorldLoad(LevelStorageSource.LevelStorageAccess levelStorageAccess, PackRepository packRepository, WorldStem worldStem, Optional<GameRules> gameRules, boolean bl);
+
+    @Shadow
+    @Final
+    private Window window;
 
     @Inject(method = "pauseGame", at = @At("HEAD"), cancellable = true)
     public void pauseGame(boolean bl, CallbackInfo ci) {
@@ -172,7 +144,7 @@ public abstract class MixinMinecraft extends ReentrantBlockableEventLoop<Runnabl
         original.call(instance, camera);
     }
 
-    @Inject(method = "runTick", at=@At(value = "INVOKE", target = "Lcom/mojang/blaze3d/pipeline/RenderTarget;blitToScreen()V", shift = At.Shift.AFTER))
+    @Inject(method = "renderFrame", at=@At(value = "INVOKE", target = "Lcom/mojang/blaze3d/pipeline/RenderTarget;blitToScreen()V", shift = At.Shift.AFTER))
     public void afterMainBlit(boolean bl, CallbackInfo ci) {
         if (!RenderSystem.isOnRenderThread()) return;
         ReplayUI.drawOverlay();
@@ -321,7 +293,9 @@ public abstract class MixinMinecraft extends ReentrantBlockableEventLoop<Runnabl
         }
 
         if (Flashback.isInReplay()) {
-            int localPlayerTicks = this.localPlayerTimer.advanceTime(Util.getMillis(), runTick);
+            long millis = Util.getMillis();
+            this.localPlayerTimer.advanceRealTime(millis);
+            int localPlayerTicks = this.localPlayerTimer.advanceGameTime(millis);
             if (this.flashback$overridingLocalPlayerTimer()) {
                 localPlayerTicks = Math.min(10, localPlayerTicks);
                 for (int i = 0; i < localPlayerTicks; i++) {
@@ -396,26 +370,34 @@ public abstract class MixinMinecraft extends ReentrantBlockableEventLoop<Runnabl
         }
     }
 
+    @Inject(method = "pauseIfInactive", at = @At("HEAD"), cancellable = true)
+    public void pauseIfInactive(CallbackInfo ci) {
+        if (Flashback.isInReplay()) {
+            ci.cancel();
+        }
+    }
+
     @Unique
     private final ThreadLocal<StartReplayServerInfo> info = new ThreadLocal<>();
 
     @WrapOperation(method = "doWorldLoad", at = @At(value = "INVOKE", target = "Lnet/minecraft/server/MinecraftServer;spin(Ljava/util/function/Function;)Lnet/minecraft/server/MinecraftServer;"))
     public MinecraftServer doWorldLoad_spin(Function<Thread, MinecraftServer> function, Operation<MinecraftServer> original,
-            @Local(argsOnly = true) LevelStorageSource.LevelStorageAccess levelStorageAccess, @Local(argsOnly = true) PackRepository packRepository, @Local(argsOnly = true) WorldStem stem,
+            @Local(argsOnly = true) LevelStorageSource.LevelStorageAccess levelStorageAccess, @Local(argsOnly = true) PackRepository packRepository,
+            @Local(argsOnly = true) WorldStem stem, @Local(argsOnly = true) Optional<GameRules> gameRules,
             @Local LevelLoadListener levelLoadListener) {
         StartReplayServerInfo info = this.info.get();
         if (info != null) {
             function = thread -> new ReplayServer(thread, (Minecraft) (Object) this,
-                levelStorageAccess, packRepository, stem, this.services, levelLoadListener, info.playbackUUID(), info.path());
+                levelStorageAccess, packRepository, stem, gameRules, this.services, levelLoadListener, info.playbackUUID(), info.path());
         }
         return original.call(function);
     }
 
     @Override
-    public void flashback$startReplayServer(LevelStorageSource.LevelStorageAccess levelStorageAccess, PackRepository packRepository, WorldStem stem, StartReplayServerInfo info) {
+    public void flashback$startReplayServer(LevelStorageSource.LevelStorageAccess levelStorageAccess, PackRepository packRepository, WorldStem stem, Optional<GameRules> gameRules, StartReplayServerInfo info) {
         this.info.set(info);
         try {
-            this.doWorldLoad(levelStorageAccess, packRepository, stem, false);
+            this.doWorldLoad(levelStorageAccess, packRepository, stem, gameRules, false);
         } finally {
             this.info.remove();
         }

@@ -1,7 +1,7 @@
 package com.moulberry.flashback.screen;
 
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.AbstractStringWidget;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
@@ -23,7 +23,7 @@ public class BottomTextWidget extends AbstractWidget {
         return this;
     }
 
-    public void renderWidget(GuiGraphics guiGraphics, int i, int j, float f) {
+    public void extractWidgetRenderState(GuiGraphicsExtractor guiGraphics, int i, int j, float f) {
         Component component = this.getMessage();
 
         int width = this.getWidth();
@@ -31,7 +31,7 @@ public class BottomTextWidget extends AbstractWidget {
         int x = this.getX() + Math.round((width - textWidth) * this.horizontalAlignment);
         int y = this.getY() + this.getHeight() - this.font.lineHeight + 1;
 
-        guiGraphics.drawString(font, component.getVisualOrderText(), x, y, -1);
+        guiGraphics.text(font, component.getVisualOrderText(), x, y, -1);
     }
 
     @Override

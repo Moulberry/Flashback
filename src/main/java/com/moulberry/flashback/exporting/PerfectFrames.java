@@ -42,7 +42,7 @@ public class PerfectFrames {
         long start = System.currentTimeMillis();
         while (!isFrameReady(start)) {
             LockSupport.parkNanos("waiting for frame to be ready", 100000L);
-            while (Minecraft.getInstance().pollTask()) {}
+            Minecraft.getInstance().runAllTasks();
         }
     }
 

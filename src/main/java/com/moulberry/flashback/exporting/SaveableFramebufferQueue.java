@@ -12,8 +12,7 @@ import com.moulberry.flashback.visuals.ShaderManager;
 import org.jetbrains.annotations.Nullable;
 
 import java.nio.FloatBuffer;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.ArrayDeque;
 import java.util.OptionalInt;
 
 public class SaveableFramebufferQueue implements AutoCloseable {
@@ -21,10 +20,8 @@ public class SaveableFramebufferQueue implements AutoCloseable {
     private final int width;
     private final int height;
 
-    private static final int CAPACITY = 3;
-
-    private final List<SaveableFramebuffer> available = new ArrayList<>();
-    private final List<SaveableFramebuffer> waiting = new ArrayList<>();
+    private final ArrayDeque<SaveableFramebuffer> available = new ArrayDeque<>();
+    private final ArrayDeque<SaveableFramebuffer> waiting = new ArrayDeque<>();
 
     private final GpuTexture flipBuffer;
     private final GpuTextureView flipBufferView;
@@ -35,17 +32,14 @@ public class SaveableFramebufferQueue implements AutoCloseable {
 
         this.flipBuffer = RenderSystem.getDevice().createTexture(() -> "flip buffer", GpuTexture.USAGE_COPY_DST | GpuTexture.USAGE_RENDER_ATTACHMENT, TextureFormat.RGBA8, width, height, 1, 1);
         this.flipBufferView = RenderSystem.getDevice().createTextureView(this.flipBuffer);
-
-        for (int i = 0; i < CAPACITY; i++) {
-            this.available.add(new SaveableFramebuffer());
-        }
     }
 
     public SaveableFramebuffer take() {
         if (this.available.isEmpty()) {
-            throw new IllegalStateException("No textures available!");
+            return new SaveableFramebuffer(this.width, this.height);
+        } else {
+            return this.available.removeFirst();
         }
-        return this.available.removeFirst();
     }
 
     private void blitFlip(RenderTarget src, boolean supersampling) {
@@ -63,29 +57,36 @@ public class SaveableFramebufferQueue implements AutoCloseable {
         // Do an inline flip
         this.blitFlip(target, supersampling);
 
-        texture.startDownload(this.flipBuffer, this.width, this.height);
+        texture.startDownload(this.flipBuffer);
         this.waiting.add(texture);
     }
 
-    record DownloadedFrame(NativeImage image, @Nullable FloatBuffer audioBuffer) {}
+    public record DownloadedFrame(NativeImage image, @Nullable FloatBuffer audioBuffer) {}
 
-    public @Nullable DownloadedFrame finishDownload(boolean drain) {
-        if (this.waiting.isEmpty()) {
+    public @Nullable DownloadedFrame finishDownload() {
+        SaveableFramebuffer first = this.waiting.peekFirst();
+        if (first == null) {
             return null;
         }
 
-        if (!drain && !this.available.isEmpty()) {
+        NativeImage downloaded = first.finishDownload();
+
+        if (downloaded == null) {
             return null;
         }
 
-        SaveableFramebuffer texture = this.waiting.removeFirst();
+        FloatBuffer audioBuffer = first.audioBuffer;
+        DownloadedFrame frame = new DownloadedFrame(downloaded, audioBuffer);
 
-        NativeImage nativeImage = texture.finishDownload(this.width, this.height);
-        FloatBuffer audioBuffer = texture.audioBuffer;
-        texture.audioBuffer = null;
+        SaveableFramebuffer popped = this.waiting.removeFirst();
+        popped.audioBuffer = null;
+        this.available.add(popped);
 
-        this.available.add(texture);
-        return new DownloadedFrame(nativeImage, audioBuffer);
+        return frame;
+    }
+
+    public boolean isEmpty() {
+        return this.waiting.isEmpty();
     }
 
     @Override

@@ -10,7 +10,7 @@ import com.moulberry.flashback.editor.ui.ReplayUI;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Gui;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.multiplayer.MultiPlayerGameMode;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.world.entity.Entity;
@@ -39,8 +39,8 @@ public abstract class MixinGui {
     @Unique
     private boolean shouldHideElements = false;
 
-    @Inject(method = "render", at = @At("HEAD"))
-    public void render_updateCameraGameType(GuiGraphics guiGraphics, DeltaTracker deltaTracker, CallbackInfo ci) {
+    @Inject(method = "extractRenderState", at = @At("HEAD"))
+    public void extractRenderState_updateCameraGameType(GuiGraphicsExtractor guiGraphics, DeltaTracker deltaTracker, CallbackInfo ci) {
         this.shouldHideElements = false;
         this.cameraGameType = null;
         if (Flashback.isInReplay()) {
@@ -60,8 +60,8 @@ public abstract class MixinGui {
         }
     }
 
-    @Inject(method = "renderChat", at = @At("HEAD"), cancellable = true, require = 0)
-    public void renderChat(GuiGraphics guiGraphics, DeltaTracker deltaTracker, CallbackInfo ci) {
+    @Inject(method = "extractChat", at = @At("HEAD"), cancellable = true, require = 0)
+    public void extractChat(GuiGraphicsExtractor guiGraphics, DeltaTracker deltaTracker, CallbackInfo ci) {
         if (this.shouldHideElements) {
             EditorState editorState = EditorStateManager.getCurrent();
             if (editorState != null && !editorState.replayVisuals.showChat) {
@@ -70,8 +70,8 @@ public abstract class MixinGui {
         }
     }
 
-    @Inject(method = "renderTitle", at = @At("HEAD"), cancellable = true, require = 0)
-    public void renderTitle(GuiGraphics guiGraphics, DeltaTracker deltaTracker, CallbackInfo ci) {
+    @Inject(method = "extractTitle", at = @At("HEAD"), cancellable = true, require = 0)
+    public void extractTitle(GuiGraphicsExtractor guiGraphics, DeltaTracker deltaTracker, CallbackInfo ci) {
         if (this.shouldHideElements) {
             EditorState editorState = EditorStateManager.getCurrent();
             if (editorState != null && !editorState.replayVisuals.showTitleText) {
@@ -80,8 +80,8 @@ public abstract class MixinGui {
         }
     }
 
-    @Inject(method = "renderScoreboardSidebar", at = @At("HEAD"), cancellable = true, require = 0)
-    public void renderScoreboardSidebar(GuiGraphics guiGraphics, DeltaTracker deltaTracker, CallbackInfo ci) {
+    @Inject(method = "extractScoreboardSidebar", at = @At("HEAD"), cancellable = true, require = 0)
+    public void extractScoreboardSidebar(GuiGraphicsExtractor guiGraphics, DeltaTracker deltaTracker, CallbackInfo ci) {
         if (this.shouldHideElements) {
             EditorState editorState = EditorStateManager.getCurrent();
             if (editorState != null && !editorState.replayVisuals.showScoreboard) {
@@ -90,8 +90,8 @@ public abstract class MixinGui {
         }
     }
 
-    @Inject(method = "renderOverlayMessage", at = @At("HEAD"), cancellable = true, require = 0)
-    public void renderOverlayMessage(GuiGraphics guiGraphics, DeltaTracker deltaTracker, CallbackInfo ci) {
+    @Inject(method = "extractOverlayMessage", at = @At("HEAD"), cancellable = true, require = 0)
+    public void extractOverlayMessage(GuiGraphicsExtractor guiGraphics, DeltaTracker deltaTracker, CallbackInfo ci) {
         if (this.shouldHideElements) {
             EditorState editorState = EditorStateManager.getCurrent();
             if (editorState != null && !editorState.replayVisuals.showActionBar) {
@@ -107,8 +107,8 @@ public abstract class MixinGui {
         }
     }
 
-    @Inject(method = "renderHotbarAndDecorations", at = @At("HEAD"), cancellable = true, require = 0)
-    public void renderHotbarAndDecorations(GuiGraphics guiGraphics, DeltaTracker deltaTracker, CallbackInfo ci) {
+    @Inject(method = "extractHotbarAndDecorations", at = @At("HEAD"), cancellable = true, require = 0)
+    public void extractHotbarAndDecorations(GuiGraphicsExtractor guiGraphics, DeltaTracker deltaTracker, CallbackInfo ci) {
         if (this.shouldHideElements) {
             EditorState editorState = EditorStateManager.getCurrent();
             if (editorState != null && !editorState.replayVisuals.showHotbar) {
@@ -117,32 +117,32 @@ public abstract class MixinGui {
         }
     }
 
-    @WrapOperation(method = "renderHotbarAndDecorations", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/multiplayer/MultiPlayerGameMode;getPlayerMode()Lnet/minecraft/world/level/GameType;"), require = 0)
-    public GameType renderHotbarAndDecorations_getPlayerMode(MultiPlayerGameMode instance, Operation<GameType> original) {
+    @WrapOperation(method = "extractHotbarAndDecorations", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/multiplayer/MultiPlayerGameMode;getPlayerMode()Lnet/minecraft/world/level/GameType;"), require = 0)
+    public GameType extractHotbarAndDecorations_getPlayerMode(MultiPlayerGameMode instance, Operation<GameType> original) {
         if (this.cameraGameType != null) {
             return this.cameraGameType;
         }
         return original.call(instance);
     }
 
-    @WrapOperation(method = "renderHotbarAndDecorations", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/multiplayer/MultiPlayerGameMode;canHurtPlayer()Z"), require = 0)
-    public boolean renderHotbarAndDecorations_canHurtPlayer(MultiPlayerGameMode instance, Operation<Boolean> original) {
+    @WrapOperation(method = "extractHotbarAndDecorations", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/multiplayer/MultiPlayerGameMode;canHurtPlayer()Z"), require = 0)
+    public boolean extractHotbarAndDecorations_canHurtPlayer(MultiPlayerGameMode instance, Operation<Boolean> original) {
         if (this.cameraGameType != null) {
             return this.cameraGameType.isSurvival();
         }
         return original.call(instance);
     }
 
-    @WrapOperation(method = "renderHotbarAndDecorations", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/multiplayer/MultiPlayerGameMode;hasExperience()Z"), require = 0)
-    public boolean renderHotbarAndDecorations_hasExperience(MultiPlayerGameMode instance, Operation<Boolean> original) {
+    @WrapOperation(method = "extractHotbarAndDecorations", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/multiplayer/MultiPlayerGameMode;hasExperience()Z"), require = 0)
+    public boolean extractHotbarAndDecorations_hasExperience(MultiPlayerGameMode instance, Operation<Boolean> original) {
         if (this.cameraGameType != null) {
             return this.cameraGameType.isSurvival();
         }
         return original.call(instance);
     }
 
-    @WrapOperation(method = "renderHotbarAndDecorations", at = @At(value = "FIELD", target = "Lnet/minecraft/client/player/LocalPlayer;experienceLevel:I"), require = 0)
-    public int renderExperienceLevel_experienceLevel(LocalPlayer instance, Operation<Integer> original) {
+    @WrapOperation(method = "extractHotbarAndDecorations", at = @At(value = "FIELD", target = "Lnet/minecraft/client/player/LocalPlayer;experienceLevel:I"), require = 0)
+    public int extractExperienceLevel_experienceLevel(LocalPlayer instance, Operation<Integer> original) {
         if (Flashback.isInReplay()) {
             Player player = this.getCameraPlayer();
             if (player != null) {
@@ -152,8 +152,8 @@ public abstract class MixinGui {
         return original.call(instance);
     }
 
-    @WrapOperation(method = "renderCrosshair", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/player/LocalPlayer;getAttackStrengthScale(F)F"), require = 0)
-    public float renderCrosshair_getAttackStrengthScale(LocalPlayer instance, float partialTick, Operation<Float> original) {
+    @WrapOperation(method = "extractCrosshair", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/player/LocalPlayer;getAttackStrengthScale(F)F"), require = 0)
+    public float extractCrosshair_getAttackStrengthScale(LocalPlayer instance, float partialTick, Operation<Float> original) {
         if (Flashback.isInReplay()) {
             Player player = this.getCameraPlayer();
             if (player != null) {
@@ -163,8 +163,8 @@ public abstract class MixinGui {
         return original.call(instance, partialTick);
     }
 
-    @WrapOperation(method = "renderCrosshair", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/player/LocalPlayer;getCurrentItemAttackStrengthDelay()F"), require = 0)
-    public float renderCrosshair_getCurrentItemAttackStrengthDelay(LocalPlayer instance, Operation<Float> original) {
+    @WrapOperation(method = "extractCrosshair", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/player/LocalPlayer;getCurrentItemAttackStrengthDelay()F"), require = 0)
+    public float extractCrosshair_getCurrentItemAttackStrengthDelay(LocalPlayer instance, Operation<Float> original) {
         if (Flashback.isInReplay()) {
             Player player = this.getCameraPlayer();
             if (player != null) {
@@ -174,8 +174,8 @@ public abstract class MixinGui {
         return original.call(instance);
     }
 
-    @Inject(method = "renderVignette", at = @At("HEAD"), cancellable = true)
-    public void renderVignette(GuiGraphics guiGraphics, Entity entity, CallbackInfo ci) {
+    @Inject(method = "extractVignette", at = @At("HEAD"), cancellable = true)
+    public void extractVignette(GuiGraphicsExtractor guiGraphics, Entity entity, CallbackInfo ci) {
         // The vignette ruins the transparency when trying to export with alpha
         // The vignette is also probably unwanted in general when trying to record, so lets just get rid of it
         if (Flashback.isInReplay()) {

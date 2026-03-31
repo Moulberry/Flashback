@@ -18,19 +18,14 @@ import com.mojang.blaze3d.vertex.MeshData;
 import com.mojang.blaze3d.vertex.Tesselator;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import com.moulberry.flashback.visuals.ShaderManager;
-import net.minecraft.client.renderer.CachedOrthoProjectionMatrixBuffer;
-import net.minecraft.client.renderer.RenderPipelines;
+import net.minecraft.client.renderer.Projection;
+import net.minecraft.client.renderer.ProjectionMatrixBuffer;
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
 import org.joml.Vector4f;
-import org.lwjgl.opengl.ARBDirectStateAccess;
-import org.lwjgl.opengl.EXTFramebufferMultisampleBlitScaled;
-import org.lwjgl.opengl.GL;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL30;
-import org.lwjgl.opengl.GL30C;
 import org.lwjgl.opengl.GL32;
-import org.lwjgl.opengl.GLCapabilities;
 
 import java.util.OptionalInt;
 
@@ -64,15 +59,24 @@ public class FramebufferUtils {
         return renderTarget;
     }
 
-    private static final CachedOrthoProjectionMatrixBuffer projectionBuffers = new CachedOrthoProjectionMatrixBuffer("flashback blit", 1000.0f, 3000.0f, true);
+    private static ProjectionMatrixBuffer projectionBuffers;
+    private static Projection projection;
 
     private static void blitTo(GpuTextureView from, RenderTarget to, int width, int height, float x1, float y1, float x2, float y2) {
+        if (projectionBuffers == null) {
+            projectionBuffers = new ProjectionMatrixBuffer("flashback blit");
+            projection = new Projection();
+            projection.setupOrtho(1000.0f, 3000.0f, width, height, true);
+        } else if (projection.width() != width || projection.height() != height) {
+            projection.setSize(width, height);
+        }
+
         var modelViewStack = RenderSystem.getModelViewStack();
         modelViewStack.pushMatrix();
         modelViewStack.set(new Matrix4f().translation(0.0f, 0.0f, -2000.0f));
         var oldProjectionMatrix = RenderSystem.getProjectionMatrixBuffer();
         ProjectionType oldProjectionType = RenderSystem.getProjectionType();
-        RenderSystem.setProjectionMatrix(projectionBuffers.getBuffer(width, height), ProjectionType.ORTHOGRAPHIC);
+        RenderSystem.setProjectionMatrix(projectionBuffers.getBuffer(projection), ProjectionType.ORTHOGRAPHIC);
 
         BufferBuilder builder = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX);
         builder.addVertex(width*x1, height*y2, 0.0f).setUv(0.0f, 0.0f);

@@ -20,7 +20,7 @@ public class MixinMinecraftServer {
      * to load them from the resource pack repository where it doesn't exist
      */
 
-    @WrapOperation(method = "method_29437", at = @At(value = "INVOKE", target = "Lnet/minecraft/tags/TagLoader;loadTagsForExistingRegistries(Lnet/minecraft/server/packs/resources/ResourceManager;Lnet/minecraft/core/RegistryAccess;)Ljava/util/List;"))
+    @WrapOperation(method = "lambda$reloadResources$1", at = @At(value = "INVOKE", target = "Lnet/minecraft/tags/TagLoader;loadTagsForExistingRegistries(Lnet/minecraft/server/packs/resources/ResourceManager;Lnet/minecraft/core/RegistryAccess;)Ljava/util/List;"))
     public List<Registry.PendingTags<?>> loadTagsForExistingRegistries(ResourceManager resourceManager, RegistryAccess registryAccess, Operation<List<Registry.PendingTags<?>>> original) {
         if ((Object) this instanceof ReplayServer replayServer && replayServer.overridePendingTags != null) {
             return replayServer.overridePendingTags;

@@ -20,7 +20,7 @@ public class MixinExperienceBarRenderer {
     @Final
     private Minecraft minecraft;
 
-    @WrapOperation(method = "renderBackground", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/player/LocalPlayer;getXpNeededForNextLevel()I"), require = 0)
+    @WrapOperation(method = "extractBackground", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/player/LocalPlayer;getXpNeededForNextLevel()I"), require = 0)
     public int renderExperienceBar_getXpNeededForNextLevel(LocalPlayer instance, Operation<Integer> original) {
         if (Flashback.isInReplay()) {
             Entity entity = this.minecraft.getCameraEntity();
@@ -31,7 +31,7 @@ public class MixinExperienceBarRenderer {
         return original.call(instance);
     }
 
-    @WrapOperation(method = "renderBackground", at = @At(value = "FIELD", target = "Lnet/minecraft/client/player/LocalPlayer;experienceProgress:F"), require = 0)
+    @WrapOperation(method = "extractBackground", at = @At(value = "FIELD", target = "Lnet/minecraft/client/player/LocalPlayer;experienceProgress:F"), require = 0)
     public float renderExperienceBar_experienceProgress(LocalPlayer instance, Operation<Float> original) {
         if (Flashback.isInReplay()) {
             Entity entity = this.minecraft.getCameraEntity();

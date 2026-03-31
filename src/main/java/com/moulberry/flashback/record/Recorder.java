@@ -14,6 +14,7 @@ import com.moulberry.flashback.RegistryMetaHelper;
 import com.moulberry.flashback.action.*;
 import com.moulberry.flashback.compat.BobbyUtil;
 import com.moulberry.flashback.compat.DistantHorizonsSupport;
+import com.moulberry.flashback.ext.ClientClockManagerExt;
 import com.moulberry.flashback.io.AsyncReplaySaver;
 import com.moulberry.flashback.io.ReplayWriter;
 import com.moulberry.flashback.mixin.compat.bobby.FakeChunkManagerAccessor;
@@ -762,7 +763,9 @@ public class Recorder {
                 registryFriendlyByteBuf.writeFloat(xRot);
                 registryFriendlyByteBuf.writeFloat(yRot);
                 registryFriendlyByteBuf.writeFloat(yHeadRot);
-                registryFriendlyByteBuf.writeVec3(deltaMovement);
+                registryFriendlyByteBuf.writeDouble(deltaMovement.x());
+                registryFriendlyByteBuf.writeDouble(deltaMovement.y());
+                registryFriendlyByteBuf.writeDouble(deltaMovement.z());
                 ByteBufCodecs.GAME_PROFILE.encode(registryFriendlyByteBuf, newProfile);
                 registryFriendlyByteBuf.writeVarInt(gameModeId);
 
@@ -851,7 +854,7 @@ public class Recorder {
             // If we skipped a packet, we should run all updates to ensure that
             // the packet changes have been applied to the game state.
             this.skippedPacketDueToWaitingForWrite = false;
-            while (minecraft.pollTask()) {}
+            minecraft.runAllTasks();
         }
 
         if (asActualSnapshot) {
@@ -1013,7 +1016,7 @@ public class Recorder {
         // Level info
         WorldBorder worldBorder = level.getWorldBorder();
         gamePackets.add(new ClientboundInitializeBorderPacket(worldBorder));
-        gamePackets.add(new ClientboundSetTimePacket(level.getGameTime(), level.getDayTime(), level.tickDayTime));
+        gamePackets.add(new ClientboundSetTimePacket(level.getGameTime(), ((ClientClockManagerExt)level.clockManager()).flashback$encodeClockUpdates()));
         gamePackets.add(new ClientboundSetDefaultSpawnPositionPacket(level.getRespawnData()));
         if (level.isRaining()) {
             gamePackets.add(new ClientboundGameEventPacket(ClientboundGameEventPacket.START_RAINING, 0.0f));
@@ -1160,7 +1163,7 @@ public class Recorder {
             LevelChunk chunk = chunksList.get(i);
             if (chunk != null) {
                 chunks.add(chunk);
-                seenChunkPositions.add(chunk.getPos().toLong());
+                seenChunkPositions.add(chunk.getPos().pack());
             }
         }
 
@@ -1206,8 +1209,8 @@ public class Recorder {
                 int centerX = localPlayer.getBlockX() >> 4;
                 int centerZ = localPlayer.getBlockZ() >> 4;
                 levelChunkPacketTasks.sort(Comparator.comparingInt(task -> {
-                    int dx = task.pos.x - centerX;
-                    int dz = task.pos.z - centerZ;
+                    int dx = task.pos.x() - centerX;
+                    int dz = task.pos.z() - centerZ;
                     return dx*dx + dz*dz;
                 }));
 

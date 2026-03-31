@@ -1,6 +1,7 @@
 package com.moulberry.flashback;
 
 import io.netty.buffer.Unpooled;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.protocol.game.ClientboundLevelChunkPacketData;
 import net.minecraft.network.protocol.game.ClientboundLevelChunkWithLightPacket;
@@ -83,7 +84,7 @@ public class CachedChunkPacket {
         for (ClientboundLevelChunkPacketData.BlockEntityInfo blockEntitiesData : copy) {
             digest.update((byte) blockEntitiesData.packedXZ);
             digest.update(intToByteArray(blockEntitiesData.y));
-            digest.update(BlockEntityType.getKey(blockEntitiesData.type).toString().getBytes(StandardCharsets.UTF_8));
+            digest.update(BuiltInRegistries.BLOCK_ENTITY_TYPE.getKey(blockEntitiesData.type).toString().getBytes(StandardCharsets.UTF_8));
             if (blockEntitiesData.tag != null) {
                 frenBuffer.writeNbt(blockEntitiesData.tag);
                 digest.update(frenBuffer.array(), 0, frenBuffer.writerIndex());
