@@ -84,7 +84,7 @@ public record KeyframeChangeTrackEntity(UUID target, TrackingBodyPart trackingBo
         if (player != null) {
             position.y -= player.getEyeHeight();
         }
-        keyframeHandler.applyCameraPosition(position, yaw, pitch, 0.0f);
+        keyframeHandler.applyCameraPosition(position, yaw, pitch, this.roll);
     }
 
     @Override
