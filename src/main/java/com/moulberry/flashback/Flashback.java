@@ -1158,7 +1158,7 @@ public class Flashback implements ModInitializer, ClientModInitializer {
                     complete.specialWorldProperty(), complete.lifecycle()), complete.dimensionsRegistryAccess());
             }, WorldStem::new, Util.backgroundExecutor(), executor)).get();
 
-            ((MinecraftExt)Minecraft.getInstance()).flashback$startReplayServer(access, packRepository, worldStem, replayUuid, path);
+            ((MinecraftExt)Minecraft.getInstance()).flashback$startReplayServer(access, packRepository, worldStem, new MinecraftExt.StartReplayServerInfo(replayUuid, path));
 
             TaskbarManager.launchTaskbarManager();
         } catch (Exception e) {
