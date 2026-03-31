@@ -2,6 +2,7 @@ package com.moulberry.flashback.mixin.replay_server;
 
 import com.llamalad7.mixinextras.injector.v2.WrapWithCondition;
 import com.mojang.authlib.GameProfile;
+import com.mojang.authlib.properties.Property;
 import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.playback.ReplayServer;
 import com.moulberry.flashback.screen.select_replay.PendingSelectionEntry;
