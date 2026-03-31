@@ -125,7 +125,7 @@ public class ReplayServer extends IntegratedServer {
     public static int REPLAY_VIEWER_IDS_START = -981723987;
     public static String REPLAY_VIEWER_NAME = "Replay Viewer";
 
-    public volatile int jumpToTick = -1;
+    private volatile int jumpToTick = -1;
     public volatile boolean replayPaused = true;
     public AtomicBoolean forceApplyKeyframes = new AtomicBoolean(false);
     public AtomicBoolean sendFinishedServerTick = new AtomicBoolean(false);
@@ -453,6 +453,11 @@ public class ReplayServer extends IntegratedServer {
 
     public void goToReplayTick(int tick) {
         this.jumpToTick = tick;
+        LockSupport.unpark(this.getRunningThread());
+    }
+
+    public int jumpToTick() {
+        return jumpToTick;
     }
 
     public float getDesiredTickRate(boolean manual) {
@@ -1504,6 +1509,22 @@ public class ReplayServer extends IntegratedServer {
         }
 
         this.followLocalPlayerNextTickIfWrongDimension = false;
+    }
+
+    @Override
+    public boolean haveTime() {
+        // When jumping to a tick, we want to tick asap
+        return super.haveTime() && this.jumpToTick == -1;
+    }
+
+    @Override
+    public void waitForTasks() {
+        if (this.jumpToTick != -1) {
+            // When jumping to a tick, don't wait for the full tick
+            LockSupport.parkNanos("waiting for tasks", 100000L);
+        } else {
+            super.waitForTasks();
+        }
     }
 
     private void stopWithReason(Component reason) {

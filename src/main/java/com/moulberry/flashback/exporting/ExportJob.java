@@ -491,7 +491,7 @@ public class ExportJob {
         if (force || replayServer.getReplayTick() != targetTick) {
             this.finishedServerTick.set(false);
 
-            replayServer.jumpToTick = targetTick;
+            replayServer.goToReplayTick(targetTick);
             replayServer.replayPaused = true;
             replayServer.sendFinishedServerTick.set(true);
 
