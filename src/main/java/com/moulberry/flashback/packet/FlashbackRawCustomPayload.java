@@ -8,7 +8,7 @@ import net.minecraft.network.protocol.game.GameProtocols;
 import net.minecraft.world.item.ItemStack;
 
 public record FlashbackRawCustomPayload(byte[] packetBytes, boolean configPhase) implements CustomPacketPayload {
-    public static final Type<FlashbackRawCustomPayload> TYPE = new Type<>(Flashback.createIdentifier("raw_custom_payload"));
+    public static final Type<FlashbackRawCustomPayload> TYPE = new Type<>(Flashback.createResourceLocation("raw_custom_payload"));
 
     public static final StreamCodec<RegistryFriendlyByteBuf, FlashbackRawCustomPayload> STREAM_CODEC = new ProcessPacketRawStreamCodec();
 
