@@ -118,13 +118,11 @@ public class AsyncReplaySaver {
                     boolean add = true;
 
                     List<CachedChunkPacket> cached = this.cachedChunkPackets.computeIfAbsent(cachedChunkPacket.longHashCode, (l)->new ArrayList<>());
-                    if (!cached.isEmpty()) {
-                        for (CachedChunkPacket existingChunkPacket : cached) {
-                            if (existingChunkPacket.equals(cachedChunkPacket)) {
-                                add = false;
-                                index = existingChunkPacket.index;
-                                break;
-                            }
+                    for (CachedChunkPacket existingChunkPacket : cached) {
+                        if (existingChunkPacket.equals(cachedChunkPacket)) {
+                            add = false;
+                            index = existingChunkPacket.index;
+                            break;
                         }
                     }
 
