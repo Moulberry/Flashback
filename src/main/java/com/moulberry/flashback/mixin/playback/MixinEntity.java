@@ -44,11 +44,7 @@ public abstract class MixinEntity {
 
             int localId = replayServer.getLocalPlayerId();
             if (this.level.getEntity(localId) instanceof Player localPlayer) {
-                if ((Object)this == localPlayer) {
-                    cir.setReturnValue(false);
-                } else {
-                    cir.setReturnValue(this.isInvisibleTo(localPlayer));
-                }
+                cir.setReturnValue(this.isInvisibleTo(localPlayer));
             } else {
                 cir.setReturnValue(this.isInvisible());
             }
