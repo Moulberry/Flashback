@@ -271,10 +271,11 @@ public class TimelineWindow {
         timelineOffset = middleX + errorOffset;
 
         cursorTicks = currentReplayTick;
+        int jumpToTick = replayServer.jumpToTick();
         if (grabbedPlayback) {
             cursorTicks = timelineXToReplayTick(mouseX - x);
-        } else if (replayServer.jumpToTick >= 0) {
-            cursorTicks = replayServer.jumpToTick;
+        } else if (jumpToTick >= 0) {
+            cursorTicks = jumpToTick;
         } else if (pendingStepBackwardsTicks > 0) {
             cursorTicks = Math.max(0, cursorTicks - pendingStepBackwardsTicks);
         }
@@ -1162,7 +1163,7 @@ public class TimelineWindow {
 
     private static void togglePaused(ReplayServer replayServer) {
         if (replayServer.getReplayTick() >= replayServer.getTotalReplayTicks()) {
-            replayServer.jumpToTick = 0;
+            replayServer.goToReplayTick(0);
         }
         replayServer.replayPaused = !replayServer.replayPaused;
         if (!replayServer.replayPaused) {
