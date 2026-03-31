@@ -9,8 +9,10 @@ import java.util.UUID;
 
 public interface MinecraftExt {
 
+    record StartReplayServerInfo(UUID playbackUUID, Path path) {}
+
     void flashback$applyKeyframes();
-    void flashback$startReplayServer(LevelStorageSource.LevelStorageAccess levelStorageAccess, PackRepository packRepository, WorldStem stem, UUID playbackUUID, Path path);
+    void flashback$startReplayServer(LevelStorageSource.LevelStorageAccess levelStorageAccess, PackRepository packRepository, WorldStem stem, StartReplayServerInfo info);
     float flashback$getLocalPlayerPartialTick(float originalPartialTick);
     boolean flashback$overridingLocalPlayerTimer();
 
