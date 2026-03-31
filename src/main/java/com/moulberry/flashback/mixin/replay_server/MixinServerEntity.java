@@ -13,7 +13,6 @@ import net.minecraft.server.level.ServerEntity;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
-import org.jspecify.annotations.Nullable;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
@@ -30,7 +29,7 @@ public class MixinServerEntity {
      * Force update interval to be 1 on a replay server, sending updates as soon as possible
      */
 
-    @Shadow @Nullable public List<SynchedEntityData.DataValue<?>> trackedDataValues;
+    @Shadow public List<SynchedEntityData.DataValue<?>> trackedDataValues;
 
     @Shadow public Entity entity;
 
