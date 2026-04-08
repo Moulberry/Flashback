@@ -75,7 +75,7 @@ dependencies {
     // Mod compatibility
     compileOnly("maven.modrinth:distanthorizons:Mt9bDAs6")
     compileOnly("maven.modrinth:sodium:Amr4VcZo")
-    compileOnly("maven.modrinth:iris:Yi5E3d2l")
+    compileOnly("maven.modrinth:iris:MwcLS51S")
     compileOnly("maven.modrinth:bobby:8gsFUovP")
     compileOnly("maven.modrinth:simple-voice-chat:mXHTeWn9")
     compileOnly("maven.modrinth:modmenu:jvjwXH6l")
