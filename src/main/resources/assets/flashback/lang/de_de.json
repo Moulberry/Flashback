@@ -45,7 +45,7 @@
 
   "flashback.option.exporting": "Exportieren",
   "flashback.export_filename": "Export-Dateiname",
-  "flashback.export_filename_tooltip": "Der Standarddateiname beim Exportieren\nVariablen:\n  %%date%% => Jahr-Monat-Tag\n  %%time%% => hh_mm_ss\n  %%replay%% => Name der Wiedergabe\n  %%scene%% => Name der aktuell aktiven Szene\n  %%seq%% => Exportanzahl für diese Sitzung",
+  "flashback.export_filename_tooltip": "Der Standarddateiname beim Exportieren\nVariablen:\n  %%date%% => Jahr-Monat-Tag\n  %%time%% => hh_mm_ss\n  %%replay%% => Replayname\n  %%scene%% => Name der aktuell aktiven Szene\n  %%seq%% => Exportanzahl für diese Sitzung",
   "flashback.dummy_render_frames": "Dummy-Render-Frames",
   "flashback.dummy_render_frames_description": "Dadurch rendert der Exporter vor dem Speichern eines Frames zusätzliche Dummy-Frames.\nDies verlängert die Exportzeit DRASTISCH, kann jedoch erforderlich sein, wenn Shader verwendet werden, die auf zeitlicher Akkumulation basieren, oder Mods, die FREX Flawless Frames nicht unterstützen.",
 
@@ -105,8 +105,8 @@
   "flashback.unsupported_loader.message": "Du verwendest einen nicht unterstützten Modloader: %1$s\n\nMelde Abstürze, Fehler oder andere Probleme nicht an Flashback\n\nDu wirst keinen Support von Flashback erhalten\n\nWenn du Hilfe benötigst, wende dich bitte an %1$s",
   "flashback.screen_unsupported": "Flashback: Nicht unterstützt",
   "flashback.screen_recovery": "Flashback: Wiederherstellung",
-  "flashback.recovery1": "Flashback hat %s erkannt",
-  "flashback.recovery2": "nicht beendete Aufnahmen",
+  "flashback.recovery1": "Flashback hat %s nicht",
+  "flashback.recovery2": "beendete Aufnahmen erkannt",
   "flashback.recovery3": "Dies liegt in der Regel daran, dass das Spiel während der Aufzeichnung unerwartet geschlossen wurde",
   "flashback.recovery4": "Leider können bis zu 5 Minuten Spielzeit vom Ende der Aufzeichnung verloren gehen",
   "flashback.recovery5": "Möchtest du versuchen, die Aufzeichnung wiederherzustellen?",
@@ -428,7 +428,7 @@
   "flashback.position_offset": "Positionsversatz",
   "flashback.view_offset": "Ansichtsversatz",
   "flashback.registry_warning": "KRITISCHER FEHLER: REGISTRIERUNGSDATEN",
-  "flashback.registry_warning_description": "Ein Fehler ist beim Laden der Registrierungsdaten aufgetreten, das Replay ist wahrscheinlich beschädigt... Siehe Logs für Stacktrace",
+  "flashback.registry_warning_description": "Ein Fehler ist beim Laden der Registrierungsdaten aufgetreten, Replay ist wahrscheinlich beschädigt... Siehe Logs für Stacktrace",
   "flashback.player_spawn_warning": "KRITISCHER FEHLER: SPIELER KONNTE NICHT GESPAWNT WERDEN",
   "flashback.player_spawn_warning_description": "Beim Versuch, einen Spieler zu spawnen, ist ein Fehler aufgetreten. Höchstwahrscheinlich liegt dies an einer Mod-Inkompatibilität... siehe Logs für Stacktrace",
   "flashback.interpolation_type.smooth": "Geschmeidig",
