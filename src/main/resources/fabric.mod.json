@@ -35,6 +35,9 @@
 	"mixins": [
 		"flashback.mixins.json"
 	],
+    "breaks": {
+        "iris": "<1.10.9"
+    },
 	"depends": {
 		"fabricloader": ">=0.15.10",
 		"minecraft": "~26.1",
