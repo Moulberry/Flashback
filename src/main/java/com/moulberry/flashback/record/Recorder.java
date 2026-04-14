@@ -882,10 +882,10 @@ public class Recorder {
         // Tags
         Map<ResourceKey<? extends Registry<?>>, TagNetworkSerialization.NetworkPayload> serializedTags = new HashMap<>();
         localPlayer.registryAccess().registries().forEach(entry -> {
-            if (RegistrySynchronization.isNetworkable(entry.key())) {
+            try {
                 var tags = TagNetworkSerialization.serializeToNetwork(entry.value());
                 serializedTags.put(entry.key(), tags);
-            }
+            } catch (Exception ignored) {}
         });
 
         configurationPackets.add(new ClientboundUpdateTagsPacket(serializedTags));
