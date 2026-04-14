@@ -40,9 +40,4 @@ public class MixinPlayerList {
         return original.call(minecraftServer, connection, serverPlayer, commonListenerCookie);
     }
 
-    @WrapWithCondition(method = "sendLevelInfo", at = @At(value = "INVOKE", target = "Lnet/minecraft/server/network/ServerGamePacketListenerImpl;send(Lnet/minecraft/network/protocol/Packet;)V"))
-    public boolean sendLevelInfo_send(ServerGamePacketListenerImpl instance, Packet packet) {
-        return !(packet instanceof ClientboundSetTimePacket);
-    }
-
 }
