@@ -7,6 +7,8 @@ import com.moulberry.flashback.playback.FakePlayer;
 import com.moulberry.flashback.playback.ReplayServer;
 import net.fabricmc.fabric.impl.event.interaction.FakePlayerPacketListener;
 import net.minecraft.network.Connection;
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.game.ClientboundSetTimePacket;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.CommonListenerCookie;
@@ -36,6 +38,11 @@ public class MixinPlayerList {
             return new FakePlayerPacketListener(serverPlayer);
         }
         return original.call(minecraftServer, connection, serverPlayer, commonListenerCookie);
+    }
+
+    @WrapWithCondition(method = "sendLevelInfo", at = @At(value = "INVOKE", target = "Lnet/minecraft/server/network/ServerGamePacketListenerImpl;send(Lnet/minecraft/network/protocol/Packet;)V"))
+    public boolean sendLevelInfo_send(ServerGamePacketListenerImpl instance, Packet packet) {
+        return !(packet instanceof ClientboundSetTimePacket);
     }
 
 }
