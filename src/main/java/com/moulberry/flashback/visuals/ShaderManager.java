@@ -1,12 +1,13 @@
 package com.moulberry.flashback.visuals;
 
 import com.mojang.blaze3d.pipeline.RenderPipeline;
-import com.mojang.blaze3d.platform.DepthTestFunction;
 import com.mojang.blaze3d.shaders.UniformType;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.resources.Identifier;
+
+import java.util.Optional;
 
 public class ShaderManager {
 
@@ -16,9 +17,8 @@ public class ShaderManager {
                       .withVertexShader("core/screenquad")
                       .withFragmentShader("core/blit_screen")
                       .withSampler("InSampler")
-                      .withDepthWrite(false)
+                      .withDepthStencilState(Optional.empty())
                       .withCull(false)
-                      .withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST)
                       .withVertexFormat(DefaultVertexFormat.EMPTY, VertexFormat.Mode.TRIANGLES)
                       .build()
     );
@@ -29,10 +29,9 @@ public class ShaderManager {
                 .withVertexShader(Identifier.fromNamespaceAndPath("flashback", "core/blit_screen_old"))
                 .withFragmentShader(Identifier.fromNamespaceAndPath("flashback", "core/blit_screen_old"))
                 .withSampler("InSampler")
-                .withDepthWrite(false)
+                .withDepthStencilState(Optional.empty())
                 .withCull(false)
                 .withUniform("DynamicTransforms", UniformType.UNIFORM_BUFFER)
-                .withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST)
                 .withVertexFormat(DefaultVertexFormat.POSITION_TEX, VertexFormat.Mode.QUADS)
                 .build()
     );
@@ -43,9 +42,8 @@ public class ShaderManager {
                       .withVertexShader("core/screenquad")
                       .withFragmentShader(Identifier.fromNamespaceAndPath("flashback", "core/blit_screen_round_alpha"))
                       .withSampler("InSampler")
-                      .withDepthWrite(false)
+                      .withDepthStencilState(Optional.empty())
                       .withCull(false)
-                      .withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST)
                       .withVertexFormat(DefaultVertexFormat.POSITION_TEX, VertexFormat.Mode.QUADS)
                       .build()
     );
@@ -56,9 +54,8 @@ public class ShaderManager {
                       .withVertexShader(Identifier.fromNamespaceAndPath("flashback", "core/screenquad_flip"))
                       .withFragmentShader("core/blit_screen")
                       .withSampler("InSampler")
-                      .withDepthWrite(false)
+                      .withDepthStencilState(Optional.empty())
                       .withCull(false)
-                      .withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST)
                       .withVertexFormat(DefaultVertexFormat.EMPTY, VertexFormat.Mode.TRIANGLES)
                       .build()
     );

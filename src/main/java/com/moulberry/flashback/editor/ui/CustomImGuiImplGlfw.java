@@ -86,7 +86,8 @@ public class CustomImGuiImplGlfw {
     private GLFWScrollCallback prevUserCallbackScroll = null;
     private GLFWCursorPosCallback prevUserCallbackCursorPos = null;
     private GLFWKeyCallback prevUserCallbackKey = null;
-    private GLFWCharModsCallback prevUserCallbackChar = null;
+    private GLFWCharModsCallback prevUserCallbackCharMods = null;
+    private GLFWCharCallback prevUserCallbackChar = null;
     private GLFWMonitorCallback prevUserCallbackMonitor = null;
     private GLFWCursorEnterCallback prevUserCallbackCursorEnter = null;
 
@@ -713,22 +714,39 @@ public class CustomImGuiImplGlfw {
     }
 
     /**
-     * Method to set the {@link GLFWCharCallback}.
+     * Method to set the {@link GLFWCharModsCallback}.
      *
      * @param windowId pointer to the window
      * @param c        pressed char
      */
-    public void charCallback(final long windowId, final int c, final int mods) {
+    public void charModsCallback(final long windowId, final int c, final int mods) {
+        if (AsyncFileDialogs.hasDialog()) return;
+
+        var io = ReplayUI.getIO();
+        boolean pass = !ReplayUI.isActive() || (!io.getWantCaptureKeyboard() && !io.getWantTextInput());
+
+        if (pass && this.prevUserCallbackCharMods != null && windowId == this.mainWindowPtr) {
+            this.prevUserCallbackCharMods.invoke(windowId, c, mods);
+        }
+    }
+
+    /**
+     * Method to set the {@link GLFWCharModsCallback}.
+     *
+     * @param windowId pointer to the window
+     * @param c        pressed char
+     */
+    public void charCallback(final long windowId, final int c) {
         if (AsyncFileDialogs.hasDialog()) return;
 
         if (!ReplayUI.isActive()) {
-            if (this.prevUserCallbackChar != null && windowId == this.mainWindowPtr) this.prevUserCallbackChar.invoke(windowId, c, mods);
+            if (this.prevUserCallbackChar != null && windowId == this.mainWindowPtr) this.prevUserCallbackChar.invoke(windowId, c);
             return;
         }
 
         var io = ReplayUI.getIO();
         if (!io.getWantCaptureKeyboard() && !io.getWantTextInput() && this.prevUserCallbackChar != null && windowId == this.mainWindowPtr) {
-            this.prevUserCallbackChar.invoke(windowId, c, mods);
+            this.prevUserCallbackChar.invoke(windowId, c);
         }
 
         if (!ImGuiHelper.addInputCharacter((char) c)) {
@@ -749,15 +767,6 @@ public class CustomImGuiImplGlfw {
         this.wantUpdateMonitors = true;
     }
 
-    /**
-     * Method to do an initialization of the {@link imgui.glfw.ImGuiImplGlfw} state. It SHOULD be called before calling the {@link imgui.glfw.ImGuiImplGlfw#newFrame()} method.
-     * <p>
-     * Method takes two arguments, which should be a valid GLFW window pointer and a boolean indicating whether or not to install callbacks.
-     *
-     * @param windowId         pointer to the window
-     * @param installCallbacks should window callbacks be installed
-     * @return true if everything initialized
-     */
     public boolean init(final long windowId, final boolean installCallbacks) {
         this.mainWindowPtr = windowId;
 
@@ -811,7 +820,8 @@ public class CustomImGuiImplGlfw {
             this.prevUserCallbackScroll = glfwSetScrollCallback(windowId, this::scrollCallback);
             this.prevUserCallbackCursorPos = glfwSetCursorPosCallback(windowId, this::cursorPosCallback);
             this.prevUserCallbackKey = glfwSetKeyCallback(windowId, this::keyCallback);
-            this.prevUserCallbackChar = glfwSetCharModsCallback(windowId, this::charCallback);
+            this.prevUserCallbackChar = glfwSetCharCallback(windowId, this::charCallback);
+            this.prevUserCallbackCharMods = glfwSetCharModsCallback(windowId, this::charModsCallback);
             this.prevUserCallbackMonitor = glfwSetMonitorCallback(this::monitorCallback);
         }
 
@@ -1289,7 +1299,8 @@ public class CustomImGuiImplGlfw {
             glfwSetMouseButtonCallback(data.window, CustomImGuiImplGlfw.this::mouseButtonCallback);
             glfwSetScrollCallback(data.window, CustomImGuiImplGlfw.this::scrollCallback);
             glfwSetKeyCallback(data.window, CustomImGuiImplGlfw.this::keyCallback);
-            glfwSetCharModsCallback(data.window, CustomImGuiImplGlfw.this::charCallback);
+            glfwSetCharCallback(data.window, CustomImGuiImplGlfw.this::charCallback);
+            glfwSetCharModsCallback(data.window, CustomImGuiImplGlfw.this::charModsCallback);
             glfwSetWindowCloseCallback(data.window, CustomImGuiImplGlfw.this::windowCloseCallback);
             glfwSetWindowPosCallback(data.window, CustomImGuiImplGlfw.this::windowPosCallback);
             glfwSetWindowSizeCallback(data.window, CustomImGuiImplGlfw.this::windowSizeCallback);

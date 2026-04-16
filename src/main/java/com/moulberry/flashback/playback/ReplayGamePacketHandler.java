@@ -22,7 +22,7 @@ import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntList;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import it.unimi.dsi.fastutil.longs.LongSet;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerWorldEvents;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLevelEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.multiplayer.PlayerInfo;
@@ -51,6 +51,8 @@ import net.minecraft.sounds.SoundEvent;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.util.ProblemReporter;
 import net.minecraft.world.Difficulty;
+import net.minecraft.world.clock.ClockNetworkState;
+import net.minecraft.world.clock.WorldClock;
 import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.*;
@@ -163,7 +165,7 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
             ((ServerLevelExt) level).flashback$setCanSpawnEntities(true);
             try {
                 level.addFreshEntity(pendingEntity);
-                ChunkPos chunkPos = new ChunkPos(pendingEntity.blockPosition());
+                ChunkPos chunkPos = ChunkPos.containing(pendingEntity.blockPosition());
                 level.getChunkSource().addTicketWithRadius(ReplayServer.ENTITY_LOAD_TICKET, chunkPos, 3);
             } catch (Exception e) {
                 Flashback.LOGGER.error("Unable to spawn entity", e);
@@ -354,11 +356,11 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
         BlockState blockState = this.level().getBlockState(pos);
 
         if (blockState.getBlock() instanceof PistonBaseBlock) {
-            this.forceSendChunksDueToMovingPistonShenanigans.add(ChunkPos.asLong(pos.getX() >> 4, pos.getZ() >> 4));
-            this.forceSendChunksDueToMovingPistonShenanigans.add(ChunkPos.asLong((pos.getX() >> 4) + 1, pos.getZ() >> 4));
-            this.forceSendChunksDueToMovingPistonShenanigans.add(ChunkPos.asLong(pos.getX() >> 4, (pos.getZ() >> 4) + 1));
-            this.forceSendChunksDueToMovingPistonShenanigans.add(ChunkPos.asLong((pos.getX() >> 4) - 1, pos.getZ() >> 4));
-            this.forceSendChunksDueToMovingPistonShenanigans.add(ChunkPos.asLong(pos.getX() >> 4, (pos.getZ() >> 4) - 1));
+            this.forceSendChunksDueToMovingPistonShenanigans.add(ChunkPos.pack(pos.getX() >> 4, pos.getZ() >> 4));
+            this.forceSendChunksDueToMovingPistonShenanigans.add(ChunkPos.pack((pos.getX() >> 4) + 1, pos.getZ() >> 4));
+            this.forceSendChunksDueToMovingPistonShenanigans.add(ChunkPos.pack(pos.getX() >> 4, (pos.getZ() >> 4) + 1));
+            this.forceSendChunksDueToMovingPistonShenanigans.add(ChunkPos.pack((pos.getX() >> 4) - 1, pos.getZ() >> 4));
+            this.forceSendChunksDueToMovingPistonShenanigans.add(ChunkPos.pack(pos.getX() >> 4, (pos.getZ() >> 4) - 1));
         }
 
         this.replayServer.getPlayerList().broadcastAll(clientboundBlockEventPacket);
@@ -546,10 +548,10 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
         if (type == ClientboundGameEventPacket.NO_RESPAWN_BLOCK_AVAILABLE) {
             return;
         } else if (type == ClientboundGameEventPacket.START_RAINING) {
-            level.getLevelData().setRaining(true);
+            level.getWeatherData().setRaining(true);
             level.setRainLevel(0.0f);
         } else if (type == ClientboundGameEventPacket.STOP_RAINING) {
-            level.getLevelData().setRaining(false);
+            level.getWeatherData().setRaining(false);
             level.setRainLevel(1.0f);
         } else if (type == ClientboundGameEventPacket.CHANGE_GAME_MODE) {
             return;
@@ -608,7 +610,7 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
         }
 
         ChunkPos chunkPos = chunk.getPos();
-        ((ServerLevelExt)this.level()).flashback$markChunkAsSendable(chunkPos.toLong());
+        ((ServerLevelExt)this.level()).flashback$markChunkAsSendable(chunkPos.pack());
         for (ServerPlayer serverPlayer : this.replayServer.getReplayViewers()) {
             if (serverPlayer.getChunkTrackingView().contains(chunkPos)) {
                 serverPlayer.connection.chunkSender.markChunkPendingToSend(chunk);
@@ -678,7 +680,7 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
     public void handleChunksBiomes(ClientboundChunksBiomesPacket clientboundChunksBiomesPacket) {
         List<ChunkAccess> chunks = new ArrayList<>(clientboundChunksBiomesPacket.chunkBiomeData().size());
         for (ClientboundChunksBiomesPacket.ChunkBiomeData chunkBiomeData : clientboundChunksBiomesPacket.chunkBiomeData()) {
-            LevelChunk chunk = this.level().getChunk(chunkBiomeData.pos().x, chunkBiomeData.pos().z);
+            LevelChunk chunk = this.level().getChunk(chunkBiomeData.pos().x(), chunkBiomeData.pos().z());
             chunk.replaceBiomes(chunkBiomeData.getReadBuffer());
             chunks.add(chunk);
         }
@@ -733,11 +735,9 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
             primaryLevelData.settings = new LevelSettings(
                 primaryLevelData.settings.levelName(),
                 primaryLevelData.settings.gameType(),
-                clientboundLoginPacket.hardcore(),
-                Difficulty.NORMAL,
+                new LevelSettings.DifficultySettings(Difficulty.NORMAL, clientboundLoginPacket.hardcore(), true),
                 true,
-                primaryLevelData.settings.gameRules(),
-                primaryLevelData.settings.getDataConfiguration()
+                primaryLevelData.settings.dataConfiguration()
             );
         }
 
@@ -756,7 +756,11 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
         float xRot = registryFriendlyByteBuf.readFloat();
         float yRot = registryFriendlyByteBuf.readFloat();
         float yHeadRot = registryFriendlyByteBuf.readFloat();
-        Vec3 velocity = registryFriendlyByteBuf.readVec3();
+        Vec3 velocity = new Vec3(
+            registryFriendlyByteBuf.readDouble(),
+            registryFriendlyByteBuf.readDouble(),
+            registryFriendlyByteBuf.readDouble()
+        );
 
         ClientboundAddEntityPacket addEntityPacket = new ClientboundAddEntityPacket(this.localPlayerId, uuid, x, y, z, xRot, yRot, EntityType.PLAYER, 0, velocity, yHeadRot);
         GameProfile gameProfile = ByteBufCodecs.GAME_PROFILE.decode(registryFriendlyByteBuf);
@@ -796,9 +800,9 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
             Holder.Reference<Biome> plains = this.replayServer.registryAccess().lookupOrThrow(Registries.BIOME).get(Biomes.PLAINS).get();
             LevelStem levelStem = new LevelStem(commonPlayerSpawnInfo.dimensionType(), new EmptyLevelSource(plains));
             ServerLevel serverLevel = new ServerLevel(this.replayServer, this.replayServer.executor, this.replayServer.storageSource,
-                serverLevelData, dimension, levelStem, false, commonPlayerSpawnInfo.seed(), List.of(), false, null);
+                serverLevelData, dimension, levelStem, false, commonPlayerSpawnInfo.seed(), List.of(), false);
             serverLevel.noSave = true;
-            ServerWorldEvents.LOAD.invoker().onWorldLoad(this.replayServer, serverLevel);
+            ServerLevelEvents.LOAD.invoker().onLevelLoad(this.replayServer, serverLevel);
             this.replayServer.levels.put(dimension, serverLevel);
             this.replayServer.getPlayerList().addWorldborderListener(serverLevel);
 
@@ -1079,11 +1083,11 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
 
     @Override
     public void handleSetEntityMotion(ClientboundSetEntityMotionPacket clientboundSetEntityMotionPacket) {
-        Entity entity = this.getEntityOrPending(clientboundSetEntityMotionPacket.getId());
+        Entity entity = this.getEntityOrPending(clientboundSetEntityMotionPacket.id());
         forward(entity, clientboundSetEntityMotionPacket);
 
         if (entity != null) {
-            entity.setDeltaMovement(clientboundSetEntityMotionPacket.getMovement());
+            entity.setDeltaMovement(clientboundSetEntityMotionPacket.movement());
         }
     }
 
@@ -1184,20 +1188,11 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
 
     @Override
     public void handleSetTime(ClientboundSetTimePacket clientboundSetTimePacket) {
-        boolean updateTime = true;
-
-        long dayTime = clientboundSetTimePacket.dayTime();
-        if (dayTime < 0) {
-            dayTime = -dayTime;
-            updateTime = false;
-        }
-
         for (ServerLevel level : this.replayServer.getAllLevels()) {
-            if (level.getGameRules().get(GameRules.ADVANCE_TIME) != updateTime) {
-                level.getGameRules().set(GameRules.ADVANCE_TIME, updateTime, this.replayServer);
+            for (Map.Entry<Holder<WorldClock>, ClockNetworkState> entry : clientboundSetTimePacket.clockUpdates().entrySet()) {
+                level.clockManager().setTotalTicks(entry.getKey(), entry.getValue().totalTicks());
+                level.clockManager().setPaused(entry.getKey(), entry.getValue().rate() == 0.0f);
             }
-
-            level.setDayTime(dayTime);
 
             if (level.getLevelData() instanceof ServerLevelData serverLevelData) {
                 serverLevelData.setGameTime(clientboundSetTimePacket.gameTime());
@@ -1620,15 +1615,7 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
 
     @Override
     public void handleCustomPayload(ClientboundCustomPayloadPacket clientboundCustomPayloadPacket) {
-        if (clientboundCustomPayloadPacket.type().id().getNamespace().startsWith("fabric-screen-handler-api")) {
-            return;
-        }
-
-        if (this.replayServer.isProcessingSnapshot) {
-            this.replayServer.customPacketsInSnapshot.add(clientboundCustomPayloadPacket);
-        }
-
-        forward(clientboundCustomPayloadPacket);
+        throw new UnsupportedPacketException(clientboundCustomPayloadPacket);
     }
 
     @Override
@@ -1728,6 +1715,14 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
 
     @Override
     public void handleGameTestHighlightPos(ClientboundGameTestHighlightPosPacket clientboundGameTestHighlightPosPacket) {
+    }
+
+    @Override
+    public void handleGameRuleValues(ClientboundGameRuleValuesPacket packet) {
+    }
+
+    @Override
+    public void handleLowDiskSpaceWarning(ClientboundLowDiskSpaceWarningPacket packet) {
     }
 
     @Override

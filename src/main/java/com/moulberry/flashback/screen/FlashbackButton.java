@@ -1,7 +1,7 @@
 package com.moulberry.flashback.screen;
 
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.renderer.RenderPipelines;
@@ -29,8 +29,8 @@ public class FlashbackButton extends Button {
     }
 
     @Override
-    protected void renderContents(GuiGraphics guiGraphics, int i, int j, float f) {
-        super.renderDefaultSprite(guiGraphics);
+    protected void extractContents(GuiGraphicsExtractor guiGraphics, int i, int j, float f) {
+        super.extractDefaultSprite(guiGraphics);
 
         final int size = 16;
         int paddingX = (this.getWidth() - size) / 2;

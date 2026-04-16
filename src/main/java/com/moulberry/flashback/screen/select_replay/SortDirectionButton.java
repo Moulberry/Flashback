@@ -1,7 +1,7 @@
 package com.moulberry.flashback.screen.select_replay;
 
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
@@ -26,8 +26,8 @@ public class SortDirectionButton extends Button {
     }
 
     @Override
-    protected void renderContents(GuiGraphics guiGraphics, int i, int j, float f) {
-        super.renderDefaultSprite(guiGraphics);
+    protected void extractContents(GuiGraphicsExtractor guiGraphics, int i, int j, float f) {
+        super.extractDefaultSprite(guiGraphics);
 
         final int size = 16;
         int paddingX = (this.getWidth() - size) / 2;

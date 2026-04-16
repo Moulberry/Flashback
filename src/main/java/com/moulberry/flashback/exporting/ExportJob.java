@@ -18,6 +18,8 @@ import com.moulberry.flashback.state.EditorState;
 import com.moulberry.flashback.playback.ReplayServer;
 import com.moulberry.flashback.visuals.AccurateEntityPositionHandler;
 import net.minecraft.ChatFormatting;
+import net.minecraft.client.renderer.Projection;
+import net.minecraft.client.renderer.ProjectionMatrixBuffer;
 import net.minecraft.util.Util;
 import net.minecraft.client.Camera;
 import net.minecraft.client.DeltaTracker;
@@ -25,7 +27,6 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.player.LocalPlayer;
-import net.minecraft.client.renderer.CachedOrthoProjectionMatrixBuffer;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.network.chat.Component;
 import net.minecraft.sounds.SoundEvents;
@@ -68,7 +69,6 @@ public class ExportJob {
     private long clientTickTimeNanos = 0;
     private long renderTimeNanos = 0;
     private long encodeTimeNanos = 0;
-    private long downloadTimeNanos = 0;
     private boolean patreonLinkClicked = false;
 
     private int extraDummyFrames = 0;
@@ -187,7 +187,8 @@ public class ExportJob {
 
             // Reset display size
             Minecraft.getInstance().options.guiScale().set(oldGuiScale);
-            Minecraft.getInstance().resizeDisplay();
+            Minecraft.getInstance().resizeGui();
+            Minecraft.getInstance().getWindow().resetIsResized();
 
             // Refreeze server & client
             replayServer.replayPaused = true;
@@ -246,7 +247,8 @@ public class ExportJob {
         if (this.settings.ssaa()) {
             Minecraft.getInstance().options.guiScale().set(Minecraft.getInstance().options.guiScale().get() * 2);
         }
-        Minecraft.getInstance().resizeDisplay();
+        Minecraft.getInstance().resizeGui();
+        Minecraft.getInstance().getWindow().resetIsResized();
 
         List<TickInfo> ticks = calculateTicks(this.settings.editorState(), this.settings.startTick(), this.settings.endTick(), this.settings.framerate());
 
@@ -318,16 +320,14 @@ public class ExportJob {
                     additionalDummyFrames -= 1;
                 }
 
-                Window window = Minecraft.getInstance().getWindow();
                 RenderTarget renderTarget = Minecraft.getInstance().mainRenderTarget;
-                RenderSystem.getDevice().createCommandEncoder().clearColorAndDepthTextures(renderTarget.getColorTexture(), 0, renderTarget.getDepthTexture(), 1.0);
-                Minecraft.getInstance().gameRenderer.render(Minecraft.getInstance().deltaTracker, true);
+                render(renderTarget, Minecraft.getInstance().deltaTracker);
 
                 this.shouldChangeFramebufferSize = false;
                 if (!Minecraft.getInstance().getWindow().isMinimized()) {
                     renderTarget.blitToScreen();
                 }
-                window.updateDisplay(null);
+                RenderSystem.flipFrame(null);
                 this.shouldChangeFramebufferSize = true;
 
                 if (Minecraft.getInstance().getOverlay() != null || Minecraft.getInstance().screen != null) {
@@ -361,10 +361,8 @@ public class ExportJob {
 
             // Perform rendering
             PerfectFrames.waitUntilFrameReady();
-            RenderSystem.getDevice().createCommandEncoder().clearColorAndDepthTextures(renderTarget.getColorTexture(), 0, renderTarget.getDepthTexture(), 1.0);
-
             start = System.nanoTime();
-            Minecraft.getInstance().gameRenderer.render(timer, true);
+            render(renderTarget, timer);
             renderTimeNanos += System.nanoTime() - start;
 
             boolean cancel;
@@ -400,6 +398,22 @@ public class ExportJob {
 
         submitDownloadedFrames(videoWriter, downloader, true);
         videoWriter.finish();
+    }
+
+    private static void render(RenderTarget renderTarget, DeltaTracker.Timer timer) {
+        Minecraft minecraft = Minecraft.getInstance();
+
+        if (minecraft.level != null) {
+            minecraft.level.update();
+        }
+        minecraft.gameRenderer.update(timer, true);
+        minecraft.gameRenderer.extract(timer, true);
+        RenderSystem.executePendingTasks();
+
+        var commandEncoder = RenderSystem.getDevice().createCommandEncoder();
+        commandEncoder.clearColorAndDepthTextures(renderTarget.getColorTexture(), 0, renderTarget.getDepthTexture(), 1.0);
+        minecraft.gameRenderer.render(timer, true);
+
     }
 
     private void updateRandoms(Random random, Random mathRandom) {
@@ -507,7 +521,7 @@ public class ExportJob {
         Minecraft minecraft = Minecraft.getInstance();
 
         minecraft.packetProcessor().processQueuedPackets();
-        while (minecraft.pollTask()) {}
+        minecraft.runAllTasks();
         this.updateClientFreeze(frozen);
         if (!frozen) {
             minecraft.getTextureManager().tick();
@@ -541,12 +555,17 @@ public class ExportJob {
     private void submitDownloadedFrames(VideoWriter videoWriter, SaveableFramebufferQueue downloader, boolean drain) {
         SaveableFramebufferQueue.DownloadedFrame frame;
         while (true) {
-            long start = System.nanoTime();
-            frame = downloader.finishDownload(drain);
-            downloadTimeNanos += System.nanoTime() - start;
+            RenderSystem.executePendingTasks();
+            frame = downloader.finishDownload();
 
             if (frame == null) {
-                break;
+                if (drain && !downloader.isEmpty()) {
+                    System.out.println("waiting for frame");
+                    LockSupport.parkNanos("waiting for frame to download", 100000L);
+                    continue;
+                } else {
+                    break;
+                }
             }
 
             if (this.firstFrame == null) {
@@ -554,15 +573,20 @@ public class ExportJob {
             }
             this.writtenFrames += 1;
 
-            start = System.nanoTime();
+            long start = System.nanoTime();
             videoWriter.encode(frame.image(), frame.audioBuffer());
             encodeTimeNanos += System.nanoTime() - start;
         }
     }
 
-    private static CachedOrthoProjectionMatrixBuffer projectionBuffers = null;
+    private static ProjectionMatrixBuffer projectionBuffers = null;
+    private static Projection projection;
 
     private boolean finishFrame(RenderTarget framebuffer, int currentFrame, int totalFrames) {
+        RenderSystem.executePendingTasks();
+        Minecraft.getInstance().getWindow().resetIsResized();
+        RenderSystem.pollEvents();
+
         boolean cancel = false;
 
         long currentTime = System.currentTimeMillis();
@@ -579,17 +603,20 @@ public class ExportJob {
             bufferSource.endBatch();
             RenderSystem.getDevice().createCommandEncoder().clearDepthTexture(framebuffer.getDepthTexture(), 1.0);
 
-            // todo: need to override the main render target with framebuffer I think?
-
             float guiScale = 4f;
             int scaledWidth = (int) Math.ceil(framebuffer.width / guiScale);
             int scaledHeight = (int) Math.ceil(framebuffer.height / guiScale);
 
             if (projectionBuffers == null) {
-                projectionBuffers = new CachedOrthoProjectionMatrixBuffer("flashback export", 1000.0f, 21000.0f, true);
+                projectionBuffers = new ProjectionMatrixBuffer("flashback export");
+                projection = new Projection();
+                projection.setupOrtho(1000.0f, 21000.0f, scaledWidth, scaledHeight, true);
+            } else if (projection.width() != scaledWidth || projection.height() != scaledHeight) {
+                projection.setSize(scaledWidth, scaledHeight);
             }
 
-            RenderSystem.setProjectionMatrix(projectionBuffers.getBuffer(scaledWidth, scaledHeight), ProjectionType.ORTHOGRAPHIC);
+            var buffer = projectionBuffers.getBuffer(projection);
+            RenderSystem.setProjectionMatrix(buffer, ProjectionType.ORTHOGRAPHIC);
 
             Matrix4f matrix = new Matrix4f();
             matrix.translate(0.0f, 0.0f, -1001.0f);
@@ -626,7 +653,6 @@ public class ExportJob {
             if (showingDebug) {
                 lines.add("ST: " + serverTickTimeNanos/1000000 + ", CT: " + clientTickTimeNanos/1000000);
                 lines.add("RT: " + renderTimeNanos/1000000 + ", ET: " + encodeTimeNanos/1000000);
-                lines.add("DT: " + downloadTimeNanos/1000000);
             } else {
                 lines.add("Press [F3] to show debug info");
             }
@@ -695,9 +721,10 @@ public class ExportJob {
                 int windowFramebufferWidth = WindowSizeTracker.getWidth(window);
                 int windowFramebufferHeight = WindowSizeTracker.getHeight(window);
 
+//                framebuffer.blitToScreen();
                 FramebufferUtils.blitToScreenPartial(framebuffer, windowFramebufferWidth, windowFramebufferHeight, 0, 0, 1, 1);
             }
-            window.updateDisplay(null);
+            RenderSystem.flipFrame(null);
         }
 
         return cancel;

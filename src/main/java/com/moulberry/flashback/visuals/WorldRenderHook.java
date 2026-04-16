@@ -15,6 +15,7 @@ import net.minecraft.client.gui.Font;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.renderer.rendertype.RenderSetup;
 import net.minecraft.client.renderer.rendertype.RenderType;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.resources.Identifier;
 import org.joml.Matrix4f;
 
@@ -26,7 +27,7 @@ public class WorldRenderHook {
         .createRenderSetup()
     );
 
-    public static void renderHook(PoseStack poseStack, Camera camera) {
+    public static void renderHook(PoseStack poseStack, CameraRenderState camera) {
         ReplayServer replayServer = Flashback.getReplayServer();
         if (replayServer == null || Flashback.isExporting() || !ReplayUI.isActive()) {
             return;
@@ -58,11 +59,11 @@ public class WorldRenderHook {
 
                 poseStack.pushPose();
                 poseStack.translate(
-                    position.position().x - camera.position().x,
-                    position.position().y - camera.position().y,
-                    position.position().z - camera.position().z
+                    position.position().x - camera.pos.x,
+                    position.position().y - camera.pos.y,
+                    position.position().z - camera.pos.z
                 );
-                poseStack.mulPose(camera.rotation());
+                poseStack.mulPose(camera.orientation);
 
                 if (bufferBuilder == null) {
                     bufferBuilder = multiBufferSource.getBuffer(MARKER_CIRCLE_RENDER_TYPE);

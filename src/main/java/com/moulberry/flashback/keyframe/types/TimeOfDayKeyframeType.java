@@ -57,7 +57,7 @@ public class TimeOfDayKeyframeType implements KeyframeType<TimeOfDayKeyframe> {
         if (editorState != null && editorState.replayVisuals.overrideTimeOfDay >= 0) {
             timeOfDayKeyframeInput[0] = (int) editorState.replayVisuals.overrideTimeOfDay;
         } else {
-            timeOfDayKeyframeInput[0] = (int)(Minecraft.getInstance().level.getDayTime() % 24000);
+            timeOfDayKeyframeInput[0] = (int)(Minecraft.getInstance().level.getDefaultClockTime() % 24000);
         }
 
         return () -> {

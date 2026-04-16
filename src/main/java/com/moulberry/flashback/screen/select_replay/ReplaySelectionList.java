@@ -11,7 +11,7 @@ import com.moulberry.flashback.record.FlashbackMeta;
 import com.moulberry.flashback.screen.ReplaySummary;
 import net.minecraft.util.Util;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.ObjectSelectionList;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.client.input.KeyEvent;
@@ -90,7 +90,7 @@ public class ReplaySelectionList extends ObjectSelectionList<ReplaySelectionEntr
     }
 
     @Override
-    public void renderWidget(GuiGraphics guiGraphics, int i, int j, float f) {
+    public void extractWidgetRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float a) {
         List<PendingSelectionEntry> list = this.pollReplaysIgnoreErrors();
         if (this.currentlyDisplayedReplays != list) {
             if (list == null) {
@@ -102,7 +102,7 @@ public class ReplaySelectionList extends ObjectSelectionList<ReplaySelectionEntr
 
             this.currentlyDisplayedReplays = list;
         }
-        super.renderWidget(guiGraphics, i, j, f);
+        super.extractWidgetRenderState(graphics, mouseX, mouseY, a);
     }
 
     public void updateFilter(String filter, ReplaySorting replaySorting, boolean sortDescending) {

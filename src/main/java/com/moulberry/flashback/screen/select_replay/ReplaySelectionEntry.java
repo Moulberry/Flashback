@@ -11,7 +11,7 @@ import it.unimi.dsi.fastutil.booleans.BooleanConsumer;
 import net.minecraft.ChatFormatting;
 import net.minecraft.util.Util;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.ObjectSelectionList;
 import net.minecraft.client.gui.components.WidgetSprites;
 import net.minecraft.client.gui.components.toasts.SystemToast;
@@ -69,13 +69,13 @@ public abstract class ReplaySelectionEntry extends ObjectSelectionList.Entry<Rep
         }
 
         @Override
-        public void renderContent(GuiGraphics guiGraphics, int mouseX, int mouseY, boolean hovered, float partialTick) {
+        public void extractContent(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, boolean hovered, float partialTick) {
             guiGraphics.blitSprite(RenderPipelines.GUI_TEXTURED, SPRITES.get(true, hovered), this.getContentX() + 4, this.getContentY() + 2,
                     this.getContentWidth() - 8, this.getContentHeight() - 4);
 
             int p = (this.minecraft.screen.width - this.minecraft.font.width(LOAD_REPLAY_LABEL)) / 2;
             int q = this.getContentY() + (this.getContentHeight() - this.minecraft.font.lineHeight) / 2 + 1;
-            guiGraphics.drawString(this.minecraft.font, LOAD_REPLAY_LABEL, p, q, 0xFFFFFFFF, true);
+            guiGraphics.text(this.minecraft.font, LOAD_REPLAY_LABEL, p, q, 0xFFFFFFFF, true);
         }
 
         @Override
@@ -93,14 +93,14 @@ public abstract class ReplaySelectionEntry extends ObjectSelectionList.Entry<Rep
         }
 
         @Override
-        public void renderContent(GuiGraphics guiGraphics, int mouseX, int mouseY, boolean hovered, float partialTick) {
+        public void extractContent(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, boolean hovered, float partialTick) {
             int p = (this.minecraft.screen.width - this.minecraft.font.width(LOADING_LABEL)) / 2;
             int q = this.getContentY() + (this.getContentHeight() - this.minecraft.font.lineHeight) / 2;
-            guiGraphics.drawString(this.minecraft.font, LOADING_LABEL, p, q, 0xFFFFFFFF, false);
+            guiGraphics.text(this.minecraft.font, LOADING_LABEL, p, q, 0xFFFFFFFF, false);
             String string = LoadingDotsText.get(Util.getMillis());
             int r = (this.minecraft.screen.width - this.minecraft.font.width(string)) / 2;
             int s = q + this.minecraft.font.lineHeight;
-            guiGraphics.drawString(this.minecraft.font, string, r, s, -8355712, false);
+            guiGraphics.text(this.minecraft.font, string, r, s, -8355712, false);
         }
 
         @Override
@@ -138,20 +138,20 @@ public abstract class ReplaySelectionEntry extends ObjectSelectionList.Entry<Rep
         }
 
         @Override
-        public void renderContent(GuiGraphics guiGraphics, int mouseX, int mouseY, boolean hovered, float partialTick) {
+        public void extractContent(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, boolean hovered, float partialTick) {
             int x = this.getContentX();
             int y = this.getContentY();
-            guiGraphics.drawString(this.minecraft.font, this.nameComponent, x + ICON_WIDTH + 3, y + 1, -1, false);
+            guiGraphics.text(this.minecraft.font, this.nameComponent, x + ICON_WIDTH + 3, y + 1, -1, false);
 
             int textY = y + this.minecraft.font.lineHeight + 2;
 
             if (this.modifiedTime > 0) {
                 String time = "Created: " + DATE_FORMAT.format(Instant.ofEpochMilli(this.modifiedTime));
-                guiGraphics.drawString(this.minecraft.font, time, x + ICON_WIDTH + 3, textY + 1, 0xFF808080, false);
+                guiGraphics.text(this.minecraft.font, time, x + ICON_WIDTH + 3, textY + 1, 0xFF808080, false);
                 textY += this.minecraft.font.lineHeight;
             }
 
-            guiGraphics.drawString(this.minecraft.font, "Replays: " + this.replayCount, x + ICON_WIDTH + 3, textY + 3, 0xFF808080, false);
+            guiGraphics.text(this.minecraft.font, "Replays: " + this.replayCount, x + ICON_WIDTH + 3, textY + 3, 0xFF808080, false);
 
             guiGraphics.blitSprite(RenderPipelines.GUI_TEXTURED, FOLDER_SPRITE, x, y, ICON_WIDTH, ICON_HEIGHT);
 
@@ -204,7 +204,7 @@ public abstract class ReplaySelectionEntry extends ObjectSelectionList.Entry<Rep
         }
 
         @Override
-        public void renderContent(GuiGraphics guiGraphics, int mouseX, int mouseY, boolean hovered, float partialTick) {
+        public void extractContent(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, boolean hovered, float partialTick) {
             int x = this.getContentX();
             int y = this.getContentY();
 
@@ -226,16 +226,16 @@ public abstract class ReplaySelectionEntry extends ObjectSelectionList.Entry<Rep
                 titleColour = 0xFFFFAA55;
             }
 
-            guiGraphics.drawString(this.minecraft.font, title, x + ICON_WIDTH + 3, y + 1, titleColour, false);
+            guiGraphics.text(this.minecraft.font, title, x + ICON_WIDTH + 3, y + 1, titleColour, false);
             int titleEnd = x + ICON_WIDTH + 3 + this.minecraft.font.width(title);
 
             String worldName = this.summary.getWorldName();
             if (worldName != null) {
-                guiGraphics.drawString(this.minecraft.font, "(" + worldName + ")", titleEnd + 4, y + 1, 0xFF808080, false);
+                guiGraphics.text(this.minecraft.font, "(" + worldName + ")", titleEnd + 4, y + 1, 0xFF808080, false);
             }
 
-            guiGraphics.drawString(this.minecraft.font, fileAndTime, x + ICON_WIDTH + 3, y + this.minecraft.font.lineHeight + 3, 0xFF808080, false);
-            guiGraphics.drawString(this.minecraft.font, info, x + ICON_WIDTH + 3, y + this.minecraft.font.lineHeight + this.minecraft.font.lineHeight + 3, 0xFF808080, false);
+            guiGraphics.text(this.minecraft.font, fileAndTime, x + ICON_WIDTH + 3, y + this.minecraft.font.lineHeight + 3, 0xFF808080, false);
+            guiGraphics.text(this.minecraft.font, info, x + ICON_WIDTH + 3, y + this.minecraft.font.lineHeight + this.minecraft.font.lineHeight + 3, 0xFF808080, false);
 
             guiGraphics.blit(RenderPipelines.GUI_TEXTURED, this.icon.textureLocation(), x, y, 0.0f, 0.0f, 32, 32, 32, 32);
 

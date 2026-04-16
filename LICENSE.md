@@ -11,7 +11,11 @@ Authors/contributors:
 - en_us.json: Moulberry
 - ko_kr.json: MagPlum
 - zh_cn.json: abcdd12344, Q2297045667
-- ja_jp.json: hqnkuh
+- ja_jp.json: hqnkuh, stabery
 - fr_fr.json: MazeWave
 - cs_cz.json: Madeleaan
 - pt_br.json: Draacoun
+- id_id.json: moonbrooke
+- pl_pl.json: samswi
+- de_de.json: GulutGames
+- nl_nl.json: DjJj123dj

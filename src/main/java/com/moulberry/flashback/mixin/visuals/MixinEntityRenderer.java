@@ -57,8 +57,8 @@ public class MixinEntityRenderer {
         }
     }
 
-    @Inject(method = "submitNameTag", at = @At("HEAD"), cancellable = true)
-    public void submitNameTag(CallbackInfo ci) {
+    @Inject(method = "submitNameDisplay(Lnet/minecraft/client/renderer/entity/state/EntityRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;Lnet/minecraft/client/renderer/state/level/CameraRenderState;I)V", at = @At("HEAD"), cancellable = true)
+    public void submitNameDisplay(CallbackInfo ci) {
         EditorState editorState = EditorStateManager.getCurrent();
         if (editorState != null && !editorState.replayVisuals.renderNametags) {
             ci.cancel();

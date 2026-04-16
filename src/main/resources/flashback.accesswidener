@@ -1,4 +1,4 @@
-accessWidener	v1	named
+classTweaker v1 official
 
 # Options
 accessible class net/minecraft/client/OptionInstance$IntRangeBase
@@ -35,7 +35,6 @@ accessible field net/minecraft/network/protocol/game/ClientboundLevelChunkWithLi
 mutable field net/minecraft/network/protocol/game/ClientboundLevelChunkWithLightPacket lightData Lnet/minecraft/network/protocol/game/ClientboundLightUpdatePacketData;
 
 accessible field net/minecraft/client/multiplayer/ClientLevel$ClientLevelData isFlat Z
-accessible field net/minecraft/client/multiplayer/ClientLevel tickDayTime Z
 accessible field net/minecraft/client/multiplayer/ClientLevel lightUpdateQueue Ljava/util/Deque;
 
 # Entity
@@ -55,8 +54,8 @@ mutable field net/minecraft/world/level/storage/PrimaryLevelData specialWorldPro
 
 accessible field net/minecraft/server/MinecraftServer registries Lnet/minecraft/core/LayeredRegistryAccess;
 mutable field net/minecraft/server/MinecraftServer registries Lnet/minecraft/core/LayeredRegistryAccess;
-accessible class net/minecraft/resources/RegistryDataLoader$Loader
-accessible class net/minecraft/resources/RegistryDataLoader$LoadingFunction
+# accessible class net/minecraft/resources/RegistryDataLoader$Loader
+# accessible class net/minecraft/resources/RegistryDataLoader$LoadingFunction
 accessible field net/minecraft/core/LayeredRegistryAccess keys Ljava/util/List;
 mutable field net/minecraft/core/LayeredRegistryAccess keys Ljava/util/List;
 accessible field net/minecraft/core/LayeredRegistryAccess values Ljava/util/List;
@@ -74,8 +73,8 @@ accessible class net/minecraft/world/level/chunk/PalettedContainer$Data
 accessible method net/minecraft/server/MinecraftServer haveTime ()Z
 extendable method net/minecraft/server/MinecraftServer haveTime ()Z
 
-accessible method net/minecraft/server/MinecraftServer synchronizeTime (Lnet/minecraft/server/level/ServerLevel;)V
-extendable method net/minecraft/server/MinecraftServer synchronizeTime (Lnet/minecraft/server/level/ServerLevel;)V
+# accessible method net/minecraft/server/MinecraftServer synchronizeTime (Lnet/minecraft/server/level/ServerLevel;)V
+# extendable method net/minecraft/server/MinecraftServer synchronizeTime (Lnet/minecraft/server/level/ServerLevel;)V
 
 accessible class net/minecraft/server/level/ThreadedLevelLightEngine$TaskType
 accessible field net/minecraft/server/network/PlayerChunkSender pendingChunks Lit/unimi/dsi/fastutil/longs/LongSet;
@@ -117,6 +116,10 @@ accessible field net/minecraft/server/level/ServerEntity lastSentYHeadRot B
 accessible field net/minecraft/server/level/ServerEntity wasOnGround Z
 accessible field net/minecraft/server/level/ServerEntity trackedDataValues Ljava/util/List;
 accessible field net/minecraft/server/level/ServerEntity updateInterval I
+accessible class net/minecraft/client/ClientClockManager$ClockInstance
+accessible field net/minecraft/client/ClientClockManager$ClockInstance totalTicks J
+accessible field net/minecraft/client/ClientClockManager$ClockInstance partialTick F
+accessible field net/minecraft/client/ClientClockManager$ClockInstance rate F
 
 # Replay UI
 accessible field net/minecraft/client/gui/screens/Screen renderables Ljava/util/List;
@@ -150,6 +153,8 @@ accessible field com/mojang/blaze3d/platform/Window framebufferHeight I
 accessible field net/minecraft/client/Minecraft mainRenderTarget Lcom/mojang/blaze3d/pipeline/RenderTarget;
 mutable field net/minecraft/client/Minecraft mainRenderTarget Lcom/mojang/blaze3d/pipeline/RenderTarget;
 accessible field net/minecraft/client/multiplayer/ClientPacketListener random Lnet/minecraft/util/RandomSource;
+accessible field net/minecraft/world/level/Level random Lnet/minecraft/util/RandomSource;
+accessible method net/minecraft/util/thread/BlockableEventLoop runAllTasks ()V
 
 accessible field net/minecraft/client/sounds/SoundManager soundEngine Lnet/minecraft/client/sounds/SoundEngine;
 accessible field net/minecraft/client/sounds/SoundEngine library Lcom/mojang/blaze3d/audio/Library;

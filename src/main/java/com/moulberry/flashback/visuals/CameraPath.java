@@ -28,6 +28,7 @@ import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.fog.FogRenderer;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Matrix4f;
 import org.joml.Quaterniond;
@@ -45,7 +46,7 @@ public class CameraPath {
     private static int lastEditorStateModCount = 0;
     private static int lastCursorTick = 0;
 
-    public static void renderCameraPath(PoseStack poseStack, Camera camera, ReplayServer replayServer) {
+    public static void renderCameraPath(PoseStack poseStack, CameraRenderState camera, ReplayServer replayServer) {
         RenderSystem.assertOnRenderThread();
 
         if (Minecraft.getInstance().options.hideGui) {
@@ -69,7 +70,7 @@ public class CameraPath {
                 lastCameraPathArgs = cameraPathArgs;
 
                 BufferBuilder bufferBuilder = Tesselator.getInstance().begin(VertexFormat.Mode.LINES, DefaultVertexFormat.POSITION_COLOR_NORMAL_LINE_WIDTH);
-                Vector3d basePosition = new Vector3d(camera.position().x, camera.position().y, camera.position().z);
+                Vector3d basePosition = new Vector3d(camera.pos.x, camera.pos.y, camera.pos.z);
                 buildCameraPath(state, basePosition.mul(-1, new Vector3d()), cameraPathArgs, bufferBuilder);
 
                 if (cameraPathVertexBuffer != null) {
@@ -97,8 +98,8 @@ public class CameraPath {
         RenderSystem.setShaderFog(Minecraft.getInstance().gameRenderer.fogRenderer.getBuffer(FogRenderer.FogMode.NONE));
 
         poseStack.pushPose();
-        poseStack.translate(basePosition.x-camera.position().x,
-            basePosition.y-camera.position().y + camera.eyeHeight, basePosition.z-camera.position().z);
+        poseStack.translate(basePosition.x-camera.pos.x,
+            basePosition.y-camera.pos.y+1.62f, basePosition.z-camera.pos.z);
 
         var stack = RenderSystem.getModelViewStack();
         stack.pushMatrix();

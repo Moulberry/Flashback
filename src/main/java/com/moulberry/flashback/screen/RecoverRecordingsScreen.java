@@ -3,7 +3,7 @@ package com.moulberry.flashback.screen;
 import com.moulberry.flashback.Flashback;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.TextAlignment;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.MultiLineLabel;
@@ -66,9 +66,9 @@ public class RecoverRecordingsScreen extends Screen {
     }
 
     @Override
-    public void render(GuiGraphics guiGraphics, int i, int j, float f) {
-        super.render(guiGraphics, i, j, f);
-        guiGraphics.drawCenteredString(this.font, this.title, this.width / 2, 70, 0xFFFFFFFF);
+    public void extractRenderState(GuiGraphicsExtractor guiGraphics, int i, int j, float f) {
+        super.extractRenderState(guiGraphics, i, j, f);
+        guiGraphics.centeredText(this.font, this.title, this.width / 2, 70, 0xFFFFFFFF);
 
         this.message.visitLines(TextAlignment.CENTER, this.width / 2, 90, this.font.lineHeight, guiGraphics.textRenderer());
     }

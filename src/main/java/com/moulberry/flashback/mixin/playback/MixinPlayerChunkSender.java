@@ -39,7 +39,7 @@ public class MixinPlayerChunkSender {
     public void markChunkPendingToSend(LevelChunk levelChunk, CallbackInfo ci) {
         ReplayServer replayServer = Flashback.getReplayServer();
         if (replayServer != null) {
-            if (!((ServerLevelExt)levelChunk.getLevel()).flashback$shouldSendChunk(levelChunk.getPos().toLong())) {
+            if (!((ServerLevelExt)levelChunk.getLevel()).flashback$shouldSendChunk(levelChunk.getPos().pack())) {
                 ci.cancel();
             }
         }

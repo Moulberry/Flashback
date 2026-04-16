@@ -499,7 +499,7 @@ public class ReplayUI {
         // Recalculate the size of the gameplay window
         Window window = Minecraft.getInstance().getWindow();
         if (window.getWidth() > 0 && window.getWidth() <= 16384 && window.getHeight() > 0 && window.getHeight() <= 16384) {
-            Minecraft.getInstance().resizeDisplay();
+            Minecraft.getInstance().resizeGui();
         }
         imguiGlfw.ungrab();
 
@@ -937,7 +937,7 @@ public class ReplayUI {
         }
 
         if (frameX != oldFrameX || frameY != oldFrameY || frameWidth != oldFrameWidth || frameHeight != oldFrameHeight) {
-            Minecraft.getInstance().resizeDisplay();
+            Minecraft.getInstance().resizeGui();
         }
 
         transitionActiveState(true);

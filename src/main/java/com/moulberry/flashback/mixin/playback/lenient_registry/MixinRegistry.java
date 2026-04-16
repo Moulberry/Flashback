@@ -14,12 +14,12 @@ import org.spongepowered.asm.mixin.injection.At;
 @Mixin(Registry.class)
 public interface MixinRegistry {
 
-    @ModifyReturnValue(method = "method_57065", at = @At("RETURN"))
+    @ModifyReturnValue(method = "lambda$referenceHolderWithLifecycle$0", at = @At("RETURN"))
     default DataResult<?> referenceHolderWithLifecycle_get(DataResult<?> original) {
         if (original.isSuccess()) {
             return original;
         }
-        if (Flashback.isInReplay() && ReplayConfigurationPacketHandler.LENIENT_REGISTRY_LOADING.get() == Boolean.TRUE) {
+        if (Flashback.isInReplay()) {
             if (this == BuiltInRegistries.PARTICLE_TYPE) {
                 return DataResult.success(ParticleTypes.ASH);
             } else if (this instanceof DefaultedRegistry<?> defaultedRegistry) {
