@@ -196,12 +196,21 @@ public class EditorState {
     }
 
     public void applyKeyframes(KeyframeHandler keyframeHandler, float tick) {
+        this.applyKeyframes(keyframeHandler, tick, 0);
+    }
+
+    @ApiStatus.Internal
+    public void applyKeyframes(KeyframeHandler keyframeHandler, float tick, long stamp) {
         Set<Class<? extends KeyframeChange>> applied = new HashSet<>();
         Map<Class<? extends KeyframeChange>, KeyframeTrack> maybeApplyLastTick = new HashMap<>();
 
         updateRealtimeMappingsIfNeeded();
 
-        long stamp = this.sceneLock.readLock();
+        boolean unlock = false;
+        if (!this.sceneLock.validate(stamp)) {
+            stamp = this.sceneLock.readLock();
+            unlock = true;
+        }
         try {
             for (KeyframeTrack keyframeTrack : this.currentScene().keyframeTracks) {
                 // Ignore lines that are disabled
@@ -261,7 +270,9 @@ public class EditorState {
                 }
             }
         } finally {
-            this.sceneLock.unlock(stamp);
+            if (unlock) {
+                this.sceneLock.unlock(stamp);
+            }
         }
     }
 
