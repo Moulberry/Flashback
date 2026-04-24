@@ -291,7 +291,7 @@ public class TimelineWindow {
                 }
             }
             if (isCtrlDown) {
-                editorState.applyKeyframes(new MinecraftKeyframeHandler(Minecraft.getInstance()), cursorTicks);
+                editorState.applyKeyframes(new MinecraftKeyframeHandler(Minecraft.getInstance()), cursorTicks, editorSceneStamp);
             }
             if (!isCtrlDown && !isShiftDown) {
                 ImGuiHelper.drawTooltip(I18n.get("flashback.hold_ctrl_to_apply_keyframes"));
