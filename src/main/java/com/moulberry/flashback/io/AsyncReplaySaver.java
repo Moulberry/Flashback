@@ -30,9 +30,11 @@ import net.minecraft.network.protocol.configuration.ClientConfigurationPacketLis
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundLevelChunkWithLightPacket;
 import net.minecraft.network.protocol.game.ClientboundLoginPacket;
+import net.minecraft.util.Util;
 
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.OpenOption;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
@@ -208,7 +210,15 @@ public class AsyncReplaySaver {
 
             Path levelChunkCachePath = this.recordFolder.resolve("level_chunk_caches").resolve(""+index);
             Files.createDirectories(levelChunkCachePath.getParent());
-            Files.write(levelChunkCachePath, bytes, StandardOpenOption.CREATE, StandardOpenOption.APPEND, StandardOpenOption.SYNC);
+
+            OpenOption[] options;
+            if (Util.getPlatform() == Util.OS.LINUX) {
+                options = new OpenOption[]{StandardOpenOption.CREATE, StandardOpenOption.APPEND};
+            } else {
+                options = new OpenOption[]{StandardOpenOption.CREATE, StandardOpenOption.APPEND, StandardOpenOption.SYNC};
+            }
+
+            Files.write(levelChunkCachePath, bytes, options);
         } catch (IOException e) {
             SneakyThrow.sneakyThrow(e);
         }
