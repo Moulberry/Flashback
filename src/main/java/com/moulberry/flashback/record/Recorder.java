@@ -21,6 +21,8 @@ import com.moulberry.flashback.mixin.compat.bobby.FakeChunkManagerAccessor;
 import com.moulberry.flashback.packet.FlashbackAccurateEntityPosition;
 import io.netty.buffer.ByteBuf;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
+import net.fabricmc.fabric.api.networking.v1.context.PacketContext;
+import net.fabricmc.fabric.api.networking.v1.context.PacketContextProvider;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.SharedConstants;
 import net.minecraft.client.Minecraft;
@@ -250,6 +252,10 @@ public class Recorder {
         float yaw = entity.getViewYRot(partialTick);
         float pitch = entity.getViewXRot(partialTick);
         this.partialPositions.put(partialTick, new PositionAndAngle(x, y, z, yaw, pitch));
+    }
+
+    public void endTickWithContext(boolean close) {
+        this.runWithClientPacketContext(() -> this.endTick(close));
     }
 
     public void endTick(boolean close) {
@@ -774,12 +780,21 @@ public class Recorder {
         }
     }
 
+    private void runWithClientPacketContext(Runnable runnable) {
+        var context = PacketContext.get();
+        if (context == null && Minecraft.getInstance().player instanceof PacketContextProvider provider) {
+            PacketContext.runWithContext(provider, runnable);
+        } else {
+            runnable.run();
+        }
+    }
+
     public void writeLevelEvent(int type, BlockPos blockPos, int data, boolean globalEvent) {
         if (!this.readyToWrite()) {
             return;
         }
 
-        this.pendingPackets.add(new PacketWithPhase(new ClientboundLevelEventPacket(type, blockPos, data, globalEvent), ConnectionProtocol.PLAY));
+        runWithClientPacketContext(() -> this.pendingPackets.add(new PacketWithPhase(new ClientboundLevelEventPacket(type, blockPos, data, globalEvent), ConnectionProtocol.PLAY)));
     }
 
     public void writeSound(Holder<SoundEvent> holder, SoundSource soundSource, double x, double y, double z, float volume, float pitch, long seed) {
@@ -787,7 +802,7 @@ public class Recorder {
             return;
         }
 
-        this.pendingPackets.add(new PacketWithPhase(new ClientboundSoundPacket(holder, soundSource, x, y, z, volume, pitch, seed), ConnectionProtocol.PLAY));
+        runWithClientPacketContext(() -> this.pendingPackets.add(new PacketWithPhase(new ClientboundSoundPacket(holder, soundSource, x, y, z, volume, pitch, seed), ConnectionProtocol.PLAY)));
     }
 
     public void writeEntitySound(Holder<SoundEvent> holder, SoundSource soundSource, Entity entity, float volume, float pitch, long seed) {
@@ -795,7 +810,7 @@ public class Recorder {
             return;
         }
 
-        this.pendingPackets.add(new PacketWithPhase(new ClientboundSoundEntityPacket(holder, soundSource, entity, volume, pitch, seed), ConnectionProtocol.PLAY));
+        runWithClientPacketContext(() -> this.pendingPackets.add(new PacketWithPhase(new ClientboundSoundEntityPacket(holder, soundSource, entity, volume, pitch, seed), ConnectionProtocol.PLAY)));
     }
 
     public void writePacketAsync(Packet<?> packet, ConnectionProtocol phase) {

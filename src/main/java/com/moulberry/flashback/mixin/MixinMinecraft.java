@@ -156,7 +156,7 @@ public abstract class MixinMinecraft extends ReentrantBlockableEventLoop<Runnabl
     @Inject(method = "tick", at = @At("RETURN"))
     public void tick(CallbackInfo ci) {
         if (Flashback.RECORDER != null) {
-            Flashback.RECORDER.endTick(false);
+            Flashback.RECORDER.endTickWithContext(false);
         }
 
         EditorStateManager.saveIfNeeded();

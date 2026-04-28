@@ -1043,7 +1043,7 @@ public class Flashback implements ModInitializer, ClientModInitializer {
 
         Recorder recorder = RECORDER;
         RECORDER = null;
-        recorder.endTick(true);
+        recorder.endTickWithContext(true);
 
         if (Flashback.getConfig().recordingControls.quicksave) {
             Path replayDir = getReplayFolder();
