@@ -105,7 +105,7 @@ public class VisualsWindow {
                 ImGui.sameLine();
                 ImGui.textUnformatted(I18n.get("flashback.visuals.world.sky_colour"));
 
-                if (ImGui.beginPopup("##EditSkyColour")) {
+                if (ImGuiHelper.beginPopup("##EditSkyColour")) {
                     ImGui.colorPicker3(I18n.get("flashback.visuals.world.sky_colour"), visuals.skyColour);
                     ImGui.endPopup();
                 }
@@ -158,7 +158,7 @@ public class VisualsWindow {
                 ImGui.sameLine();
                 ImGui.textUnformatted(I18n.get("flashback.visuals.overrides.fog_colour"));
 
-                if (ImGui.beginPopup("##EditFogColour")) {
+                if (ImGuiHelper.beginPopup("##EditFogColour")) {
                     ImGui.colorPicker3(I18n.get("flashback.visuals.overrides.fog_colour"), visuals.fogColour);
                     ImGui.endPopup();
                 }
