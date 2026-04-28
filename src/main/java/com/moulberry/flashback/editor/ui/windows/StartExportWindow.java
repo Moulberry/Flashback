@@ -239,11 +239,11 @@ public class StartExportWindow {
                 ImGui.openPopup("QueuedJobName");
             }
 
-            if (ImGui.beginPopup("QueuedJobName")) {
+            if (ImGuiHelper.beginPopup("QueuedJobName")) {
                 ImGui.setNextItemWidth(100);
                 ImGui.inputText(I18n.get("flashback.job_name"), jobName);
 
-                if (ImGui.button(I18n.get("flashback.queue_job"))) {
+                if (ImGui.button(I18n.get("flashback.queue_job")) || ReplayUI.consumeConfirm()) {
                     createExportSettings(ImGuiHelper.getString(jobName), config).thenAccept(settings -> {
                         if (settings != null) {
                             close = true;
@@ -253,7 +253,7 @@ public class StartExportWindow {
                     });
                 }
                 ImGui.sameLine();
-                if (ImGui.button(I18n.get("gui.back"))) {
+                if (ImGui.button(I18n.get("gui.back")) || ReplayUI.consumeCancel()) {
                     ImGui.closeCurrentPopup();
                 }
                 ImGui.endPopup();

@@ -84,8 +84,6 @@ public class ReplayUI {
     public static ImFont font = null;
 
     private static String languageCode = null;
-    private static boolean wasNavClose = false;
-    private static boolean navClose = false;
 
     private static float globalScale = 1.0f;
     public static float newGlobalScale = 1.0f;
@@ -104,6 +102,9 @@ public class ReplayUI {
 
     private static int displayingTip = -1;
     private static boolean dontShowTipsOnStartupCheckbox = false;
+
+    private static boolean cancelPressed = false;
+    private static boolean confirmPressed = false;
 
     public static boolean shownRegistryErrorWarning = false;
     public static boolean shownPlayerSpawnErrorWarning = false;
@@ -593,14 +594,10 @@ public class ReplayUI {
         imguiGl3.newFrame();
         ImGui.newFrame();
 
-        hasAnyPopupOpen = ImGui.isPopupOpen("", ImGuiPopupFlags.AnyPopup);
+        confirmPressed = ImGui.isKeyPressed(ImGuiKey.Enter);
+        cancelPressed = ImGui.isKeyPressed(ImGuiKey.Escape);
 
-        navClose = hasAnyPopupOpen && ImGui.isKeyPressed(ImGuiKey.Escape);
-        if (wasNavClose != navClose) {
-            wasNavClose = navClose;
-        } else if (wasNavClose) {
-            navClose = false;
-        }
+        hasAnyPopupOpen = ImGui.isPopupOpen("", ImGuiPopupFlags.AnyPopup);
 
         if (hasAnyPopupOpen) {
             ReplayUI.getIO().addConfigFlags(ImGuiConfigFlags.NavEnableKeyboard);
@@ -787,7 +784,7 @@ public class ReplayUI {
                         ImGui.sameLine();
                         ImGui.dummy(scaleUi(20), 0);
                         ImGui.sameLine();
-                        if (ImGui.button(I18n.get("flashback.close"))) {
+                        if (ImGui.button(I18n.get("flashback.close")) || (ImGui.isWindowFocused() && ReplayUI.consumeCancel())) {
                             if (dontShowTipsOnStartupCheckbox) {
                                 FlashbackConfigV1 config = Flashback.getConfig();
                                 config.internal.showTipOfTheDay = false;
@@ -1027,10 +1024,16 @@ public class ReplayUI {
         }
     }
 
-    public static boolean consumeNavClose() {
-        boolean navClose = ReplayUI.navClose;
-        ReplayUI.navClose = false;
-        return navClose;
+    public static boolean consumeConfirm() {
+        boolean confirmPressed = ReplayUI.confirmPressed;
+        ReplayUI.confirmPressed = false;
+        return confirmPressed;
+    }
+
+    public static boolean consumeCancel() {
+        boolean cancelPressed = ReplayUI.cancelPressed;
+        ReplayUI.cancelPressed = false;
+        return cancelPressed;
     }
 
     public static boolean isMoveQuickDown() {
