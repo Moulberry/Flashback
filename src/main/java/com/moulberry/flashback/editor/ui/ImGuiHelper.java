@@ -229,7 +229,7 @@ public class ImGuiHelper {
     }
 
     public static void endPopupModalCloseable() {
-        if (closeableModalOnTop && closeableModalOnTopLast && ReplayUI.consumeNavClose()) {
+        if (closeableModalOnTop && closeableModalOnTopLast && ReplayUI.consumeCancel()) {
             ImGui.closeCurrentPopup();
         }
         ImGui.endPopup();

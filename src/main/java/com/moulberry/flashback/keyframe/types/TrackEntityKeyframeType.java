@@ -2,6 +2,7 @@ package com.moulberry.flashback.keyframe.types;
 
 import com.moulberry.flashback.combo_options.TrackingBodyPart;
 import com.moulberry.flashback.editor.ui.ImGuiHelper;
+import com.moulberry.flashback.editor.ui.ReplayUI;
 import com.moulberry.flashback.keyframe.KeyframeType;
 import com.moulberry.flashback.keyframe.change.KeyframeChange;
 import com.moulberry.flashback.keyframe.change.KeyframeChangeTrackEntity;
@@ -88,7 +89,7 @@ public class TrackEntityKeyframeType implements KeyframeType<TrackEntityKeyframe
             ImGuiHelper.inputFloat(I18n.get("flashback.roll"), data.roll);
 
             if (data.validEntityTarget == null) ImGui.beginDisabled();
-            if (ImGui.button(I18n.get("flashback.add"))) {
+            if ((ImGui.button(I18n.get("flashback.add")) || ReplayUI.consumeConfirm()) && data.validEntityTarget != null) {
                 Vector3d positionOffset = new Vector3d(data.positionOffset[0], data.positionOffset[1], data.positionOffset[2]);
                 Vector3d viewOffset = new Vector3d(data.viewOffset[0], data.viewOffset[1], data.viewOffset[2]);
                 return new TrackEntityKeyframe(data.validEntityTarget, data.trackingBodyPart, data.cameraTrackYaw[0],
@@ -96,7 +97,7 @@ public class TrackEntityKeyframeType implements KeyframeType<TrackEntityKeyframe
             }
             if (data.validEntityTarget == null) ImGui.endDisabled();
             ImGui.sameLine();
-            if (ImGui.button(I18n.get("gui.cancel"))) {
+            if (ImGui.button(I18n.get("gui.cancel")) || ReplayUI.consumeCancel()) {
                 ImGui.closeCurrentPopup();
             }
             return null;

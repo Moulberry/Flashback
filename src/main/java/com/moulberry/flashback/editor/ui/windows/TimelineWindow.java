@@ -495,7 +495,7 @@ public class TimelineWindow {
             }
         }
 
-        if (ImGui.beginPopup("##KeyframePopup")) {
+        if (ImGuiHelper.beginPopup("##KeyframePopup")) {
             renderKeyframeOptionsPopup(totalTicks);
             ImGui.endPopup();
         } else {
@@ -1198,7 +1198,7 @@ public class TimelineWindow {
         KeyframeTrack keyframeTrack = editorScene.keyframeTracks.get(editingKeyframeTrack);
         Keyframe editingKeyframe = keyframeTrack.keyframesByTick.get(editingKeyframeTick);
 
-        if (editingKeyframe == null || selectedKeyframesList.isEmpty()) {
+        if (editingKeyframe == null || selectedKeyframesList.isEmpty() || ReplayUI.consumeCancel()) {
             editingKeyframeTrack = -1;
             ImGui.closeCurrentPopup();
             return;
@@ -1317,7 +1317,7 @@ public class TimelineWindow {
             if (ImGui.button(I18n.get("flashback.copy_relative") + "##CopyRelative")) {
                 ImGui.openPopup("##CopyOptions");
             }
-            if (ImGui.beginPopup("##CopyOptions")) {
+            if (ImGuiHelper.beginPopup("##CopyOptions")) {
                 if (ImGui.checkbox(I18n.get("flashback.copy_relative_to_position") + "##CopyRelativeToPos", copyRelativeToPosition)) {
                     copyRelativeToPosition = !copyRelativeToPosition;
                 }
@@ -1766,7 +1766,7 @@ public class TimelineWindow {
                 openCreateKeyframeAtTickTrack = -1;
             }
 
-            if (ImGui.beginPopup("##CreateKeyframeAtTickPopup")) {
+            if (ImGuiHelper.beginPopup("##CreateKeyframeAtTickPopup")) {
                 if (ImGui.menuItem(I18n.get("flashback.create_keyframe_at_n", createKeyframeAtTick) + "##CreateKeyframeAtN")) {
                     ImGui.closeCurrentPopup();
                     ImGui.endPopup();
@@ -1910,7 +1910,7 @@ public class TimelineWindow {
                 ImGuiHelper.tooltip(I18n.get("flashback.add_keyframe"));
             }
 
-            if (ImGui.beginPopup("##CreateKeyframe")) {
+            if (ImGuiHelper.beginPopup("##CreateKeyframe")) {
                 if (createKeyframeWithPopup != null) {
                     hasOpenPopup = true;
                     Keyframe keyframe = createKeyframeWithPopup.render();
@@ -1928,7 +1928,7 @@ public class TimelineWindow {
 
             boolean openTrackColourPopup = false;
 
-            if (ImGui.beginPopup("##TrackPopup")) {
+            if (ImGuiHelper.beginPopup("##TrackPopup")) {
                 if (ImGui.menuItem("\ue3c9 " + I18n.get("flashback.rename"))) {
                     keyframeTrack.nameEditField = ImGuiHelper.createResizableImString(name);
                     keyframeTrack.forceFocusTrack = true;
@@ -1948,7 +1948,7 @@ public class TimelineWindow {
             if (openTrackColourPopup) {
                 ImGui.openPopup("##SetTrackColour");
             }
-            if (ImGui.beginPopup("##SetTrackColour")) {
+            if (ImGuiHelper.beginPopup("##SetTrackColour")) {
                 if (ImGui.button(I18n.get("flashback.reset_to_default") + "##ResetToDefault")) {
                     keyframeTrack.customColour = 0;
                     ImGui.closeCurrentPopup();
@@ -2072,10 +2072,11 @@ public class TimelineWindow {
             ImGui.openPopup("##NewScene");
             sceneNameString = ImGuiHelper.createResizableImString(I18n.get("flashback.default_scene_name", scenes.size() + 1));
         }
-        if (ImGui.beginPopup("##NewScene")) {
+        if (ImGuiHelper.beginPopup("##NewScene")) {
+            if (openNewScenePopup) ImGui.setKeyboardFocusHere();
             ImGui.inputText(I18n.get("flashback.name"), sceneNameString);
 
-            if (ImGui.button(I18n.get("flashback.create"))) {
+            if (ImGui.button(I18n.get("flashback.create")) || ReplayUI.consumeConfirm()) {
                 String sceneName = ImGuiHelper.getString(sceneNameString).trim();
                 if (!sceneName.isEmpty()) {
                     upgradeToSceneWrite();
@@ -2086,7 +2087,7 @@ public class TimelineWindow {
                 }
             }
             ImGui.sameLine();
-            if (ImGui.button(I18n.get("gui.cancel"))) {
+            if (ImGui.button(I18n.get("gui.cancel")) || ReplayUI.consumeCancel()) {
                 ImGui.closeCurrentPopup();
             }
 
@@ -2097,10 +2098,11 @@ public class TimelineWindow {
             ImGui.openPopup("##RenameScene");
             sceneNameString = ImGuiHelper.createResizableImString(editorScene.name);
         }
-        if (ImGui.beginPopup("##RenameScene")) {
+        if (ImGuiHelper.beginPopup("##RenameScene")) {
+            if (openRenameScenePopup) ImGui.setKeyboardFocusHere();
             ImGui.inputText(I18n.get("flashback.name"), sceneNameString);
 
-            if (ImGui.button(I18n.get("flashback.rename"))) {
+            if (ImGui.button(I18n.get("flashback.rename")) || ReplayUI.consumeConfirm()) {
                 String sceneName = ImGuiHelper.getString(sceneNameString).trim();
                 if (!sceneName.isEmpty()) {
                     upgradeToSceneWrite();
@@ -2110,7 +2112,7 @@ public class TimelineWindow {
                 }
             }
             ImGui.sameLine();
-            if (ImGui.button(I18n.get("gui.cancel"))) {
+            if (ImGui.button(I18n.get("gui.cancel")) || ReplayUI.consumeCancel()) {
                 ImGui.closeCurrentPopup();
             }
 
@@ -2120,7 +2122,7 @@ public class TimelineWindow {
         if (openDeleteScenePopup) {
             ImGui.openPopup("##DeleteScene");
         }
-        if (ImGui.beginPopup("##DeleteScene")) {
+        if (ImGuiHelper.beginPopup("##DeleteScene")) {
             if (scenes.size() > 1 && editorScene.keyframeTracks.isEmpty()) {
                 ImGui.textUnformatted(I18n.get("flashback.delete_scene_confirm1"));
                 ImGui.textUnformatted(I18n.get("flashback.delete_scene_confirm2"));
@@ -2137,7 +2139,7 @@ public class TimelineWindow {
                     ImGui.closeCurrentPopup();
                 }
                 ImGui.sameLine();
-                if (ImGui.button(I18n.get("gui.cancel"))) {
+                if (ImGui.button(I18n.get("gui.cancel")) || ReplayUI.consumeCancel()) {
                     ImGui.closeCurrentPopup();
                 }
             } else {
@@ -2147,7 +2149,7 @@ public class TimelineWindow {
             ImGui.endPopup();
         }
 
-        if (ImGui.beginPopup("##AddKeyframeElement")) {
+        if (ImGuiHelper.beginPopup("##AddKeyframeElement")) {
             for (KeyframeType<?> type : KeyframeRegistry.getTypes()) {
                 if (!type.canBeCreatedNormally()) {
                     continue;
