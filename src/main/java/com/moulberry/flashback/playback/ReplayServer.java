@@ -248,6 +248,8 @@ public class ReplayServer extends IntegratedServer {
             ));
         }
 
+        this.gameRules = this.gameRules.copy(featureFlagSet);
+
         overridePendingTags = pendingTags;
         this.reloadResources(knownPackIds != null ? knownPackIds : this.getPackRepository().getSelectedIds());
         this.clockManager().init(this);

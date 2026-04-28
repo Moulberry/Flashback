@@ -52,6 +52,9 @@ accessible field net/minecraft/server/MinecraftServer nextTickTimeNanos J
 accessible field net/minecraft/world/level/storage/PrimaryLevelData specialWorldProperty Lnet/minecraft/world/level/storage/PrimaryLevelData$SpecialWorldProperty;
 mutable field net/minecraft/world/level/storage/PrimaryLevelData specialWorldProperty Lnet/minecraft/world/level/storage/PrimaryLevelData$SpecialWorldProperty;
 
+accessible field net/minecraft/server/MinecraftServer gameRules Lnet/minecraft/world/level/gamerules/GameRules;
+mutable field net/minecraft/server/MinecraftServer gameRules Lnet/minecraft/world/level/gamerules/GameRules;
+
 accessible field net/minecraft/server/MinecraftServer registries Lnet/minecraft/core/LayeredRegistryAccess;
 mutable field net/minecraft/server/MinecraftServer registries Lnet/minecraft/core/LayeredRegistryAccess;
 # accessible class net/minecraft/resources/RegistryDataLoader$Loader
