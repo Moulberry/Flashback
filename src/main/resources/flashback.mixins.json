@@ -67,6 +67,8 @@
   },
   "mixins": [
     "MixinThreadedLevelLightEngine",
+    "compat.MixinSodiumChunkRenderer",
+    "compat.MixinSodiumRenderSectionManager",
     "compat.MixinSodiumWorldRenderer",
     "compat.axiom.MixinAxiomEditorUI",
     "compat.axiom.MixinAxiomServerIntegration",
