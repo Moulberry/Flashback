@@ -954,7 +954,7 @@ public class Flashback implements ModInitializer, ClientModInitializer {
     }
 
     public static boolean isInReplay() {
-        return isInReplay;
+        return isInReplay || isOpeningReplay;
     }
 
     public static long getVisualMillis() {
