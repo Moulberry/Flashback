@@ -6,9 +6,13 @@ import com.moulberry.flashback.FlashbackGson;
 import com.moulberry.flashback.combo_options.AudioCodec;
 import com.moulberry.flashback.combo_options.MarkerColour;
 import com.moulberry.flashback.combo_options.MovementDirection;
+import com.moulberry.flashback.combo_options.Projection;
 import com.moulberry.flashback.combo_options.RecordingControlsLocation;
 import com.moulberry.flashback.combo_options.VideoCodec;
 import com.moulberry.flashback.combo_options.VideoContainer;
+import com.moulberry.flashback.editor.keybinds.Keybinds;
+import com.moulberry.flashback.editor.ui.ReplayUI;
+import com.moulberry.flashback.editor.ui.windows.WindowType;
 import com.moulberry.flashback.keyframe.interpolation.InterpolationType;
 import com.moulberry.flashback.screen.select_replay.ReplaySorting;
 import com.moulberry.lattice.LatticeDynamicFrequency;
@@ -28,6 +32,8 @@ import com.moulberry.lattice.annotation.widget.LatticeWidgetTextField;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.KeyMapping;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.options.controls.KeyBindsScreen;
 import net.minecraft.network.chat.Component;
 
 import java.io.IOException;
@@ -37,7 +43,9 @@ import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 public class FlashbackConfigV1 {
@@ -48,6 +56,7 @@ public class FlashbackConfigV1 {
     }
 
     private int configVersion = -1;
+    public Map<String, String> keybinds = new LinkedHashMap<>();
 
     @LatticeCategory(name = "flashback.option.recording_controls")
     public SubcategoryRecordingControls recordingControls = new SubcategoryRecordingControls();
@@ -293,6 +302,7 @@ public class FlashbackConfigV1 {
     public static class SubcategoryInternalExport {
         public int[] resolution = new int[]{1920, 1080};
         public float[] framerate = new float[]{60};
+        public Projection projection = Projection.PERSPECTIVE;
         public boolean resetRng = false;
         public boolean ssaa = false;
         public boolean noGui = false;
@@ -353,12 +363,14 @@ public class FlashbackConfigV1 {
     }
 
     public void saveToDefaultFolder() {
+        Keybinds.save(this);
+
         Path configFolder = FabricLoader.getInstance().getConfigDir().resolve("flashback");
         this.saveToFolder(configFolder);
         this.saveDelay = 0;
     }
 
-    public synchronized void saveToFolder(Path configFolder) {
+    private synchronized void saveToFolder(Path configFolder) {
         Path primary = configFolder.resolve("flashback.json");
         Path backup = configFolder.resolve(".flashback.json.backup");
 

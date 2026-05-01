@@ -317,6 +317,8 @@ public class ReplayUI {
         builder.addChar('\ue55f');
         builder.addChar('\uea44');
         builder.addChar('\ue3a1');
+        builder.addChar('\ue41a'); // Rotate CW
+        builder.addChar('\ue419'); // Rotate CCW
         return builder.buildRanges();
     }
 
@@ -526,6 +528,10 @@ public class ReplayUI {
         }
 
         imguiGlfw.setViewportWindowsHidden(!activeLastFrame);
+    }
+
+    public static boolean isImGuiContextActive() {
+        return imGuiContext != null && imGuiContext.ptr == ImGui.getCurrentContext().ptr;
     }
 
     public static void drawOverlay() {

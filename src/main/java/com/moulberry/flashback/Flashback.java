@@ -15,6 +15,7 @@ import com.moulberry.flashback.command.BetterColorArgument;
 import com.moulberry.flashback.compat.DistantHorizonsSupport;
 import com.moulberry.flashback.compat.simple_voice_chat.SimpleVoiceChatPlayback;
 import com.moulberry.flashback.configuration.FlashbackConfigV1;
+import com.moulberry.flashback.editor.keybinds.Keybinds;
 import com.moulberry.flashback.editor.ui.ReplayUI;
 import com.moulberry.flashback.exporting.AsyncFileDialogs;
 import com.moulberry.flashback.exporting.ExportJob;
@@ -233,6 +234,7 @@ public class Flashback implements ModInitializer, ClientModInitializer {
             Minecraft.getInstance().schedule(() -> Lattice.performTest(configElements));
         }
 
+        Keybinds.load(config);
         TempFolderProvider.tryDeleteStaleFolders(TempFolderProvider.TempFolderType.SERVER);
 
         Path recordingFolder = TempFolderProvider.getTypedTempFolder(TempFolderProvider.TempFolderType.RECORDING);

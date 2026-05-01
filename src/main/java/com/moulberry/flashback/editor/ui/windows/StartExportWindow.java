@@ -161,6 +161,8 @@ public class StartExportWindow {
             }
             ImGuiHelper.inputFloat(I18n.get("flashback.framerate"), config.internalExport.framerate);
 
+            config.internalExport.projection = ImGuiHelper.enumCombo(I18n.get("flashback.projection"), config.internalExport.projection);
+
             if (ImGui.checkbox(I18n.get("flashback.reset_rng"), config.internalExport.resetRng)) {
                 config.internalExport.resetRng = !config.internalExport.resetRng;
             }
@@ -416,6 +418,7 @@ public class StartExportWindow {
                 return new ExportSettings(name, editorState.copy(),
                     player.position(), player.getYRot(), player.getXRot(),
                     config.internalExport.resolution[0], config.internalExport.resolution[1], start, end,
+                    config.internalExport.projection,
                     Math.max(1, config.internalExport.framerate[0]), config.internalExport.resetRng, config.internalExport.container, useVideoCodec, encoder, numBitrate, transparent, config.internalExport.ssaa, config.internalExport.noGui,
                     shouldRecordAudio, config.internalExport.stereoAudio, useAudioCodec,
                     path, ImGuiHelper.getString(pngSequenceFormat));

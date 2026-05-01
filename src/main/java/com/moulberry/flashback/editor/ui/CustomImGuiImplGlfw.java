@@ -1,6 +1,8 @@
 package com.moulberry.flashback.editor.ui;
 
 import com.moulberry.flashback.Flashback;
+import com.moulberry.flashback.editor.keybinds.Keybind;
+import com.moulberry.flashback.editor.keybinds.Keybinds;
 import com.moulberry.flashback.exporting.AsyncFileDialogs;
 import imgui.moulberry90.ImGui;
 import imgui.moulberry90.ImGuiIO;
@@ -25,16 +27,14 @@ import imgui.moulberry90.glfw.ImGuiImplGlfwNative;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.KeyboardHandler;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.input.InputQuirks;
 import net.minecraft.client.input.KeyEvent;
-import net.minecraft.world.phys.Vec2;
 import org.lwjgl.PointerBuffer;
 import org.lwjgl.glfw.*;
 
 import java.nio.ByteBuffer;
 import java.nio.FloatBuffer;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 
 import static org.lwjgl.glfw.GLFW.*;
 import static org.lwjgl.system.MemoryUtil.NULL;
@@ -209,7 +209,7 @@ public class CustomImGuiImplGlfw {
         return delta;
     }
 
-    protected int glfwKeyToImGuiKey(final int glfwKey) {
+    public static int glfwKeyToImGuiKey(final int glfwKey) {
         switch (glfwKey) {
             case GLFW_KEY_TAB:
                 return ImGuiKey.Tab;
@@ -538,20 +538,21 @@ public class CustomImGuiImplGlfw {
             return;
         }
 
+        var io = ReplayUI.getIO();
+
         updateKeyModifiers(windowId);
 
-        boolean shiftMod = (mods & GLFW_MOD_SHIFT) != 0;
-        boolean ctrlMod = (mods & GLFW_MOD_CONTROL) != 0;
-        boolean altMod = (mods & GLFW_MOD_ALT) != 0;
-        boolean superMod = (mods & GLFW_MOD_SUPER) != 0;
+        boolean shiftMod = (mods & GLFW_MOD_SHIFT) != 0 || (glfwGetKey(windowId, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) || (glfwGetKey(windowId, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS);
+        boolean ctrlMod = (mods & GLFW_MOD_CONTROL) != 0 || (glfwGetKey(windowId, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS) || (glfwGetKey(windowId, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS);
+        boolean altMod = (mods & GLFW_MOD_ALT) != 0 || (glfwGetKey(windowId, GLFW_KEY_LEFT_ALT) == GLFW_PRESS) || (glfwGetKey(windowId, GLFW_KEY_RIGHT_ALT) == GLFW_PRESS);
+        boolean superMod = (mods & GLFW_MOD_SUPER) != 0 || (glfwGetKey(windowId, GLFW_KEY_LEFT_SUPER) == GLFW_PRESS) || (glfwGetKey(windowId, GLFW_KEY_RIGHT_SUPER) == GLFW_PRESS);
+
         int minecraftKey = key;
         boolean keyInBoundsForGame = minecraftKey >= 0 && minecraftKey < this.keyPressedGame.length;
 
         if (this.grabbed != null && action == GLFW_RELEASE && this.grabLinkedKey > 0 && key == this.grabLinkedKey) {
             this.ungrab();
         }
-
-        var io = ReplayUI.getIO();
 
         if (!ReplayUI.isActive() || Minecraft.getInstance().screen != null) {
             if (action == GLFW_RELEASE && key >= 0 && key < this.keyOwnerWindows.length) {
@@ -578,20 +579,38 @@ public class CustomImGuiImplGlfw {
             return;
         }
 
+        Keybind editingKeybind = ImGuiHelper.getEditingKeybind();
+        if (action == GLFW_PRESS && key != GLFW.GLFW_KEY_ESCAPE && editingKeybind != null) {
+            if (editingKeybind.isForceScrollKey()) {
+                shiftMod |= key == GLFW_KEY_LEFT_SHIFT || key == GLFW_KEY_RIGHT_SHIFT;
+                ctrlMod |= key == GLFW_KEY_LEFT_CONTROL || key == GLFW_KEY_RIGHT_CONTROL;
+                altMod |= key == GLFW_KEY_LEFT_ALT || key == GLFW_KEY_RIGHT_ALT;
+                superMod |= key == GLFW_KEY_LEFT_SUPER || key == GLFW_KEY_RIGHT_SUPER;
+                editingKeybind.set(Keybind.FAKE_SCROLL_KEY, shiftMod, ctrlMod, altMod, superMod);
+                return;
+            }
+
+            shiftMod &= key != GLFW_KEY_LEFT_SHIFT && key != GLFW_KEY_RIGHT_SHIFT;
+            ctrlMod &= key != GLFW_KEY_LEFT_CONTROL && key != GLFW_KEY_RIGHT_CONTROL;
+            altMod &= key != GLFW_KEY_LEFT_ALT && key != GLFW_KEY_RIGHT_ALT;
+            superMod &= key != GLFW_KEY_LEFT_SUPER && key != GLFW_KEY_RIGHT_SUPER;
+
+            if (InputQuirks.REPLACE_CTRL_KEY_WITH_CMD_KEY) {
+                boolean temp = ctrlMod;
+                ctrlMod = superMod;
+                superMod = temp;
+            }
+
+            editingKeybind.set(key, shiftMod, ctrlMod, altMod, superMod);
+            return;
+        }
+
         if (action == GLFW_PRESS && ImGuiHelper.getWantsSpecialInput()) {
             if (key == GLFW_KEY_BACKSPACE && ImGuiHelper.backspaceInput(mods)) {
                 return;
             } else if (key == GLFW_KEY_SPACE) {
                 return;
             }
-        }
-
-        boolean forcePassToGame = action != GLFW_RELEASE && ((key == GLFW_KEY_ESCAPE && !io.getWantTextInput() && !ReplayUI.hasAnyPopupOpen) ||
-                (key >= GLFW_KEY_F1 && key <= GLFW_KEY_F25) || GLFW.glfwGetKey(windowId, GLFW_KEY_F3) != GLFW_RELEASE);
-        if (forcePassToGame) {
-            this.prevUserCallbackKey.invoke(windowId, minecraftKey, scancode, action, mods);
-            if (keyInBoundsForGame) this.keyPressedGame[minecraftKey] = true;
-            return;
         }
 
         boolean passToMinecraft = false;
@@ -605,28 +624,7 @@ public class CustomImGuiImplGlfw {
                 passToImGui = true;
             }
         } else {
-            if (io.getWantTextInput()) {
-                passToMinecraft = false;
-            } else if (this.grabbed == MouseHandledBy.GAME) {
-                passToMinecraft = true;
-            } else if (ReplayUI.isMainFrameActive()) {
-                for (KeyMapping keyMapping : Minecraft.getInstance().options.keyMappings) {
-                    if (keyMapping.matches(new KeyEvent(key, scancode, 0))) {
-                        passToMinecraft = true;
-                        break;
-                    }
-                }
-            } else if (Minecraft.getInstance().options.keyUp.matches(new KeyEvent(key, scancode, 0)) ||
-                    Minecraft.getInstance().options.keyLeft.matches(new KeyEvent(key, scancode, 0)) ||
-                    Minecraft.getInstance().options.keyDown.matches(new KeyEvent(key, scancode, 0)) ||
-                    Minecraft.getInstance().options.keyRight.matches(new KeyEvent(key, scancode, 0)) ||
-                    Minecraft.getInstance().options.keyJump.matches(new KeyEvent(key, scancode, 0)) ||
-                    Minecraft.getInstance().options.keyChat.matches(new KeyEvent(key, scancode, 0)) ||
-                    Minecraft.getInstance().options.keyCommand.matches(new KeyEvent(key, scancode, 0))) {
-                ReplayUI.focusMainWindowCounter = 5;
-                passToMinecraft = true;
-            }
-
+            passToMinecraft = shouldPassToMinecraft(io, windowId, key, scancode, mods);
             passToImGui = !passToMinecraft;
         }
 
@@ -647,6 +645,65 @@ public class CustomImGuiImplGlfw {
                 this.keyOwnerWindows[key] = -1;
             }
         }
+    }
+
+    private boolean shouldPassToMinecraft(ImGuiIO io, long windowId, int key, int scancode, int mods) {
+        if (key == GLFW_KEY_ESCAPE) {
+            return !io.getWantTextInput() && !ReplayUI.hasAnyPopupOpen;
+        }
+
+        // If any of our keybinds would be triggered, don't pass to Minecraft
+        boolean shiftMod = (mods & GLFW_MOD_SHIFT) != 0;
+        boolean ctrlMod = (mods & GLFW_MOD_CONTROL) != 0;
+        boolean altMod = (mods & GLFW_MOD_ALT) != 0;
+        boolean superMod = (mods & GLFW_MOD_SUPER) != 0;
+        for (Keybind keybind : Keybinds.KEYBINDS) {
+            if (keybind.wouldBePressed(key, shiftMod, ctrlMod, altMod, superMod)) {
+                return false;
+            }
+        }
+
+        // Pass all function keys to Minecraft
+        if (key >= GLFW_KEY_F1 && key <= GLFW_KEY_F25) {
+            return true;
+        }
+
+        // Pass all F3 combinations to Minecraft
+        if (GLFW.glfwGetKey(windowId, GLFW_KEY_F3) != GLFW_RELEASE) {
+            return true;
+        }
+
+        if (io.getWantTextInput()) {
+            return false;
+        } else if (this.grabbed == MouseHandledBy.GAME) {
+            return true;
+        }
+
+        var options = Minecraft.getInstance().options;
+        var keyEvent = new KeyEvent(key, scancode, mods);
+
+        // If any Minecraft keybinds would be triggered while focusing the main frame, pass to minecraft
+        if (ReplayUI.isMainFrameActive()) {
+            for (KeyMapping keyMapping : options.keyMappings) {
+                if (keyMapping.matches(keyEvent)) {
+                    return true;
+                }
+            }
+        }
+
+        // Special keybinds that take priority even if the main frame isn't focused
+        if (options.keyUp.matches(keyEvent) ||
+                options.keyLeft.matches(keyEvent) ||
+                options.keyDown.matches(keyEvent) ||
+                options.keyRight.matches(keyEvent) ||
+                options.keyJump.matches(keyEvent) ||
+                options.keyChat.matches(keyEvent) ||
+                options.keyCommand.matches(keyEvent)) {
+            ReplayUI.focusMainWindowCounter = 5;
+            return true;
+        }
+
+        return false;
     }
 
     public void cursorPosCallback(final long windowId, final double xpos, final double ypos) {

@@ -6,6 +6,7 @@ import com.moulberry.flashback.Utils;
 import com.moulberry.flashback.editor.CopiedKeyframes;
 import com.moulberry.flashback.editor.SavedTrack;
 import com.moulberry.flashback.editor.SelectedKeyframes;
+import com.moulberry.flashback.editor.keybinds.Keybinds;
 import com.moulberry.flashback.editor.ui.KeyframeRelativeOffsets;
 import com.moulberry.flashback.editor.ui.ReplayUI;
 import com.moulberry.flashback.keyframe.KeyframeType;
@@ -28,6 +29,7 @@ import com.moulberry.flashback.playback.ReplayServer;
 import com.moulberry.flashback.editor.ui.ImGuiHelper;
 import com.moulberry.flashback.record.FlashbackMeta;
 import com.moulberry.flashback.state.KeyframeTrack;
+import com.moulberry.flashback.visuals.ReplayVisuals;
 import imgui.moulberry90.ImDrawList;
 import imgui.moulberry90.ImGui;
 import imgui.moulberry90.ImVec4;
@@ -507,21 +509,41 @@ public class TimelineWindow {
         if (shouldProcessInput) {
             int scroll = (int) Math.signum(ReplayUI.getIO().getMouseWheel());
             if (scroll != 0 && mouseX > x + middleX && mouseX < x + width && mouseY > y && mouseY < y + height) {
-                double mousePercentage = (mouseX - (x + middleX)) / (width - middleX);
+                if (Keybinds.TIMELINE_ZOOM_SCROLL.areAllModifiersDown()) {
+                    double mousePercentage = (mouseX - (x + middleX)) / (width - middleX);
 
-                if (scroll > 0) {
-                    double zoomDelta = editorState.zoomMax - editorState.zoomMin;
-                    if (zoomDelta > 0.001) {
-                        editorState.zoomMin += zoomDelta * 0.05 * mousePercentage;
-                        editorState.zoomMax -= zoomDelta * 0.05 * (1 - mousePercentage);
+                    if (scroll > 0) {
+                        double zoomDelta = editorState.zoomMax - editorState.zoomMin;
+                        if (zoomDelta > 0.001) {
+                            editorState.zoomMin += zoomDelta * 0.05 * mousePercentage;
+                            editorState.zoomMax -= zoomDelta * 0.05 * (1 - mousePercentage);
+                            editorState.markDirty();
+                        }
+                    } else if (scroll < 0) {
+                        double zoomDelta = editorState.zoomMax - editorState.zoomMin;
+
+                        editorState.zoomMin = Math.max(0, editorState.zoomMin - zoomDelta * 0.05/0.9 * mousePercentage);
+                        editorState.zoomMax = Math.min(1, editorState.zoomMax + zoomDelta * 0.05/0.9 * (1 - mousePercentage));
                         editorState.markDirty();
                     }
-                } else if (scroll < 0) {
-                    double zoomDelta = editorState.zoomMax - editorState.zoomMin;
-
-                    editorState.zoomMin = Math.max(0, editorState.zoomMin - zoomDelta * 0.05/0.9 * mousePercentage);
-                    editorState.zoomMax = Math.min(1, editorState.zoomMax + zoomDelta * 0.05/0.9 * (1 - mousePercentage));
-                    editorState.markDirty();
+                } else if (Keybinds.TIMELINE_MOVE_SCROLL.areAllModifiersDown()) {
+                    if (scroll > 0) {
+                        if (editorState.zoomMax >= 0.99) {
+                            editorState.zoomMin += 1.0 - editorState.zoomMax;
+                            editorState.zoomMax = 1.0;
+                        } else {
+                            editorState.zoomMin += 0.01;
+                            editorState.zoomMax += 0.01;
+                        }
+                    } else {
+                        if (editorState.zoomMin <= 0.01) {
+                            editorState.zoomMax -= editorState.zoomMin;
+                            editorState.zoomMin = 0.0;
+                        } else {
+                            editorState.zoomMin -= 0.01;
+                            editorState.zoomMax -= 0.01;
+                        }
+                    }
                 }
             }
 
@@ -716,16 +738,17 @@ public class TimelineWindow {
     }
 
     private static void handleKeyPresses(ReplayServer replayServer, int cursorTicks, int totalTicks) {
-        boolean pressedIn = ImGui.isKeyPressed(GLFW.GLFW_KEY_I, false);
-        boolean pressedOut = ImGui.isKeyPressed(GLFW.GLFW_KEY_O, false);
+        boolean pressedIn = Keybinds.MARK_IN.isPressed(false);
+        boolean pressedOut = Keybinds.MARK_OUT.isPressed(false);
+        boolean pressedClearIn = Keybinds.CLEAR_IN.isPressed(false);
+        boolean pressedClearOut = Keybinds.CLEAR_OUT.isPressed(false);
 
-        boolean ctrlPressed = InputQuirks.REPLACE_CTRL_KEY_WITH_CMD_KEY ? ImGui.isKeyDown(GLFW.GLFW_KEY_LEFT_SUPER) : ImGui.isKeyDown(GLFW.GLFW_KEY_LEFT_CONTROL);
-        boolean pressedCopy = ctrlPressed && ImGui.isKeyPressed(GLFW.GLFW_KEY_C, false);
-        boolean pressedPaste = ctrlPressed && ImGui.isKeyPressed(GLFW.GLFW_KEY_V, false);
+        boolean pressedCopy = Keybinds.COPY.isPressed(false);
+        boolean pressedPaste = Keybinds.PASTE.isPressed(false);
 
         boolean pressedDelete = ImGui.isKeyPressed(GLFW.GLFW_KEY_DELETE, false) || ImGui.isKeyPressed(GLFW.GLFW_KEY_BACKSPACE, false);
 
-        if (ImGui.isKeyPressed(GLFW.GLFW_KEY_P, false)) {
+        if (Keybinds.PAUSE.isPressed(false)) {
             togglePaused(replayServer);
         }
         if (ImGui.isKeyPressed(GLFW.GLFW_KEY_LEFT, false)) {
@@ -789,25 +812,35 @@ public class TimelineWindow {
             replayServer.goToReplayTick(previousKeyframeTick);
             replayServer.forceApplyKeyframes.set(true);
         }
-        if (ImGui.isKeyPressed(GLFW.GLFW_KEY_Z, false) && (ImGui.isKeyDown(GLFW.GLFW_KEY_LEFT_CONTROL) || ImGui.isKeyDown(GLFW.GLFW_KEY_RIGHT_CONTROL))) {
+        if (Keybinds.UNDO.isPressed(false)) {
             upgradeToSceneWrite();
             editorScene.undo(ReplayUI::setInfoOverlayShort);
             editorState.markDirty();
         }
-        if (ImGui.isKeyPressed(GLFW.GLFW_KEY_Y, false) && (ImGui.isKeyDown(GLFW.GLFW_KEY_LEFT_CONTROL) || ImGui.isKeyDown(GLFW.GLFW_KEY_RIGHT_CONTROL))) {
+        if (Keybinds.REDO.isPressed(false)) {
             upgradeToSceneWrite();
             editorScene.redo(ReplayUI::setInfoOverlayShort);
             editorState.markDirty();
         }
 
-        if (pressedIn || pressedOut) {
+        if (pressedIn || pressedOut || pressedClearIn || pressedClearOut) {
             int start = -1;
             int end = -1;
             if (pressedIn) {
+                ReplayUI.setInfoOverlayShort("Marked 'In' render point at " + cursorTicks);
                 start = cursorTicks;
             }
             if (pressedOut) {
+                ReplayUI.setInfoOverlayShort("Marked 'Out' render point at " + cursorTicks);
                 end = cursorTicks;
+            }
+            if (pressedClearIn) {
+                ReplayUI.setInfoOverlayShort("Cleared 'In' render point");
+                start = 0;
+            }
+            if (pressedClearOut) {
+                ReplayUI.setInfoOverlayShort("Cleared 'Out' render point");
+                end = totalTicks;
             }
             upgradeToSceneWrite();
             editorScene.setExportTicks(start, end, totalTicks);
@@ -859,6 +892,90 @@ public class TimelineWindow {
                 }
             } catch (Exception ignored) {}
         }
+
+        if (Keybinds.ZOOM_IN.isPressed(true)) {
+            double zoomDelta = editorState.zoomMax - editorState.zoomMin;
+            if (zoomDelta > 0.001) {
+                editorState.zoomMin += zoomDelta * 0.025;
+                editorState.zoomMax -= zoomDelta * 0.025;
+                editorState.markDirty();
+            }
+        }
+
+        if (Keybinds.ZOOM_OUT.isPressed(true)) {
+            double zoomDelta = editorState.zoomMax - editorState.zoomMin;
+            if (zoomDelta > 0.001 && zoomDelta < 1.0) {
+                editorState.zoomMin = Math.max(0, editorState.zoomMin - zoomDelta * 0.025);
+                editorState.zoomMax = Math.min(1, editorState.zoomMax + zoomDelta * 0.025);
+                editorState.markDirty();
+            }
+        }
+
+        float rollCw = Keybinds.ROLL_CW.isPressed(true) ? (Keybinds.ROLL_CW.isPressed(false) ? 1.0f : 3.0f) : 0.0f;
+        float rollCcw = Keybinds.ROLL_CCW.isPressed(true) ? (Keybinds.ROLL_CCW.isPressed(false) ? 1.0f : 3.0f) : 0.0f;
+
+        if (rollCw != rollCcw) {
+            ReplayVisuals visuals = editorState.replayVisuals;
+            visuals.overrideRoll = true;
+
+            visuals.overrideRollAmount += rollCw - rollCcw;
+            if (visuals.overrideRollAmount < -180.0f) visuals.overrideRollAmount += 360.0f;
+            if (visuals.overrideRollAmount > 180.0f) visuals.overrideRollAmount -= 360.0f;
+
+            Minecraft.getInstance().levelRenderer.needsUpdate();
+            editorState.markDirty();
+        }
+
+        if (Keybinds.ADD_CAMERA.isPressed(false)) {
+            ReplayUI.setInfoOverlayShort("Added camera keyframe at tick " + cursorTicks);
+
+            upgradeToSceneWrite();
+
+            int trackIndex = findOrCreateCameraTrack();
+
+            editorScene.setKeyframe(trackIndex, cursorTicks, CameraKeyframeType.INSTANCE.createDirect());
+            editorState.markDirty();
+
+            lastKeyframeTrackCameraWasAddedTo = editorScene.keyframeTracks.get(trackIndex);
+        }
+    }
+
+    private static KeyframeTrack lastKeyframeTrackCameraWasAddedTo = null;
+
+    private static int findOrCreateCameraTrack() {
+        if (lastKeyframeTrackCameraWasAddedTo != null) {
+            int lastCameraAddedIndex = editorScene.keyframeTracks.indexOf(lastKeyframeTrackCameraWasAddedTo);
+            if (lastCameraAddedIndex >= 0) {
+                return lastCameraAddedIndex;
+            }
+        }
+
+        int disabledIndex = -1;
+
+        for (int i = 0; i < editorScene.keyframeTracks.size(); i++) {
+            KeyframeTrack track = editorScene.keyframeTracks.get(i);
+            if (track.keyframeType == CameraKeyframeType.INSTANCE) {
+                if (track.enabled) {
+                    return i;
+                } else {
+                    disabledIndex = i;
+                }
+            }
+        }
+
+        if (disabledIndex >= 0) {
+            return disabledIndex;
+        }
+
+        int index = editorScene.keyframeTracks.size();
+
+        editorScene.push(new EditorSceneHistoryEntry(
+            List.of(new EditorSceneHistoryAction.RemoveTrack(CameraKeyframeType.INSTANCE, index)),
+            List.of(new EditorSceneHistoryAction.AddTrack(CameraKeyframeType.INSTANCE, index)),
+            I18n.get("flashback.create_named_track", CameraKeyframeType.INSTANCE.name())));
+        editorState.markDirty();
+
+        return index;
     }
 
     private static void performCopy(int totalTicks, boolean relativePosition, boolean relativeYaw, boolean relativePitch) {
@@ -2166,6 +2283,10 @@ public class TimelineWindow {
                     editorScene.push(new EditorSceneHistoryEntry(undo, redo, I18n.get("flashback.create_named_track", type.name())));
                     editorState.markDirty();
                     ImGui.closeCurrentPopup();
+
+                    if (type == CameraKeyframeType.INSTANCE) {
+                        lastKeyframeTrackCameraWasAddedTo = editorScene.keyframeTracks.get(index);
+                    }
                 }
             }
             ImGui.endPopup();
@@ -2181,6 +2302,10 @@ public class TimelineWindow {
 
         Keyframe keyframe = keyframeType.createDirect();
         if (keyframe != null) {
+            if (keyframeType == CameraKeyframeType.INSTANCE) {
+                lastKeyframeTrackCameraWasAddedTo = editorScene.keyframeTracks.get(trackIndex);
+            }
+
             editorScene.setKeyframe(trackIndex, tick, keyframe);
             editorState.markDirty();
         } else {

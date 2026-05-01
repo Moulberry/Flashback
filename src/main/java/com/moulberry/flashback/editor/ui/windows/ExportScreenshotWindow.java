@@ -51,6 +51,8 @@ public class ExportScreenshotWindow {
 
             EditorState editorState = EditorStateManager.getCurrent();
 
+            config.internalExport.projection = ImGuiHelper.enumCombo(I18n.get("flashback.projection"), config.internalExport.projection);
+
             if (ImGui.checkbox(I18n.get("flashback.ssaa"), config.internalExport.ssaa)) {
                 config.internalExport.ssaa = !config.internalExport.ssaa;
             }
@@ -90,6 +92,7 @@ public class ExportScreenshotWindow {
                         ExportSettings settings = new ExportSettings(null, copiedEditorState,
                             player.position(), player.getYRot(), player.getXRot(),
                             config.internalExport.resolution[0], config.internalExport.resolution[1], tick, tick,
+                            config.internalExport.projection,
                             1, false, VideoContainer.PNG_SEQUENCE, null, null, 0, transparent, ssaa, noGui,
                             false, false, null,
                             path, null);

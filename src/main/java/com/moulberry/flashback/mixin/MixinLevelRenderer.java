@@ -4,6 +4,7 @@ import com.llamalad7.mixinextras.injector.v2.WrapWithCondition;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.mojang.blaze3d.buffers.GpuBufferSlice;
+import com.mojang.blaze3d.framegraph.FrameGraphBuilder;
 import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.resource.GraphicsResourceAllocator;
 import com.mojang.blaze3d.systems.RenderPass;
@@ -15,6 +16,8 @@ import com.mojang.blaze3d.textures.GpuTextureView;
 import com.mojang.blaze3d.textures.TextureFormat;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.moulberry.flashback.Flashback;
+import com.moulberry.flashback.combo_options.Projection;
+import com.moulberry.flashback.exporting.ExportJob;
 import com.moulberry.flashback.playback.ReplayServer;
 import com.moulberry.flashback.state.EditorState;
 import com.moulberry.flashback.state.EditorStateManager;
@@ -37,8 +40,10 @@ import net.minecraft.client.renderer.entity.state.AvatarRenderState;
 import net.minecraft.client.renderer.entity.state.EntityRenderState;
 import net.minecraft.client.renderer.state.OptionsRenderState;
 import net.minecraft.client.renderer.state.level.CameraRenderState;
+import net.minecraft.client.renderer.state.level.LevelRenderState;
 import net.minecraft.client.renderer.state.level.ParticlesRenderState;
 import net.minecraft.world.TickRateManager;
+import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Matrix4f;
 import org.joml.Matrix4fc;
@@ -68,6 +73,10 @@ public abstract class MixinLevelRenderer {
     private int ticks;
 
     @Shadow @Final private LevelTargetBundle targets;
+
+    @Shadow
+    @Final
+    private LevelRenderState levelRenderState;
 
     @Inject(method = "tick", at = @At("HEAD"))
     public void tick(CallbackInfo ci) {
@@ -217,6 +226,18 @@ public abstract class MixinLevelRenderer {
     public void addSkyPass(CallbackInfo ci) {
         EditorState editorState = EditorStateManager.getCurrent();
         if (editorState != null && !editorState.replayVisuals.renderSky) {
+            ci.cancel();
+        }
+        ExportJob exportJob = Flashback.EXPORT_JOB;
+        if (exportJob != null && exportJob.getSettings().projection() == Projection.ORTHOGRAPHIC) {
+            ci.cancel();
+        }
+    }
+
+    @Inject(method = "addCloudsPass", at = @At("HEAD"), cancellable = true)
+    public void addCloudsPass(CallbackInfo ci) {
+        ExportJob exportJob = Flashback.EXPORT_JOB;
+        if (exportJob != null && exportJob.getSettings().projection() == Projection.ORTHOGRAPHIC) {
             ci.cancel();
         }
     }

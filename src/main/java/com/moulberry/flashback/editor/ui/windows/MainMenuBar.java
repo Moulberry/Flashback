@@ -85,13 +85,16 @@ public class MainMenuBar {
         ImGui.separator();
 
         if (ImGui.menuItem(I18n.get("flashback.player_list") + "##PlayerList")) {
-            toggleWindow("player_list");
+            WindowType.PLAYER_LIST.toggle();
         }
         if (ImGui.menuItem(I18n.get("flashback.movement") + "##Movement")) {
-            toggleWindow("movement");
+            WindowType.MOVEMENT.toggle();
         }
         if (ImGui.menuItem(I18n.get("flashback.render_filter") + "##RenderFilter")) {
-            toggleWindow("render_filter");
+            WindowType.RENDER_FILTER.toggle();
+        }
+        if (ImGui.menuItem(I18n.get("flashback.keybinds") + "##Keybinds")) {
+            WindowType.KEYBINDS.toggle();
         }
 
         ImGui.separator();
@@ -99,17 +102,6 @@ public class MainMenuBar {
         if (ImGui.menuItem(I18n.get("flashback.hide_replay_ui") + "##HideReplayUI")) {
             Minecraft.getInstance().options.hideGui = true;
         }
-    }
-
-    private static void toggleWindow(String windowName) {
-        var openedWindows = Flashback.getConfig().internal.openedWindows;
-        boolean playerListIsOpen = openedWindows.contains(windowName);
-        if (playerListIsOpen) {
-            openedWindows.remove(windowName);
-        } else {
-            openedWindows.add(windowName);
-        }
-        Flashback.getConfig().delayedSaveToDefaultFolder();
     }
 
 }

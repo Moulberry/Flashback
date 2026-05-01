@@ -1,11 +1,14 @@
 package com.moulberry.flashback.editor.ui;
 
 import com.moulberry.flashback.combo_options.ComboOption;
+import com.moulberry.flashback.editor.keybinds.Keybind;
 import imgui.moulberry90.ImGui;
 import imgui.moulberry90.ImVec2;
 import imgui.moulberry90.flag.ImGuiCol;
 import imgui.moulberry90.flag.ImGuiComboFlags;
 import imgui.moulberry90.flag.ImGuiHoveredFlags;
+import imgui.moulberry90.flag.ImGuiKey;
+import imgui.moulberry90.flag.ImGuiMouseButton;
 import imgui.moulberry90.flag.ImGuiWindowFlags;
 import imgui.moulberry90.type.ImBoolean;
 import imgui.moulberry90.type.ImFloat;
@@ -17,6 +20,39 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class ImGuiHelper {
+
+    private static Keybind editingKeybindLastFrame = null;
+    private static Keybind editingKeybindThisFrame = null;
+
+    private static boolean closeableModalOnTopLast = false;
+    private static boolean closeableModalOnTop = false;
+    private static boolean wantSpecialInputLastFrame = false;
+    private static boolean wantSpecialInputThisFrame = false;
+
+    private static StringBuilder specialInput = new StringBuilder();
+    private static int backspaceCount = 0;
+
+    private static boolean handledFocusNext = false;
+    private static boolean focusNext = false;
+    private static int focusIndex = 0;
+    private static int focusLastIndex = 0;
+
+    public static void endFrame() {
+        closeableModalOnTopLast = closeableModalOnTop;
+
+        wantSpecialInputLastFrame = wantSpecialInputThisFrame;
+        wantSpecialInputThisFrame = false;
+
+        editingKeybindLastFrame = editingKeybindThisFrame;
+        editingKeybindThisFrame = null;
+
+        handledFocusNext = false;
+        focusNext = false;
+        focusIndex = 0;
+
+        if (!wantSpecialInputLastFrame) specialInput.setLength(0);
+    }
+
 
     public static String getString(ImString string) {
         StringBuilder builder = new StringBuilder();
@@ -65,6 +101,14 @@ public class ImGuiHelper {
         } else {
             return values[enumComboSharedArray[0]];
         }
+    }
+
+    public static void setEditingKeybind(Keybind keybind) {
+        editingKeybindThisFrame = keybind;
+    }
+
+    public static Keybind getEditingKeybind() {
+        return editingKeybindLastFrame;
     }
 
     @SuppressWarnings("unchecked")
@@ -121,30 +165,44 @@ public class ImGuiHelper {
         return changed;
     }
 
-    private static boolean closeableModalOnTopLast = false;
-    private static boolean closeableModalOnTop = false;
-    private static boolean wantSpecialInputLastFrame = false;
-    private static boolean wantSpecialInputThisFrame = false;
+    public static boolean isGlfwBindingDown(int key) {
+        if (key == 0) {
+            return false;
+        }
 
-    private static StringBuilder specialInput = new StringBuilder();
-    private static int backspaceCount = 0;
+        if (key < 0) {
+            int mouse = -key-1;
+            if (mouse >= ImGuiMouseButton.COUNT) {
+                return false;
+            }
+            return ImGui.isMouseDown(mouse);
+        } else {
+            int namedKey = CustomImGuiImplGlfw.glfwKeyToImGuiKey(key);
+            if (namedKey < ImGuiKey.NamedKey_BEGIN || namedKey >= ImGuiKey.NamedKey_END) {
+                return false;
+            }
+            return ImGui.isKeyDown(namedKey);
+        }
+    }
 
-    private static boolean handledFocusNext = false;
-    private static boolean focusNext = false;
-    private static int focusIndex = 0;
-    private static int focusLastIndex = 0;
+    public static boolean isGlfwBindingClicked(int key, boolean repeat) {
+        if (key == 0) {
+            return false;
+        }
 
-    public static void endFrame() {
-        closeableModalOnTopLast = closeableModalOnTop;
-
-        wantSpecialInputLastFrame = wantSpecialInputThisFrame;
-        wantSpecialInputThisFrame = false;
-
-        handledFocusNext = false;
-        focusNext = false;
-        focusIndex = 0;
-
-        if (!wantSpecialInputLastFrame) specialInput.setLength(0);
+        if (key < 0) {
+            int mouse = -key-1;
+            if (mouse >= ImGuiMouseButton.COUNT) {
+                return false;
+            }
+            return ImGui.isMouseClicked(mouse, repeat);
+        } else {
+            int namedKey = CustomImGuiImplGlfw.glfwKeyToImGuiKey(key);
+            if (namedKey < ImGuiKey.NamedKey_BEGIN || namedKey >= ImGuiKey.NamedKey_END) {
+                return false;
+            }
+            return ImGui.isKeyPressed(namedKey, repeat);
+        }
     }
 
     public static String modifyFromInput(String existing) {
