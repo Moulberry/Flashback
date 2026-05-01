@@ -411,6 +411,11 @@ public abstract class MixinMinecraft extends ReentrantBlockableEventLoop<Runnabl
         return original.call(function);
     }
 
+    @Inject(method = "doWorldLoad", at = @At(value = "FIELD", target = "Lnet/minecraft/client/Minecraft;singleplayerServer:Lnet/minecraft/client/server/IntegratedServer;", opcode = Opcodes.PUTFIELD, shift = At.Shift.AFTER))
+    public void afterSetSingleplayerServer(LevelStorageSource.LevelStorageAccess levelSourceAccess, PackRepository packRepository, WorldStem worldStem, Optional<GameRules> gameRules, boolean newWorld, CallbackInfo ci) {
+        Flashback.updateIsInReplay();
+    }
+
     @Override
     public void flashback$startReplayServer(LevelStorageSource.LevelStorageAccess levelStorageAccess, PackRepository packRepository, WorldStem stem, StartReplayServerInfo info) {
         this.info.set(info);
