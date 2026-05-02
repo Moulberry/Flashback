@@ -4,6 +4,7 @@ import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.Utils;
 import com.moulberry.flashback.combo_options.AspectRatio;
 import com.moulberry.flashback.combo_options.AudioCodec;
+import com.moulberry.flashback.combo_options.ExportProjection;
 import com.moulberry.flashback.combo_options.Sizing;
 import com.moulberry.flashback.combo_options.VideoCodec;
 import com.moulberry.flashback.combo_options.VideoContainer;
@@ -162,6 +163,15 @@ public class StartExportWindow {
             ImGuiHelper.inputFloat(I18n.get("flashback.framerate"), config.internalExport.framerate);
 
             config.internalExport.projection = ImGuiHelper.enumCombo(I18n.get("flashback.projection"), config.internalExport.projection);
+            if (config.internalExport.projection == ExportProjection.ORTHOGRAPHIC) {
+                ImGui.sliderFloat("Ortho Zoom", config.internalExport.orthographicZoom, 0.0f, 10.0f);
+            } else if (config.internalExport.projection == ExportProjection.CUBE_MAP) {
+                int resX = config.internalExport.resolution[0];
+                int resY = config.internalExport.resolution[1];
+                if (resX % 4 != 0 || resY % 3 != 0 || resX != resY*4/3) {
+                    ImGui.text("Warning: Resolution should be 4:3 for cube map export");
+                }
+            }
 
             if (ImGui.checkbox(I18n.get("flashback.reset_rng"), config.internalExport.resetRng)) {
                 config.internalExport.resetRng = !config.internalExport.resetRng;
@@ -418,7 +428,7 @@ public class StartExportWindow {
                 return new ExportSettings(name, editorState.copy(),
                     player.position(), player.getYRot(), player.getXRot(),
                     config.internalExport.resolution[0], config.internalExport.resolution[1], start, end,
-                    config.internalExport.projection,
+                    config.internalExport.projection, config.internalExport.orthographicZoom[0],
                     Math.max(1, config.internalExport.framerate[0]), config.internalExport.resetRng, config.internalExport.container, useVideoCodec, encoder, numBitrate, transparent, config.internalExport.ssaa, config.internalExport.noGui,
                     shouldRecordAudio, config.internalExport.stereoAudio, useAudioCodec,
                     path, ImGuiHelper.getString(pngSequenceFormat));

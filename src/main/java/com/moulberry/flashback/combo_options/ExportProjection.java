@@ -2,7 +2,7 @@ package com.moulberry.flashback.combo_options;
 
 import net.minecraft.client.resources.language.I18n;
 
-public enum Projection implements ComboOption {
+public enum ExportProjection implements ComboOption {
 
     PERSPECTIVE("flashback.projection.perspective"),
     ORTHOGRAPHIC("flashback.projection.orthographic"),
@@ -11,7 +11,7 @@ public enum Projection implements ComboOption {
 
     private final String key;
 
-    Projection(String key) {
+    ExportProjection(String key) {
         this.key = key;
     }
 

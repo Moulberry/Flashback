@@ -46,27 +46,13 @@ public class SaveableFramebuffer implements AutoCloseable {
         };
 
         commandEncoder.copyTextureToBuffer(gpuTexture, this.pbo, 0, runnable, 0);
+    }
 
-//        if (this.pboId == -1) {
-//            this.pboId = GL30C.glGenBuffers();
-//
-//            GL30C.glBindBuffer(GL30C.GL_PIXEL_PACK_BUFFER, this.pboId);
-//            GL30C.glBufferData(GL30C.GL_PIXEL_PACK_BUFFER, (long) width * height * 4, GL30C.GL_STREAM_READ);
-//            GL30C.glBindBuffer(GL30C.GL_PIXEL_PACK_BUFFER, 0);
-//        }
-//
-//        int fbo = ((GlTexture)gpuTexture).getFbo(((GlDevice)RenderSystem.getDevice()).directStateAccess(), null);
-//        GlStateManager._glBindFramebuffer(GL30.GL_FRAMEBUFFER, fbo);
-//
-//        GL30C.glBindBuffer(GL30C.GL_PIXEL_PACK_BUFFER, this.pboId);
-//        GlStateManager._pixelStore(GL11.GL_PACK_ALIGNMENT, 1);
-//        GlStateManager._pixelStore(GL11.GL_PACK_ROW_LENGTH, 0);
-//        GlStateManager._pixelStore(GL11.GL_PACK_SKIP_PIXELS, 0);
-//        GlStateManager._pixelStore(GL11.GL_PACK_SKIP_ROWS, 0);
-//        GL30C.glReadPixels(0, 0, width, height, GL30C.GL_RGBA, GL30C.GL_UNSIGNED_BYTE, 0);
-//        GL30C.glBindBuffer(GL30C.GL_PIXEL_PACK_BUFFER, 0);
-//
-//        GlStateManager._glBindFramebuffer(GL30.GL_FRAMEBUFFER, 0);
+    public boolean canFinishDownload() {
+        if (!this.isDownloading) {
+            throw new IllegalStateException("Can't finish downloading before download has started");
+        }
+        return this.downloaded != null;
     }
 
     public NativeImage finishDownload() {

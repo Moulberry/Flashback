@@ -6,6 +6,7 @@ import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.blaze3d.platform.Window;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.moulberry.flashback.*;
+import com.moulberry.flashback.combo_options.ExportProjection;
 import com.moulberry.flashback.combo_options.VideoContainer;
 import com.moulberry.flashback.editor.ui.ReplayUI;
 import com.moulberry.flashback.editor.ui.windows.ExportDoneWindow;
@@ -33,6 +34,7 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.Vec3;
+import org.apache.commons.math3.analysis.function.Min;
 import org.bytedeco.ffmpeg.global.avutil;
 import org.joml.Matrix4f;
 import org.lwjgl.glfw.GLFW;
@@ -105,11 +107,33 @@ public class ExportJob {
     }
 
     public int getWidth() {
-        return this.settings.resolutionX() * (this.settings.ssaa() ? 2 : 1);
+        int resolutionX = this.settings.resolutionX();
+
+        ExportProjection projection = this.settings.projection();
+        if (projection == ExportProjection.CUBE_MAP) {
+            resolutionX = (resolutionX + 3)/4;
+        }
+
+        if (this.settings.ssaa()) {
+            resolutionX *= 2;
+        }
+
+        return resolutionX;
     }
 
     public int getHeight() {
-        return this.settings.resolutionY() * (this.settings.ssaa() ? 2 : 1);
+        int resolutionY = this.settings.resolutionY();
+
+        ExportProjection projection = this.settings.projection();
+        if (projection == ExportProjection.CUBE_MAP) {
+            resolutionY = (resolutionY + 2)/3;
+        }
+
+        if (this.settings.ssaa()) {
+            resolutionY *= 2;
+        }
+
+        return resolutionY;
     }
 
     public double getCurrentTickDouble() {
@@ -158,8 +182,21 @@ public class ExportJob {
         try {
             Files.createDirectories(exportTempFolder);
 
+            int resolutionX = this.settings.resolutionX();
+            int resolutionY = this.settings.resolutionY();
+
+            if (this.settings.projection() == ExportProjection.CUBE_MAP || this.settings.projection() == ExportProjection.EQUIRECTANGULAR) {
+                if (this.settings.projection() == ExportProjection.CUBE_MAP) {
+                    resolutionX = (resolutionX + 3)/4;
+                    resolutionY = (resolutionY + 2)/3;
+                }
+
+                var camera = Minecraft.getInstance().gameRenderer.getMainCamera();
+                camera.enablePanoramicMode();
+            }
+
             try (VideoWriter encoder = createVideoWriter(this.settings, tempFileName);
-                 SaveableFramebufferQueue downloader = new SaveableFramebufferQueue(this.settings.resolutionX(), this.settings.resolutionY())) {
+                 SaveableFramebufferQueue downloader = new SaveableFramebufferQueue(resolutionX, resolutionY)) {
                 doExport(encoder, downloader);
             }
 
@@ -184,6 +221,10 @@ public class ExportJob {
         } finally {
             this.running = false;
             this.shouldChangeFramebufferSize = false;
+
+            if (this.settings.projection() == ExportProjection.CUBE_MAP || this.settings.projection() == ExportProjection.EQUIRECTANGULAR) {
+                Minecraft.getInstance().gameRenderer.getMainCamera().disablePanoramicMode();
+            }
 
             // Reset display size
             Minecraft.getInstance().options.guiScale().set(oldGuiScale);
@@ -236,6 +277,8 @@ public class ExportJob {
             return;
         }
 
+        Minecraft mc = Minecraft.getInstance();
+
         Random random = new Random(1000);
         Random mathRandom = this.settings.resetRng() ? Utils.getInternalMathRandom() : null;
 
@@ -245,10 +288,10 @@ public class ExportJob {
         shouldChangeFramebufferSize = true;
         // Double gui scale if using SSAA which doubles resolution
         if (this.settings.ssaa()) {
-            Minecraft.getInstance().options.guiScale().set(Minecraft.getInstance().options.guiScale().get() * 2);
+            mc.options.guiScale().set(mc.options.guiScale().get() * 2);
         }
-        Minecraft.getInstance().resizeGui();
-        Minecraft.getInstance().getWindow().resetIsResized();
+        mc.resizeGui();
+        mc.getWindow().resetIsResized();
 
         List<TickInfo> ticks = calculateTicks(this.settings.editorState(), this.settings.startTick(), this.settings.endTick(), this.settings.framerate());
 
@@ -285,7 +328,7 @@ public class ExportJob {
 
             this.updateClientFreeze(frozen);
 
-            DeltaTracker.Timer timer = Minecraft.getInstance().deltaTracker;
+            DeltaTracker.Timer timer = mc.deltaTracker;
             timer.updateFrozenState(frozen);
             timer.updatePauseState(false);
             timer.deltaTicks = deltaTicksFloat;
@@ -293,7 +336,7 @@ public class ExportJob {
             timer.deltaTickResidual = (float) partialClientTick;
             timer.pausedDeltaTickResidual = (float) partialClientTick;
 
-            AccurateEntityPositionHandler.apply(Minecraft.getInstance().level, timer);
+            AccurateEntityPositionHandler.apply(mc.level, timer);
 
             // Apply keyframes
             if (frozen) {
@@ -302,7 +345,7 @@ public class ExportJob {
                 FlashbackAudioManager.startHandling();
             }
             try {
-                KeyframeHandler keyframeHandler = new MinecraftKeyframeHandler(Minecraft.getInstance());
+                KeyframeHandler keyframeHandler = new MinecraftKeyframeHandler(mc);
                 this.settings.editorState().applyKeyframes(keyframeHandler, (float)(this.settings.startTick() + currentTickDouble));
             } finally {
                 if (!frozen) {
@@ -312,25 +355,25 @@ public class ExportJob {
 
             long pauseScreenStart = System.currentTimeMillis();
             int additionalDummyFrames = this.extraDummyFrames;
-            while (Minecraft.getInstance().getOverlay() != null || Minecraft.getInstance().screen != null || additionalDummyFrames > 0) {
-                if (Minecraft.getInstance().getOverlay() != null || Minecraft.getInstance().screen != null) {
+            while (mc.getOverlay() != null || mc.screen != null || additionalDummyFrames > 0) {
+                if (mc.getOverlay() != null || mc.screen != null) {
                     this.runClientTick(frozen);
                 }
                 if (additionalDummyFrames > 0) {
                     additionalDummyFrames -= 1;
                 }
 
-                RenderTarget renderTarget = Minecraft.getInstance().mainRenderTarget;
-                render(renderTarget, Minecraft.getInstance().deltaTracker);
+                RenderTarget renderTarget = mc.mainRenderTarget;
+                render(renderTarget, mc.deltaTracker);
 
                 this.shouldChangeFramebufferSize = false;
-                if (!Minecraft.getInstance().getWindow().isMinimized()) {
+                if (!mc.getWindow().isMinimized()) {
                     renderTarget.blitToScreen();
                 }
                 RenderSystem.flipFrame(null);
                 this.shouldChangeFramebufferSize = true;
 
-                if (Minecraft.getInstance().getOverlay() != null || Minecraft.getInstance().screen != null) {
+                if (mc.getOverlay() != null || mc.screen != null) {
                     LockSupport.parkNanos("waiting for pause overlay to disappear", 50_000_000L);
 
                     // Force remove screens/overlays after 5s/15s respectively
@@ -339,10 +382,10 @@ public class ExportJob {
                         pauseScreenStart = currentTime;
                     }
                     if (currentTime - pauseScreenStart > 5000) {
-                        Minecraft.getInstance().setScreen(null);
+                        mc.setScreen(null);
                     }
                     if (currentTime - pauseScreenStart > 15000) {
-                        Minecraft.getInstance().setOverlay(null);
+                        mc.setOverlay(null);
                     }
                 }
 
@@ -356,38 +399,82 @@ public class ExportJob {
                 timer.pausedDeltaTickResidual = (float) partialClientTick;
             }
 
-            SaveableFramebuffer saveable = downloader.take();
             RenderTarget renderTarget = Minecraft.getInstance().mainRenderTarget;
 
-            // Perform rendering
-            PerfectFrames.waitUntilFrameReady();
-            start = System.nanoTime();
-            render(renderTarget, timer);
-            renderTimeNanos += System.nanoTime() - start;
+            ExportProjection projection = this.settings.projection();
 
-            boolean cancel;
+            if (projection == ExportProjection.CUBE_MAP || projection == ExportProjection.EQUIRECTANGULAR) {
+                var player = mc.player;
 
-            // Capture audio if necessary
-            FloatBuffer audioBuffer = null;
-            if (this.settings.recordAudio()) {
-                long device = Minecraft.getInstance().getSoundManager().soundEngine.library.currentDevice;
+                for (int i = 0; i < 6; i++) {
+                    if (i < 4) {
+                        player.setYRot(90.0f * i - 90.0f);
+                        player.setXRot(0.0f);
+                    } else if (i == 4) {
+                        player.setYRot(0.0f);
+                        player.setXRot(-90.0f);
+                    } else if (i == 5) {
+                        player.setYRot(0.0f);
+                        player.setXRot(90.0f);
+                    }
+                    player.setOldRot();
 
-                audioSamples += 48000 / this.settings.framerate();
-                int renderSamples = (int) audioSamples;
-                audioSamples -= renderSamples;
+                    // Perform rendering
+                    PerfectFrames.waitUntilFrameReady();
+                    start = System.nanoTime();
+                    render(renderTarget, timer);
+                    renderTimeNanos += System.nanoTime() - start;
 
-                int channels = this.settings.stereoAudio() ? 2 : 1;
+                    // Capture audio if necessary
+                    FloatBuffer audioBuffer = null;
+                    if (this.settings.recordAudio() && i == 0) {
+                        long device = Minecraft.getInstance().getSoundManager().soundEngine.library.currentDevice;
 
-                audioBuffer = ByteBuffer.allocateDirect(renderSamples * 4 * channels).order(ByteOrder.nativeOrder()).asFloatBuffer();
-                SOFTLoopback.alcRenderSamplesSOFT(device, audioBuffer, renderSamples);
+                        audioSamples += 48000 / this.settings.framerate();
+                        int renderSamples = (int) audioSamples;
+                        audioSamples -= renderSamples;
+
+                        int channels = this.settings.stereoAudio() ? 2 : 1;
+
+                        audioBuffer = ByteBuffer.allocateDirect(renderSamples * 4 * channels).order(ByteOrder.nativeOrder()).asFloatBuffer();
+                        SOFTLoopback.alcRenderSamplesSOFT(device, audioBuffer, renderSamples);
+                    }
+
+                    SaveableFramebuffer saveable = downloader.take();
+                    saveable.audioBuffer = audioBuffer;
+                    downloader.startDownload(renderTarget, saveable, this.settings.ssaa());
+                }
+            } else {
+                // Perform rendering
+                PerfectFrames.waitUntilFrameReady();
+                start = System.nanoTime();
+                render(renderTarget, timer);
+                renderTimeNanos += System.nanoTime() - start;
+
+                // Capture audio if necessary
+                FloatBuffer audioBuffer = null;
+                if (this.settings.recordAudio()) {
+                    long device = Minecraft.getInstance().getSoundManager().soundEngine.library.currentDevice;
+
+                    audioSamples += 48000 / this.settings.framerate();
+                    int renderSamples = (int) audioSamples;
+                    audioSamples -= renderSamples;
+
+                    int channels = this.settings.stereoAudio() ? 2 : 1;
+
+                    audioBuffer = ByteBuffer.allocateDirect(renderSamples * 4 * channels).order(ByteOrder.nativeOrder()).asFloatBuffer();
+                    SOFTLoopback.alcRenderSamplesSOFT(device, audioBuffer, renderSamples);
+                }
+
+                SaveableFramebuffer saveable = downloader.take();
+                saveable.audioBuffer = audioBuffer;
+                downloader.startDownload(renderTarget, saveable, this.settings.ssaa());
             }
 
-            saveable.audioBuffer = audioBuffer;
-            downloader.startDownload(renderTarget, saveable, this.settings.ssaa());
             submitDownloadedFrames(videoWriter, downloader, false);
 
             this.shouldChangeFramebufferSize = false;
-            cancel = finishFrame(renderTarget, tickIndex, ticks.size());
+            boolean cancel = finishFrame(renderTarget, tickIndex, ticks.size());
             this.shouldChangeFramebufferSize = true;
 
             if (cancel) {
@@ -553,29 +640,148 @@ public class ExportJob {
     }
 
     private void submitDownloadedFrames(VideoWriter videoWriter, SaveableFramebufferQueue downloader, boolean drain) {
-        SaveableFramebufferQueue.DownloadedFrame frame;
         while (true) {
             RenderSystem.executePendingTasks();
-            frame = downloader.finishDownload();
 
-            if (frame == null) {
-                if (drain && !downloader.isEmpty()) {
-                    System.out.println("waiting for frame");
-                    LockSupport.parkNanos("waiting for frame to download", 100000L);
-                    continue;
-                } else {
-                    break;
+            if (this.settings.projection() == ExportProjection.CUBE_MAP || this.settings.projection() == ExportProjection.EQUIRECTANGULAR) {
+                var frames = downloader.finishDownloadMultiple(6);
+
+                if (frames == null) {
+                    if (drain && !downloader.isEmpty()) {
+                        LockSupport.parkNanos("waiting for frame to download", 100000L);
+                        continue;
+                    } else {
+                        break;
+                    }
                 }
-            }
 
-            if (this.firstFrame == null) {
-                this.firstFrame = frame.image().mappedCopy(x -> 0xFF000000 | x);
-            }
-            this.writtenFrames += 1;
+                FloatBuffer audioBuffer = null;
+                for (SaveableFramebufferQueue.DownloadedFrame frame : frames) {
+                    if (frame.audioBuffer() != null) {
+                        audioBuffer = frame.audioBuffer();
+                        break;
+                    }
+                }
 
-            long start = System.nanoTime();
-            videoWriter.encode(frame.image(), frame.audioBuffer());
-            encodeTimeNanos += System.nanoTime() - start;
+                int resolutionX = this.settings.resolutionX();
+                int resolutionY = this.settings.resolutionY();
+
+                NativeImage target = new NativeImage(resolutionX, resolutionY, true);
+
+                if (this.settings.projection() == ExportProjection.CUBE_MAP) {
+                    for (int i = 0; i < frames.length; i++) {
+                        int positionX;
+                        int positionY;
+
+                        if (i < 4) {
+                            positionX = resolutionX * i / 4;
+                            positionY = resolutionY / 3;
+                        } else if (i == 4) {
+                            positionX = resolutionX / 4;
+                            positionY = 0;
+                        } else if (i == 5) {
+                            positionX = resolutionX / 4;
+                            positionY = resolutionY * 2 / 3;
+                        } else {
+                            break;
+                        }
+
+                        NativeImage image = frames[i].image();
+                        int sizeX = Math.min(image.getWidth(), target.getWidth() - positionX);
+                        int sizeY = Math.min(image.getHeight(), target.getHeight() - positionY);
+                        image.copyRect(target, 0, 0, positionX, positionY, sizeX, sizeY, false, false);
+                    }
+                } else {
+                    for (int y = 0; y < resolutionY; y++) {
+                        for (int x = 0; x < resolutionX; x++) {
+                            double yaw = (double) x / resolutionX * 2.0 * Math.PI;
+                            double pitch = (double) y / resolutionY * Math.PI - Math.PI/2.0;
+
+                            // Sphere xyz
+                            double sx = -Math.sin(yaw) * Math.cos(pitch);
+                            double sy = Math.sin(pitch);
+                            double sz = -Math.cos(yaw) * Math.cos(pitch);
+
+                            // Cube xyz
+                            double a = Math.max(Math.abs(sx), Math.max(Math.abs(sy), Math.abs(sz)));
+                            double cx = sx / a;
+                            double cy = sy / a;
+                            double cz = sz / a;
+
+                            if (cy == -1.0) {
+                                NativeImage image = frames[4].image();
+                                int imageX = (int) Math.round((cx+1)/2 * (image.getWidth()-1));
+                                int imageY = (int) Math.round((cz+1)/2 * (image.getHeight()-1));
+
+                                target.setPixel(x, y, image.getPixel(imageX, imageY));
+                            } else if (cy == 1.0) {
+                                NativeImage image = frames[5].image();
+                                int imageX = (int) Math.round((cx+1)/2 * (image.getWidth()-1));
+                                int imageY = image.getHeight()-1 - (int) Math.round((cz+1)/2 * (image.getHeight()-1));
+
+                                target.setPixel(x, y, image.getPixel(imageX, imageY));
+                            } else if (cz == -1.0) {
+                                NativeImage image = frames[3].image();
+                                int imageX = image.getWidth()-1 - (int) Math.round((cx+1)/2 * (image.getWidth()-1));
+                                int imageY = (int) Math.round((cy+1)/2 * (image.getHeight()-1));
+
+                                target.setPixel(x, y, image.getPixel(imageX, imageY));
+                            } else if (cz == 1.0) {
+                                NativeImage image = frames[1].image();
+                                int imageX = (int) Math.round((cx+1)/2 * (image.getWidth()-1));
+                                int imageY = (int) Math.round((cy+1)/2 * (image.getHeight()-1));
+
+                                target.setPixel(x, y, image.getPixel(imageX, imageY));
+                            } else if (cx == 1.0) {
+                                NativeImage image = frames[2].image();
+                                int imageX = image.getWidth()-1 - (int) Math.round((cz+1)/2 * (image.getWidth()-1));
+                                int imageY = (int) Math.round((cy+1)/2 * (image.getHeight()-1));
+
+                                target.setPixel(x, y, image.getPixel(imageX, imageY));
+                            } else if (cx == -1.0) {
+                                NativeImage image = frames[0].image();
+                                int imageX = (int) Math.round((cz+1)/2 * (image.getWidth()-1));
+                                int imageY = (int) Math.round((cy+1)/2 * (image.getHeight()-1));
+
+                                target.setPixel(x, y, image.getPixel(imageX, imageY));
+                            }
+                        }
+                    }
+                }
+
+                for (SaveableFramebufferQueue.DownloadedFrame frame : frames) {
+                    frame.image().close();
+                }
+
+                if (this.firstFrame == null) {
+                    this.firstFrame = target.mappedCopy(x -> 0xFF000000 | x);
+                }
+                this.writtenFrames += 1;
+
+                long start = System.nanoTime();
+                videoWriter.encode(target, audioBuffer);
+                encodeTimeNanos += System.nanoTime() - start;
+            } else {
+                SaveableFramebufferQueue.DownloadedFrame frame = downloader.finishDownload();
+
+                if (frame == null) {
+                    if (drain && !downloader.isEmpty()) {
+                        LockSupport.parkNanos("waiting for frame to download", 100000L);
+                        continue;
+                    } else {
+                        break;
+                    }
+                }
+
+                if (this.firstFrame == null) {
+                    this.firstFrame = frame.image().mappedCopy(x -> 0xFF000000 | x);
+                }
+                this.writtenFrames += 1;
+
+                long start = System.nanoTime();
+                videoWriter.encode(frame.image(), frame.audioBuffer());
+                encodeTimeNanos += System.nanoTime() - start;
+            }
         }
     }
 

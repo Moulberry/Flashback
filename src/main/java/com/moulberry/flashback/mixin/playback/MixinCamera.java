@@ -5,7 +5,7 @@ import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.moulberry.flashback.Flashback;
-import com.moulberry.flashback.combo_options.Projection;
+import com.moulberry.flashback.combo_options.ExportProjection;
 import com.moulberry.flashback.exporting.ExportJob;
 import com.moulberry.flashback.ext.MinecraftExt;
 import com.moulberry.flashback.ext.ProjectionExt;
@@ -16,7 +16,6 @@ import com.moulberry.flashback.visuals.CameraRotation;
 import net.minecraft.client.Camera;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
@@ -81,6 +80,9 @@ public abstract class MixinCamera {
     @Final
     private Vector3f forwards;
 
+    @Shadow
+    private boolean isPanoramicMode;
+
     @Inject(method = "update", at = @At(value = "RETURN"))
     public void afterSetPosition(DeltaTracker deltaTracker, CallbackInfo ci)  {
         if (this.entity == null) {
@@ -120,6 +122,10 @@ public abstract class MixinCamera {
     @WrapMethod(method = "calculateFov")
     public float calculateFov(float partialTicks, Operation<Float> original) {
         if (Flashback.isInReplay()) {
+            if (this.isPanoramicMode) {
+                return 90.0f;
+            }
+
             EditorState editorState = EditorStateManager.getCurrent();
             if (editorState != null && editorState.replayVisuals.overrideFov) {
                 return editorState.replayVisuals.overrideFovAmount;
@@ -134,28 +140,34 @@ public abstract class MixinCamera {
     @WrapOperation(method = "update", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/Camera;setupPerspective(FFFFF)V"))
     public void update_setupPerspective(Camera instance, float zNear, float zFar, float fov, float width, float height, Operation<Void> original) {
         ExportJob exportJob = Flashback.EXPORT_JOB;
-        if (exportJob != null && exportJob.getSettings().projection() == Projection.ORTHOGRAPHIC) {
-            float orthoHeight = (float)(Math.tan(Math.toRadians(fov/2)) * zFar / 4f);
-            float orthoWidth = width / height * orthoHeight;
+        if (exportJob != null) {
+            if (exportJob.getSettings().projection() == ExportProjection.ORTHOGRAPHIC) {
+                float orthoHeight = (float)(Math.tan(Math.toRadians(fov/2)) * zFar / 4f) / exportJob.getSettings().orthographicZoom();
+                float orthoWidth = width / height * orthoHeight;
 
-            this.setupOrtho(-zFar, zFar, orthoWidth, orthoHeight, false);
-            ((ProjectionExt)this.projection).flashback$setCenteredOrtho(true);
-        } else {
-            original.call(instance, zNear, zFar, fov, width, height);
+                this.setupOrtho(-zFar, zFar, orthoWidth, orthoHeight, false);
+                ((ProjectionExt)this.projection).flashback$setCenteredOrtho(true);
+                return;
+            } else if (exportJob.getSettings().projection() == ExportProjection.CUBE_MAP || exportJob.getSettings().projection() == ExportProjection.EQUIRECTANGULAR) {
+                width = Math.max(width, height);
+                height = Math.max(width, height);
+            }
         }
+
+        original.call(instance, zNear, zFar, fov, width, height);
     }
 
     @Inject(method = "createProjectionMatrixForCulling", at = @At("HEAD"), cancellable = true)
     public void createProjectionMatrixForCulling(CallbackInfoReturnable<Matrix4f> cir) {
         ExportJob exportJob = Flashback.EXPORT_JOB;
-        if (exportJob != null && exportJob.getSettings().projection() == Projection.ORTHOGRAPHIC) {
+        if (exportJob != null && exportJob.getSettings().projection() == ExportProjection.ORTHOGRAPHIC) {
             Matrix4f projection = new Matrix4f();
 
             float fovForCulling = Math.max(this.fov, this.minecraft.options.fov().get().intValue());
 
             float width = this.minecraft.getWindow().getWidth();
             float height = this.minecraft.getWindow().getHeight();
-            float orthoHeight = (float)(Math.tan(Math.toRadians(fovForCulling/2)) * this.depthFar / 4f);
+            float orthoHeight = (float)(Math.tan(Math.toRadians(fovForCulling/2)) * this.depthFar / 4f) / exportJob.getSettings().orthographicZoom();
             float orthoWidth = width / height * orthoHeight;
 
             projection.setOrtho(

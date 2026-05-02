@@ -1,11 +1,10 @@
 package com.moulberry.flashback.exporting;
 
 import com.moulberry.flashback.combo_options.AudioCodec;
-import com.moulberry.flashback.combo_options.Projection;
+import com.moulberry.flashback.combo_options.ExportProjection;
 import com.moulberry.flashback.combo_options.VideoCodec;
 import com.moulberry.flashback.combo_options.VideoContainer;
 import com.moulberry.flashback.state.EditorState;
-import com.moulberry.flashback.visuals.ReplayVisuals;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
@@ -16,7 +15,7 @@ public record ExportSettings(@Nullable String name, EditorState editorState,
                              Vec3 initialCameraPosition, float initialCameraYaw, float initialCameraPitch,
                              // Capture
                              int resolutionX, int resolutionY, int startTick, int endTick,
-                             Projection projection,
+                             ExportProjection projection, float orthographicZoom,
                              double framerate, boolean resetRng,
                              // Video
                              VideoContainer container, VideoCodec codec, String encoder, int bitrate, boolean transparent, boolean ssaa, boolean noGui,

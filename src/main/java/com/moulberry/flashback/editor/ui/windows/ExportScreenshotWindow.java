@@ -2,6 +2,7 @@ package com.moulberry.flashback.editor.ui.windows;
 
 import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.Utils;
+import com.moulberry.flashback.combo_options.ExportProjection;
 import com.moulberry.flashback.combo_options.VideoContainer;
 import com.moulberry.flashback.configuration.FlashbackConfigV1;
 import com.moulberry.flashback.editor.ui.ImGuiHelper;
@@ -52,6 +53,9 @@ public class ExportScreenshotWindow {
             EditorState editorState = EditorStateManager.getCurrent();
 
             config.internalExport.projection = ImGuiHelper.enumCombo(I18n.get("flashback.projection"), config.internalExport.projection);
+            if (config.internalExport.projection == ExportProjection.ORTHOGRAPHIC) {
+                ImGui.sliderFloat("Ortho Zoom", config.internalExport.orthographicZoom, 0.0f, 10.0f);
+            }
 
             if (ImGui.checkbox(I18n.get("flashback.ssaa"), config.internalExport.ssaa)) {
                 config.internalExport.ssaa = !config.internalExport.ssaa;
@@ -92,7 +96,7 @@ public class ExportScreenshotWindow {
                         ExportSettings settings = new ExportSettings(null, copiedEditorState,
                             player.position(), player.getYRot(), player.getXRot(),
                             config.internalExport.resolution[0], config.internalExport.resolution[1], tick, tick,
-                            config.internalExport.projection,
+                            config.internalExport.projection, config.internalExport.orthographicZoom[0],
                             1, false, VideoContainer.PNG_SEQUENCE, null, null, 0, transparent, ssaa, noGui,
                             false, false, null,
                             path, null);

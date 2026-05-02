@@ -3,7 +3,7 @@ package com.moulberry.flashback.mixin.compat;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.moulberry.flashback.Flashback;
-import com.moulberry.flashback.combo_options.Projection;
+import com.moulberry.flashback.combo_options.ExportProjection;
 import com.moulberry.flashback.exporting.ExportJob;
 import com.moulberry.mixinconstraints.annotations.IfModLoaded;
 import net.caffeinemc.mods.sodium.client.gui.SodiumOptions;
@@ -20,7 +20,7 @@ public abstract class MixinSodiumRenderSectionManager {
     @WrapOperation(method = "getSearchDistance", require = 0, remap = false, at = @At(value = "FIELD", target = "Lnet/caffeinemc/mods/sodium/client/gui/SodiumOptions$PerformanceSettings;useFogOcclusion:Z", opcode = Opcodes.GETFIELD, remap = false))
     private boolean getSearchDistance_useFogOcclusion(SodiumOptions.PerformanceSettings instance, Operation<Boolean> original) {
         ExportJob exportJob = Flashback.EXPORT_JOB;
-        if (exportJob != null && exportJob.getSettings().projection() == Projection.ORTHOGRAPHIC) {
+        if (exportJob != null && exportJob.getSettings().projection() == ExportProjection.ORTHOGRAPHIC) {
             return false;
         }
         return original.call(instance);

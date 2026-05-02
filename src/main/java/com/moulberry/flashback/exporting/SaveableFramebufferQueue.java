@@ -13,6 +13,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.nio.FloatBuffer;
 import java.util.ArrayDeque;
+import java.util.Objects;
 import java.util.OptionalInt;
 
 public class SaveableFramebufferQueue implements AutoCloseable {
@@ -83,6 +84,33 @@ public class SaveableFramebufferQueue implements AutoCloseable {
         this.available.add(popped);
 
         return frame;
+    }
+
+
+    public @Nullable DownloadedFrame[] finishDownloadMultiple(int n) {
+        if (this.waiting.size() < n) {
+            return null;
+        }
+
+        var iterator = this.waiting.iterator();
+        for (int i = 0; i < n; i++) {
+            var saveableFramebuffer = iterator.next();
+            if (!saveableFramebuffer.canFinishDownload()) {
+                return null;
+            }
+        }
+
+        DownloadedFrame[] downloads = new DownloadedFrame[n];
+        for (int i = 0; i < n; i++) {
+            SaveableFramebuffer next = Objects.requireNonNull(this.waiting.removeFirst());
+            NativeImage downloaded = Objects.requireNonNull(next.finishDownload());
+
+            downloads[i] = new DownloadedFrame(downloaded, next.audioBuffer);
+            next.audioBuffer = null;
+            this.available.add(next);
+        }
+
+        return downloads;
     }
 
     public boolean isEmpty() {

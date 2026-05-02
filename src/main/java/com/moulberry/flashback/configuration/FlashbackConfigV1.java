@@ -4,15 +4,13 @@ import com.google.gson.JsonObject;
 import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.FlashbackGson;
 import com.moulberry.flashback.combo_options.AudioCodec;
+import com.moulberry.flashback.combo_options.ExportProjection;
 import com.moulberry.flashback.combo_options.MarkerColour;
 import com.moulberry.flashback.combo_options.MovementDirection;
-import com.moulberry.flashback.combo_options.Projection;
 import com.moulberry.flashback.combo_options.RecordingControlsLocation;
 import com.moulberry.flashback.combo_options.VideoCodec;
 import com.moulberry.flashback.combo_options.VideoContainer;
 import com.moulberry.flashback.editor.keybinds.Keybinds;
-import com.moulberry.flashback.editor.ui.ReplayUI;
-import com.moulberry.flashback.editor.ui.windows.WindowType;
 import com.moulberry.flashback.keyframe.interpolation.InterpolationType;
 import com.moulberry.flashback.screen.select_replay.ReplaySorting;
 import com.moulberry.lattice.LatticeDynamicFrequency;
@@ -30,10 +28,7 @@ import com.moulberry.lattice.annotation.widget.LatticeWidgetMessage;
 import com.moulberry.lattice.annotation.widget.LatticeWidgetSlider;
 import com.moulberry.lattice.annotation.widget.LatticeWidgetTextField;
 import net.fabricmc.loader.api.FabricLoader;
-import net.minecraft.ChatFormatting;
 import net.minecraft.client.KeyMapping;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.screens.options.controls.KeyBindsScreen;
 import net.minecraft.network.chat.Component;
 
 import java.io.IOException;
@@ -302,7 +297,8 @@ public class FlashbackConfigV1 {
     public static class SubcategoryInternalExport {
         public int[] resolution = new int[]{1920, 1080};
         public float[] framerate = new float[]{60};
-        public Projection projection = Projection.PERSPECTIVE;
+        public ExportProjection projection = ExportProjection.PERSPECTIVE;
+        public float[] orthographicZoom = new float[]{1.0f};
         public boolean resetRng = false;
         public boolean ssaa = false;
         public boolean noGui = false;
