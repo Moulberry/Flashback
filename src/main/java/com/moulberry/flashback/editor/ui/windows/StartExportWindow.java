@@ -171,6 +171,12 @@ public class StartExportWindow {
                 if (resX % 4 != 0 || resY % 3 != 0 || resX != resY*4/3) {
                     ImGui.text("Warning: Resolution should be 4:3 for cube map export");
                 }
+            } else if (config.internalExport.projection == ExportProjection.EQUIRECTANGULAR) {
+                int resX = config.internalExport.resolution[0];
+                int resY = config.internalExport.resolution[1];
+                if (resX != resY*2) {
+                    ImGui.text("Warning: Resolution should be 2:1 for equirectangular export");
+                }
             }
 
             if (ImGui.checkbox(I18n.get("flashback.reset_rng"), config.internalExport.resetRng)) {

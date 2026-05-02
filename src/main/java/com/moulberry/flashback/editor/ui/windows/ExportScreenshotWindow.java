@@ -55,6 +55,18 @@ public class ExportScreenshotWindow {
             config.internalExport.projection = ImGuiHelper.enumCombo(I18n.get("flashback.projection"), config.internalExport.projection);
             if (config.internalExport.projection == ExportProjection.ORTHOGRAPHIC) {
                 ImGui.sliderFloat("Ortho Zoom", config.internalExport.orthographicZoom, 0.0f, 10.0f);
+            } else if (config.internalExport.projection == ExportProjection.CUBE_MAP) {
+                int resX = config.internalExport.resolution[0];
+                int resY = config.internalExport.resolution[1];
+                if (resX % 4 != 0 || resY % 3 != 0 || resX != resY*4/3) {
+                    ImGui.text("Warning: Resolution should be 4:3 for cube map export");
+                }
+            } else if (config.internalExport.projection == ExportProjection.EQUIRECTANGULAR) {
+                int resX = config.internalExport.resolution[0];
+                int resY = config.internalExport.resolution[1];
+                if (resX != resY*2) {
+                    ImGui.text("Warning: Resolution should be 2:1 for equirectangular export");
+                }
             }
 
             if (ImGui.checkbox(I18n.get("flashback.ssaa"), config.internalExport.ssaa)) {
