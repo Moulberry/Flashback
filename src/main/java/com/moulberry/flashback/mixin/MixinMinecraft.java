@@ -42,6 +42,7 @@ import net.minecraft.world.TickRateManager;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.storage.LevelStorageSource;
 import org.jetbrains.annotations.Nullable;
+import org.objectweb.asm.Opcodes;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -409,6 +410,11 @@ public abstract class MixinMinecraft extends ReentrantBlockableEventLoop<Runnabl
                 levelStorageAccess, packRepository, stem, this.services, levelLoadListener, info.playbackUUID(), info.path());
         }
         return original.call(function);
+    }
+
+    @Inject(method = "doWorldLoad", at = @At(value = "FIELD", target = "Lnet/minecraft/client/Minecraft;singleplayerServer:Lnet/minecraft/client/server/IntegratedServer;", opcode = Opcodes.PUTFIELD, shift = At.Shift.AFTER))
+    public void afterSetSingleplayerServer(CallbackInfo ci) {
+        Flashback.updateIsInReplay();
     }
 
     @Override
