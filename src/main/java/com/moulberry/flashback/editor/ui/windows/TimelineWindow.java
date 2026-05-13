@@ -292,7 +292,13 @@ public class TimelineWindow {
                 }
             }
             if (isCtrlDown) {
+                // applyKeyframes may need to acquire a write lock internally; sceneLock is non-reentrant,
+                // so release our outer read first and re-acquire afterwards
+                editorState.release(editorSceneStamp);
                 editorState.applyKeyframes(new MinecraftKeyframeHandler(Minecraft.getInstance()), cursorTicks);
+                editorSceneStamp = editorState.acquireRead();
+                editorSceneStampIsWrite = false;
+                editorScene = editorState.getCurrentScene(editorSceneStamp);
             }
             if (!isCtrlDown && !isShiftDown) {
                 ImGuiHelper.drawTooltip(I18n.get("flashback.hold_ctrl_to_apply_keyframes"));
