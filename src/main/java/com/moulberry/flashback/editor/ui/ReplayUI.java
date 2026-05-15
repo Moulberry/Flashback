@@ -152,8 +152,7 @@ public class ReplayUI {
 
         imGuiIO = new ImGuiIO(ImGui.getIO().ptr);
 
-        Path relativePath = FabricLoader.getInstance().getGameDir().relativize(path);
-        imGuiIO.setIniFilename(relativePath.toString());
+        imGuiIO.setIniFilename(path.toAbsolutePath().toString());
 
         imGuiIO.addConfigFlags(ImGuiConfigFlags.DockingEnable);
         imGuiIO.setConfigMacOSXBehaviors(InputQuirks.REPLACE_CTRL_KEY_WITH_CMD_KEY);
