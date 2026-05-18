@@ -456,7 +456,7 @@
   "flashback.keybinds.pause": "Pausieren/Abspielen",
   "flashback.keybinds.copy": "Keyframes kopieren",
   "flashback.keybinds.paste": "Keyframes einfügen",
-  "flashback.keybinds.undo": "Keyframes rückgängig",
+  "flashback.keybinds.undo": "Keyframes rückgängig machen",
   "flashback.keybinds.redo": "Keyframes wiederholen",
   "flashback.keybinds.mark_in": "In markieren",
   "flashback.keybinds.mark_out": "Out markieren",
@@ -470,7 +470,7 @@
   "flashback.keybinds.roll_cw": "\uE41A rollen",
   "flashback.keybinds.roll_ccw": "\uE419 rollen",
   "flashback.projection": "Projektion",
-  "flashback.projection.perspective": "Perspektivisch",
+  "flashback.projection.perspective": "Perspektive",
   "flashback.projection.orthographic": "Orthographisch",
   "flashback.projection.cube_map": "Cube Map",
   "flashback.projection.equirectangular": "Äquirektangular"
