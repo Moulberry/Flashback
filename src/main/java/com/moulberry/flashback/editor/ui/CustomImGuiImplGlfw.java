@@ -517,7 +517,7 @@ public class CustomImGuiImplGlfw {
         }
 
         if (this.prevUserCallbackScroll != null && windowId == this.mainWindowPtr) {
-            this.prevUserCallbackScroll.invoke(windowId, 0, yOffset);
+            this.prevUserCallbackScroll.invoke(windowId, xOffset, yOffset);
         }
     }
 
