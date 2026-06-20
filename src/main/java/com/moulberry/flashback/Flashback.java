@@ -541,16 +541,16 @@ public class Flashback implements ModInitializer, ClientModInitializer {
 
         ClientTickEvents.START_CLIENT_TICK.register(minecraft -> {
             if (RECORDER != null && Flashback.config.advanced.synchronizeTicking && minecraft.hasSingleplayerServer()) {
-                boolean isLevelLoaded = !(minecraft.screen instanceof LevelLoadingScreen);
-                boolean willRecord = minecraft.level != null && (minecraft.getOverlay() == null || !minecraft.getOverlay().isPauseScreen()) &&
+                boolean isLevelLoaded = !(minecraft.gui.screen() instanceof LevelLoadingScreen);
+                boolean willRecord = minecraft.level != null && (minecraft.gui.overlay() == null || !minecraft.gui.overlay().isPausing()) &&
                     !minecraft.isPaused() && !RECORDER.isPaused() && isLevelLoaded;
                 while (willRecord && !synchronizeTickingCanTickClient.compareAndSet(true, false)) {
                     LockSupport.parkNanos("flashback synchronized ticking: waiting for server", 100000L);
                 }
             }
 
-            if (canReplaceScreen(minecraft.screen)) {
-                openNewScreen(unsupportedLoader, minecraft.screen);
+            if (canReplaceScreen(minecraft.gui.screen())) {
+                openNewScreen(unsupportedLoader, minecraft.gui.screen());
             }
 
             if (minecraft.level != null && delayedStartRecording > 0) {
@@ -617,7 +617,7 @@ public class Flashback implements ModInitializer, ClientModInitializer {
             if (System.currentTimeMillis() > Flashback.getConfig().internal.nextUnsupportedModLoaderWarning) {
                 Component warning = Component.translatable("flashback.unsupported_loader.message", Component.literal(loaderName));
 
-                Minecraft.getInstance().setScreen(new UnsupportedLoaderScreen(currentScreen,
+                Minecraft.getInstance().gui.setScreen(new UnsupportedLoaderScreen(currentScreen,
                         Component.translatable("flashback.screen_unsupported"), warning));
                 return;
             }
@@ -631,7 +631,7 @@ public class Flashback implements ModInitializer, ClientModInitializer {
                     .append(Component.translatable("flashback.recovery3")).append(nl).append(nl)
                     .append(Component.translatable("flashback.recovery4").withStyle(ChatFormatting.RED)).append(nl).append(nl)
                     .append(Component.translatable("flashback.recovery5").withStyle(ChatFormatting.GREEN));
-            Minecraft.getInstance().setScreen(new RecoverRecordingsScreen(currentScreen, title, description, recover -> {
+            Minecraft.getInstance().gui.setScreen(new RecoverRecordingsScreen(currentScreen, title, description, recover -> {
                 switch (recover) {
                     case RECOVER -> {
                         pendingReplaySave.addAll(pendingReplayRecovery);
@@ -654,7 +654,7 @@ public class Flashback implements ModInitializer, ClientModInitializer {
 
             LocalDateTime dateTime = LocalDateTime.now();
             dateTime = dateTime.withNano(0);
-            Minecraft.getInstance().setScreen(new SaveReplayScreen(currentScreen, recordFolder, dateTime.toString()));
+            Minecraft.getInstance().gui.setScreen(new SaveReplayScreen(currentScreen, recordFolder, dateTime.toString()));
             return;
         }
 
@@ -662,7 +662,7 @@ public class Flashback implements ModInitializer, ClientModInitializer {
             String mods = StringUtils.join(pendingUnsupportedModsForRecording, ", ");
             Component title = Component.translatable("flashback.incompatible_with_recording");
             Component description = Component.translatable("flashback.incompatible_with_recording_description").append(Component.literal(mods).withStyle(ChatFormatting.RED));
-            Minecraft.getInstance().setScreen(new AlertScreen(() -> Minecraft.getInstance().setScreen(currentScreen), title, description));
+            Minecraft.getInstance().gui.setScreen(new AlertScreen(() -> Minecraft.getInstance().gui.setScreen(currentScreen), title, description));
             pendingUnsupportedModsForRecording = null;
             return;
         }
@@ -679,7 +679,7 @@ public class Flashback implements ModInitializer, ClientModInitializer {
     }
 
     public static void openConfigScreen(Screen oldScreen) {
-        Minecraft.getInstance().setScreen(createConfigScreen(oldScreen));
+        Minecraft.getInstance().gui.setScreen(createConfigScreen(oldScreen));
     }
 
     public static List<String> getReplayIncompatibleMods() {
@@ -737,7 +737,7 @@ public class Flashback implements ModInitializer, ClientModInitializer {
         Minecraft minecraft = Minecraft.getInstance();
 
         if (RECORDER == null) {
-            minecraft.gui.getChat().addClientSystemMessage(Component.translatable("flashback.mark_command.not_recording").withStyle(ChatFormatting.RED));
+            minecraft.gui.hud.getChat().addClientSystemMessage(Component.translatable("flashback.mark_command.not_recording").withStyle(ChatFormatting.RED));
             return;
         }
 
@@ -778,7 +778,7 @@ public class Flashback implements ModInitializer, ClientModInitializer {
             }
         }
 
-        minecraft.gui.getChat().addClientSystemMessage(Component.literal(feedback));
+        minecraft.gui.hud.getChat().addClientSystemMessage(Component.literal(feedback));
         RECORDER.addMarker(new ReplayMarker(colour, position, description));
     }
 
@@ -1006,7 +1006,7 @@ public class Flashback implements ModInitializer, ClientModInitializer {
 
     public static void startRecordingReplay() {
         if (RECORDER != null) {
-            SystemToast.add(Minecraft.getInstance().getToastManager(), FlashbackSystemToasts.RECORDING_TOAST,
+            SystemToast.add(Minecraft.getInstance().gui.toastManager(), FlashbackSystemToasts.RECORDING_TOAST,
                     Component.translatable("flashback.toast.already_recording"), Component.translatable("flashback.toast.already_recording_description"));
             return;
         }
@@ -1019,7 +1019,7 @@ public class Flashback implements ModInitializer, ClientModInitializer {
 
         RECORDER = new Recorder(Minecraft.getInstance().player.registryAccess());
         if (Flashback.getConfig().recordingControls.showRecordingToasts) {
-            SystemToast.add(Minecraft.getInstance().getToastManager(), FlashbackSystemToasts.RECORDING_TOAST,
+            SystemToast.add(Minecraft.getInstance().gui.toastManager(), FlashbackSystemToasts.RECORDING_TOAST,
                     FlashbackTextComponents.FLASHBACK, Component.translatable("flashback.toast.started_recording"));
         }
     }
@@ -1028,7 +1028,7 @@ public class Flashback implements ModInitializer, ClientModInitializer {
         RECORDER.setPaused(pause);
 
         if (Flashback.getConfig().recordingControls.showRecordingToasts) {
-            SystemToast.add(Minecraft.getInstance().getToastManager(), FlashbackSystemToasts.RECORDING_TOAST,
+            SystemToast.add(Minecraft.getInstance().gui.toastManager(), FlashbackSystemToasts.RECORDING_TOAST,
                     FlashbackTextComponents.FLASHBACK, Component.translatable(pause ? "flashback.toast.paused_recording" : "flashback.toast.unpaused_recording"));
         }
     }
@@ -1045,14 +1045,14 @@ public class Flashback implements ModInitializer, ClientModInitializer {
         }
 
         if (Flashback.getConfig().recordingControls.showRecordingToasts) {
-            SystemToast.add(Minecraft.getInstance().getToastManager(), FlashbackSystemToasts.RECORDING_TOAST,
+            SystemToast.add(Minecraft.getInstance().gui.toastManager(), FlashbackSystemToasts.RECORDING_TOAST,
                 FlashbackTextComponents.FLASHBACK, Component.translatable("flashback.toast.cancelled_recording"));
         }
     }
 
     public static void finishRecordingReplay() {
         if (RECORDER == null) {
-            SystemToast.add(Minecraft.getInstance().getToastManager(), FlashbackSystemToasts.RECORDING_TOAST,
+            SystemToast.add(Minecraft.getInstance().gui.toastManager(), FlashbackSystemToasts.RECORDING_TOAST,
                     Component.translatable("flashback.toast.not_recording"), Component.translatable("flashback.toast.cant_finish_when_not_recording"));
             return;
         }
@@ -1087,7 +1087,7 @@ public class Flashback implements ModInitializer, ClientModInitializer {
         }
 
         if (Flashback.getConfig().recordingControls.showRecordingToasts) {
-            SystemToast.add(Minecraft.getInstance().getToastManager(), FlashbackSystemToasts.RECORDING_TOAST,
+            SystemToast.add(Minecraft.getInstance().gui.toastManager(), FlashbackSystemToasts.RECORDING_TOAST,
                 FlashbackTextComponents.FLASHBACK, Component.translatable("flashback.toast.finished_recording"));
         }
     }
@@ -1140,7 +1140,7 @@ public class Flashback implements ModInitializer, ClientModInitializer {
             minecraft.level.disconnect(Component.empty());
         }
         minecraft.disconnectWithProgressScreen();
-        minecraft.setScreen(new TitleScreen());
+        minecraft.gui.setScreen(new TitleScreen());
 
         ReplayUI.shownRegistryErrorWarning = false;
         ReplayUI.shownPlayerSpawnErrorWarning = false;

@@ -51,7 +51,7 @@ public class UnsupportedLoaderScreen extends Screen {
             var button = Button.builder(Component.translatable("flashback.i_understand"), b -> {
                 Flashback.getConfig().internal.nextUnsupportedModLoaderWarning = System.currentTimeMillis() + Duration.ofDays(7).toMillis();
                 Flashback.getConfig().delayedSaveToDefaultFolder();
-                Minecraft.getInstance().setScreen(this.lastScreen);
+                Minecraft.getInstance().gui.setScreen(this.lastScreen);
            }).bounds((this.width - 150) / 2, buttonY, 150, 20).build();
             this.addRenderableWidget(button);
         } else if (this.countdown <= 10) {

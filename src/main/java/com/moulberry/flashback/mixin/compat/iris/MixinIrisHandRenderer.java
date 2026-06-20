@@ -12,7 +12,7 @@ import net.minecraft.client.multiplayer.MultiPlayerGameMode;
 import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.ItemInHandRenderer;
-import net.minecraft.client.renderer.SubmitNodeStorage;
+import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.item.BlockItem;
@@ -61,8 +61,8 @@ public abstract class MixinIrisHandRenderer {
         return original.call(instance);
     }
 
-    @WrapOperation(method = "renderSolid", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/ItemInHandRenderer;iris$renderHandsWithCustomRenderer(Lnet/irisshaders/iris/pathways/HandRenderer;FLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeStorage;Lnet/minecraft/client/player/LocalPlayer;I)V"), require = 0)
-    public void renderSolid_renderHandsWithItems(ItemInHandRenderer instance, HandRenderer handRenderer, float tickDelta, PoseStack poseStack, SubmitNodeStorage submitNodeStorage, LocalPlayer localPlayer, int i, Operation<Void> original) {
+    @WrapOperation(method = "renderSolid", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/ItemInHandRenderer;iris$renderHandsWithCustomRenderer(Lnet/irisshaders/iris/pathways/HandRenderer;FLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;Lnet/minecraft/client/player/LocalPlayer;I)V"), require = 0)
+    public void renderSolid_renderHandsWithItems(ItemInHandRenderer instance, HandRenderer handRenderer, float tickDelta, PoseStack poseStack, SubmitNodeCollector submitNodeStorage, LocalPlayer localPlayer, int i, Operation<Void> original) {
         AbstractClientPlayer spectatingPlayer = Flashback.getSpectatingPlayer();
         if (spectatingPlayer != null) {
             EnumSet<InteractionHand> renderableArms = EnumSet.noneOf(InteractionHand.class);
@@ -77,8 +77,8 @@ public abstract class MixinIrisHandRenderer {
         }
     }
 
-    @WrapOperation(method = "renderTranslucent", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/ItemInHandRenderer;iris$renderHandsWithCustomRenderer(Lnet/irisshaders/iris/pathways/HandRenderer;FLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeStorage;Lnet/minecraft/client/player/LocalPlayer;I)V"), require = 0)
-    public void renderTranslucent_renderHandsWithItems(ItemInHandRenderer instance, HandRenderer handRenderer, float tickDelta, PoseStack poseStack, SubmitNodeStorage submitNodeStorage, LocalPlayer localPlayer, int i, Operation<Void> original) {
+    @WrapOperation(method = "renderTranslucent", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/ItemInHandRenderer;iris$renderHandsWithCustomRenderer(Lnet/irisshaders/iris/pathways/HandRenderer;FLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;Lnet/minecraft/client/player/LocalPlayer;I)V"), require = 0)
+    public void renderTranslucent_renderHandsWithItems(ItemInHandRenderer instance, HandRenderer handRenderer, float tickDelta, PoseStack poseStack, SubmitNodeCollector submitNodeStorage, LocalPlayer localPlayer, int i, Operation<Void> original) {
         AbstractClientPlayer spectatingPlayer = Flashback.getSpectatingPlayer();
         if (spectatingPlayer != null) {
             EnumSet<InteractionHand> renderableArms = EnumSet.noneOf(InteractionHand.class);

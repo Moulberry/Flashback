@@ -1,5 +1,7 @@
 package com.moulberry.flashback;
 
+import com.mojang.blaze3d.GpuFormat;
+import com.mojang.blaze3d.PrimitiveTopology;
 import com.mojang.blaze3d.ProjectionType;
 import com.mojang.blaze3d.buffers.GpuBuffer;
 import com.mojang.blaze3d.buffers.GpuBufferSlice;
@@ -13,36 +15,47 @@ import com.mojang.blaze3d.textures.FilterMode;
 import com.mojang.blaze3d.textures.GpuTexture;
 import com.mojang.blaze3d.textures.GpuTextureView;
 import com.mojang.blaze3d.vertex.BufferBuilder;
+import com.mojang.blaze3d.vertex.ByteBufferBuilder;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.MeshData;
-import com.mojang.blaze3d.vertex.Tesselator;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import com.moulberry.flashback.visuals.ShaderManager;
+import net.minecraft.client.renderer.DynamicUniforms;
 import net.minecraft.client.renderer.Projection;
 import net.minecraft.client.renderer.ProjectionMatrixBuffer;
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
 import org.joml.Vector4f;
+import org.joml.Vector4fc;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL30;
 import org.lwjgl.opengl.GL32;
 
-import java.util.OptionalInt;
+import java.util.Optional;
 
 public class FramebufferUtils {
+
+    private static Vector4fc intToVector4f(int colour) {
+        float r = ((colour >> 16) & 0xFF) / 255.0f;
+        float g = ((colour >> 8) & 0xFF) / 255.0f;
+        float b = (colour & 0xFF) / 255.0f;
+        float a = ((colour >> 24) & 0xFF) / 255.0f;
+        return new Vector4f(r, g, b, a);
+    }
 
     public static void clear(RenderTarget renderTarget, int colour) {
         int oldReadFbo = GL11.glGetInteger(GL30.GL_READ_FRAMEBUFFER_BINDING);
         int oldDrawFbo = GL11.glGetInteger(GL30.GL_DRAW_FRAMEBUFFER_BINDING);
 
+        Vector4fc clearColor = intToVector4f(colour);
         GpuTexture colourTexture = renderTarget.getColorTexture();
         GpuTexture depthTexture = renderTarget.getDepthTexture();
         if (colourTexture != null && !colourTexture.isClosed() && depthTexture != null && !depthTexture.isClosed()) {
-            RenderSystem.getDevice().createCommandEncoder().clearColorAndDepthTextures(colourTexture, colour, depthTexture, 1.0f);
+            RenderSystem.getDevice().createCommandEncoder().clearColorAndDepthTextures(colourTexture, clearColor, depthTexture, 1.0);
         } else if (colourTexture != null && !colourTexture.isClosed()) {
-            RenderSystem.getDevice().createCommandEncoder().clearColorTexture(colourTexture, colour);
+            RenderSystem.getDevice().createCommandEncoder().clearColorTexture(colourTexture, clearColor);
         } else if (depthTexture != null && !depthTexture.isClosed()) {
-            RenderSystem.getDevice().createCommandEncoder().clearDepthTexture(depthTexture, 1.0f);
+            RenderSystem.getDevice().createCommandEncoder().clearDepthTexture(depthTexture, 1.0);
         }
 
         GlStateManager._glBindFramebuffer(GL32.GL_READ_FRAMEBUFFER, oldReadFbo);
@@ -51,7 +64,7 @@ public class FramebufferUtils {
 
     public static RenderTarget resizeOrCreateFramebuffer(RenderTarget renderTarget, int width, int height) {
         if (renderTarget == null) {
-            renderTarget = new TextureTarget(null, width, height, true);
+            renderTarget = new TextureTarget(null, width, height, true, GpuFormat.RGBA8_UNORM);
         } else if (renderTarget.width != width || renderTarget.height != height) {
             renderTarget.resize(width, height);
         }
@@ -78,27 +91,27 @@ public class FramebufferUtils {
         ProjectionType oldProjectionType = RenderSystem.getProjectionType();
         RenderSystem.setProjectionMatrix(projectionBuffers.getBuffer(projection), ProjectionType.ORTHOGRAPHIC);
 
-        BufferBuilder builder = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX);
+        BufferBuilder builder = new BufferBuilder(new ByteBufferBuilder(256), PrimitiveTopology.QUADS, DefaultVertexFormat.POSITION_TEX);
         builder.addVertex(width*x1, height*y2, 0.0f).setUv(0.0f, 0.0f);
         builder.addVertex(width*x2, height*y2, 0.0f).setUv(1.0f, 0.0f);
         builder.addVertex(width*x2, height*y1, 0.0f).setUv(1.0f, 1.0f);
         builder.addVertex(width*x1, height*y1, 0.0f).setUv(0.0f, 1.0f);
         try (MeshData meshData = builder.buildOrThrow()) {
-            RenderSystem.AutoStorageIndexBuffer autoStorageIndexBuffer = RenderSystem.getSequentialBuffer(VertexFormat.Mode.QUADS);
+            RenderSystem.AutoStorageIndexBuffer autoStorageIndexBuffer = RenderSystem.getSequentialBuffer(PrimitiveTopology.QUADS);
             GpuBuffer gpuBuffer = autoStorageIndexBuffer.getBuffer(6);
-            GpuBuffer vertexBuffer = DefaultVertexFormat.POSITION_TEX.uploadImmediateVertexBuffer(meshData.vertexBuffer());
+            GpuBufferSlice vertexBufferSlice = RenderSystem.getDevice().createBuffer(() -> "flashback blit vertex", GpuBuffer.USAGE_VERTEX, meshData.vertexBuffer()).slice();
 
-            GpuBufferSlice gpuBufferSlice = RenderSystem.getDynamicUniforms().writeTransform(RenderSystem.getModelViewMatrix(), new Vector4f(1.0F, 1.0F, 1.0F, 1.0F),
+            GpuBufferSlice gpuBufferSlice = new DynamicUniforms().writeTransform(RenderSystem.getModelViewMatrixCopy(), new Vector4f(1.0F, 1.0F, 1.0F, 1.0F),
                 new Vector3f(), new Matrix4f());
 
-            try (RenderPass renderPass = RenderSystem.getDevice().createCommandEncoder().createRenderPass(() -> "flashback blit", to.getColorTextureView(), OptionalInt.empty())) {
+            try (RenderPass renderPass = RenderSystem.getDevice().createCommandEncoder().createRenderPass(() -> "flashback blit", to.getColorTextureView(), Optional.empty())) {
                 renderPass.setPipeline(ShaderManager.BLIT_SCREEN_WITH_UV);
                 RenderSystem.bindDefaultUniforms(renderPass);
                 renderPass.setUniform("DynamicTransforms", gpuBufferSlice);
-                renderPass.setVertexBuffer(0, vertexBuffer);
+                renderPass.setVertexBuffer(0, vertexBufferSlice);
                 renderPass.setIndexBuffer(gpuBuffer, autoStorageIndexBuffer.type());
                 renderPass.bindTexture("InSampler", from, RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST));
-                renderPass.drawIndexed(0, 0, 6, 1);
+                renderPass.drawIndexed(0, 0, 6, 0, 1);
             }
         }
 
@@ -119,7 +132,7 @@ public class FramebufferUtils {
 
         blitTo(renderTarget.getColorTextureView(), tempRenderTarget, width, height, x1, y1, x2, y2);
 
-        tempRenderTarget.blitToScreen();
+        // tempRenderTarget.blitToScreen(); // Removed in 26.2 - use RenderSystem.outputColorTextureOverride instead
 
         GlStateManager._glBindFramebuffer(GL32.GL_READ_FRAMEBUFFER, oldReadFbo);
         GlStateManager._glBindFramebuffer(GL32.GL_DRAW_FRAMEBUFFER, oldDrawFbo);

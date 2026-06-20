@@ -81,7 +81,7 @@ public class SelectReplayScreen extends Screen {
                 .bounds(this.width / 2 - 151, this.height - 28, 98, 20).build());
         this.deleteButton = this.addRenderableWidget(Button.builder(Component.translatable("selectWorld.delete"), this::tryDeleteReplay)
                                                            .bounds(this.width / 2 - 49, this.height - 28, 98, 20).build());
-        this.addRenderableWidget(Button.builder(CommonComponents.GUI_BACK, button -> this.minecraft.setScreen(this.lastScreen))
+        this.addRenderableWidget(Button.builder(CommonComponents.GUI_BACK, button -> this.minecraft.gui.setScreen(this.lastScreen))
                                                            .bounds(this.width / 2 + 53, this.height - 28, 98, 20).build());
 
         this.updateButtonStatus(null);
@@ -94,7 +94,7 @@ public class SelectReplayScreen extends Screen {
 
     @Override
     public void onClose() {
-        this.minecraft.setScreen(this.lastScreen);
+        this.minecraft.gui.setScreen(this.lastScreen);
     }
 
     @Override

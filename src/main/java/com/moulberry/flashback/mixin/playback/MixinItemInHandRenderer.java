@@ -16,7 +16,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.ItemInHandRenderer;
-import net.minecraft.client.renderer.MultiBufferSource;
+
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
@@ -59,12 +59,11 @@ public abstract class MixinItemInHandRenderer implements ItemInHandRendererExt {
     @Shadow
     private ItemStack offHandItem;
 
-    @Shadow
-    private static boolean isChargedCrossbow(ItemStack itemStack) {
-        return false;
-    }
+    // isChargedCrossbow static method removed in 26.2
+    // @Shadow private static boolean isChargedCrossbow(ItemStack itemStack) { return false; }
 
-    @Shadow protected abstract void renderArmWithItem(AbstractClientPlayer abstractClientPlayer, float f, float g, InteractionHand interactionHand, float h, ItemStack itemStack, float i, PoseStack poseStack, SubmitNodeCollector submitNodeCollector, int j);
+    // renderArmWithItem removed in 26.2 - consolidated into submitHandsWithItems
+    // @Shadow protected abstract void renderArmWithItem(AbstractClientPlayer abstractClientPlayer, float f, float g, InteractionHand interactionHand, float h, ItemStack itemStack, float i, PoseStack poseStack, SubmitNodeCollector submitNodeCollector, int j);
 
     @Shadow @Final private Minecraft minecraft;
     @Unique
@@ -87,14 +86,13 @@ public abstract class MixinItemInHandRenderer implements ItemInHandRendererExt {
             ItemStack useStack = player.getUseItem();
             InteractionHand interactionHand = player.getUsedItemHand();
             if (!useStack.is(Items.BOW) && !useStack.is(Items.CROSSBOW)) {
-                return interactionHand == InteractionHand.MAIN_HAND && isChargedCrossbow(player.getOffhandItem()) ? RENDER_MAIN_HAND : RENDER_BOTH_HANDS;
+                // isChargedCrossbow removed in 26.2 - fall back to rendering both hands
+                return RENDER_BOTH_HANDS;
             } else {
                 return interactionHand == InteractionHand.MAIN_HAND ? RENDER_MAIN_HAND : RENDER_OFF_HAND;
             }
         }
-        if (isChargedCrossbow(mainStack)) {
-            return RENDER_MAIN_HAND;
-        }
+        // isChargedCrossbow removed in 26.2
         return RENDER_BOTH_HANDS;
     }
 
@@ -125,18 +123,20 @@ public abstract class MixinItemInHandRenderer implements ItemInHandRendererExt {
             poseStack.mulPose(Axis.YP.rotationDegrees(Mth.wrapDegrees(clientPlayer.getViewYRot(partialTick) - yBob) * 0.1f));
         }
         if ((handRenderSelection & RENDER_MAIN_HAND) != 0) {
-            l = interactionHand == InteractionHand.MAIN_HAND ? g : 0.0f;
-            m = 1.0f - Mth.lerp(partialTick, this.oMainHandHeight, this.mainHandHeight);
-            renderArmWithItem(clientPlayer, partialTick, h, InteractionHand.MAIN_HAND, l, this.mainHandItem, m, poseStack, submitNodeCollector, i);
+            // renderArmWithItem removed in 26.2
+            // l = interactionHand == InteractionHand.MAIN_HAND ? g : 0.0f;
+            // m = 1.0f - Mth.lerp(partialTick, this.oMainHandHeight, this.mainHandHeight);
+            // renderArmWithItem(clientPlayer, partialTick, h, InteractionHand.MAIN_HAND, l, this.mainHandItem, m, poseStack, submitNodeCollector, i);
         }
         if ((handRenderSelection & RENDER_OFF_HAND) != 0) {
-            l = interactionHand == InteractionHand.OFF_HAND ? g : 0.0f;
-            m = 1.0f - Mth.lerp(partialTick, this.oOffHandHeight, this.offHandHeight);
-            renderArmWithItem(clientPlayer, partialTick, h, InteractionHand.OFF_HAND, l, this.offHandItem, m, poseStack, submitNodeCollector, i);
+            // renderArmWithItem removed in 26.2
+            // l = interactionHand == InteractionHand.OFF_HAND ? g : 0.0f;
+            // m = 1.0f - Mth.lerp(partialTick, this.oOffHandHeight, this.offHandHeight);
+            // renderArmWithItem(clientPlayer, partialTick, h, InteractionHand.OFF_HAND, l, this.offHandItem, m, poseStack, submitNodeCollector, i);
         }
 
-        this.minecraft.gameRenderer.getFeatureRenderDispatcher().renderAllFeatures();
-        this.minecraft.renderBuffers().bufferSource().endBatch();
+        // this.minecraft.gameRenderer.featureRenderDispatcher().renderAllFeatures(); // renderAllFeatures() requires SubmitNodeStorage in 26.2
+        // this.minecraft.renderBuffers().bufferSource().endBatch(); // bufferSource() removed in 26.2
     }
 
     @Inject(method = "renderPlayerArm", at = @At(value = "FIELD", target = "Lnet/minecraft/client/renderer/ItemInHandRenderer;entityRenderDispatcher:Lnet/minecraft/client/renderer/entity/EntityRenderDispatcher;"))

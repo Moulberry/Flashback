@@ -25,14 +25,14 @@ public class MixinClientPacketListener {
     @Inject(method = "handleCustomPayload", at = @At("HEAD"))
     public void handleCustomPayloadHead(CallbackInfo ci) {
         if (Flashback.isInReplay()) {
-            this.screenBeforeHandleCustomPayload = Minecraft.getInstance().screen;
+            this.screenBeforeHandleCustomPayload = Minecraft.getInstance().gui.screen();
         }
     }
 
     @Inject(method = "handleCustomPayload", at = @At("RETURN"))
     public void handleCustomPayloadReturn(CallbackInfo ci) {
         if (Flashback.isInReplay()) {
-            Minecraft.getInstance().setScreen(this.screenBeforeHandleCustomPayload);
+            Minecraft.getInstance().gui.setScreen(this.screenBeforeHandleCustomPayload);
         }
     }
 

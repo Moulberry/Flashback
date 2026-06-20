@@ -15,7 +15,7 @@ public class MixinClientLevel {
 
     @Mixin(ClientLevel.ClientLevelData.class)
     public static class MixinClientLevelData {
-        @Inject(method = "getGameTime", at = @At("HEAD"), cancellable = true)
+        @Inject(method = "getGameTime", at = @At("HEAD"), cancellable = true, require = 0)
         public void getGameTime(CallbackInfoReturnable<Long> cir) {
             if (Flashback.isInReplay()) {
                 cir.setReturnValue(Flashback.getReplayGameTime());
@@ -23,7 +23,7 @@ public class MixinClientLevel {
         }
     }
 
-//    @Inject(method = "getSkyColor", at = @At("HEAD"), cancellable = true)
+//    @Inject(method = "getSkyColor", at = @At("HEAD"), cancellable = true, require = 0)
 //    public void getSkyColor(Vec3 vec3, float f, CallbackInfoReturnable<Integer> cir) {
 //        EditorState editorState = EditorStateManager.getCurrent();
 //        if (editorState != null) {

@@ -1,6 +1,7 @@
 package com.moulberry.flashback.exporting;
 
 import com.mojang.blaze3d.buffers.GpuBuffer;
+import com.mojang.blaze3d.buffers.GpuBufferSlice;
 import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.blaze3d.systems.CommandEncoder;
 import com.mojang.blaze3d.systems.RenderSystem;
@@ -38,7 +39,7 @@ public class SaveableFramebuffer implements AutoCloseable {
 
         CommandEncoder commandEncoder = RenderSystem.getDevice().createCommandEncoder();
         Runnable runnable = () -> {
-            try (GpuBuffer.MappedView mappedView = commandEncoder.mapBuffer(this.pbo, true, false)) {
+            try (GpuBufferSlice.MappedView mappedView = this.pbo.map(true, false)) {
                 NativeImage nativeImage = new NativeImage(NativeImage.Format.RGBA, width, height, false);
                 MemoryUtil.memCopy(MemoryUtil.memAddress(mappedView.data()), nativeImage.pixels, nativeImage.size);
                 this.downloaded = nativeImage;

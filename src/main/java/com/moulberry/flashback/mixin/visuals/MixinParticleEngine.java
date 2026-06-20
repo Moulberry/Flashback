@@ -20,7 +20,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Mixin(ParticleEngine.class)
 public class MixinParticleEngine {
 
-    @Inject(method = "createParticle", at = @At("HEAD"), cancellable = true)
+    @Inject(method = "createParticle", at = @At("HEAD"), cancellable = true, require = 0)
     public void createParticle(ParticleOptions particleOptions, double d, double e, double f, double g, double h, double i, CallbackInfoReturnable<Particle> cir) {
         EditorState editorState = EditorStateManager.getCurrent();
         if (editorState != null) {
@@ -38,7 +38,7 @@ public class MixinParticleEngine {
         }
     }
 
-    @Inject(method = "extract", at = @At("HEAD"), cancellable = true)
+    @Inject(method = "extract", at = @At("HEAD"), cancellable = true, require = 0)
     public void extract(CallbackInfo ci) {
         EditorState editorState = EditorStateManager.getCurrent();
         if (editorState != null && !editorState.replayVisuals.renderParticles) {

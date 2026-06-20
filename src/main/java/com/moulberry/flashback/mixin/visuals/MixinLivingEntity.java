@@ -24,7 +24,7 @@ public abstract class MixinLivingEntity extends Entity  {
     // there isn't a specific method to override when rendering. I also don't want to have
     // to manually wrap every getItemBySlot call inside the model rendering code, so here we are
 
-    @Inject(method = "getItemBySlot", at = @At("HEAD"), cancellable = true)
+    @Inject(method = "getItemBySlot", at = @At("HEAD"), cancellable = true, require = 0)
     public void getItemBySlot(EquipmentSlot equipmentSlot, CallbackInfoReturnable<ItemStack> cir) {
         if (this.level().isClientSide()) {
             EditorState editorState = EditorStateManager.getCurrent();

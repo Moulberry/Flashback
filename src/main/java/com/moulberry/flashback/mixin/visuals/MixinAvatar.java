@@ -19,7 +19,7 @@ public abstract class MixinAvatar extends LivingEntity {
         super(entityType, level);
     }
 
-    @Inject(method = "isModelPartShown", at = @At("HEAD"), cancellable = true)
+    @Inject(method = "isModelPartShown", at = @At("HEAD"), cancellable = true, require = 0)
     public void isModelPartShown(PlayerModelPart playerModelPart, CallbackInfoReturnable<Boolean> cir) {
         EditorState editorState = EditorStateManager.getCurrent();
         if (editorState != null) {

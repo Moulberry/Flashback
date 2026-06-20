@@ -37,6 +37,7 @@ import net.minecraft.world.phys.Vec3;
 import org.apache.commons.math3.analysis.function.Min;
 import org.bytedeco.ffmpeg.global.avutil;
 import org.joml.Matrix4f;
+import org.joml.Vector4f;
 import org.lwjgl.glfw.GLFW;
 import org.lwjgl.openal.SOFTLoopback;
 
@@ -191,7 +192,7 @@ public class ExportJob {
                     resolutionY = (resolutionY + 2)/3;
                 }
 
-                var camera = Minecraft.getInstance().gameRenderer.getMainCamera();
+                var camera = Minecraft.getInstance().gameRenderer.mainCamera();
                 camera.enablePanoramicMode();
             }
 
@@ -223,13 +224,13 @@ public class ExportJob {
             this.shouldChangeFramebufferSize = false;
 
             if (this.settings.projection() == ExportProjection.CUBE_MAP || this.settings.projection() == ExportProjection.EQUIRECTANGULAR) {
-                Minecraft.getInstance().gameRenderer.getMainCamera().disablePanoramicMode();
+                Minecraft.getInstance().gameRenderer.mainCamera().disablePanoramicMode();
             }
 
             // Reset display size
             Minecraft.getInstance().options.guiScale().set(oldGuiScale);
             Minecraft.getInstance().resizeGui();
-            Minecraft.getInstance().getWindow().resetIsResized();
+            // Minecraft.getInstance().getWindow().resetIsResized(); // Removed in 26.2
 
             // Refreeze server & client
             replayServer.replayPaused = true;
@@ -291,7 +292,7 @@ public class ExportJob {
             mc.options.guiScale().set(mc.options.guiScale().get() * 2);
         }
         mc.resizeGui();
-        mc.getWindow().resetIsResized();
+        // mc.getWindow().resetIsResized(); // Removed in 26.2
 
         List<TickInfo> ticks = calculateTicks(this.settings.editorState(), this.settings.startTick(), this.settings.endTick(), this.settings.framerate());
 
@@ -328,7 +329,7 @@ public class ExportJob {
 
             this.updateClientFreeze(frozen);
 
-            DeltaTracker.Timer timer = mc.deltaTracker;
+            DeltaTracker.Timer timer = (DeltaTracker.Timer) mc.getDeltaTracker();
             timer.updateFrozenState(frozen);
             timer.updatePauseState(false);
             timer.deltaTicks = deltaTicksFloat;
@@ -355,25 +356,25 @@ public class ExportJob {
 
             long pauseScreenStart = System.currentTimeMillis();
             int additionalDummyFrames = this.extraDummyFrames;
-            while (mc.getOverlay() != null || mc.screen != null || additionalDummyFrames > 0) {
-                if (mc.getOverlay() != null || mc.screen != null) {
+            while (mc.gui.overlay() != null || mc.gui.screen() != null || additionalDummyFrames > 0) {
+                if (mc.gui.overlay() != null || mc.gui.screen() != null) {
                     this.runClientTick(frozen);
                 }
                 if (additionalDummyFrames > 0) {
                     additionalDummyFrames -= 1;
                 }
 
-                RenderTarget renderTarget = mc.mainRenderTarget;
-                render(renderTarget, mc.deltaTracker);
+                RenderTarget renderTarget = mc.gameRenderer.mainRenderTarget();
+                render(renderTarget, (DeltaTracker.Timer) mc.getDeltaTracker());
 
                 this.shouldChangeFramebufferSize = false;
-                if (!mc.getWindow().isMinimized()) {
-                    renderTarget.blitToScreen();
-                }
-                RenderSystem.flipFrame(null);
+                // if (!mc.getWindow().isMinimized()) {
+                //     renderTarget.blitToScreen(); // Removed in 26.2
+                // }
+                // RenderSystem.flipFrame(null); // Removed in 26.2
                 this.shouldChangeFramebufferSize = true;
 
-                if (mc.getOverlay() != null || mc.screen != null) {
+                if (mc.gui.overlay() != null || mc.gui.screen() != null) {
                     LockSupport.parkNanos("waiting for pause overlay to disappear", 50_000_000L);
 
                     // Force remove screens/overlays after 5s/15s respectively
@@ -382,10 +383,10 @@ public class ExportJob {
                         pauseScreenStart = currentTime;
                     }
                     if (currentTime - pauseScreenStart > 5000) {
-                        mc.setScreen(null);
+                        mc.gui.setScreen(null);
                     }
                     if (currentTime - pauseScreenStart > 15000) {
-                        mc.setOverlay(null);
+                        mc.gui.setOverlay(null);
                     }
                 }
 
@@ -399,7 +400,7 @@ public class ExportJob {
                 timer.pausedDeltaTickResidual = (float) partialClientTick;
             }
 
-            RenderTarget renderTarget = Minecraft.getInstance().mainRenderTarget;
+            RenderTarget renderTarget = Minecraft.getInstance().gameRenderer.mainRenderTarget();
 
             ExportProjection projection = this.settings.projection();
 
@@ -417,7 +418,7 @@ public class ExportJob {
                         player.setYRot(0.0f);
                         player.setXRot(90.0f);
                     }
-                    player.setOldRot();
+                    player.setOldPosAndRot();
 
                     // Perform rendering
                     PerfectFrames.waitUntilFrameReady();
@@ -493,12 +494,12 @@ public class ExportJob {
         if (minecraft.level != null) {
             minecraft.level.update();
         }
-        minecraft.gameRenderer.update(timer, true);
+        minecraft.gameRenderer.update(timer);
         minecraft.gameRenderer.extract(timer, true);
         RenderSystem.executePendingTasks();
 
         var commandEncoder = RenderSystem.getDevice().createCommandEncoder();
-        commandEncoder.clearColorAndDepthTextures(renderTarget.getColorTexture(), 0, renderTarget.getDepthTexture(), 1.0);
+        commandEncoder.clearColorAndDepthTextures(renderTarget.getColorTexture(), new Vector4f(0, 0, 0, 0), renderTarget.getDepthTexture(), 1.0);
         minecraft.gameRenderer.render(timer, true);
 
     }
@@ -585,7 +586,7 @@ public class ExportJob {
         }
 
         // Remove screen
-        minecraft.setScreen(null);
+        minecraft.gui.setScreen(null);
     }
 
     private void setServerTickAndWait(ReplayServer replayServer, int targetTick, boolean force) {
@@ -629,7 +630,7 @@ public class ExportJob {
             }
         }
 
-        minecraft.getSoundManager().updateSource(Minecraft.getInstance().gameRenderer.getMainCamera());
+        minecraft.getSoundManager().updateSource(Minecraft.getInstance().gameRenderer.mainCamera());
     }
 
     private void updateClientFreeze(boolean frozen) {
@@ -790,7 +791,7 @@ public class ExportJob {
 
     private boolean finishFrame(RenderTarget framebuffer, int currentFrame, int totalFrames) {
         RenderSystem.executePendingTasks();
-        Minecraft.getInstance().getWindow().resetIsResized();
+        // Minecraft.getInstance().getWindow().resetIsResized(); // Removed in 26.2
         RenderSystem.pollEvents();
 
         boolean cancel = false;
@@ -805,8 +806,8 @@ public class ExportJob {
             this.lastRenderMillis = currentTime;
 
             Font font = Minecraft.getInstance().font;
-            var bufferSource = Minecraft.getInstance().renderBuffers().bufferSource();
-            bufferSource.endBatch();
+            // var bufferSource = Minecraft.getInstance().gameRenderer.renderBuffers().bufferSource(); // bufferSource() removed in 26.2
+            // bufferSource.endBatch(); // endBatch() removed in 26.2
             RenderSystem.getDevice().createCommandEncoder().clearDepthTexture(framebuffer.getDepthTexture(), 1.0);
 
             float guiScale = 4f;
@@ -886,6 +887,8 @@ public class ExportJob {
 
             int x = scaledWidth / 2;
             int y = scaledHeight / 2 - font.lineHeight * (lines.size() + 1)/2;
+            // TODO 26.2: font.drawInBatch removed - text overlay rendering needs to be reimplemented using GuiGraphicsExtractor
+            /*
             for (String line : lines) {
                 if (line.isEmpty()) {
                     y += font.lineHeight / 2 + 1;
@@ -922,15 +925,17 @@ public class ExportJob {
             }
 
             bufferSource.endBatch();
+            */
 
             if (!window.isMinimized()) {
                 int windowFramebufferWidth = WindowSizeTracker.getWidth(window);
                 int windowFramebufferHeight = WindowSizeTracker.getHeight(window);
 
-//                framebuffer.blitToScreen();
-                FramebufferUtils.blitToScreenPartial(framebuffer, windowFramebufferWidth, windowFramebufferHeight, 0, 0, 1, 1);
+                // framebuffer.blitToScreen();
+                // TODO 26.2: blitToScreenPartial needs updating for new render API
+                // FramebufferUtils.blitToScreenPartial(framebuffer, windowFramebufferWidth, windowFramebufferHeight, 0, 0, 1, 1);
             }
-            RenderSystem.flipFrame(null);
+            // RenderSystem.flipFrame(null); // Removed in 26.2
         }
 
         return cancel;

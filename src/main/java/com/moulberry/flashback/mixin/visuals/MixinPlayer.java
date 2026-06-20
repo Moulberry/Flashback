@@ -48,9 +48,12 @@ public abstract class MixinPlayer extends LivingEntity {
                     mutableComponent = mutableComponent.append(playerTeam.getPlayerSuffix());
                 }
 
-                ChatFormatting chatFormatting = playerTeam.getColor();
-                if (chatFormatting != ChatFormatting.RESET) {
-                    mutableComponent.withStyle(chatFormatting);
+                var teamColor = playerTeam.getColor();
+                if (teamColor.isPresent()) {
+                    ChatFormatting chatFormatting = ChatFormatting.valueOf(teamColor.get().name());
+                    if (chatFormatting != ChatFormatting.RESET) {
+                        mutableComponent = mutableComponent.withStyle(chatFormatting);
+                    }
                 }
 
                 return mutableComponent;

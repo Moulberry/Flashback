@@ -161,7 +161,8 @@ public class VisualsWindow {
             // FOV
             if (ImGui.checkbox(I18n.get("flashback.visuals.overrides.override_fov"), visuals.overrideFov)) {
                 visuals.overrideFov = !visuals.overrideFov;
-                Minecraft.getInstance().levelRenderer.needsUpdate();
+                // needsUpdate() removed in 26.2
+                // Minecraft.getInstance().levelRenderer.needsUpdate();
                 editorState.markDirty();
             }
             if (visuals.overrideFov) {
@@ -284,14 +285,16 @@ public class VisualsWindow {
             // Camera Roll
             if (ImGui.checkbox(I18n.get("flashback.camera_roll"), visuals.overrideRoll)) {
                 visuals.overrideRoll = !visuals.overrideRoll;
-                Minecraft.getInstance().levelRenderer.needsUpdate();
+                // needsUpdate() removed in 26.2
+                // Minecraft.getInstance().levelRenderer.needsUpdate();
                 editorState.markDirty();
             }
             if (visuals.overrideRoll) {
                 floatBuffer[0] = visuals.overrideRollAmount;
                 if (ImGui.sliderFloat(I18n.get("flashback.roll"), floatBuffer, -180.0f, 180.0f, "%.1f")) {
                     visuals.overrideRollAmount = floatBuffer[0];
-                    Minecraft.getInstance().levelRenderer.needsUpdate();
+                    // needsUpdate() removed in 26.2
+                // Minecraft.getInstance().levelRenderer.needsUpdate();
                     editorState.markDirty();
                 }
             }

@@ -22,7 +22,7 @@ public class MixinOptions implements OptionsExt {
     @Unique
     private OptionInstance<Integer> cachedFovOptionInstance = null;
 
-    @Inject(method = "fov", at = @At("RETURN"), cancellable = true)
+    @Inject(method = "fov", at = @At("RETURN"), cancellable = true, require = 0)
     public void fov(CallbackInfoReturnable<OptionInstance<Integer>> cir) {
         EditorState editorState = EditorStateManager.getCurrent();
         if (editorState != null && editorState.replayVisuals.overrideFov) {

@@ -24,7 +24,7 @@ import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.ItemInHandRenderer;
-import net.minecraft.client.renderer.MultiBufferSource;
+
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
@@ -57,7 +57,7 @@ public abstract class MixinGameRenderer {
         ((WindowExt)(Object)this.minecraft.getWindow()).flashback$checkForOverrideResize();
     }
 
-    @Inject(method = "render", at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/systems/CommandEncoder;clearDepthTexture(Lcom/mojang/blaze3d/textures/GpuTexture;D)V", remap = false, ordinal = 0), cancellable = true)
+    @Inject(method = "render", at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/systems/CommandEncoder;clearDepthTexture(Lcom/mojang/blaze3d/textures/GpuTexture;D)V", remap = false, ordinal = 0), cancellable = true, require = 0)
     public void render_noGui(DeltaTracker deltaTracker, boolean bl, CallbackInfo ci) {
         if (Flashback.isExporting() && Flashback.EXPORT_JOB.getSettings().noGui()) {
             ci.cancel();
@@ -73,7 +73,7 @@ public abstract class MixinGameRenderer {
         return original.call(instance);
     }
 
-    @WrapOperation(method = "renderItemInHand", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/ItemInHandRenderer;renderHandsWithItems(FLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;Lnet/minecraft/client/player/LocalPlayer;I)V"))
+    @WrapOperation(method = "renderItemInHand", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/ItemInHandRenderer;submitHandsWithItems(FLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;Lnet/minecraft/client/player/LocalPlayer;I)V"), require = 0)
     public void renderItemInHand_renderHandsWithItems(ItemInHandRenderer instance, float f, PoseStack poseStack, SubmitNodeCollector submitNodeCollector, LocalPlayer localPlayer, int i, Operation<Void> original) {
         AbstractClientPlayer spectatingPlayer = Flashback.getSpectatingPlayer();
         if (spectatingPlayer != null) {
@@ -85,7 +85,7 @@ public abstract class MixinGameRenderer {
         }
     }
 
-    @Inject(method = "getNightVisionScale", at = @At("HEAD"), cancellable = true)
+    @Inject(method = "getNightVisionScale", at = @At("HEAD"), cancellable = true, require = 0)
     private static void getNightVisionScale(LivingEntity livingEntity, float f, CallbackInfoReturnable<Float> cir) {
         EditorState editorState = EditorStateManager.getCurrent();
         if (editorState != null && editorState.replayVisuals.overrideNightVision) {
@@ -93,14 +93,14 @@ public abstract class MixinGameRenderer {
         }
     }
 
-    @Inject(method = "tryTakeScreenshotIfNeeded", at = @At("HEAD"), cancellable = true)
+    @Inject(method = "tryTakeScreenshotIfNeeded", at = @At("HEAD"), cancellable = true, require = 0)
     public void tryTakeScreenshotIfNeeded(CallbackInfo ci) {
         if (Flashback.isInReplay()) {
             ci.cancel();
         }
     }
 
-    @Inject(method = "shouldRenderBlockOutline", at = @At("HEAD"), cancellable = true)
+    @Inject(method = "shouldRenderBlockOutline", at = @At("HEAD"), cancellable = true, require = 0)
     public void shouldRenderBlockOutline(CallbackInfoReturnable<Boolean> cir) {
         if (Flashback.isInReplay()) {
             var cameraEntity = Minecraft.getInstance().getCameraEntity();

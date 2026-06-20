@@ -2,10 +2,11 @@
 	"schemaVersion": 1,
 	"id": "flashback",
 	"version": "${version}",
-	"name": "Flashback",
-	"description": "Record your gameplay, view the recordings and export cinematic shots",
+	"name": "Flashback (26.2 Port)",
+	"description": "Record your gameplay, view the recordings and export cinematic shots. Unofficial port to Minecraft 26.2.",
 	"authors": [
-		"Moulberry"
+		"Moulberry",
+		"Uiloalxise (26.2 port)"
 	],
 	"contact": {
 		"homepage": "https://flashback.moulberry.com/",
@@ -40,7 +41,7 @@
     },
 	"depends": {
 		"fabricloader": ">=0.15.10",
-		"minecraft": "~26.1",
+		"minecraft": "~26.2",
 		"java": ">=21",
 		"fabric-api": ">=0.107.0"
 	}

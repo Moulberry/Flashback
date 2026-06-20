@@ -33,7 +33,7 @@ public record KeyframeChangeTrackEntity(UUID target, TrackingBodyPart trackingBo
             return;
         }
 
-        float partialTick = minecraft.deltaTracker.getGameTimeDeltaPartialTick(true);
+        float partialTick = minecraft.getDeltaTracker().getGameTimeDeltaPartialTick(true);
 
         Vec3 limbPosition;
         float yaw;

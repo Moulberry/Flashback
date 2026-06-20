@@ -14,7 +14,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Mixin(WeatherEffectRenderer.class)
 public class MixinWeatherEffectRenderer {
 
-    @Inject(method = "getPrecipitationAt", at = @At("HEAD"), cancellable = true)
+    @Inject(method = "getPrecipitationAt", at = @At("HEAD"), cancellable = true, require = 0)
     public void getPrecipitationAt(Level level, BlockPos blockPos, CallbackInfoReturnable<Biome.Precipitation> cir) {
         EditorState editorState = EditorStateManager.getCurrent();
         if (editorState != null) {

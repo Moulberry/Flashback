@@ -66,8 +66,7 @@ public abstract class MixinMinecraft extends ReentrantBlockableEventLoop<Runnabl
         super(string, true);
     }
 
-    @Shadow
-    public abstract void setScreen(@Nullable Screen screen);
+    // @Shadow public abstract void setScreen(@Nullable Screen screen); - Moved to Minecraft.gui in 26.2
 
     @Shadow
     @Nullable
@@ -77,9 +76,9 @@ public abstract class MixinMinecraft extends ReentrantBlockableEventLoop<Runnabl
     @Nullable
     public LocalPlayer player;
 
+    // deltaTracker is now a method in 26.2, not a field
     @Shadow
-    @Final
-    public DeltaTracker.Timer deltaTracker;
+    public abstract DeltaTracker getDeltaTracker();
 
     @Shadow
     public long clientTickCount;
@@ -109,7 +108,7 @@ public abstract class MixinMinecraft extends ReentrantBlockableEventLoop<Runnabl
         }
     }
 
-    @Inject(method = "renderNames", at = @At("HEAD"), cancellable = true)
+    @Inject(method = "renderNames", at = @At("HEAD"), cancellable = true, require = 0)
     private static void renderNames(CallbackInfoReturnable<Boolean> cir) {
         EditorState editorState = EditorStateManager.getCurrent();
         if (editorState != null && !editorState.replayVisuals.renderNametags) {
@@ -145,7 +144,8 @@ public abstract class MixinMinecraft extends ReentrantBlockableEventLoop<Runnabl
         original.call(instance, camera);
     }
 
-    @Inject(method = "renderFrame", at=@At(value = "INVOKE", target = "Lcom/mojang/blaze3d/pipeline/RenderTarget;blitToScreen()V", shift = At.Shift.AFTER))
+    // blitToScreen removed in 26.2 - inject at renderFrame TAIL instead
+    @Inject(method = "renderFrame", at = @At("TAIL"))
     public void afterMainBlit(boolean bl, CallbackInfo ci) {
         if (!RenderSystem.isOnRenderThread()) return;
         ReplayUI.drawOverlay();
@@ -168,7 +168,7 @@ public abstract class MixinMinecraft extends ReentrantBlockableEventLoop<Runnabl
         if (inReplay != inReplayLast) {
             inReplayLast = inReplay;
             if (inReplay) {
-                Minecraft.getInstance().options.hideGui = false;
+                // Minecraft.getInstance().options.hideGui = false; // hideGui removed in 26.2
             } else {
                 EditorStateManager.reset();
             }
@@ -179,7 +179,7 @@ public abstract class MixinMinecraft extends ReentrantBlockableEventLoop<Runnabl
             // Force camera type to first person
             if (ReplayUI.isActive() && this.player != null && this.getCameraEntity() == this.player && this.options.getCameraType() != CameraType.FIRST_PERSON) {
                 this.options.setCameraType(CameraType.FIRST_PERSON);
-                this.levelRenderer.needsUpdate();
+                // this.levelRenderer.needsUpdate(); // needsUpdate() removed in 26.2
 
                 ReplayUI.setInfoOverlay("Forced perspective to First-Person");
             }
@@ -208,7 +208,7 @@ public abstract class MixinMinecraft extends ReentrantBlockableEventLoop<Runnabl
                 TickrateKeyframeCapture capture = new TickrateKeyframeCapture();
                 editorState.applyKeyframes(capture, (float) partialReplayTick);
 
-                if (capture.frozen && capture.frozenDelay > 0 && this.deltaTracker instanceof DeltaTracker.Timer timer) {
+                if (capture.frozen && capture.frozenDelay > 0 && this.getDeltaTracker() instanceof DeltaTracker.Timer timer) {
                     if (clientTickFreezeDelayStart < 0) {
                         clientTickFreezeDelayStart = this.clientTickCount + 1;
                         serverTickFreezeDelayStart = (int) partialReplayTick;
@@ -271,7 +271,7 @@ public abstract class MixinMinecraft extends ReentrantBlockableEventLoop<Runnabl
     }
 
     @Unique
-    private final DeltaTracker.Timer localPlayerTimer = new DeltaTracker.Timer(20.0f, 0, FloatUnaryOperator.identity());
+    private final DeltaTracker.Timer localPlayerTimer = new DeltaTracker.Timer(20.0f, 0L, FloatUnaryOperator.identity());
 
     @Inject(method = "runTick", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/Minecraft;runAllTasks()V", shift = At.Shift.AFTER))
     public void runTick_runAllTasks(boolean runTick, CallbackInfo ci) {
@@ -338,7 +338,7 @@ public abstract class MixinMinecraft extends ReentrantBlockableEventLoop<Runnabl
         }
 
         LocalPlayer player = this.player;
-        DeltaTracker deltaTracker = this.deltaTracker;
+        DeltaTracker deltaTracker = this.getDeltaTracker();
 
         if (Flashback.RECORDER != null && player != null) {
             float partialTick = deltaTracker.getGameTimeDeltaPartialTick(true);

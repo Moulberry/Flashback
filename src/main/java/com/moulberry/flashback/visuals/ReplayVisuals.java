@@ -59,7 +59,7 @@ public class ReplayVisuals {
 
     public void setFov(float fov) {
         if (!overrideFov || Math.abs(overrideFovAmount - fov) >= 0.01) {
-            Minecraft.getInstance().levelRenderer.needsUpdate();
+            // Minecraft.getInstance().levelRenderer.allChanged(); // allChanged() removed in 26.2
         }
 
         overrideFov = true;

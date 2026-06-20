@@ -286,8 +286,7 @@ public class ReplayServer extends IntegratedServer {
 
     @Override
     public boolean initServer() {
-        Entity.ENTITY_COUNTER.set(1000000);
-
+        // ENTITY_COUNTER removed in 1.26.2 - entities now manage their own IDs internally
         this.setPlayerList(new PlayerList(this, this.registries(), this.playerDataStorage, this.notificationManager()) {
             @Override
             public void placeNewPlayer(Connection connection, ServerPlayer serverPlayer, CommonListenerCookie commonListenerCookie) {

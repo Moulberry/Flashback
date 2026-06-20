@@ -74,7 +74,7 @@ public class MainMenuBar {
                     minecraft.level.disconnect(Component.empty());
                 }
                 minecraft.disconnectWithProgressScreen();
-                minecraft.setScreen(new SelectReplayScreen(new TitleScreen()));
+                minecraft.gui.setScreen(new SelectReplayScreen(new TitleScreen()));
             }
             ImGui.endMenu();
         }
@@ -100,7 +100,7 @@ public class MainMenuBar {
         ImGui.separator();
 
         if (ImGui.menuItem(I18n.get("flashback.hide_replay_ui") + "##HideReplayUI")) {
-            Minecraft.getInstance().options.hideGui = true;
+            // Minecraft.getInstance().options.hideGui = true; // hideGui removed in 26.2
         }
     }
 

@@ -91,7 +91,8 @@ public class SelectedEntityPopup {
         } else if (ImGui.button(I18n.get("flashback.set_audio_source"))) {
             editorState.audioSourceEntity = entity.getUUID();
             editorState.markDirty();
-            Minecraft.getInstance().levelRenderer.debugRenderer.refreshRendererList();
+            // debugRenderer removed in 26.2
+            // Minecraft.getInstance().levelRenderer.debugRenderer.refreshRendererList();
         }
 
         if (FabricLoader.getInstance().isModLoaded("voicechat")) {

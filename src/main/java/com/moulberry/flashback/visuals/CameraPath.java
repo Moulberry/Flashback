@@ -1,17 +1,19 @@
 package com.moulberry.flashback.visuals;
 
+import com.mojang.blaze3d.IndexType;
+import com.mojang.blaze3d.PrimitiveTopology;
 import com.mojang.blaze3d.buffers.GpuBuffer;
+import com.mojang.blaze3d.buffers.GpuBufferSlice;
 import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.platform.Window;
 import com.mojang.blaze3d.systems.RenderPass;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.textures.GpuTexture;
 import com.mojang.blaze3d.vertex.BufferBuilder;
+import com.mojang.blaze3d.vertex.ByteBufferBuilder;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.MeshData;
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.Tesselator;
-import com.mojang.blaze3d.vertex.VertexFormat;
 import com.moulberry.flashback.Utils;
 import com.moulberry.flashback.combo_options.Sizing;
 import com.moulberry.flashback.editor.ui.windows.TimelineWindow;
@@ -24,19 +26,21 @@ import com.moulberry.flashback.state.EditorStateManager;
 import com.moulberry.flashback.state.KeyframeTrack;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.DynamicUniforms;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.fog.FogRenderer;
-import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Matrix4f;
 import org.joml.Quaterniond;
 import org.joml.Quaternionf;
 import org.joml.Vector3d;
+import org.joml.Vector3f;
+import org.joml.Vector4f;
 
+import java.util.Optional;
 import java.util.OptionalDouble;
-import java.util.OptionalInt;
 
 public class CameraPath {
 
@@ -49,7 +53,7 @@ public class CameraPath {
     public static void renderCameraPath(PoseStack poseStack, CameraRenderState camera, ReplayServer replayServer) {
         RenderSystem.assertOnRenderThread();
 
-        if (Minecraft.getInstance().options.hideGui) {
+        if (false) { // options.hideGui removed in 26.2
             return;
         }
 
@@ -69,7 +73,7 @@ public class CameraPath {
             if (lastEditorStateModCount != state.modCount || !cameraPathArgs.equals(lastCameraPathArgs)) {
                 lastCameraPathArgs = cameraPathArgs;
 
-                BufferBuilder bufferBuilder = Tesselator.getInstance().begin(VertexFormat.Mode.LINES, DefaultVertexFormat.POSITION_COLOR_NORMAL_LINE_WIDTH);
+                BufferBuilder bufferBuilder = new BufferBuilder(new ByteBufferBuilder(256), PrimitiveTopology.LINES, DefaultVertexFormat.POSITION_COLOR_NORMAL_LINE_WIDTH);
                 Vector3d basePosition = new Vector3d(camera.pos.x, camera.pos.y, camera.pos.z);
                 buildCameraPath(state, basePosition.mul(-1, new Vector3d()), cameraPathArgs, bufferBuilder);
 
@@ -115,10 +119,28 @@ public class CameraPath {
             state.applyKeyframes(handler, replayTick);
             state.applyKeyframes(fovHandler, replayTick);
             if (handler.position != null) {
-                BufferBuilder bufferBuilder = Tesselator.getInstance().begin(VertexFormat.Mode.LINES, DefaultVertexFormat.POSITION_COLOR_NORMAL_LINE_WIDTH);
+                BufferBuilder bufferBuilder = new BufferBuilder(new ByteBufferBuilder(256), PrimitiveTopology.LINES, DefaultVertexFormat.POSITION_COLOR_NORMAL_LINE_WIDTH);
                 renderCamera(bufferBuilder, handler.position.sub(basePosition, new Vector3d()), handler.angle, fovHandler.fov,
                     getCameraColour(false, true), 1.0f);
-                RenderTypes.LINES.draw(bufferBuilder.buildOrThrow());
+                try (MeshData meshData = bufferBuilder.buildOrThrow()) {
+                    MeshData.DrawState drawState = meshData.drawState();
+                    GpuBufferSlice vertexBufferSlice = RenderSystem.getDevice().createBuffer(() -> "flashback camera preview", GpuBuffer.USAGE_VERTEX, meshData.vertexBuffer()).slice();
+                    RenderSystem.AutoStorageIndexBuffer autoStorageIndexBuffer = RenderSystem.getSequentialBuffer(PrimitiveTopology.LINES);
+                    GpuBuffer indexBuffer = autoStorageIndexBuffer.getBuffer(drawState.indexCount());
+                    IndexType indexType = autoStorageIndexBuffer.type();
+
+                    GpuBufferSlice gpuBufferSlice = new DynamicUniforms().writeTransform(RenderSystem.getModelViewMatrixCopy(), new Vector4f(1.0F, 1.0F, 1.0F, 1.0F), new Vector3f(), new Matrix4f());
+
+                    RenderTarget renderTarget = Minecraft.getInstance().gameRenderer.mainRenderTarget();
+                    try (RenderPass renderPass = RenderSystem.getDevice().createCommandEncoder().createRenderPass(() -> "flashback camera preview", renderTarget.getColorTextureView(), Optional.empty(), renderTarget.getDepthTextureView(), OptionalDouble.empty())) {
+                        renderPass.setPipeline(RenderPipelines.LINES);
+                        RenderSystem.bindDefaultUniforms(renderPass);
+                        renderPass.setUniform("DynamicTransforms", gpuBufferSlice);
+                        renderPass.setVertexBuffer(0, vertexBufferSlice);
+                        renderPass.setIndexBuffer(indexBuffer, indexType);
+                        renderPass.drawIndexed(0, 0, drawState.indexCount(), 0, 1);
+                    }
+                }
             }
         }
 

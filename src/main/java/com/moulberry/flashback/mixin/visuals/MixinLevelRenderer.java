@@ -30,55 +30,24 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(LevelRenderer.class)
 public class MixinLevelRenderer {
 
-    @Shadow
-    @Final
-    private RenderBuffers renderBuffers;
+    // renderBuffers field removed in 26.2
+    // @Shadow @Final private RenderBuffers renderBuffers;
 
-    @Shadow @Final private LevelTargetBundle targets;
+    // LevelTargetBundle removed in 26.2
+    // @Shadow @Final private LevelTargetBundle targets;
 
-    @Inject(method="renderLevel", at=@At(
-        value = "INVOKE",
-        target = "Lnet/minecraft/client/renderer/LevelRenderer;addLateDebugPass(Lcom/mojang/blaze3d/framegraph/FrameGraphBuilder;Lnet/minecraft/client/renderer/state/level/CameraRenderState;Lcom/mojang/blaze3d/buffers/GpuBufferSlice;Lorg/joml/Matrix4fc;)V",
-        shift = At.Shift.BEFORE
-    ))
-    public void renderLevelPost(GraphicsResourceAllocator resourceAllocator, DeltaTracker deltaTracker, boolean renderOutline,
-        CameraRenderState cameraState, Matrix4fc modelViewMatrix, GpuBufferSlice terrainFog, Vector4f fogColor, boolean shouldRenderSky,
-        ChunkSectionsToRender chunkSectionsToRender, CallbackInfo ci,
-        @Local FrameGraphBuilder frameGraphBuilder
-    ) {
-        if (!Flashback.isInReplay()) {
-            return;
-        }
-
-        FramePass framePass = frameGraphBuilder.addPass("flashback_mod_pass");
-        this.targets.main = framePass.readsAndWrites(this.targets.main);
-        if (this.targets.translucent != null) {
-            this.targets.translucent = framePass.readsAndWrites(this.targets.translucent);
-        }
-        if (this.targets.itemEntity != null) {
-            this.targets.itemEntity = framePass.readsAndWrites(this.targets.itemEntity);
-        }
-        if (this.targets.particles != null) {
-            this.targets.particles = framePass.readsAndWrites(this.targets.particles);
-        }
-        framePass.executes(() -> {
-            this.renderBuffers.bufferSource().endBatch();
-
-            PoseStack poseStack = new PoseStack();
-            poseStack.mulPose(modelViewMatrix);
-
-            // Set model view stack to identity
-            var modelViewStack = RenderSystem.getModelViewStack();
-            modelViewStack.pushMatrix();
-            modelViewStack.identity();
-
-            WorldRenderHook.renderHook(poseStack, cameraState);
-
-            this.renderBuffers.bufferSource().endBatch();
-
-            // Pop model view stack
-            modelViewStack.popMatrix();
-        });
-    }
+    // renderLevel renamed to render in 26.2, targets and addLateDebugPass removed
+    // @Inject(method="renderLevel", at=@At(
+    //     value = "INVOKE",
+    //     target = "Lnet/minecraft/client/renderer/LevelRenderer;addLateDebugPass(Lcom/mojang/blaze3d/framegraph/FrameGraphBuilder;Lnet/minecraft/client/renderer/state/level/CameraRenderState;Lcom/mojang/blaze3d/buffers/GpuBufferSlice;Lorg/joml/Matrix4fc;)V",
+    //     shift = At.Shift.BEFORE
+    // ), require = 0)
+    // public void renderLevelPost(GraphicsResourceAllocator resourceAllocator, DeltaTracker deltaTracker, boolean renderOutline,
+    //     CameraRenderState cameraState, Matrix4fc modelViewMatrix, GpuBufferSlice terrainFog, Vector4f fogColor, boolean shouldRenderSky,
+    //     ChunkSectionsToRender chunkSectionsToRender, CallbackInfo ci,
+    //     @Local FrameGraphBuilder frameGraphBuilder
+    // ) {
+    //     // Entire method disabled - renderLevel, targets, addLateDebugPass all removed in 26.2
+    // }
 
 }

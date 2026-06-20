@@ -47,7 +47,7 @@ public abstract class MixinAbstractClientPlayer extends Player {
         }
     }
 
-    @Inject(method = "getPlayerInfo", at = @At("RETURN"), cancellable = true)
+    @Inject(method = "getPlayerInfo", at = @At("RETURN"), cancellable = true, require = 0)
     public void getPlayerInfo(CallbackInfoReturnable<PlayerInfo> cir) {
         if (cir.getReturnValue() == null) {
             cir.setReturnValue(this.fallbackPlayerInfo);

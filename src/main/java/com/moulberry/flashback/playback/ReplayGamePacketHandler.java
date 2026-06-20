@@ -27,7 +27,9 @@ import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.multiplayer.PlayerInfo;
 import net.minecraft.core.*;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.Identifier;
 import net.minecraft.network.Connection;
 import net.minecraft.network.DisconnectionDetails;
 import net.minecraft.network.PacketSendListener;
@@ -41,6 +43,8 @@ import net.minecraft.network.protocol.game.*;
 import net.minecraft.network.protocol.ping.ClientboundPongResponsePacket;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerChunkCache;
 import net.minecraft.server.level.ServerLevel;
@@ -189,10 +193,7 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
 
     @Override
     public void handleAddEntity(ClientboundAddEntityPacket clientboundAddEntityPacket) {
-        if (Entity.ENTITY_COUNTER.get() <= clientboundAddEntityPacket.getId()) {
-            Entity.ENTITY_COUNTER.set(clientboundAddEntityPacket.getId() + 1000);
-        }
-
+        // ENTITY_COUNTER removed in 1.26.2 - entities now manage their own IDs internally
         if (clientboundAddEntityPacket.id >= ReplayServer.REPLAY_VIEWER_IDS_START && clientboundAddEntityPacket.id <= ReplayServer.REPLAY_VIEWER_IDS_START+128) {
             clientboundAddEntityPacket.id += 128;
         }
@@ -270,7 +271,7 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
     @Nullable
     private Entity createEntityFromPacket(ClientboundAddEntityPacket packet) {
         EntityType<?> entityType = packet.getType();
-        if (entityType == EntityType.PLAYER) {
+        if (entityType == BuiltInRegistries.ENTITY_TYPE.getValue(Identifier.withDefaultNamespace("player"))) {
             PlayerInfo playerInfo = this.playerInfoMap.get(packet.getUUID());
             if (playerInfo == null) {
                 return null;
@@ -762,7 +763,7 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
             registryFriendlyByteBuf.readDouble()
         );
 
-        ClientboundAddEntityPacket addEntityPacket = new ClientboundAddEntityPacket(this.localPlayerId, uuid, x, y, z, xRot, yRot, EntityType.PLAYER, 0, velocity, yHeadRot);
+        ClientboundAddEntityPacket addEntityPacket = new ClientboundAddEntityPacket(this.localPlayerId, uuid, x, y, z, xRot, yRot, BuiltInRegistries.ENTITY_TYPE.getValue(Identifier.withDefaultNamespace("player")), 0, velocity, yHeadRot);
         GameProfile gameProfile = ByteBufCodecs.GAME_PROFILE.decode(registryFriendlyByteBuf);
         GameType gameType = GameType.byId(registryFriendlyByteBuf.readVarInt());
 
@@ -993,7 +994,7 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
 
         if (localPlayer instanceof ServerPlayer oldServerPlayer) {
             ClientboundAddEntityPacket addEntityPacket = new ClientboundAddEntityPacket(oldServerPlayer.getId(), oldServerPlayer.getUUID(),
-                oldServerPlayer.getX(), oldServerPlayer.getY(), oldServerPlayer.getZ(), oldServerPlayer.getXRot(), oldServerPlayer.getYRot(), EntityType.PLAYER,
+                oldServerPlayer.getX(), oldServerPlayer.getY(), oldServerPlayer.getZ(), oldServerPlayer.getXRot(), oldServerPlayer.getYRot(), BuiltInRegistries.ENTITY_TYPE.getValue(Identifier.withDefaultNamespace("player")),
                 0, Vec3.ZERO, oldServerPlayer.getYHeadRot());
 
             ServerPlayer newServerPlayer = this.spawnPlayer(addEntityPacket, oldServerPlayer.getGameProfile(), oldServerPlayer.gameMode.getGameModeForPlayer());

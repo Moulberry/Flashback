@@ -29,9 +29,14 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Mixin(Gui.class)
 public abstract class MixinGui {
 
-    @Shadow
-    @Nullable
-    protected abstract Player getCameraPlayer();
+    // getCameraPlayer() removed in 26.2 - use Minecraft.getInstance().getCameraEntity()
+    // @Shadow @Nullable protected abstract Player getCameraPlayer();
+
+    @Unique
+    private @Nullable Player flashback$getCameraPlayer() {
+        Entity camera = Minecraft.getInstance().getCameraEntity();
+        return camera instanceof Player player ? player : null;
+    }
 
     @Unique
     private GameType cameraGameType = null;
@@ -40,14 +45,15 @@ public abstract class MixinGui {
     private boolean shouldHideElements = false;
 
     @Inject(method = "extractRenderState", at = @At("HEAD"))
-    public void extractRenderState_updateCameraGameType(GuiGraphicsExtractor guiGraphics, DeltaTracker deltaTracker, CallbackInfo ci) {
+    public void extractRenderState_updateCameraGameType(DeltaTracker deltaTracker, boolean bl, boolean bl2, CallbackInfo ci) {
         this.shouldHideElements = false;
         this.cameraGameType = null;
         if (Flashback.isInReplay()) {
             this.shouldHideElements = ReplayUI.isActive() || Flashback.isExporting();
-            this.cameraGameType = Minecraft.getInstance().gameMode.getPlayerMode();
+            var gameMode = Minecraft.getInstance().gameMode;
+            this.cameraGameType = gameMode != null ? gameMode.getPlayerMode() : null;
 
-            Player player = this.getCameraPlayer();
+            Player player = this.flashback$getCameraPlayer();
             if (player != null) {
                 var connection = Minecraft.getInstance().getConnection();
                 if (connection != null) {
@@ -100,12 +106,13 @@ public abstract class MixinGui {
         }
     }
 
-    @Inject(method = "nextContextualInfoState", at = @At("HEAD"), cancellable = true)
-    public void nextContextualInfoState(CallbackInfoReturnable<Gui.ContextualInfo> cir) {
-        if (this.cameraGameType != null) {
-            cir.setReturnValue(this.cameraGameType.isSurvival() ? Gui.ContextualInfo.EXPERIENCE : Gui.ContextualInfo.EMPTY);
-        }
-    }
+    // nextContextualInfoState removed in 26.2 - ContextualInfo is now in Hud (private), cannot inject
+    // @Inject(method = "nextContextualInfoState", at = @At("HEAD"), cancellable = true, require = 0)
+    // public void nextContextualInfoState(CallbackInfoReturnable<Hud.ContextualInfo> cir) {
+    //     if (this.cameraGameType != null) {
+    //         cir.setReturnValue(this.cameraGameType.isSurvival() ? Hud.ContextualInfo.EXPERIENCE : Hud.ContextualInfo.EMPTY);
+    //     }
+    // }
 
     @Inject(method = "extractHotbarAndDecorations", at = @At("HEAD"), cancellable = true, require = 0)
     public void extractHotbarAndDecorations(GuiGraphicsExtractor guiGraphics, DeltaTracker deltaTracker, CallbackInfo ci) {
@@ -144,7 +151,7 @@ public abstract class MixinGui {
     @WrapOperation(method = "extractHotbarAndDecorations", at = @At(value = "FIELD", target = "Lnet/minecraft/client/player/LocalPlayer;experienceLevel:I"), require = 0)
     public int extractExperienceLevel_experienceLevel(LocalPlayer instance, Operation<Integer> original) {
         if (Flashback.isInReplay()) {
-            Player player = this.getCameraPlayer();
+            Player player = this.flashback$getCameraPlayer();
             if (player != null) {
                 return player.experienceLevel;
             }
@@ -155,7 +162,7 @@ public abstract class MixinGui {
     @WrapOperation(method = "extractCrosshair", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/player/LocalPlayer;getAttackStrengthScale(F)F"), require = 0)
     public float extractCrosshair_getAttackStrengthScale(LocalPlayer instance, float partialTick, Operation<Float> original) {
         if (Flashback.isInReplay()) {
-            Player player = this.getCameraPlayer();
+            Player player = this.flashback$getCameraPlayer();
             if (player != null) {
                 return player.getAttackStrengthScale(partialTick);
             }
@@ -166,7 +173,7 @@ public abstract class MixinGui {
     @WrapOperation(method = "extractCrosshair", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/player/LocalPlayer;getCurrentItemAttackStrengthDelay()F"), require = 0)
     public float extractCrosshair_getCurrentItemAttackStrengthDelay(LocalPlayer instance, Operation<Float> original) {
         if (Flashback.isInReplay()) {
-            Player player = this.getCameraPlayer();
+            Player player = this.flashback$getCameraPlayer();
             if (player != null) {
                 return player.getCurrentItemAttackStrengthDelay();
             }
@@ -174,7 +181,7 @@ public abstract class MixinGui {
         return original.call(instance);
     }
 
-    @Inject(method = "extractVignette", at = @At("HEAD"), cancellable = true)
+    @Inject(method = "extractVignette", at = @At("HEAD"), cancellable = true, require = 0)
     public void extractVignette(GuiGraphicsExtractor guiGraphics, Entity entity, CallbackInfo ci) {
         // The vignette ruins the transparency when trying to export with alpha
         // The vignette is also probably unwanted in general when trying to record, so lets just get rid of it

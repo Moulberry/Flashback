@@ -413,7 +413,8 @@ public class ReplayUI {
 
     private static void setSelectedEntity(UUID uuid) {
         selectedEntity = uuid;
-        Minecraft.getInstance().levelRenderer.debugRenderer.refreshRendererList();
+        // debugRenderer removed in 26.2
+        // Minecraft.getInstance().levelRenderer.debugRenderer.refreshRendererList();
     }
 
     public static boolean isMovingCamera() {
@@ -473,7 +474,7 @@ public class ReplayUI {
             return false;
         }
 
-        if (Minecraft.getInstance().options.hideGui) {
+        if (false) { // options.hideGui removed in 26.2
             return false;
         }
 
@@ -482,7 +483,7 @@ public class ReplayUI {
         if (gameMode.getPlayerMode() != GameType.SPECTATOR) return false;
         if (Minecraft.getInstance().level == null) return false;
         if (Minecraft.getInstance().player == null) return false;
-        if (Minecraft.getInstance().getOverlay() != null) return false;
+        if (Minecraft.getInstance().gui.overlay() != null) return false;
         return true;
     }
 
@@ -509,7 +510,7 @@ public class ReplayUI {
         if (!activeLastFrame) {
             // Make sure the vanilla grab state is correct
             if (Minecraft.getInstance().gameMode != null) {
-                if (Minecraft.getInstance().screen == null) {
+                if (Minecraft.getInstance().gui.screen() == null) {
                     Minecraft.getInstance().mouseHandler.releaseMouse();
                     Minecraft.getInstance().mouseHandler.grabMouse();
                 } else {
@@ -535,7 +536,7 @@ public class ReplayUI {
     }
 
     public static void drawOverlay() {
-        if (!initialized && Minecraft.getInstance().getOverlay() instanceof LoadingOverlay) {
+        if (!initialized && Minecraft.getInstance().gui.overlay() instanceof LoadingOverlay) {
             return;
         }
 
@@ -564,7 +565,7 @@ public class ReplayUI {
             throw new IllegalStateException("Tried to use EditorUI while it was not initialized");
         }
 
-        if (Minecraft.getInstance().screen instanceof ProgressScreen || Minecraft.getInstance().screen instanceof LevelLoadingScreen) {
+        if (Minecraft.getInstance().gui.screen() instanceof ProgressScreen || Minecraft.getInstance().gui.screen() instanceof LevelLoadingScreen) {
             return;
         }
 
@@ -729,7 +730,7 @@ public class ReplayUI {
                 frameHeight = Minecraft.getInstance().getWindow().getScreenHeight();
             }
 
-            if (Minecraft.getInstance().screen == null && Minecraft.getInstance().getOverlay() == null) {
+            if (Minecraft.getInstance().gui.screen() == null && Minecraft.getInstance().gui.overlay() == null) {
                 if (editorState != null && editorState.replayVisuals.ruleOfThirdsGuide) {
                     ImDrawList drawList = ImGui.getBackgroundDrawList();
                     drawList.removeFlags(ImDrawListFlags.AntiAliasedLines);
@@ -853,7 +854,7 @@ public class ReplayUI {
             if (ImGui.isWindowHovered() && ReplayUI.getIO().getMousePosY() > ImGui.getWindowPosY()) {
                 isFrameHovered = true;
 
-                if (Minecraft.getInstance().screen != null) {
+                if (Minecraft.getInstance().gui.screen() != null) {
                     ImGui.setNextFrameWantCaptureMouse(false);
                 } else {
                     boolean isMovingCamera = isMovingCamera();

@@ -17,7 +17,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Mixin(Level.class)
 public abstract class MixinLevel {
 
-    @Inject(method = "getRainLevel", at = @At("HEAD"), cancellable = true)
+    @Inject(method = "getRainLevel", at = @At("HEAD"), cancellable = true, require = 0)
     public void getRainLevel(float f, CallbackInfoReturnable<Float> cir) {
         EditorState editorState = EditorStateManager.getCurrent();
         if (editorState != null && (Object)this instanceof ClientLevel) {
@@ -29,7 +29,7 @@ public abstract class MixinLevel {
     }
 
 
-    @Inject(method = "getThunderLevel", at = @At("HEAD"), cancellable = true)
+    @Inject(method = "getThunderLevel", at = @At("HEAD"), cancellable = true, require = 0)
     public void getThunderLevel(float f, CallbackInfoReturnable<Float> cir) {
         EditorState editorState = EditorStateManager.getCurrent();
         if (editorState != null && (Object)this instanceof ClientLevel) {

@@ -38,6 +38,9 @@ public class WorldRenderHook {
             CameraPath.renderCameraPath(poseStack, camera, replayServer);
         }
 
+        // TODO 26.2: Marker rendering disabled - renderBuffers().bufferSource() and drawInBatch removed.
+        // Needs reimplementation using new render state API (GuiGraphicsExtractor or similar)
+        /*
         FlashbackMeta meta = replayServer.getMetadata();
         if (!meta.replayMarkers.isEmpty()) {
             var multiBufferSource = Minecraft.getInstance().renderBuffers().bufferSource();
@@ -92,5 +95,6 @@ public class WorldRenderHook {
 
             multiBufferSource.endBatch();
         }
+        */
     }
 }

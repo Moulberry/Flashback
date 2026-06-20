@@ -197,7 +197,9 @@ tasks.register("mergeShadowWithIncludes", Jar) {
     var archiveFileFrom = it.archiveFile
     var archiveFileTo = project.tasks.jar.archiveFile
     doLast {
-        archiveFileFrom.get().asFile.renameTo(archiveFileTo.get().asFile)
+        var toFile = archiveFileTo.get().asFile
+        if (toFile.exists()) toFile.delete()
+        archiveFileFrom.get().asFile.renameTo(toFile)
     }
 }
 project.assemble.dependsOn(mergeShadowWithIncludes)

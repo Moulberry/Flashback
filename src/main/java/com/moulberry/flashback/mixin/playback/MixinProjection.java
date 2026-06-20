@@ -66,7 +66,7 @@ public class MixinProjection implements ProjectionExt {
                 this.orthoInvertY ? -this.height/2f : this.height/2f,
                 this.zNear,
                 this.zFar,
-                RenderSystem.getDevice().isZZeroToOne()
+                RenderSystem.getDevice().getDeviceInfo().isZZeroToOne()
             )));
         }
     }

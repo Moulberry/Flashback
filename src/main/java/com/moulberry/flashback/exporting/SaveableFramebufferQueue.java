@@ -7,14 +7,14 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.textures.FilterMode;
 import com.mojang.blaze3d.textures.GpuTexture;
 import com.mojang.blaze3d.textures.GpuTextureView;
-import com.mojang.blaze3d.textures.TextureFormat;
+import com.mojang.blaze3d.GpuFormat;
 import com.moulberry.flashback.visuals.ShaderManager;
 import org.jetbrains.annotations.Nullable;
 
 import java.nio.FloatBuffer;
 import java.util.ArrayDeque;
 import java.util.Objects;
-import java.util.OptionalInt;
+import java.util.Optional;
 
 public class SaveableFramebufferQueue implements AutoCloseable {
 
@@ -31,7 +31,7 @@ public class SaveableFramebufferQueue implements AutoCloseable {
         this.width = width;
         this.height = height;
 
-        this.flipBuffer = RenderSystem.getDevice().createTexture(() -> "flip buffer", GpuTexture.USAGE_COPY_DST | GpuTexture.USAGE_RENDER_ATTACHMENT, TextureFormat.RGBA8, width, height, 1, 1);
+        this.flipBuffer = RenderSystem.getDevice().createTexture(() -> "flip buffer", GpuTexture.USAGE_COPY_DST | GpuTexture.USAGE_RENDER_ATTACHMENT, GpuFormat.RGBA8_UNORM, width, height, 1, 1);
         this.flipBufferView = RenderSystem.getDevice().createTextureView(this.flipBuffer);
     }
 
@@ -46,11 +46,11 @@ public class SaveableFramebufferQueue implements AutoCloseable {
     private void blitFlip(RenderTarget src, boolean supersampling) {
         FilterMode filterMode = supersampling ? FilterMode.LINEAR : FilterMode.NEAREST;
 
-        try (RenderPass renderPass = RenderSystem.getDevice().createCommandEncoder().createRenderPass(() -> "flashback flip pass", this.flipBufferView, OptionalInt.empty())) {
+        try (RenderPass renderPass = RenderSystem.getDevice().createCommandEncoder().createRenderPass(() -> "flashback flip pass", this.flipBufferView, Optional.empty())) {
             renderPass.setPipeline(ShaderManager.BLIT_SCREEN_FLIP);
             RenderSystem.bindDefaultUniforms(renderPass);
             renderPass.bindTexture("InSampler", src.getColorTextureView(), RenderSystem.getSamplerCache().getClampToEdge(filterMode));
-            renderPass.draw(0, 3);
+            renderPass.draw(0, 0, 3, 1);
         }
     }
 

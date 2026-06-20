@@ -182,18 +182,18 @@ public class CombineReplayScreen extends Screen {
                 }, WorldStem::new, Util.backgroundExecutor(), executor)).get();
 
                 ReplayCombiner.combine(worldStem.registries().compositeAccess(), this.newReplayName, this.firstReplay, this.secondReplay, this.output);
-                Minecraft.getInstance().setScreen(new TitleScreen());
+                Minecraft.getInstance().gui.setScreen(new TitleScreen());
 
                 worldStem.close();
             } catch (Exception e) {
                 Flashback.LOGGER.error("Error combining replays", e);
-                Minecraft.getInstance().setScreen(new AlertScreen(() -> Minecraft.getInstance().setScreen(this.lastScreen),
+                Minecraft.getInstance().gui.setScreen(new AlertScreen(() -> Minecraft.getInstance().gui.setScreen(this.lastScreen),
                     Component.translatable("flashback.combine_replay.error"), Component.literal(e.getMessage())));
             }
 
         }).width(98).build(), 1);
         rowHelper.addChild(Button.builder(CommonComponents.GUI_CANCEL, button -> {
-            Minecraft.getInstance().setScreen(this.lastScreen);
+            Minecraft.getInstance().gui.setScreen(this.lastScreen);
         }).width(98).build(), 1);
 
         gridLayout.arrangeElements();
@@ -205,6 +205,6 @@ public class CombineReplayScreen extends Screen {
 
     @Override
     public void onClose() {
-        this.minecraft.setScreen(this.lastScreen);
+        this.minecraft.gui.setScreen(this.lastScreen);
     }
 }
