@@ -29,17 +29,31 @@ public abstract class MixinWindow implements WindowExt {
     @Unique
     private int lastModifiedFramebufferHeight = -1;
 
+    // Guard against recursive getWidth/getHeight calls during injection
     @Unique
-    private boolean gettingWidth = false;
+    private boolean flashback$inGetWidth = false;
     @Unique
-    private boolean gettingHeight = false;
+    private boolean flashback$inGetHeight = false;
+
+    @Unique
+    private float calculateWidthScaleFactor() {
+        // When called during getWidth injection, use screen width as fallback
+        if (flashback$inGetWidth) return 1.0f;
+        return Math.max(1/8f, Math.min(8f, (float) this.getWidth() / this.getScreenWidth()));
+    }
+
+    @Unique
+    private float calculateHeightScaleFactor() {
+        if (flashback$inGetHeight) return 1.0f;
+        return Math.max(1/8f, Math.min(8f, (float) this.getHeight() / this.getScreenHeight()));
+    }
 
     @Unique
     private int calculateNewFramebufferWidth() {
         if (Flashback.EXPORT_JOB != null && Flashback.EXPORT_JOB.shouldChangeFramebufferSize()) {
             return Flashback.EXPORT_JOB.getWidth();
         } else if (ReplayUI.shouldModifyViewport()) {
-            return ReplayUI.getNewGameWidth(1);
+            return ReplayUI.getNewGameWidth(this.calculateWidthScaleFactor());
         } else {
             return -1;
         }
@@ -50,7 +64,7 @@ public abstract class MixinWindow implements WindowExt {
         if (Flashback.EXPORT_JOB != null && Flashback.EXPORT_JOB.shouldChangeFramebufferSize()) {
             return Flashback.EXPORT_JOB.getHeight();
         } else if (ReplayUI.shouldModifyViewport()) {
-            return ReplayUI.getNewGameHeight(1);
+            return ReplayUI.getNewGameHeight(this.calculateHeightScaleFactor());
         } else {
             return -1;
         }
@@ -70,23 +84,29 @@ public abstract class MixinWindow implements WindowExt {
 
     @Inject(method = "getWidth", at = @At("HEAD"), cancellable = true)
     public void getWidth(CallbackInfoReturnable<Integer> cir) {
-        if (gettingWidth) return;
-        int width = calculateNewFramebufferWidth();
-        if (width != -1) {
-            gettingWidth = true;
-            cir.setReturnValue(width);
-            gettingWidth = false;
+        if (flashback$inGetWidth) return;
+        flashback$inGetWidth = true;
+        try {
+            int width = calculateNewFramebufferWidth();
+            if (width != -1) {
+                cir.setReturnValue(width);
+            }
+        } finally {
+            flashback$inGetWidth = false;
         }
     }
 
     @Inject(method = "getHeight", at = @At("HEAD"), cancellable = true)
     public void getHeight(CallbackInfoReturnable<Integer> cir) {
-        if (gettingHeight) return;
-        int height = calculateNewFramebufferHeight();
-        if (height != -1) {
-            gettingHeight = true;
-            cir.setReturnValue(height);
-            gettingHeight = false;
+        if (flashback$inGetHeight) return;
+        flashback$inGetHeight = true;
+        try {
+            int height = calculateNewFramebufferHeight();
+            if (height != -1) {
+                cir.setReturnValue(height);
+            }
+        } finally {
+            flashback$inGetHeight = false;
         }
     }
 
@@ -122,10 +142,4 @@ public abstract class MixinWindow implements WindowExt {
             cir.setReturnValue(j);
         }
     }
-
-    @Inject(method = "setGuiScale", at = @At("HEAD"), cancellable = true)
-    public void setGuiScale(int scale, CallbackInfo ci) {
-        // Handled by vanilla in 26.2
-    }
-
 }

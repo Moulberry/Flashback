@@ -144,10 +144,15 @@ public abstract class MixinMinecraft extends ReentrantBlockableEventLoop<Runnabl
         original.call(instance, camera);
     }
 
-    // blitToScreen removed in 26.2 - inject at renderFrame TAIL instead
+    // Handle UI state transition BEFORE rendering (viewport restore for ESC menu etc.)
+    @Inject(method = "renderFrame", at = @At("HEAD"))
+    public void beforeRenderFrame(boolean bl, CallbackInfo ci) {
+        ReplayUI.checkAndTransitionState();
+    }
+
+    // Render ImGui overlay at TAIL (after all rendering)
     @Inject(method = "renderFrame", at = @At("TAIL"))
-    public void afterMainBlit(boolean bl, CallbackInfo ci) {
-        if (!RenderSystem.isOnRenderThread()) return;
+    public void afterRenderFrame(boolean bl, CallbackInfo ci) {
         ReplayUI.drawOverlay();
     }
 

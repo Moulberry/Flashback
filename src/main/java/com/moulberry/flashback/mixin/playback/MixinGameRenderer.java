@@ -8,7 +8,6 @@ import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.ext.WindowExt;
 import com.moulberry.flashback.state.EditorState;
 import com.moulberry.flashback.state.EditorStateManager;
-import com.moulberry.flashback.editor.ui.ReplayUI;
 import com.moulberry.flashback.ext.ItemInHandRendererExt;
 import com.moulberry.flashback.ext.MinecraftExt;
 import com.moulberry.flashback.visuals.AccurateEntityPositionHandler;

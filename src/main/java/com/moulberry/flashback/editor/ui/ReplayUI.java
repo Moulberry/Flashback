@@ -27,6 +27,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.LevelLoadingScreen;
 import net.minecraft.client.gui.screens.LoadingOverlay;
 import net.minecraft.client.gui.screens.ProgressScreen;
+import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.InputQuirks;
 import net.minecraft.client.multiplayer.MultiPlayerGameMode;
 import net.minecraft.client.player.LocalPlayer;
@@ -478,6 +479,10 @@ public class ReplayUI {
             return false;
         }
 
+        // If any screen is open (not in-game), hide the replay UI
+        Screen screen = Minecraft.getInstance().gui.screen();
+        if (screen != null) return false;
+
         MultiPlayerGameMode gameMode = Minecraft.getInstance().gameMode;
         if (gameMode == null) return false;
         if (gameMode.getPlayerMode() != GameType.SPECTATOR) return false;
@@ -535,6 +540,23 @@ public class ReplayUI {
         return imGuiContext != null && imGuiContext.ptr == ImGui.getCurrentContext().ptr;
     }
 
+    /**
+     * Check state and transition without ImGui rendering.
+     * Called at render frame HEAD to restore viewport before GUI rendering.
+     */
+    public static void checkAndTransitionState() {
+        if (!initialized) return;
+
+        boolean shouldBeActive = isActiveInternal();
+        if (!shouldBeActive && activeLastFrame) {
+            Flashback.LOGGER.info("[ReplayUI] Deactivating - screen={}, isInReplay={}",
+                Minecraft.getInstance().gui.screen(), Flashback.isInReplay());
+            activeLastFrame = false;
+            // Restore full viewport before GUI rendering
+            Minecraft.getInstance().resizeGui();
+        }
+    }
+
     public static void drawOverlay() {
         if (!initialized && Minecraft.getInstance().gui.overlay() instanceof LoadingOverlay) {
             return;
@@ -547,6 +569,15 @@ public class ReplayUI {
         long oldImGuiContext = ImGui.getCurrentContext().ptr;
         ImGui.setCurrentContext(imGuiContext);
         try {
+            if (!isActiveInternal()) {
+                // Render empty frame to clear previous ImGui content, then deactivate
+                transitionActiveState(false);
+                imguiGlfw.newFrame();
+                imguiGl3.newFrame();
+                ImGui.newFrame();
+                ImGui.render();
+                return;
+            }
             drawOverlayInternal();
         } finally {
             ImGuiContext currentContext = ImGui.getCurrentContext();
