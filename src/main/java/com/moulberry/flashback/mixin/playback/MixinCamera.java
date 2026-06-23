@@ -177,7 +177,7 @@ public abstract class MixinCamera {
                 orthoHeight/2,
                 -this.depthFar,
                 this.depthFar,
-                RenderSystem.getDevice().isZZeroToOne()
+                RenderSystem.getDevice().getDeviceInfo().isZZeroToOne()
             );
             cir.setReturnValue(projection);
         }

@@ -279,14 +279,14 @@ public class Recorder {
 
         Minecraft minecraft = Minecraft.getInstance();
 
-        boolean isLevelLoaded = !(Minecraft.getInstance().screen instanceof LevelLoadingScreen);
+        boolean isLevelLoaded = !(Minecraft.getInstance().gui.screen() instanceof LevelLoadingScreen);
         boolean changedDimensions = false;
 
         int localPlayerUpdatesPerSecond = Flashback.getConfig().recording.localPlayerUpdatesPerSecond;
         boolean trackAccurateFirstPersonPosition = localPlayerUpdatesPerSecond > 20;
         boolean wroteNewTick = false;
 
-        if (minecraft.level != null && (minecraft.getOverlay() == null || !minecraft.getOverlay().isPauseScreen()) &&
+        if (minecraft.level != null && (minecraft.gui.overlay() == null || !minecraft.gui.overlay().isPausing()) &&
                 !minecraft.isPaused() && !this.isPaused && isLevelLoaded) {
             this.writeEntityPositions();
             this.writeLocalData();
@@ -304,8 +304,8 @@ public class Recorder {
                 this.asyncReplaySaver.writeIcon(this.finishedScreenshot);
                 this.finishedScreenshot = null;
             }
-            if (!this.hasTakenScreenshot && ((this.writtenTicks >= 20 && minecraft.screen == null) || close)) {
-                Screenshot.takeScreenshot(minecraft.getMainRenderTarget(), image -> this.finishedScreenshot = image);
+            if (!this.hasTakenScreenshot && ((this.writtenTicks >= 20 && minecraft.gui.screen() == null) || close)) {
+                Screenshot.takeScreenshot(minecraft.gameRenderer.mainRenderTarget(), image -> this.finishedScreenshot = image);
                 this.hasTakenScreenshot = true;
             }
 
@@ -926,7 +926,7 @@ public class Recorder {
                 level.getSeaLevel());
         var loginPacket = new ClientboundLoginPacket(localPlayer.getId(), level.getLevelData().isHardcore(), connection.levels(),
             1, minecraft.options.getEffectiveRenderDistance(), level.getServerSimulationDistance(),
-            localPlayer.isReducedDebugInfo(), localPlayer.shouldShowDeathScreen(), localPlayer.getDoLimitedCrafting(), commonPlayerSpawnInfo, false);
+            localPlayer.isReducedDebugInfo(), localPlayer.shouldShowDeathScreen(), localPlayer.getDoLimitedCrafting(), commonPlayerSpawnInfo, false, false);
         gamePackets.add(loginPacket);
 
         // Write local player
@@ -993,14 +993,14 @@ public class Recorder {
         gamePackets.add(infoUpdatePacket);
 
         // Tab list
-        PlayerTabOverlay playerTabOverlay = minecraft.gui.getTabList();
+        PlayerTabOverlay playerTabOverlay = minecraft.gui.hud.getTabList();
         gamePackets.add(new ClientboundTabListPacket(
             playerTabOverlay.header != null ? playerTabOverlay.header : Component.empty(),
             playerTabOverlay.footer != null ? playerTabOverlay.footer : Component.empty()
         ));
 
         // Boss bar
-        BossHealthOverlay bossOverlay = minecraft.gui.getBossOverlay();
+        BossHealthOverlay bossOverlay = minecraft.gui.hud.getBossOverlay();
         for (LerpingBossEvent event : bossOverlay.events.values()) {
             gamePackets.add(ClientboundBossEventPacket.createAddPacket(event));
         }

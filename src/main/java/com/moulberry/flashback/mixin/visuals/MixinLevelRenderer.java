@@ -30,21 +30,12 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(LevelRenderer.class)
 public class MixinLevelRenderer {
 
-    @Shadow
-    @Final
-    private RenderBuffers renderBuffers;
-
     @Shadow @Final private LevelTargetBundle targets;
 
-    @Inject(method="renderLevel", at=@At(
-        value = "INVOKE",
-        target = "Lnet/minecraft/client/renderer/LevelRenderer;addLateDebugPass(Lcom/mojang/blaze3d/framegraph/FrameGraphBuilder;Lnet/minecraft/client/renderer/state/level/CameraRenderState;Lcom/mojang/blaze3d/buffers/GpuBufferSlice;Lorg/joml/Matrix4fc;)V",
-        shift = At.Shift.BEFORE
-    ))
+    @Inject(method = "render", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/LevelRenderer;addAlwaysOnTopPass(Lcom/mojang/blaze3d/framegraph/FrameGraphBuilder;Lnet/minecraft/client/renderer/feature/FeatureRenderDispatcher$PreparedFrame;Lcom/mojang/blaze3d/buffers/GpuBufferSlice;)V", shift = At.Shift.BEFORE))
     public void renderLevelPost(GraphicsResourceAllocator resourceAllocator, DeltaTracker deltaTracker, boolean renderOutline,
-        CameraRenderState cameraState, Matrix4fc modelViewMatrix, GpuBufferSlice terrainFog, Vector4f fogColor, boolean shouldRenderSky,
-        ChunkSectionsToRender chunkSectionsToRender, CallbackInfo ci,
-        @Local FrameGraphBuilder frameGraphBuilder
+        CameraRenderState cameraState, Matrix4fc modelViewMatrix, GpuBufferSlice terrainFog, Vector4f fogColor,
+        boolean shouldRenderSky, CallbackInfo ci, @Local FrameGraphBuilder frameGraphBuilder
     ) {
         if (!Flashback.isInReplay()) {
             return;
@@ -62,8 +53,6 @@ public class MixinLevelRenderer {
             this.targets.particles = framePass.readsAndWrites(this.targets.particles);
         }
         framePass.executes(() -> {
-            this.renderBuffers.bufferSource().endBatch();
-
             PoseStack poseStack = new PoseStack();
             poseStack.mulPose(modelViewMatrix);
 
@@ -73,8 +62,6 @@ public class MixinLevelRenderer {
             modelViewStack.identity();
 
             WorldRenderHook.renderHook(poseStack, cameraState);
-
-            this.renderBuffers.bufferSource().endBatch();
 
             // Pop model view stack
             modelViewStack.popMatrix();

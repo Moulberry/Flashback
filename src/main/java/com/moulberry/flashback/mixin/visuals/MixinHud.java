@@ -11,6 +11,7 @@ import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Gui;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.Hud;
 import net.minecraft.client.multiplayer.MultiPlayerGameMode;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.world.entity.Entity;
@@ -26,8 +27,8 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-@Mixin(Gui.class)
-public abstract class MixinGui {
+@Mixin(Hud.class)
+public abstract class MixinHud {
 
     @Shadow
     @Nullable
@@ -101,9 +102,9 @@ public abstract class MixinGui {
     }
 
     @Inject(method = "nextContextualInfoState", at = @At("HEAD"), cancellable = true)
-    public void nextContextualInfoState(CallbackInfoReturnable<Gui.ContextualInfo> cir) {
+    public void nextContextualInfoState(CallbackInfoReturnable<Hud.ContextualInfo> cir) {
         if (this.cameraGameType != null) {
-            cir.setReturnValue(this.cameraGameType.isSurvival() ? Gui.ContextualInfo.EXPERIENCE : Gui.ContextualInfo.EMPTY);
+            cir.setReturnValue(this.cameraGameType.isSurvival() ? Hud.ContextualInfo.EXPERIENCE : Hud.ContextualInfo.EMPTY);
         }
     }
 

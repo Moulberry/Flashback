@@ -189,10 +189,6 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
 
     @Override
     public void handleAddEntity(ClientboundAddEntityPacket clientboundAddEntityPacket) {
-        if (Entity.ENTITY_COUNTER.get() <= clientboundAddEntityPacket.getId()) {
-            Entity.ENTITY_COUNTER.set(clientboundAddEntityPacket.getId() + 1000);
-        }
-
         if (clientboundAddEntityPacket.id >= ReplayServer.REPLAY_VIEWER_IDS_START && clientboundAddEntityPacket.id <= ReplayServer.REPLAY_VIEWER_IDS_START+128) {
             clientboundAddEntityPacket.id += 128;
         }
@@ -270,7 +266,7 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
     @Nullable
     private Entity createEntityFromPacket(ClientboundAddEntityPacket packet) {
         EntityType<?> entityType = packet.getType();
-        if (entityType == EntityType.PLAYER) {
+        if (entityType == EntityTypes.PLAYER) {
             PlayerInfo playerInfo = this.playerInfoMap.get(packet.getUUID());
             if (playerInfo == null) {
                 return null;
@@ -762,7 +758,7 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
             registryFriendlyByteBuf.readDouble()
         );
 
-        ClientboundAddEntityPacket addEntityPacket = new ClientboundAddEntityPacket(this.localPlayerId, uuid, x, y, z, xRot, yRot, EntityType.PLAYER, 0, velocity, yHeadRot);
+        ClientboundAddEntityPacket addEntityPacket = new ClientboundAddEntityPacket(this.localPlayerId, uuid, x, y, z, xRot, yRot, EntityTypes.PLAYER, 0, velocity, yHeadRot);
         GameProfile gameProfile = ByteBufCodecs.GAME_PROFILE.decode(registryFriendlyByteBuf);
         GameType gameType = GameType.byId(registryFriendlyByteBuf.readVarInt());
 
@@ -993,7 +989,7 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
 
         if (localPlayer instanceof ServerPlayer oldServerPlayer) {
             ClientboundAddEntityPacket addEntityPacket = new ClientboundAddEntityPacket(oldServerPlayer.getId(), oldServerPlayer.getUUID(),
-                oldServerPlayer.getX(), oldServerPlayer.getY(), oldServerPlayer.getZ(), oldServerPlayer.getXRot(), oldServerPlayer.getYRot(), EntityType.PLAYER,
+                oldServerPlayer.getX(), oldServerPlayer.getY(), oldServerPlayer.getZ(), oldServerPlayer.getXRot(), oldServerPlayer.getYRot(), EntityTypes.PLAYER,
                 0, Vec3.ZERO, oldServerPlayer.getYHeadRot());
 
             ServerPlayer newServerPlayer = this.spawnPlayer(addEntityPacket, oldServerPlayer.getGameProfile(), oldServerPlayer.gameMode.getGameModeForPlayer());

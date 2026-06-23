@@ -52,15 +52,15 @@ public class RecoverRecordingsScreen extends Screen {
         int buttonY = Mth.clamp(90 + height + 12, this.height / 6 + 96, this.height - 24);
 
         this.addRenderableWidget(Button.builder(Component.translatable("flashback.recover").withStyle(ChatFormatting.GREEN), b -> {
-            Minecraft.getInstance().setScreen(this.lastScreen);
+            Minecraft.getInstance().gui.setScreen(this.lastScreen);
             this.handler.accept(RecoveryOption.RECOVER);
         }).bounds((this.width - 304) / 2, buttonY, 96, 20).build());
         this.addRenderableWidget(Button.builder(Component.translatable("flashback.skip").withStyle(ChatFormatting.YELLOW), b -> {
-            Minecraft.getInstance().setScreen(this.lastScreen);
+            Minecraft.getInstance().gui.setScreen(this.lastScreen);
             this.handler.accept(RecoveryOption.SKIP);
         }).bounds((this.width - 304) / 2 + 104, buttonY, 96, 20).build());
         this.addRenderableWidget(Button.builder(Component.translatable("flashback.delete").withStyle(ChatFormatting.RED), b -> {
-            Minecraft.getInstance().setScreen(this.lastScreen);
+            Minecraft.getInstance().gui.setScreen(this.lastScreen);
             this.handler.accept(RecoveryOption.DELETE);
         }).bounds((this.width - 304)/2 + 208, buttonY, 96, 20).build());
     }

@@ -511,7 +511,7 @@ public class CustomImGuiImplGlfw {
             io.setMouseWheelH(io.getMouseWheelH() + (float) xOffset);
             io.setMouseWheel(io.getMouseWheel() + (float) yOffset);
 
-            if (Minecraft.getInstance().screen == null || !ReplayUI.isMainFrameActive()) {
+            if (Minecraft.getInstance().gui.screen() == null || !ReplayUI.isMainFrameActive()) {
                 return;
             }
         }
@@ -554,7 +554,7 @@ public class CustomImGuiImplGlfw {
             this.ungrab();
         }
 
-        if (!ReplayUI.isActive() || Minecraft.getInstance().screen != null) {
+        if (!ReplayUI.isActive() || Minecraft.getInstance().gui.screen() != null) {
             if (action == GLFW_RELEASE && key >= 0 && key < this.keyOwnerWindows.length) {
                 if (this.keyOwnerWindows[key] != -1) {
                     final int imguiKey = glfwKeyToImGuiKey(key);

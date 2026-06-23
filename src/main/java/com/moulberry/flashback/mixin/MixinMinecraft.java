@@ -3,10 +3,16 @@ package com.moulberry.flashback.mixin;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.llamalad7.mixinextras.sugar.Local;
+import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.platform.Window;
+import com.mojang.blaze3d.systems.CommandEncoder;
+import com.mojang.blaze3d.systems.GpuSurface;
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.textures.GpuTextureView;
 import com.moulberry.flashback.Flashback;
+import com.moulberry.flashback.FramebufferUtils;
 import com.moulberry.flashback.FreezeSlowdownFormula;
+import com.moulberry.flashback.WindowSizeTracker;
 import com.moulberry.flashback.combo_options.GlowingOverride;
 import com.moulberry.flashback.configuration.FlashbackConfigV1;
 import com.moulberry.flashback.exporting.ExportJob;
@@ -22,6 +28,7 @@ import com.moulberry.flashback.ext.MinecraftExt;
 import com.moulberry.flashback.editor.ui.ReplayUI;
 import com.moulberry.flashback.visuals.AccurateEntityPositionHandler;
 import it.unimi.dsi.fastutil.floats.FloatUnaryOperator;
+import net.minecraft.client.gui.Gui;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.progress.LevelLoadListener;
 import net.minecraft.util.Util;
@@ -43,6 +50,7 @@ import net.minecraft.world.TickRateManager;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.gamerules.GameRules;
 import net.minecraft.world.level.storage.LevelStorageSource;
+import org.apache.commons.math3.analysis.function.Min;
 import org.jetbrains.annotations.Nullable;
 import org.objectweb.asm.Opcodes;
 import org.spongepowered.asm.mixin.Final;
@@ -65,9 +73,6 @@ public abstract class MixinMinecraft extends ReentrantBlockableEventLoop<Runnabl
     public MixinMinecraft(String string) {
         super(string, true);
     }
-
-    @Shadow
-    public abstract void setScreen(@Nullable Screen screen);
 
     @Shadow
     @Nullable
@@ -102,18 +107,46 @@ public abstract class MixinMinecraft extends ReentrantBlockableEventLoop<Runnabl
     @Final
     private Window window;
 
+    @Shadow
+    @Final
+    public Gui gui;
+
+    @Unique
+    private RenderTarget compositeRenderTarget = null;
+
+    @WrapOperation(method = "renderFrame", at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/systems/GpuSurface;blitFromTexture(Lcom/mojang/blaze3d/systems/CommandEncoder;Lcom/mojang/blaze3d/textures/GpuTextureView;)V"))
+    public void renderFrame(GpuSurface instance, CommandEncoder commandEncoder, GpuTextureView textureView, Operation<Void> original) {
+        if (ReplayUI.isActive() && ReplayUI.compositeOnTop != null) {
+            var window = Minecraft.getInstance().getWindow();
+            int framebufferWidth = WindowSizeTracker.getWidth(window);
+            int framebufferHeight = WindowSizeTracker.getHeight(window);
+
+            this.compositeRenderTarget = FramebufferUtils.resizeOrCreateFramebuffer(this.compositeRenderTarget, framebufferWidth, framebufferHeight, false);
+            FramebufferUtils.clear(this.compositeRenderTarget, FramebufferUtils.TRANSPARENT_CLEAR_COLOUR);
+
+            if (ReplayUI.frameWidth > 1 && ReplayUI.frameHeight > 1) {
+                float frameTop = (float) ReplayUI.frameY / ReplayUI.viewportSizeY;
+                float frameLeft = (float) ReplayUI.frameX / ReplayUI.viewportSizeX;
+                float frameWidth = (float) ReplayUI.frameWidth / ReplayUI.viewportSizeX;
+                float frameHeight = (float) ReplayUI.frameHeight / ReplayUI.viewportSizeY;
+
+                FramebufferUtils.blitTo(textureView, this.compositeRenderTarget,
+                    frameLeft, frameTop, frameLeft+frameWidth, frameTop+frameHeight);
+            }
+
+            FramebufferUtils.blitTo(ReplayUI.compositeOnTop.getColorTextureView(), this.compositeRenderTarget,
+                0, 0, 1, 1);
+
+            original.call(instance, commandEncoder, this.compositeRenderTarget.getColorTextureView());
+        } else {
+            original.call(instance, commandEncoder, textureView);
+        }
+    }
+
     @Inject(method = "pauseGame", at = @At("HEAD"), cancellable = true)
     public void pauseGame(boolean bl, CallbackInfo ci) {
         if (Flashback.EXPORT_JOB != null) {
             ci.cancel();
-        }
-    }
-
-    @Inject(method = "renderNames", at = @At("HEAD"), cancellable = true)
-    private static void renderNames(CallbackInfoReturnable<Boolean> cir) {
-        EditorState editorState = EditorStateManager.getCurrent();
-        if (editorState != null && !editorState.replayVisuals.renderNametags) {
-            cir.setReturnValue(false);
         }
     }
 
@@ -145,8 +178,8 @@ public abstract class MixinMinecraft extends ReentrantBlockableEventLoop<Runnabl
         original.call(instance, camera);
     }
 
-    @Inject(method = "renderFrame", at=@At(value = "INVOKE", target = "Lcom/mojang/blaze3d/pipeline/RenderTarget;blitToScreen()V", shift = At.Shift.AFTER))
-    public void afterMainBlit(boolean bl, CallbackInfo ci) {
+    @Inject(method = "renderFrame", at= @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/GameRenderer;render(Lnet/minecraft/client/DeltaTracker;Z)V", shift = At.Shift.AFTER))
+    public void afterMainRender(boolean bl, CallbackInfo ci) {
         if (!RenderSystem.isOnRenderThread()) return;
         ReplayUI.drawOverlay();
     }
@@ -168,7 +201,9 @@ public abstract class MixinMinecraft extends ReentrantBlockableEventLoop<Runnabl
         if (inReplay != inReplayLast) {
             inReplayLast = inReplay;
             if (inReplay) {
-                Minecraft.getInstance().options.hideGui = false;
+                if (this.gui.hud.isHidden()) {
+                    this.gui.hud.toggle();
+                }
             } else {
                 EditorStateManager.reset();
             }
@@ -179,8 +214,6 @@ public abstract class MixinMinecraft extends ReentrantBlockableEventLoop<Runnabl
             // Force camera type to first person
             if (ReplayUI.isActive() && this.player != null && this.getCameraEntity() == this.player && this.options.getCameraType() != CameraType.FIRST_PERSON) {
                 this.options.setCameraType(CameraType.FIRST_PERSON);
-                this.levelRenderer.needsUpdate();
-
                 ReplayUI.setInfoOverlay("Forced perspective to First-Person");
             }
         }

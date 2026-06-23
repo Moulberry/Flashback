@@ -1,29 +1,36 @@
 package com.moulberry.flashback.mixin.visuals;
 
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.moulberry.flashback.state.EditorState;
 import com.moulberry.flashback.state.EditorStateManager;
+import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.WeatherEffectRenderer;
 import net.minecraft.core.BlockPos;
-import net.minecraft.world.level.Level;
 import net.minecraft.world.level.biome.Biome;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(WeatherEffectRenderer.class)
 public class MixinWeatherEffectRenderer {
 
-    @Inject(method = "getPrecipitationAt", at = @At("HEAD"), cancellable = true)
-    public void getPrecipitationAt(Level level, BlockPos blockPos, CallbackInfoReturnable<Biome.Precipitation> cir) {
+    @WrapOperation(method = "extractRenderState", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/multiplayer/ClientLevel;getPrecipitationAt(Lnet/minecraft/core/BlockPos;)Lnet/minecraft/world/level/biome/Biome$Precipitation;"))
+    public Biome.Precipitation getPrecipitationAt(ClientLevel instance, BlockPos pos, Operation<Biome.Precipitation> original) {
         EditorState editorState = EditorStateManager.getCurrent();
         if (editorState != null) {
             switch (editorState.replayVisuals.overrideWeatherMode) {
-                case CLEAR, OVERCAST -> cir.setReturnValue(Biome.Precipitation.NONE);
-                case RAINING, THUNDERING -> cir.setReturnValue(Biome.Precipitation.RAIN);
-                case SNOWING -> cir.setReturnValue(Biome.Precipitation.SNOW);
+                case CLEAR, OVERCAST -> {
+                    return Biome.Precipitation.NONE;
+                }
+                case RAINING, THUNDERING -> {
+                    return Biome.Precipitation.RAIN;
+                }
+                case SNOWING -> {
+                    return Biome.Precipitation.SNOW;
+                }
             }
         }
+        return original.call(instance, pos);
     }
 
 }

@@ -92,15 +92,15 @@ public class SaveReplayScreen extends Screen {
 
         rowHelper.addChild(Button.builder(FlashbackTextComponents.SAVE_REPLAY, button -> {
             this.saveReplay();
-            Minecraft.getInstance().setScreen(this.previousScreen);
+            Minecraft.getInstance().gui.setScreen(this.previousScreen);
         }).width(98).build(), 1);
         rowHelper.addChild(Button.builder(FlashbackTextComponents.DELETE_REPLAY, button -> {
-            Minecraft.getInstance().setScreen(new ConfirmScreen(value -> {
+            Minecraft.getInstance().gui.setScreen(new ConfirmScreen(value -> {
                 if (value) {
                     this.deleteReplay();
-                    Minecraft.getInstance().setScreen(this.previousScreen);
+                    Minecraft.getInstance().gui.setScreen(this.previousScreen);
                 } else {
-                    Minecraft.getInstance().setScreen(SaveReplayScreen.this);
+                    Minecraft.getInstance().gui.setScreen(SaveReplayScreen.this);
                 }
             }, FlashbackTextComponents.CONFIRM_DELETE_REPLAY, FlashbackTextComponents.CONFIRM_DELETE_REPLAY_MESSAGE));
         }).width(98).build(), 1);
@@ -121,14 +121,14 @@ public class SaveReplayScreen extends Screen {
         super.tick();
 
         if (!Files.exists(this.recordFolder)) {
-            Minecraft.getInstance().setScreen(new AlertScreen(() -> Minecraft.getInstance().setScreen(this.previousScreen),
+            Minecraft.getInstance().gui.setScreen(new AlertScreen(() -> Minecraft.getInstance().gui.setScreen(this.previousScreen),
                 FlashbackTextComponents.ERROR_SAVING_REPLAY, FlashbackTextComponents.RECORDING_FOLDER_MISSING));
         }
     }
 
     private void saveReplay() {
         if (!Files.exists(this.recordFolder)) {
-            Minecraft.getInstance().setScreen(new AlertScreen(() -> Minecraft.getInstance().setScreen(this.previousScreen),
+            Minecraft.getInstance().gui.setScreen(new AlertScreen(() -> Minecraft.getInstance().gui.setScreen(this.previousScreen),
                 FlashbackTextComponents.ERROR_SAVING_REPLAY, FlashbackTextComponents.RECORDING_FOLDER_MISSING));
             return;
         }

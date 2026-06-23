@@ -2,11 +2,7 @@ package com.moulberry.flashback.mixin;
 
 import com.mojang.blaze3d.platform.Window;
 import com.moulberry.flashback.Flashback;
-import com.moulberry.flashback.ext.WindowExt;
-import com.moulberry.flashback.visuals.ReplayVisuals;
-import com.moulberry.flashback.combo_options.Sizing;
 import com.moulberry.flashback.editor.ui.ReplayUI;
-import org.lwjgl.glfw.GLFW;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -17,7 +13,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(Window.class)
-public abstract class MixinWindow implements WindowExt {
+public abstract class MixinWindow {
 
     @Shadow private int framebufferWidth;
     @Shadow private int framebufferHeight;
@@ -39,18 +35,10 @@ public abstract class MixinWindow implements WindowExt {
     private long handle;
 
     @Shadow
-    public boolean isResized;
-
-    @Shadow
     public abstract int getWidth();
 
     @Shadow
     public abstract int getHeight();
-
-    @Unique
-    private int lastModifiedFramebufferWidth = -1;
-    @Unique
-    private int lastModifiedFramebufferHeight = -1;
 
     @Unique
     private float calculateWidthScaleFactor() {
@@ -81,17 +69,6 @@ public abstract class MixinWindow implements WindowExt {
             return ReplayUI.getNewGameHeight(this.calculateHeightScaleFactor());
         } else {
             return -1;
-        }
-    }
-
-    @Override
-    public void flashback$checkForOverrideResize() {
-        int overrideWidth = calculateNewFramebufferWidth();
-        int overrideHeight = calculateNewFramebufferHeight();
-        if (this.lastModifiedFramebufferWidth != overrideWidth || this.lastModifiedFramebufferHeight != overrideHeight) {
-            this.lastModifiedFramebufferWidth = overrideWidth;
-            this.lastModifiedFramebufferHeight = overrideHeight;
-            this.isResized = true;
         }
     }
 

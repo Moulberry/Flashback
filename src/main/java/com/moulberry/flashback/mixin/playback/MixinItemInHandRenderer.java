@@ -1,8 +1,6 @@
 package com.moulberry.flashback.mixin.playback;
 
 import com.google.common.base.MoreObjects;
-import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
-import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.llamalad7.mixinextras.sugar.Local;
 import com.llamalad7.mixinextras.sugar.ref.LocalRef;
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -14,27 +12,22 @@ import com.moulberry.flashback.state.EditorState;
 import com.moulberry.flashback.state.EditorStateManager;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.AbstractClientPlayer;
-import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.ItemInHandRenderer;
-import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
-import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import org.jetbrains.annotations.Nullable;
+import org.objectweb.asm.Opcodes;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.ModifyArg;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 
@@ -64,9 +57,11 @@ public abstract class MixinItemInHandRenderer implements ItemInHandRendererExt {
         return false;
     }
 
-    @Shadow protected abstract void renderArmWithItem(AbstractClientPlayer abstractClientPlayer, float f, float g, InteractionHand interactionHand, float h, ItemStack itemStack, float i, PoseStack poseStack, SubmitNodeCollector submitNodeCollector, int j);
-
     @Shadow @Final private Minecraft minecraft;
+
+    @Shadow
+    protected abstract void submitArmWithItem(AbstractClientPlayer player, float frameInterp, float xRot, InteractionHand hand, float attack, ItemStack itemStack, float inverseArmHeight, PoseStack poseStack, SubmitNodeCollector submitNodeCollector, int lightCoords);
+
     @Unique
     private static final int RENDER_MAIN_HAND = 1;
     @Unique
@@ -127,19 +122,16 @@ public abstract class MixinItemInHandRenderer implements ItemInHandRendererExt {
         if ((handRenderSelection & RENDER_MAIN_HAND) != 0) {
             l = interactionHand == InteractionHand.MAIN_HAND ? g : 0.0f;
             m = 1.0f - Mth.lerp(partialTick, this.oMainHandHeight, this.mainHandHeight);
-            renderArmWithItem(clientPlayer, partialTick, h, InteractionHand.MAIN_HAND, l, this.mainHandItem, m, poseStack, submitNodeCollector, i);
+            submitArmWithItem(clientPlayer, partialTick, h, InteractionHand.MAIN_HAND, l, this.mainHandItem, m, poseStack, submitNodeCollector, i);
         }
         if ((handRenderSelection & RENDER_OFF_HAND) != 0) {
             l = interactionHand == InteractionHand.OFF_HAND ? g : 0.0f;
             m = 1.0f - Mth.lerp(partialTick, this.oOffHandHeight, this.offHandHeight);
-            renderArmWithItem(clientPlayer, partialTick, h, InteractionHand.OFF_HAND, l, this.offHandItem, m, poseStack, submitNodeCollector, i);
+            submitArmWithItem(clientPlayer, partialTick, h, InteractionHand.OFF_HAND, l, this.offHandItem, m, poseStack, submitNodeCollector, i);
         }
-
-        this.minecraft.gameRenderer.getFeatureRenderDispatcher().renderAllFeatures();
-        this.minecraft.renderBuffers().bufferSource().endBatch();
     }
 
-    @Inject(method = "renderPlayerArm", at = @At(value = "FIELD", target = "Lnet/minecraft/client/renderer/ItemInHandRenderer;entityRenderDispatcher:Lnet/minecraft/client/renderer/entity/EntityRenderDispatcher;"))
+    @Inject(method = "renderPlayerArm", at = @At(value = "FIELD", target = "Lnet/minecraft/client/renderer/ItemInHandRenderer;entityRenderDispatcher:Lnet/minecraft/client/renderer/entity/EntityRenderDispatcher;", opcode = Opcodes.GETFIELD))
     public void renderPlayerArm(CallbackInfo ci, @Local LocalRef<AbstractClientPlayer> player) {
         AbstractClientPlayer spectatingPlayer = Flashback.getSpectatingPlayer();
         if (spectatingPlayer != null) {

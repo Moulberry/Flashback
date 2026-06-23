@@ -39,7 +39,7 @@ accessible field net/minecraft/client/multiplayer/ClientLevel lightUpdateQueue L
 
 # Entity
 accessible field net/minecraft/network/syncher/SynchedEntityData itemsById [Lnet/minecraft/network/syncher/SynchedEntityData$DataItem;
-accessible field net/minecraft/world/entity/Entity ENTITY_COUNTER Ljava/util/concurrent/atomic/AtomicInteger;
+# accessible field net/minecraft/world/entity/Entity ENTITY_COUNTER Ljava/util/concurrent/atomic/AtomicInteger;
 accessible field net/minecraft/world/entity/LivingEntity fallFlyTicks I
 
 # Minecraft server
@@ -153,8 +153,6 @@ accessible field net/minecraft/client/renderer/SectionOcclusionGraph fullUpdateT
 accessible field net/minecraft/client/renderer/SectionOcclusionGraph needsFullUpdate Z
 accessible field com/mojang/blaze3d/platform/Window framebufferWidth I
 accessible field com/mojang/blaze3d/platform/Window framebufferHeight I
-accessible field net/minecraft/client/Minecraft mainRenderTarget Lcom/mojang/blaze3d/pipeline/RenderTarget;
-mutable field net/minecraft/client/Minecraft mainRenderTarget Lcom/mojang/blaze3d/pipeline/RenderTarget;
 accessible field net/minecraft/client/multiplayer/ClientPacketListener random Lnet/minecraft/util/RandomSource;
 accessible field net/minecraft/world/level/Level random Lnet/minecraft/util/RandomSource;
 accessible method net/minecraft/util/thread/BlockableEventLoop runAllTasks ()V
@@ -172,7 +170,7 @@ accessible class net/minecraft/world/level/border/WorldBorder$MovingBorderExtent
 accessible field net/minecraft/world/entity/Avatar DATA_PLAYER_MODE_CUSTOMISATION Lnet/minecraft/network/syncher/EntityDataAccessor;
 accessible field net/minecraft/world/entity/Avatar DATA_PLAYER_MAIN_HAND Lnet/minecraft/network/syncher/EntityDataAccessor;
 
-accessible class net/minecraft/client/gui/Gui$ContextualInfo
+accessible class net/minecraft/client/gui/Hud$ContextualInfo
 accessible field net/minecraft/client/renderer/GameRenderer fogRenderer Lnet/minecraft/client/renderer/fog/FogRenderer;
 
 accessible field net/minecraft/client/resources/language/ClientLanguage storage Ljava/util/Map;

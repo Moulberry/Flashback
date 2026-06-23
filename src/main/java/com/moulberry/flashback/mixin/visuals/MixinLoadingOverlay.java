@@ -22,7 +22,7 @@ public class MixinLoadingOverlay {
     @Inject(method = "extractRenderState", at = @At("RETURN"), require = 0)
     public void extractRenderState(GuiGraphicsExtractor guiGraphics, int i, int j, float f, CallbackInfo ci) {
         if (this.fadeOutStart != -1 && Flashback.isInReplay()) {
-            this.minecraft.setOverlay(null);
+            this.minecraft.gui.setOverlay(null);
         }
     }
 

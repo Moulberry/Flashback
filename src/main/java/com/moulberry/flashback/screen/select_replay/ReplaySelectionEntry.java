@@ -73,7 +73,7 @@ public abstract class ReplaySelectionEntry extends ObjectSelectionList.Entry<Rep
             guiGraphics.blitSprite(RenderPipelines.GUI_TEXTURED, SPRITES.get(true, hovered), this.getContentX() + 4, this.getContentY() + 2,
                     this.getContentWidth() - 8, this.getContentHeight() - 4);
 
-            int p = (this.minecraft.screen.width - this.minecraft.font.width(LOAD_REPLAY_LABEL)) / 2;
+            int p = (this.minecraft.gui.screen().width - this.minecraft.font.width(LOAD_REPLAY_LABEL)) / 2;
             int q = this.getContentY() + (this.getContentHeight() - this.minecraft.font.lineHeight) / 2 + 1;
             guiGraphics.text(this.minecraft.font, LOAD_REPLAY_LABEL, p, q, 0xFFFFFFFF, true);
         }
@@ -94,11 +94,11 @@ public abstract class ReplaySelectionEntry extends ObjectSelectionList.Entry<Rep
 
         @Override
         public void extractContent(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, boolean hovered, float partialTick) {
-            int p = (this.minecraft.screen.width - this.minecraft.font.width(LOADING_LABEL)) / 2;
+            int p = (this.minecraft.gui.screen().width - this.minecraft.font.width(LOADING_LABEL)) / 2;
             int q = this.getContentY() + (this.getContentHeight() - this.minecraft.font.lineHeight) / 2;
             guiGraphics.text(this.minecraft.font, LOADING_LABEL, p, q, 0xFFFFFFFF, false);
             String string = LoadingDotsText.get(Util.getMillis());
-            int r = (this.minecraft.screen.width - this.minecraft.font.width(string)) / 2;
+            int r = (this.minecraft.gui.screen().width - this.minecraft.font.width(string)) / 2;
             int s = q + this.minecraft.font.lineHeight;
             guiGraphics.text(this.minecraft.font, string, r, s, -8355712, false);
         }
@@ -155,7 +155,7 @@ public abstract class ReplaySelectionEntry extends ObjectSelectionList.Entry<Rep
 
             guiGraphics.blitSprite(RenderPipelines.GUI_TEXTURED, FOLDER_SPRITE, x, y, ICON_WIDTH, ICON_HEIGHT);
 
-            if (this.minecraft.options.touchscreen().get() || hovered) {
+            if (hovered) {
                 guiGraphics.fill(x, y, x + ICON_WIDTH, y + ICON_HEIGHT, 0xa0909090);
                 int q = mouseX - x;
                 boolean hoveredIcon = q < 32;
@@ -170,7 +170,7 @@ public abstract class ReplaySelectionEntry extends ObjectSelectionList.Entry<Rep
             this.replaySelectionList.setSelected(this);
             if (mouseButtonEvent.x() - (double) this.replaySelectionList.getRowLeft() <= 32.0 || Util.getMillis() - this.lastClickTime < 250L) {
                 this.minecraft.getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0f));
-                this.minecraft.setScreen(new SelectReplayScreen(this.replaySelectionList.getScreen(), this.path));
+                this.minecraft.gui.setScreen(new SelectReplayScreen(this.replaySelectionList.getScreen(), this.path));
                 return true;
             }
             this.lastClickTime = Util.getMillis();
@@ -239,7 +239,7 @@ public abstract class ReplaySelectionEntry extends ObjectSelectionList.Entry<Rep
 
             guiGraphics.blit(RenderPipelines.GUI_TEXTURED, this.icon.textureLocation(), x, y, 0.0f, 0.0f, 32, 32, 32, 32);
 
-            if (this.minecraft.options.touchscreen().get() || hovered) {
+            if (hovered) {
                 guiGraphics.fill(x, y, x + ICON_WIDTH, y + ICON_HEIGHT, 0xa0909090);
                 int q = mouseX - x;
                 boolean hoveredIcon = q < 32;
@@ -284,17 +284,17 @@ public abstract class ReplaySelectionEntry extends ObjectSelectionList.Entry<Rep
         public void openReplay() {
             if (this.summary.canOpen()) {
                 if (this.summary.hasNamespaceMismatch()) {
-                    Screen previousScreen = this.minecraft.screen;
+                    Screen previousScreen = this.minecraft.gui.screen();
                     BooleanConsumer afterWarning = doLoad -> {
                         if (doLoad) {
                             this.minecraft.setScreenAndShow(new GenericMessageScreen(Component.translatable("flashback.select_replay.data_read")));
                             Flashback.openReplayWorld(this.summary.getPath());
                         } else {
-                            this.minecraft.setScreen(previousScreen);
+                            this.minecraft.gui.setScreen(previousScreen);
                         }
                     };
                     Component message = RegistryMetaHelper.createMismatchWarning(this.replaySelectionList.currentNamespacesForRegistries, this.summary.getReplayMetadata().namespacesForRegistries);
-                    this.minecraft.setScreen(new ConfirmScreen(afterWarning, Component.translatable("flashback.screen_registry_mismatch"), message,
+                    this.minecraft.gui.setScreen(new ConfirmScreen(afterWarning, Component.translatable("flashback.screen_registry_mismatch"), message,
                         Component.translatable("selectWorld.backupJoinSkipButton"), CommonComponents.GUI_CANCEL));
                 } else {
                     this.minecraft.setScreenAndShow(new GenericMessageScreen(Component.translatable("flashback.select_replay.data_read")));
@@ -305,12 +305,12 @@ public abstract class ReplaySelectionEntry extends ObjectSelectionList.Entry<Rep
         }
 
         public void deleteReplay() {
-            this.minecraft.setScreen(new ConfirmScreen(bl -> {
+            this.minecraft.gui.setScreen(new ConfirmScreen(bl -> {
                     if (bl) {
-                        this.minecraft.setScreen(new ProgressScreen(true));
+                        this.minecraft.gui.setScreen(new ProgressScreen(true));
                         this.doDeleteReplay();
                     }
-                    this.minecraft.setScreen(this.replaySelectionList.getScreen());
+                    this.minecraft.gui.setScreen(this.replaySelectionList.getScreen());
                 }, Component.translatable("flashback.select_replay.delete_question"),
                     Component.translatable("selectWorld.deleteWarning", this.summary.getReplayName()),
                     Component.translatable("selectWorld.deleteButton"),
@@ -331,7 +331,7 @@ public abstract class ReplaySelectionEntry extends ObjectSelectionList.Entry<Rep
         }
 
         public void editReplay() {
-            Minecraft.getInstance().setScreen(new EditReplayScreen(Minecraft.getInstance().screen, this.summary));
+            Minecraft.getInstance().gui.setScreen(new EditReplayScreen(Minecraft.getInstance().gui.screen(), this.summary));
         }
 
         private void loadIcon() {

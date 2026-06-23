@@ -922,7 +922,6 @@ public class TimelineWindow {
             if (visuals.overrideRollAmount < -180.0f) visuals.overrideRollAmount += 360.0f;
             if (visuals.overrideRollAmount > 180.0f) visuals.overrideRollAmount -= 360.0f;
 
-            Minecraft.getInstance().levelRenderer.needsUpdate();
             editorState.markDirty();
         }
 
@@ -1284,9 +1283,9 @@ public class TimelineWindow {
         }
         replayServer.replayPaused = !replayServer.replayPaused;
         if (!replayServer.replayPaused) {
-            Screen screen = Minecraft.getInstance().screen;
+            Screen screen = Minecraft.getInstance().gui.screen();
             if (screen != null && screen.isPauseScreen()) {
-                Minecraft.getInstance().setScreen(null);
+                Minecraft.getInstance().gui.setScreen(null);
             }
         }
     }

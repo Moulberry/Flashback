@@ -100,8 +100,6 @@ public abstract sealed class EditorMovementControls permits EditorMovementContro
         @Override
         public boolean shouldStop(boolean isGrabbed) {
             return !ImGui.isMouseDown(GLFW.GLFW_MOUSE_BUTTON_LEFT);
-            // todo: keybinds
-//            return !Keybinds.ROTATE_CAMERA.isDownIgnoreMods();
         }
 
         @Override

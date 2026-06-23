@@ -1,10 +1,8 @@
 package com.moulberry.flashback;
 
-import com.mojang.blaze3d.ProjectionType;
+import com.mojang.blaze3d.GpuFormat;
+import com.mojang.blaze3d.PrimitiveTopology;
 import com.mojang.blaze3d.buffers.GpuBuffer;
-import com.mojang.blaze3d.buffers.GpuBufferSlice;
-import com.mojang.blaze3d.opengl.GlStateManager;
-import com.mojang.blaze3d.opengl.GlTexture;
 import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.pipeline.TextureTarget;
 import com.mojang.blaze3d.systems.RenderPass;
@@ -13,45 +11,36 @@ import com.mojang.blaze3d.textures.FilterMode;
 import com.mojang.blaze3d.textures.GpuTexture;
 import com.mojang.blaze3d.textures.GpuTextureView;
 import com.mojang.blaze3d.vertex.BufferBuilder;
+import com.mojang.blaze3d.vertex.ByteBufferBuilder;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
-import com.mojang.blaze3d.vertex.MeshData;
-import com.mojang.blaze3d.vertex.Tesselator;
-import com.mojang.blaze3d.vertex.VertexFormat;
+import com.moulberry.flashback.visuals.FlashbackDrawBuffer;
 import com.moulberry.flashback.visuals.ShaderManager;
-import net.minecraft.client.renderer.Projection;
-import net.minecraft.client.renderer.ProjectionMatrixBuffer;
-import org.joml.Matrix4f;
-import org.joml.Vector3f;
 import org.joml.Vector4f;
-import org.lwjgl.opengl.GL11;
-import org.lwjgl.opengl.GL30;
-import org.lwjgl.opengl.GL32;
 
-import java.util.OptionalInt;
+import java.util.Optional;
 
 public class FramebufferUtils {
 
-    public static void clear(RenderTarget renderTarget, int colour) {
-        int oldReadFbo = GL11.glGetInteger(GL30.GL_READ_FRAMEBUFFER_BINDING);
-        int oldDrawFbo = GL11.glGetInteger(GL30.GL_DRAW_FRAMEBUFFER_BINDING);
+    public static final Vector4f TRANSPARENT_CLEAR_COLOUR = new Vector4f(0.0f);
+    public static final Vector4f BLACK_CLEAR_COLOUR = new Vector4f(0.0f, 0.0f, 0.0f, 1.0f);
 
+    public static void clear(RenderTarget renderTarget, Vector4f clearColour) {
         GpuTexture colourTexture = renderTarget.getColorTexture();
         GpuTexture depthTexture = renderTarget.getDepthTexture();
         if (colourTexture != null && !colourTexture.isClosed() && depthTexture != null && !depthTexture.isClosed()) {
-            RenderSystem.getDevice().createCommandEncoder().clearColorAndDepthTextures(colourTexture, colour, depthTexture, 1.0f);
+            float minDepth = RenderSystem.getDevice().getDeviceInfo().isZZeroToOne() ? 0.0f : -1.0f;
+            RenderSystem.getDevice().createCommandEncoder().clearColorAndDepthTextures(colourTexture, clearColour, depthTexture, minDepth);
         } else if (colourTexture != null && !colourTexture.isClosed()) {
-            RenderSystem.getDevice().createCommandEncoder().clearColorTexture(colourTexture, colour);
+            RenderSystem.getDevice().createCommandEncoder().clearColorTexture(colourTexture, clearColour);
         } else if (depthTexture != null && !depthTexture.isClosed()) {
-            RenderSystem.getDevice().createCommandEncoder().clearDepthTexture(depthTexture, 1.0f);
+            float minDepth = RenderSystem.getDevice().getDeviceInfo().isZZeroToOne() ? 0.0f : -1.0f;
+            RenderSystem.getDevice().createCommandEncoder().clearDepthTexture(depthTexture, minDepth);
         }
-
-        GlStateManager._glBindFramebuffer(GL32.GL_READ_FRAMEBUFFER, oldReadFbo);
-        GlStateManager._glBindFramebuffer(GL32.GL_DRAW_FRAMEBUFFER, oldDrawFbo);
     }
 
-    public static RenderTarget resizeOrCreateFramebuffer(RenderTarget renderTarget, int width, int height) {
+    public static RenderTarget resizeOrCreateFramebuffer(RenderTarget renderTarget, int width, int height, boolean useDepth) {
         if (renderTarget == null) {
-            renderTarget = new TextureTarget(null, width, height, true);
+            renderTarget = new TextureTarget(null, width, height, useDepth, GpuFormat.RGBA8_UNORM);
         } else if (renderTarget.width != width || renderTarget.height != height) {
             renderTarget.resize(width, height);
         }
@@ -59,70 +48,30 @@ public class FramebufferUtils {
         return renderTarget;
     }
 
-    private static ProjectionMatrixBuffer projectionBuffers;
-    private static Projection projection;
+    public static void blitTo(GpuTextureView from, RenderTarget to, float x1, float y1, float x2, float y2) {
+        try (ByteBufferBuilder byteBufferBuilder = new ByteBufferBuilder(256)) {
+            BufferBuilder builder = new BufferBuilder(byteBufferBuilder, PrimitiveTopology.QUADS, DefaultVertexFormat.POSITION_TEX);
+            builder.addVertex(x1*2-1, -(y2*2-1), 0.0f).setUv(0.0f, 0.0f);
+            builder.addVertex(x2*2-1, -(y2*2-1), 0.0f).setUv(1.0f, 0.0f);
+            builder.addVertex(x2*2-1, -(y1*2-1), 0.0f).setUv(1.0f, 1.0f);
+            builder.addVertex(x1*2-1, -(y1*2-1), 0.0f).setUv(0.0f, 1.0f);
 
-    private static void blitTo(GpuTextureView from, RenderTarget to, int width, int height, float x1, float y1, float x2, float y2) {
-        if (projectionBuffers == null) {
-            projectionBuffers = new ProjectionMatrixBuffer("flashback blit");
-            projection = new Projection();
-            projection.setupOrtho(1000.0f, 3000.0f, width, height, true);
-        } else if (projection.width() != width || projection.height() != height) {
-            projection.setSize(width, height);
-        }
+            try (FlashbackDrawBuffer drawBuffer = new FlashbackDrawBuffer(GpuBuffer.USAGE_MAP_WRITE)) {
+                drawBuffer.upload(builder.buildOrThrow());
 
-        var modelViewStack = RenderSystem.getModelViewStack();
-        modelViewStack.pushMatrix();
-        modelViewStack.set(new Matrix4f().translation(0.0f, 0.0f, -2000.0f));
-        var oldProjectionMatrix = RenderSystem.getProjectionMatrixBuffer();
-        ProjectionType oldProjectionType = RenderSystem.getProjectionType();
-        RenderSystem.setProjectionMatrix(projectionBuffers.getBuffer(projection), ProjectionType.ORTHOGRAPHIC);
+                RenderSystem.AutoStorageIndexBuffer autoStorageIndexBuffer = RenderSystem.getSequentialBuffer(PrimitiveTopology.QUADS);
+                GpuBuffer indexBuffer = autoStorageIndexBuffer.getBuffer(6);
 
-        BufferBuilder builder = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX);
-        builder.addVertex(width*x1, height*y2, 0.0f).setUv(0.0f, 0.0f);
-        builder.addVertex(width*x2, height*y2, 0.0f).setUv(1.0f, 0.0f);
-        builder.addVertex(width*x2, height*y1, 0.0f).setUv(1.0f, 1.0f);
-        builder.addVertex(width*x1, height*y1, 0.0f).setUv(0.0f, 1.0f);
-        try (MeshData meshData = builder.buildOrThrow()) {
-            RenderSystem.AutoStorageIndexBuffer autoStorageIndexBuffer = RenderSystem.getSequentialBuffer(VertexFormat.Mode.QUADS);
-            GpuBuffer gpuBuffer = autoStorageIndexBuffer.getBuffer(6);
-            GpuBuffer vertexBuffer = DefaultVertexFormat.POSITION_TEX.uploadImmediateVertexBuffer(meshData.vertexBuffer());
-
-            GpuBufferSlice gpuBufferSlice = RenderSystem.getDynamicUniforms().writeTransform(RenderSystem.getModelViewMatrix(), new Vector4f(1.0F, 1.0F, 1.0F, 1.0F),
-                new Vector3f(), new Matrix4f());
-
-            try (RenderPass renderPass = RenderSystem.getDevice().createCommandEncoder().createRenderPass(() -> "flashback blit", to.getColorTextureView(), OptionalInt.empty())) {
-                renderPass.setPipeline(ShaderManager.BLIT_SCREEN_WITH_UV);
-                RenderSystem.bindDefaultUniforms(renderPass);
-                renderPass.setUniform("DynamicTransforms", gpuBufferSlice);
-                renderPass.setVertexBuffer(0, vertexBuffer);
-                renderPass.setIndexBuffer(gpuBuffer, autoStorageIndexBuffer.type());
-                renderPass.bindTexture("InSampler", from, RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST));
-                renderPass.drawIndexed(0, 0, 6, 1);
+                try (RenderPass renderPass = RenderSystem.getDevice().createCommandEncoder().createRenderPass(() -> "flashback blit", to.getColorTextureView(), Optional.empty())) {
+                    renderPass.setPipeline(ShaderManager.BLIT_SCREEN_WITH_UV);
+                    RenderSystem.bindDefaultUniforms(renderPass);
+                    renderPass.setVertexBuffer(0, drawBuffer.getVertexBuffer().slice());
+                    renderPass.setIndexBuffer(indexBuffer, autoStorageIndexBuffer.type());
+                    renderPass.bindTexture("InSampler", from, RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST));
+                    renderPass.drawIndexed(6, 1, 0, 0, 0);
+                }
             }
         }
-
-        RenderSystem.setProjectionMatrix(oldProjectionMatrix, oldProjectionType);
-        modelViewStack.popMatrix();
-    }
-
-    private static RenderTarget tempRenderTarget = null;
-
-    public static void blitToScreenPartial(RenderTarget renderTarget, int width, int height, float x1, float y1, float x2, float y2) {
-        GlStateManager._viewport(0, 0, width, height);
-
-        int oldReadFbo = GL11.glGetInteger(GL30.GL_READ_FRAMEBUFFER_BINDING);
-        int oldDrawFbo = GL11.glGetInteger(GL30.GL_DRAW_FRAMEBUFFER_BINDING);
-
-        tempRenderTarget = FramebufferUtils.resizeOrCreateFramebuffer(tempRenderTarget, width, height);
-        FramebufferUtils.clear(tempRenderTarget, 0);
-
-        blitTo(renderTarget.getColorTextureView(), tempRenderTarget, width, height, x1, y1, x2, y2);
-
-        tempRenderTarget.blitToScreen();
-
-        GlStateManager._glBindFramebuffer(GL32.GL_READ_FRAMEBUFFER, oldReadFbo);
-        GlStateManager._glBindFramebuffer(GL32.GL_DRAW_FRAMEBUFFER, oldDrawFbo);
     }
 
 }

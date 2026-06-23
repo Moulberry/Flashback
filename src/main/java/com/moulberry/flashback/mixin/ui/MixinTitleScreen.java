@@ -135,11 +135,11 @@ public class MixinTitleScreen extends Screen {
                             List<String> incompatibleMods = this.minecraft.hasShiftDown() ? List.of() : Flashback.getReplayIncompatibleMods();
 
                             if (incompatibleMods.isEmpty()) {
-                                this.minecraft.setScreen(new SelectReplayScreen(this));
+                                this.minecraft.gui.setScreen(new SelectReplayScreen(this));
                             } else {
                                 String mods = StringUtils.join(incompatibleMods, ", ");
                                 Component description = Component.translatable("flashback.incompatible_with_viewing_description").append(Component.literal(mods).withStyle(ChatFormatting.RED));
-                                this.minecraft.setScreen(new AlertScreen(() -> Minecraft.getInstance().setScreen(this),
+                                this.minecraft.gui.setScreen(new AlertScreen(() -> Minecraft.getInstance().gui.setScreen(this),
                                     Component.translatable("flashback.incompatible_with_viewing"), description));
                             }
 

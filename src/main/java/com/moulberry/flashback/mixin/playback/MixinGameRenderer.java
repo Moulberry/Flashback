@@ -2,36 +2,19 @@ package com.moulberry.flashback.mixin.playback;
 
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
-import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.moulberry.flashback.Flashback;
-import com.moulberry.flashback.ext.WindowExt;
-import com.moulberry.flashback.state.EditorState;
-import com.moulberry.flashback.state.EditorStateManager;
-import com.moulberry.flashback.editor.ui.ReplayUI;
 import com.moulberry.flashback.ext.ItemInHandRendererExt;
-import com.moulberry.flashback.ext.MinecraftExt;
-import com.moulberry.flashback.visuals.AccurateEntityPositionHandler;
-import com.moulberry.flashback.visuals.CameraRotation;
-import com.moulberry.flashback.visuals.ReplayVisuals;
-import com.moulberry.flashback.visuals.ShaderManager;
-import net.minecraft.client.Camera;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.Options;
 import net.minecraft.client.multiplayer.MultiPlayerGameMode;
 import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.ItemInHandRenderer;
-import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.GameType;
-import net.minecraft.world.level.Level;
-import org.joml.Quaternionf;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -52,11 +35,6 @@ public abstract class MixinGameRenderer {
     @Final
     Minecraft minecraft;
 
-    @Inject(method = "extract", at = @At("HEAD"))
-    public void extractHead(CallbackInfo ci) {
-        ((WindowExt)(Object)this.minecraft.getWindow()).flashback$checkForOverrideResize();
-    }
-
     @Inject(method = "render", at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/systems/CommandEncoder;clearDepthTexture(Lcom/mojang/blaze3d/textures/GpuTexture;D)V", remap = false, ordinal = 0), cancellable = true)
     public void render_noGui(DeltaTracker deltaTracker, boolean bl, CallbackInfo ci) {
         if (Flashback.isExporting() && Flashback.EXPORT_JOB.getSettings().noGui()) {
@@ -73,23 +51,17 @@ public abstract class MixinGameRenderer {
         return original.call(instance);
     }
 
-    @WrapOperation(method = "renderItemInHand", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/ItemInHandRenderer;renderHandsWithItems(FLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;Lnet/minecraft/client/player/LocalPlayer;I)V"))
-    public void renderItemInHand_renderHandsWithItems(ItemInHandRenderer instance, float f, PoseStack poseStack, SubmitNodeCollector submitNodeCollector, LocalPlayer localPlayer, int i, Operation<Void> original) {
+    @WrapOperation(method = "renderItemInHand", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/ItemInHandRenderer;submitHandsWithItems(FLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;Lnet/minecraft/client/player/LocalPlayer;I)V"))
+    public void renderItemInHand_submitHandsWithItems(ItemInHandRenderer instance, final float frameInterp, final PoseStack poseStack,
+        final SubmitNodeCollector submitNodeCollector, final LocalPlayer player, final int lightCoords, Operation<Void> original
+    ) {
         AbstractClientPlayer spectatingPlayer = Flashback.getSpectatingPlayer();
         if (spectatingPlayer != null) {
             Entity entity = this.minecraft.getCameraEntity() == null ? this.minecraft.player : this.minecraft.getCameraEntity();
-            float frozenPartialTick = this.minecraft.level.tickRateManager().isEntityFrozen(entity) ? 1.0f : f;
-            ((ItemInHandRendererExt)instance).flashback$renderHandsWithItems(frozenPartialTick, poseStack, submitNodeCollector, spectatingPlayer, i, null);
+            float frozenPartialTick = this.minecraft.level.tickRateManager().isEntityFrozen(entity) ? 1.0f : frameInterp;
+            ((ItemInHandRendererExt)instance).flashback$renderHandsWithItems(frozenPartialTick, poseStack, submitNodeCollector, spectatingPlayer, lightCoords, null);
         } else {
-            original.call(instance, f, poseStack, submitNodeCollector, localPlayer, i);
-        }
-    }
-
-    @Inject(method = "getNightVisionScale", at = @At("HEAD"), cancellable = true)
-    private static void getNightVisionScale(LivingEntity livingEntity, float f, CallbackInfoReturnable<Float> cir) {
-        EditorState editorState = EditorStateManager.getCurrent();
-        if (editorState != null && editorState.replayVisuals.overrideNightVision) {
-            cir.setReturnValue(1.0f);
+            original.call(instance, frameInterp, poseStack, submitNodeCollector, player, lightCoords);
         }
     }
 

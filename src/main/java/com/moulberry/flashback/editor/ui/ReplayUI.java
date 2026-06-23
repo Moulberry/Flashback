@@ -1,6 +1,7 @@
 package com.moulberry.flashback.editor.ui;
 
 import com.mojang.blaze3d.opengl.GlStateManager;
+import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.platform.Window;
 import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.configuration.FlashbackConfigV1;
@@ -21,7 +22,6 @@ import com.moulberry.flashback.editor.ui.windows.VisualsWindow;
 import imgui.moulberry90.*;
 import imgui.moulberry90.flag.*;
 import imgui.moulberry90.internal.ImGuiContext;
-import imgui.moulberry90.type.ImInt;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.LevelLoadingScreen;
@@ -49,19 +49,16 @@ import org.lwjgl.glfw.GLFW;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
 
-import static org.lwjgl.opengl.GL11.*;
-
 public class ReplayUI {
 
     public static final CustomImGuiImplGlfw imguiGlfw = new CustomImGuiImplGlfw();
-    private static final CustomImGuiImplGl3 imguiGl3 = new CustomImGuiImplGl3();
+    public static final CustomImGuiImplB3D imguiRenderer = new CustomImGuiImplB3D();
     private static boolean initialized = false;
 
     private static boolean isFrameFocused = false;
@@ -108,6 +105,8 @@ public class ReplayUI {
 
     public static boolean shownRegistryErrorWarning = false;
     public static boolean shownPlayerSpawnErrorWarning = false;
+
+    public static RenderTarget compositeOnTop = null;
 
     public static void init() {
         if (initialized) {
@@ -160,7 +159,7 @@ public class ReplayUI {
         imGuiIO.setConfigMacOSXBehaviors(InputQuirks.REPLACE_CTRL_KEY_WITH_CMD_KEY);
 
         imguiGlfw.init(Minecraft.getInstance().getWindow().handle(), true);
-        imguiGl3.init("#version 150");
+        imguiRenderer.init();
 
         contentScale = imguiGlfw.contentScale;
         initFonts(languageCode);
@@ -278,7 +277,7 @@ public class ReplayUI {
         fontConfig.setMergeMode(false);
 
         fonts.build();
-        imguiGl3.updateFontsTexture();
+        imguiRenderer.updateFontsTexture();
 
         fontConfig.destroy();
         fonts.clearTexData();
@@ -413,7 +412,7 @@ public class ReplayUI {
 
     private static void setSelectedEntity(UUID uuid) {
         selectedEntity = uuid;
-        Minecraft.getInstance().levelRenderer.debugRenderer.refreshRendererList();
+        Minecraft.getInstance().levelExtractor.debugRenderer.refreshRendererList();
     }
 
     public static boolean isMovingCamera() {
@@ -473,7 +472,7 @@ public class ReplayUI {
             return false;
         }
 
-        if (Minecraft.getInstance().options.hideGui) {
+        if (Minecraft.getInstance().gui.hud.isHidden()) {
             return false;
         }
 
@@ -482,7 +481,7 @@ public class ReplayUI {
         if (gameMode.getPlayerMode() != GameType.SPECTATOR) return false;
         if (Minecraft.getInstance().level == null) return false;
         if (Minecraft.getInstance().player == null) return false;
-        if (Minecraft.getInstance().getOverlay() != null) return false;
+        if (Minecraft.getInstance().gui.overlay() != null) return false;
         return true;
     }
 
@@ -509,7 +508,7 @@ public class ReplayUI {
         if (!activeLastFrame) {
             // Make sure the vanilla grab state is correct
             if (Minecraft.getInstance().gameMode != null) {
-                if (Minecraft.getInstance().screen == null) {
+                if (Minecraft.getInstance().gui.screen() == null) {
                     Minecraft.getInstance().mouseHandler.releaseMouse();
                     Minecraft.getInstance().mouseHandler.grabMouse();
                 } else {
@@ -535,7 +534,9 @@ public class ReplayUI {
     }
 
     public static void drawOverlay() {
-        if (!initialized && Minecraft.getInstance().getOverlay() instanceof LoadingOverlay) {
+        compositeOnTop = null;
+
+        if (!initialized && Minecraft.getInstance().gui.overlay() instanceof LoadingOverlay) {
             return;
         }
 
@@ -564,7 +565,7 @@ public class ReplayUI {
             throw new IllegalStateException("Tried to use EditorUI while it was not initialized");
         }
 
-        if (Minecraft.getInstance().screen instanceof ProgressScreen || Minecraft.getInstance().screen instanceof LevelLoadingScreen) {
+        if (Minecraft.getInstance().gui.screen() instanceof ProgressScreen || Minecraft.getInstance().gui.screen() instanceof LevelLoadingScreen) {
             return;
         }
 
@@ -597,7 +598,6 @@ public class ReplayUI {
         }
 
         imguiGlfw.newFrame();
-        imguiGl3.newFrame();
         ImGui.newFrame();
 
         confirmPressed = ImGui.isKeyPressed(ImGuiKey.Enter);
@@ -729,7 +729,7 @@ public class ReplayUI {
                 frameHeight = Minecraft.getInstance().getWindow().getScreenHeight();
             }
 
-            if (Minecraft.getInstance().screen == null && Minecraft.getInstance().getOverlay() == null) {
+            if (Minecraft.getInstance().gui.screen() == null && Minecraft.getInstance().gui.overlay() == null) {
                 if (editorState != null && editorState.replayVisuals.ruleOfThirdsGuide) {
                     ImDrawList drawList = ImGui.getBackgroundDrawList();
                     drawList.removeFlags(ImDrawListFlags.AntiAliasedLines);
@@ -853,7 +853,7 @@ public class ReplayUI {
             if (ImGui.isWindowHovered() && ReplayUI.getIO().getMousePosY() > ImGui.getWindowPosY()) {
                 isFrameHovered = true;
 
-                if (Minecraft.getInstance().screen != null) {
+                if (Minecraft.getInstance().gui.screen() != null) {
                     ImGui.setNextFrameWantCaptureMouse(false);
                 } else {
                     boolean isMovingCamera = isMovingCamera();
@@ -936,7 +936,7 @@ public class ReplayUI {
 
         var drawData = ImGui.getDrawData();
         if (drawData != null) {
-            imguiGl3.renderDrawData(drawData);
+            compositeOnTop = imguiRenderer.renderDrawData(drawData);
         }
 
         if (frameX != oldFrameX || frameY != oldFrameY || frameWidth != oldFrameWidth || frameHeight != oldFrameHeight) {
