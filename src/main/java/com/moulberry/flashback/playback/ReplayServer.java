@@ -1483,7 +1483,7 @@ public class ReplayServer extends IntegratedServer {
         }
 
         Entity follow = currentLevel.getEntity(this.gamePacketHandler.localPlayerId);
-        if (follow == null) {
+        if (follow == null || (follow.getX() == 0.0 && follow.getY() == 0.0 && follow.getZ() == 0.0)) {
             return;
         }
 
