@@ -17,6 +17,7 @@ import com.moulberry.flashback.combo_options.GlowingOverride;
 import com.moulberry.flashback.configuration.FlashbackConfigV1;
 import com.moulberry.flashback.exporting.ExportJob;
 import com.moulberry.flashback.exporting.ExportJobQueue;
+import com.moulberry.flashback.ext.WindowExt;
 import com.moulberry.flashback.keyframe.handler.MinecraftKeyframeHandler;
 import com.moulberry.flashback.keyframe.handler.TickrateKeyframeCapture;
 import com.moulberry.flashback.sound.FlashbackAudioManager;
@@ -143,6 +144,11 @@ public abstract class MixinMinecraft extends ReentrantBlockableEventLoop<Runnabl
         }
     }
 
+    @Inject(method = "framebufferSizeChanged", at = @At("HEAD"))
+    public void framebufferSizeChanged(CallbackInfo ci) {
+        ((WindowExt)(Object)this.window).flashback$updateScaledFramebuffer(false);
+    }
+
     @Inject(method = "pauseGame", at = @At("HEAD"), cancellable = true)
     public void pauseGame(boolean bl, CallbackInfo ci) {
         if (Flashback.EXPORT_JOB != null) {
@@ -182,6 +188,7 @@ public abstract class MixinMinecraft extends ReentrantBlockableEventLoop<Runnabl
     public void afterMainRender(boolean bl, CallbackInfo ci) {
         if (!RenderSystem.isOnRenderThread()) return;
         ReplayUI.drawOverlay();
+        ((WindowExt)(Object)Minecraft.getInstance().getWindow()).flashback$updateScaledFramebuffer(true);
     }
 
     @Unique

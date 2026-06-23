@@ -11,6 +11,7 @@ import com.moulberry.flashback.editor.ui.windows.ExportScreenshotWindow;
 import com.moulberry.flashback.editor.ui.windows.PreferencesWindow;
 import com.moulberry.flashback.editor.ui.windows.SelectedEntityPopup;
 import com.moulberry.flashback.editor.ui.windows.WindowType;
+import com.moulberry.flashback.ext.WindowExt;
 import com.moulberry.flashback.playback.ReplayServer;
 import com.moulberry.flashback.state.EditorState;
 import com.moulberry.flashback.state.EditorStateManager;
@@ -501,7 +502,7 @@ public class ReplayUI {
         // Recalculate the size of the gameplay window
         Window window = Minecraft.getInstance().getWindow();
         if (window.getWidth() > 0 && window.getWidth() <= 16384 && window.getHeight() > 0 && window.getHeight() <= 16384) {
-            Minecraft.getInstance().resizeGui();
+            ((WindowExt)(Object)Minecraft.getInstance().getWindow()).flashback$updateScaledFramebuffer(true);
         }
         imguiGlfw.ungrab();
 
@@ -940,7 +941,7 @@ public class ReplayUI {
         }
 
         if (frameX != oldFrameX || frameY != oldFrameY || frameWidth != oldFrameWidth || frameHeight != oldFrameHeight) {
-            Minecraft.getInstance().resizeGui();
+            ((WindowExt)(Object)Minecraft.getInstance().getWindow()).flashback$updateScaledFramebuffer(true);
         }
 
         transitionActiveState(true);

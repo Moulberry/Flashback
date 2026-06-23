@@ -18,6 +18,7 @@ import com.moulberry.flashback.combo_options.VideoContainer;
 import com.moulberry.flashback.editor.ui.ReplayUI;
 import com.moulberry.flashback.editor.ui.windows.ExportDoneWindow;
 import com.moulberry.flashback.exporting.taskbar.TaskbarManager;
+import com.moulberry.flashback.ext.WindowExt;
 import com.moulberry.flashback.keyframe.handler.KeyframeHandler;
 import com.moulberry.flashback.keyframe.handler.MinecraftKeyframeHandler;
 import com.moulberry.flashback.keyframe.handler.TickrateKeyframeCapture;
@@ -249,7 +250,7 @@ public class ExportJob {
 
             // Reset display size
             Minecraft.getInstance().options.guiScale().set(oldGuiScale);
-            Minecraft.getInstance().resizeGui();
+            ((WindowExt)(Object)Minecraft.getInstance().getWindow()).flashback$updateScaledFramebuffer(true);
 
             // Refreeze server & client
             replayServer.replayPaused = true;
@@ -310,7 +311,7 @@ public class ExportJob {
         if (this.settings.ssaa()) {
             mc.options.guiScale().set(mc.options.guiScale().get() * 2);
         }
-        mc.resizeGui();
+        ((WindowExt)(Object)Minecraft.getInstance().getWindow()).flashback$updateScaledFramebuffer(true);
 
         List<TickInfo> ticks = calculateTicks(this.settings.editorState(), this.settings.startTick(), this.settings.endTick(), this.settings.framerate());
 
