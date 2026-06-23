@@ -48,10 +48,34 @@ public class AsyncFFmpegVideoWriter implements AutoCloseable, VideoWriter {
 
     private final AtomicReference<Throwable> threadedError = new AtomicReference<>(null);
 
-    private record ImageFrame(long pointer, int size, int width, int height, int channels, int imageDepth, int stride, int pixelFormat,
-                              @Nullable FloatBuffer audioBuffer) implements AutoCloseable {
+    private static final class ImageFrame implements AutoCloseable {
+        private long pointer;
+        private final int size;
+        private final int width;
+        private final int height;
+        private final int channels;
+        private final int imageDepth;
+        private final int stride;
+        private final int pixelFormat;
+        private final @Nullable FloatBuffer audioBuffer;
+
+        private ImageFrame(long pointer, int size, int width, int height, int channels, int imageDepth, int stride, int pixelFormat, @Nullable FloatBuffer audioBuffer) {
+            this.pointer = pointer;
+            this.size = size;
+            this.width = width;
+            this.height = height;
+            this.channels = channels;
+            this.imageDepth = imageDepth;
+            this.stride = stride;
+            this.pixelFormat = pixelFormat;
+            this.audioBuffer = audioBuffer;
+        }
+
         public void close() {
-            MemoryUtil.nmemFree(this.pointer);
+            if (this.pointer != 0L) {
+                MemoryUtil.nmemFree(this.pointer);
+            }
+            this.pointer = 0L;
         }
     }
 
@@ -339,9 +363,9 @@ public class AsyncFFmpegVideoWriter implements AutoCloseable, VideoWriter {
         }
 
         while (true) {
+            ImageFrame imageFrame = new ImageFrame(src.pixels, (int) src.size, src.getWidth(), src.getHeight(),
+                4, Frame.DEPTH_INT, src.getWidth(), ExportJob.SRC_PIXEL_FORMAT, audioBuffer);
             try {
-                ImageFrame imageFrame = new ImageFrame(src.pixels, (int) src.size, src.getWidth(), src.getHeight(),
-                        4, Frame.DEPTH_INT, src.getWidth(), ExportJob.SRC_PIXEL_FORMAT, audioBuffer);
                 if (this.rescaleQueue != null) {
                     this.rescaleQueue.put(imageFrame);
                 } else {
@@ -349,7 +373,7 @@ public class AsyncFFmpegVideoWriter implements AutoCloseable, VideoWriter {
                 }
                 break;
             } catch (InterruptedException ignored) {}
-            checkEncodeError(src);
+            checkEncodeError(imageFrame);
         }
     }
 
