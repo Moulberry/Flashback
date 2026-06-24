@@ -77,7 +77,7 @@ dependencies {
     compileOnly("maven.modrinth:sodium:Amr4VcZo")
     compileOnly("maven.modrinth:iris:MwcLS51S")
     compileOnly("maven.modrinth:bobby:8gsFUovP")
-    compileOnly("maven.modrinth:simple-voice-chat:mXHTeWn9")
+    compileOnly("maven.modrinth:simple-voice-chat:bvaEHE2T")
     compileOnly("maven.modrinth:modmenu:jvjwXH6l")
     compileOnly("maven.modrinth:scalablelux:gYbHVCz8")
 

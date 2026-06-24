@@ -17,7 +17,7 @@ import org.spongepowered.asm.mixin.injection.At;
 @Mixin(ALSpeakerBase.class)
 public class MixinVoiceChatALSpeakerBase {
 
-    @WrapOperation(method = "setPositionSync", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/GameRenderer;getMainCamera()Lnet/minecraft/client/Camera;"))
+    @WrapOperation(method = "setPositionSync", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/GameRenderer;mainCamera()Lnet/minecraft/client/Camera;"))
     public Camera setPositionSync_getMainCamera(GameRenderer instance, Operation<Camera> original) {
         EditorState editorState = EditorStateManager.getCurrent();
         if (editorState != null) {
