@@ -26,6 +26,7 @@ import com.moulberry.lattice.annotation.widget.LatticeWidgetDropdown;
 import com.moulberry.lattice.annotation.widget.LatticeWidgetKeybind;
 import com.moulberry.lattice.annotation.widget.LatticeWidgetMessage;
 import com.moulberry.lattice.annotation.widget.LatticeWidgetSlider;
+import com.moulberry.lattice.annotation.widget.LatticeWidgetTextArea;
 import com.moulberry.lattice.annotation.widget.LatticeWidgetTextField;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.KeyMapping;
@@ -270,6 +271,10 @@ public class FlashbackConfigV1 {
         @LatticeOption(title = "flashback.advanced.synchronize_ticking", description = "!!.description")
         @LatticeWidgetButton
         public boolean synchronizeTicking = false;
+
+        @LatticeOption(title = "flashback.advanced.ignored_custom_packets", description = "!!.description")
+        @LatticeWidgetTextArea
+        public String ignoredCustomPayloads = "";
     }
 
     public SubcategoryInternal internal = new SubcategoryInternal();
