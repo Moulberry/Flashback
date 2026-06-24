@@ -65,7 +65,7 @@ dependencies {
     include(implementation(annotationProcessor("com.github.bawnorton.mixinsquared:mixinsquared-fabric:0.3.7-beta.1")))
 
     // Lattice (config)
-    include(implementation("com.moulberry:lattice:2.0.1+26.1"))
+    include(implementation("com.moulberry:lattice:2.1.0"))
 
     // Apache stuff
     include(implementation("org.apache.commons:commons-math3:3.6.1"))
