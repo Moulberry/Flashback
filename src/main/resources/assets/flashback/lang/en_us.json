@@ -73,6 +73,8 @@
   "flashback.disable_third_person_cancel": "Disable third-person cancel",
   "flashback.advanced.synchronize_ticking": "Synchronize Ticking",
   "flashback.advanced.synchronize_ticking.description": "Tick client and integrated server in lockstep. Only works in singleplayer. Useful if recording below 20 TPS. May result in deadlocks",
+  "flashback.advanced.ignored_custom_packets": "Ignored Custom Payloads",
+  "flashback.advanced.ignored_custom_packets.description": "Custom payloads to ignore from mods, primarily useful to workaround problematic mods",
 
   "flashback.mark.added_with_description": "Added \"%s\" marker",
   "flashback.mark.added_with_color": "Added #%s marker",
