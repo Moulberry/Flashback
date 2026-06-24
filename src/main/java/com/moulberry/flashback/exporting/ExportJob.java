@@ -512,7 +512,6 @@ public class ExportJob {
         var commandEncoder = RenderSystem.getDevice().createCommandEncoder();
         commandEncoder.clearColorAndDepthTextures(renderTarget.getColorTexture(), EMPTY_CLEAR_COLOUR, renderTarget.getDepthTexture(), 1.0);
         minecraft.gameRenderer.render(timer, true);
-
     }
 
     private void updateRandoms(Random random, Random mathRandom) {
@@ -852,6 +851,9 @@ public class ExportJob {
         if (currentTime - this.lastRenderMillis > 1000/60 || forceShow) {
             this.lastRenderMillis = currentTime;
         } else {
+            RenderSystem.getDevice().createCommandEncoder().submit();
+            RenderSystem.getDynamicUniforms().reset();
+            Minecraft.getInstance().levelRenderer.endFrame();
             return false;
         }
 
@@ -1039,9 +1041,12 @@ public class ExportJob {
             if (windowSurface.isAcquired()) {
                 windowSurface.present();
             }
+        } else {
+            RenderSystem.getDevice().createCommandEncoder().submit();
         }
 
         RenderSystem.getDynamicUniforms().reset();
+        Minecraft.getInstance().levelRenderer.endFrame();
 
         return cancel;
     }
