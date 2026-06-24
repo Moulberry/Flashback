@@ -44,7 +44,6 @@
     "visuals.MixinBeaconRenderer",
     "visuals.MixinBossHealthOverlay",
     "visuals.MixinClientLevel",
-    "visuals.MixinClientLevel$MixinClientLevelData",
     "visuals.MixinDebugRenderer",
     "visuals.MixinEntityRenderDispatcher",
     "visuals.MixinEntityRenderer",

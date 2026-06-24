@@ -8,20 +8,9 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(ClientLevel.class)
 public class MixinClientLevel {
-
-    @Mixin(ClientLevel.ClientLevelData.class)
-    public static class MixinClientLevelData {
-        @Inject(method = "getGameTime", at = @At("HEAD"), cancellable = true)
-        public void getGameTime(CallbackInfoReturnable<Long> cir) {
-            if (Flashback.isInReplay()) {
-                cir.setReturnValue(Flashback.getReplayGameTime());
-            }
-        }
-    }
 
 //    @Inject(method = "getSkyColor", at = @At("HEAD"), cancellable = true)
 //    public void getSkyColor(Vec3 vec3, float f, CallbackInfoReturnable<Integer> cir) {
