@@ -684,12 +684,6 @@ public class Flashback implements ModInitializer, ClientModInitializer {
 
     public static List<String> getReplayIncompatibleMods() {
         List<String> incompatible = new ArrayList<>();
-        if (FabricLoader.getInstance().isModLoaded("vmp")) {
-            incompatible.add("VeryManyPlayers (vmp)");
-        }
-        if (FabricLoader.getInstance().isModLoaded("c2me")) {
-            incompatible.add("Concurrent Chunk Management Engine (c2me)");
-        }
         return incompatible;
     }
 
