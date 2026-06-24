@@ -19,6 +19,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.LockSupport;
+import java.util.function.Consumer;
 
 public class PNGSequenceVideoWriter implements VideoWriter {
 
@@ -161,18 +162,20 @@ public class PNGSequenceVideoWriter implements VideoWriter {
         }
     }
 
-    public void finish() {
+    public void finish(Consumer<String> wait) {
         checkEncodeError(null);
 
         while (!this.encodeQueue.isEmpty()) {
             checkEncodeError(null);
             LockSupport.parkNanos("waiting for encode queue to empty", 100000L);
+            wait.accept("encode queue");
         }
 
         this.finishEncodeThread.set(true);
 
         while (!this.finishedWriting.get()) {
             LockSupport.parkNanos("waiting for encoder thread to finish", 100000L);
+            wait.accept("thread finish");
         }
 
         checkEncodeError(null);

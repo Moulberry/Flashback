@@ -119,6 +119,10 @@ public class SaveableFramebufferQueue implements AutoCloseable {
         return this.waiting.isEmpty();
     }
 
+    public int pendingCount() {
+        return this.waiting.size();
+    }
+
     @Override
     public void close() {
         for (SaveableFramebuffer texture : this.waiting) {
