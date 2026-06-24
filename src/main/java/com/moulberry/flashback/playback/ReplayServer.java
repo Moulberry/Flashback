@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.mojang.authlib.GameProfile;
 import com.moulberry.flashback.Flashback;
+import com.moulberry.flashback.IgnoredCustomPayloads;
 import com.moulberry.flashback.PacketHelper;
 import com.moulberry.flashback.configuration.FlashbackConfigV1;
 import com.moulberry.flashback.ext.ConnectionExt;
@@ -179,6 +180,8 @@ public class ReplayServer extends IntegratedServer {
     private Component shutdownReason = null;
     private FileSystem playbackFileSystem = null;
     private boolean initializedWithSnapshot = false;
+
+    private final IgnoredCustomPayloads ignoredCustomPayloads = new IgnoredCustomPayloads();
 
     public ReplayServer(Thread thread, Minecraft minecraft, LevelStorageSource.LevelStorageAccess levelStorageAccess, PackRepository packRepository, WorldStem worldStem, Services services,
                         ChunkProgressListenerFactory chunkProgressListenerFactory, UUID playbackUUID, Path path) {
@@ -639,7 +642,8 @@ public class ReplayServer extends IntegratedServer {
         if (packet instanceof ClientboundCustomPayloadPacket custom) {
             try {
                 var id = custom.payload().type().id();
-                if (id.getNamespace().startsWith("fabric-screen-handler-api")) {
+                this.ignoredCustomPayloads.setFromConfigString(Flashback.getConfig().advanced.ignoredCustomPayloads);
+                if (this.ignoredCustomPayloads.isIgnored(id)) {
                     return;
                 }
 
