@@ -957,20 +957,6 @@ public class Flashback implements ModInitializer, ClientModInitializer {
         return isInReplay || isOpeningReplay;
     }
 
-    public static long getReplayGameTime() {
-        ReplayServer replayServer = Flashback.getReplayServer();
-        if (replayServer != null) {
-            ExportJob exportJob = Flashback.EXPORT_JOB;
-            if (exportJob != null) {
-                return (long) exportJob.getCurrentTickDouble();
-            } else {
-                return (long) replayServer.getPartialReplayTick();
-            }
-        } else {
-            return 0L;
-        }
-    }
-
     public static long getVisualMillis() {
         ReplayServer replayServer = Flashback.getReplayServer();
         if (replayServer != null) {

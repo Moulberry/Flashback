@@ -102,6 +102,7 @@ import net.minecraft.world.level.gamerules.GameRules;
 import net.minecraft.world.level.storage.LevelResource;
 import net.minecraft.world.level.storage.LevelStorageSource;
 import net.minecraft.world.level.storage.PrimaryLevelData;
+import net.minecraft.world.level.storage.ServerLevelData;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
@@ -1353,11 +1354,19 @@ public class ReplayServer extends IntegratedServer {
                 stamp = 0L;
             }
 
-            int lastBlockOverrideTick = this.currentTick;
+            int lastActualTick = this.currentTick;
             while (this.currentTick < this.targetTick) {
-                if (lastBlockOverrideTick != this.currentTick && blockOverrideKeyframes != null) {
-                    applyBlockOverrideKeyframes(blockOverrideKeyframes, lastBlockOverrideTick);
-                    lastBlockOverrideTick = this.currentTick;
+                if (lastActualTick != this.currentTick) {
+                    if (blockOverrideKeyframes != null) {
+                        applyBlockOverrideKeyframes(blockOverrideKeyframes, lastActualTick);
+                    }
+                    // Advance game time on the server
+                    for (ServerLevel level : this.getAllLevels()) {
+                        if (level.getLevelData() instanceof ServerLevelData serverLevelData) {
+                            serverLevelData.setGameTime(serverLevelData.getGameTime() + this.currentTick - lastActualTick);
+                        }
+                    }
+                    lastActualTick = this.currentTick;
                 }
 
                 if (!this.currentReplayReader.handleNextAction(this)) {
@@ -1395,10 +1404,20 @@ public class ReplayServer extends IntegratedServer {
                 }
             }
 
-            if (blockOverrideKeyframes != null) {
-                if (lastBlockOverrideTick != this.currentTick) {
-                    applyBlockOverrideKeyframes(blockOverrideKeyframes, lastBlockOverrideTick);
+            if (lastActualTick != this.currentTick) {
+                if (blockOverrideKeyframes != null) {
+                    applyBlockOverrideKeyframes(blockOverrideKeyframes, lastActualTick);
                 }
+                // Advance game time on the server
+                for (ServerLevel level : this.getAllLevels()) {
+                    if (level.getLevelData() instanceof ServerLevelData serverLevelData) {
+                        serverLevelData.setGameTime(serverLevelData.getGameTime() + this.currentTick - lastActualTick);
+                    }
+                }
+                lastActualTick = this.currentTick;
+            }
+
+            if (blockOverrideKeyframes != null) {
                 applyBlockOverrideKeyframes(blockOverrideKeyframes, this.currentTick);
             }
         } finally {
