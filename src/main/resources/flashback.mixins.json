@@ -79,7 +79,6 @@
     "compat.fabric.MixinFabricBiomeModificationImpl",
     "compat.fabric.MixinFabricServerPlayNetworking",
     "compat.fabric.MixinRecipeSyncImpl",
-    "compat.iris.MixinIrisHandRenderer",
     "compat.iris.MixinIrisSystemTimeUniforms",
     "compat.voice_chat.MixinVoiceChatALSpeakerBase",
     "compat.voice_chat.MixinVoiceChatClientPlayerStateManager",
