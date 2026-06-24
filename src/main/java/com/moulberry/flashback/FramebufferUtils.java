@@ -48,9 +48,9 @@ public class FramebufferUtils {
         GlStateManager._glBindFramebuffer(GL32.GL_DRAW_FRAMEBUFFER, oldDrawFbo);
     }
 
-    public static RenderTarget resizeOrCreateFramebuffer(RenderTarget renderTarget, int width, int height) {
+    public static RenderTarget resizeOrCreateFramebuffer(RenderTarget renderTarget, int width, int height, boolean useDepth) {
         if (renderTarget == null) {
-            renderTarget = new TextureTarget(null, width, height, true);
+            renderTarget = new TextureTarget(null, width, height, useDepth);
         } else if (renderTarget.width != width || renderTarget.height != height) {
             renderTarget.resize(width, height);
         }
@@ -58,7 +58,7 @@ public class FramebufferUtils {
         return renderTarget;
     }
 
-    private static void blitTo(GpuTexture from, RenderTarget to, int width, int height, float x1, float y1, float x2, float y2) {
+    public static void blitTo(GpuTexture from, RenderTarget to, int width, int height, float x1, float y1, float x2, float y2) {
         var modelViewStack = RenderSystem.getModelViewStack();
         modelViewStack.pushMatrix();
         modelViewStack.set(new Matrix4f().translation(0.0f, 0.0f, -2000.0f));
@@ -97,7 +97,7 @@ public class FramebufferUtils {
         int oldReadFbo = GL11.glGetInteger(GL30.GL_READ_FRAMEBUFFER_BINDING);
         int oldDrawFbo = GL11.glGetInteger(GL30.GL_DRAW_FRAMEBUFFER_BINDING);
 
-        tempRenderTarget = FramebufferUtils.resizeOrCreateFramebuffer(tempRenderTarget, width, height);
+        tempRenderTarget = FramebufferUtils.resizeOrCreateFramebuffer(tempRenderTarget, width, height, true);
         FramebufferUtils.clear(tempRenderTarget, 0);
 
         blitTo(renderTarget.getColorTexture(), tempRenderTarget, width, height, x1, y1, x2, y2);

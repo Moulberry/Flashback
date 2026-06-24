@@ -29,6 +29,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.LockSupport;
+import java.util.function.Consumer;
 
 import static org.bytedeco.ffmpeg.global.avutil.*;
 import static org.bytedeco.ffmpeg.global.swscale.sws_freeContext;
@@ -377,18 +378,21 @@ public class AsyncFFmpegVideoWriter implements AutoCloseable, VideoWriter {
         }
     }
 
-    public void finish() {
+    public void finish(Consumer<String> wait) {
         checkEncodeError(null);
 
         if (this.rescaleQueue != null) {
             while (!this.rescaleQueue.isEmpty()) {
                 checkEncodeError(null);
                 LockSupport.parkNanos("waiting for rescale queue to empty", 100000L);
+                wait.accept("rescale");
             }
         }
+
         while (!this.encodeQueue.isEmpty()) {
             checkEncodeError(null);
             LockSupport.parkNanos("waiting for encode queue to empty", 100000L);
+            wait.accept("encode queue");
         }
 
         this.finishRescaleThread.set(true);
@@ -398,6 +402,7 @@ public class AsyncFFmpegVideoWriter implements AutoCloseable, VideoWriter {
 
         while (!this.finishedWriting.get()) {
             LockSupport.parkNanos("waiting for encoder thread to finish", 100000L);
+            wait.accept("thread finish");
         }
 
         checkEncodeError(null);

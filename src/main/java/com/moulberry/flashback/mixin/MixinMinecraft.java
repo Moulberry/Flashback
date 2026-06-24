@@ -4,6 +4,7 @@ import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.mojang.authlib.yggdrasil.YggdrasilAuthenticationService;
 import com.llamalad7.mixinextras.sugar.Local;
+import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.FreezeSlowdownFormula;
@@ -353,6 +354,23 @@ public abstract class MixinMinecraft implements MinecraftExt {
             return originalPartialTick;
         }
         return this.localPlayerTimer.getGameTimeDeltaPartialTick(true);
+    }
+
+    @Unique
+    private RenderTarget overrideMainRenderTarget = null;
+    @Override
+    public void flashback$pushMainRenderTarget(RenderTarget renderTarget) {
+        this.overrideMainRenderTarget = renderTarget;
+    }
+    @Override
+    public void flashback$popMainRenderTarget() {
+        this.overrideMainRenderTarget = null;
+    }
+    @Inject(method = "getMainRenderTarget", at = @At("HEAD"), cancellable = true)
+    public void getMainRenderTarget(CallbackInfoReturnable<RenderTarget> cir) {
+        if (this.overrideMainRenderTarget != null) {
+            cir.setReturnValue(this.overrideMainRenderTarget);
+        }
     }
 
     @Unique

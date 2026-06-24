@@ -5,11 +5,15 @@ import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.blaze3d.platform.Window;
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.vertex.BufferBuilder;
+import com.mojang.blaze3d.vertex.ByteBufferBuilder;
+import com.mojang.blaze3d.vertex.MeshData;
 import com.moulberry.flashback.*;
 import com.moulberry.flashback.combo_options.VideoContainer;
 import com.moulberry.flashback.editor.ui.ReplayUI;
 import com.moulberry.flashback.editor.ui.windows.ExportDoneWindow;
 import com.moulberry.flashback.exporting.taskbar.TaskbarManager;
+import com.moulberry.flashback.ext.MinecraftExt;
 import com.moulberry.flashback.keyframe.handler.KeyframeHandler;
 import com.moulberry.flashback.keyframe.handler.MinecraftKeyframeHandler;
 import com.moulberry.flashback.keyframe.handler.TickrateKeyframeCapture;
@@ -372,8 +376,6 @@ public class ExportJob {
             Minecraft.getInstance().gameRenderer.render(timer, true);
             renderTimeNanos += System.nanoTime() - start;
 
-            boolean cancel;
-
             // Capture audio if necessary
             FloatBuffer audioBuffer = null;
             if (this.settings.recordAudio()) {
@@ -394,7 +396,7 @@ public class ExportJob {
             submitDownloadedFrames(videoWriter, downloader, false);
 
             this.shouldChangeFramebufferSize = false;
-            cancel = finishFrame(renderTarget, tickIndex, ticks.size());
+            boolean cancel = finishFrameNormal(renderTarget, tickIndex, ticks.size());
             this.shouldChangeFramebufferSize = true;
 
             if (cancel) {
@@ -404,7 +406,13 @@ public class ExportJob {
         }
 
         submitDownloadedFrames(videoWriter, downloader, true);
-        videoWriter.finish();
+
+        long finishStart = System.currentTimeMillis();
+        videoWriter.finish(info -> {
+            long time = System.currentTimeMillis() - finishStart;
+            String progress = "Finalizing video (" + info + ")... " + time/1000 + "s";
+            finishFrameFinal(Minecraft.getInstance().mainRenderTarget, progress, false);
+        });
     }
 
     private void updateRandoms(Random random, Random mathRandom) {
@@ -561,77 +569,116 @@ public class ExportJob {
         }
     }
 
-    private boolean finishFrame(RenderTarget framebuffer, int currentFrame, int totalFrames) {
-        boolean cancel = false;
+    private static RenderTarget displayTarget = null;
+
+    private boolean finishFrameNormal(RenderTarget framebuffer, int currentFrame, int totalFrames) {
+        this.progressCount = currentFrame;
+        this.progressOutOf = totalFrames;
+
+        if (currentFrame == totalFrames) {
+            this.finishFrameFinal(framebuffer, "Saving...", true);
+            return false;
+        }
+
+        List<String> lines = new ArrayList<>();
+
+        lines.add("Exported Frames: " + currentFrame + "/" + totalFrames);
 
         long currentTime = System.currentTimeMillis();
-        if (currentTime - this.lastRenderMillis > 1000/60 || currentFrame == totalFrames) {
-            this.progressCount = currentFrame;
-            this.progressOutOf = totalFrames;
+        long elapsed = currentTime - this.renderStartTime;
+        lines.add("Time elapsed: " + formatTime(elapsed));
 
-            Window window = Minecraft.getInstance().getWindow();
+        if (currentFrame >= this.settings.framerate()) {
+            long estimatedRemaining = (currentTime - this.renderStartTime) * (totalFrames - currentFrame) / currentFrame;
+            lines.add("Estimated time remaining: " + formatTime(estimatedRemaining));
+        } else {
+            lines.add("Estimated time remaining: ~");
+        }
 
+        return this.finishFrame(framebuffer, lines, false, true);
+    }
+
+    private void finishFrameFinal(RenderTarget framebuffer, String customProgress, boolean forceShow) {
+        List<String> lines = new ArrayList<>();
+        lines.add(customProgress);
+        this.finishFrame(framebuffer, lines, forceShow, false);
+    }
+
+    private boolean finishFrame(RenderTarget framebuffer, List<String> lines, boolean forceShow, boolean showCancel) {
+        RenderSystem.executePendingTasks();
+
+        long currentTime = System.currentTimeMillis();
+        if (currentTime - this.lastRenderMillis > 1000/60 || forceShow) {
             this.lastRenderMillis = currentTime;
+        } else {
+            return false;
+        }
 
-            Font font = Minecraft.getInstance().font;
-            var bufferSource = Minecraft.getInstance().renderBuffers().bufferSource();
-            bufferSource.endBatch();
-            RenderSystem.getDevice().createCommandEncoder().clearDepthTexture(framebuffer.getDepthTexture(), 1.0);
+        boolean cancel = false;
 
-            // todo: need to override the main render target with framebuffer I think?
+        Window window = Minecraft.getInstance().getWindow();
 
-            float guiScale = 4f;
-            int scaledWidth = (int) Math.ceil(framebuffer.width / guiScale);
-            int scaledHeight = (int) Math.ceil(framebuffer.height / guiScale);
+        Font font = Minecraft.getInstance().font;
 
-            Matrix4f matrix4f = new Matrix4f().setOrtho(0.0f, scaledWidth, scaledHeight, 0.0f, 1000.0f, 21000.0f);
-            RenderSystem.setProjectionMatrix(matrix4f, ProjectionType.ORTHOGRAPHIC);
+        int windowFramebufferWidth = WindowSizeTracker.getWidth(window);
+        int windowFramebufferHeight = WindowSizeTracker.getHeight(window);
 
-            Matrix4f matrix = new Matrix4f();
-            matrix.translate(0.0f, 0.0f, -1001.0f);
+        displayTarget = FramebufferUtils.resizeOrCreateFramebuffer(displayTarget, windowFramebufferWidth, windowFramebufferHeight, true);
+        FramebufferUtils.clear(displayTarget, 0xFF000000);
+        ((MinecraftExt)Minecraft.getInstance()).flashback$pushMainRenderTarget(displayTarget);
 
-            List<String> lines = new ArrayList<>();
+        // Copy framebuffer to display
+        float aspectWidth = framebuffer.width / (float) windowFramebufferWidth;
+        float aspectHeight = framebuffer.height / (float) windowFramebufferHeight;
+        float framebufferX1, framebufferY1, framebufferX2, framebufferY2;
+        if (aspectWidth > aspectHeight) {
+            framebufferX1 = 0;
+            framebufferX2 = 1;
+            framebufferY1 = 0.5f - aspectHeight/aspectWidth/2;
+            framebufferY2 = 0.5f + aspectHeight/aspectWidth/2;
+        } else {
+            framebufferY1 = 0;
+            framebufferY2 = 1;
+            framebufferX1 = 0.5f - aspectWidth/aspectHeight/2;
+            framebufferX2 = 0.5f + aspectWidth/aspectHeight/2;
+        }
+        FramebufferUtils.blitTo(framebuffer.getColorTexture(), displayTarget, windowFramebufferWidth, windowFramebufferHeight, framebufferX1, framebufferY1, framebufferX2, framebufferY2);
 
-            if (this.settings.name() != null) {
-                lines.add(this.settings.name());
-                lines.add("");
+        float guiScale = Math.min(windowFramebufferWidth / 420, windowFramebufferHeight / 240);
+        int scaledWidth = (int) Math.ceil(windowFramebufferWidth / guiScale);
+        int scaledHeight = (int) Math.ceil(windowFramebufferHeight / guiScale);
+
+        Matrix4f orthographicProjection = new Matrix4f().setOrtho(0.0f, scaledWidth, scaledHeight, 0.0f, -1.0f, 1.0f);
+        RenderSystem.setProjectionMatrix(orthographicProjection, ProjectionType.ORTHOGRAPHIC);
+
+        Matrix4f poseMatrix = new Matrix4f();
+
+        if (this.settings.name() != null) {
+            lines.add(0, this.settings.name());
+            lines.add(1, "");
+        }
+
+        lines.add("");
+
+        boolean debugPressed = GLFW.glfwGetKey(Minecraft.getInstance().getWindow().getWindow(), GLFW.GLFW_KEY_F3) != GLFW.GLFW_RELEASE;
+        if (pressedDebugKey != debugPressed) {
+            pressedDebugKey = debugPressed;
+            if (pressedDebugKey) {
+                showingDebug = !showingDebug;
             }
+        }
 
-            lines.add("Exported Frames: " + currentFrame + "/" + totalFrames);
+        if (showingDebug) {
+            lines.add("ST: " + serverTickTimeNanos/1000000 + ", CT: " + clientTickTimeNanos/1000000);
+            lines.add("RT: " + renderTimeNanos/1000000 + ", ET: " + encodeTimeNanos/1000000);
+        } else {
+            lines.add("Press [F3] to show debug info");
+        }
 
-            long elapsed = currentTime - this.renderStartTime;
-            lines.add("Time elapsed: " + formatTime(elapsed));
+        lines.add("");
 
-            if (currentFrame >= this.settings.framerate()) {
-                long estimatedRemaining = (currentTime - this.renderStartTime) * (totalFrames - currentFrame) / currentFrame;
-                lines.add("Estimated time remaining: " + formatTime(estimatedRemaining));
-            } else {
-                lines.add("Estimated time remaining: ~");
-            }
-
-            lines.add("");
-
-            boolean debugPressed = GLFW.glfwGetKey(Minecraft.getInstance().getWindow().getWindow(), GLFW.GLFW_KEY_F3) != GLFW.GLFW_RELEASE;
-            if (pressedDebugKey != debugPressed) {
-                pressedDebugKey = debugPressed;
-                if (pressedDebugKey) {
-                    showingDebug = !showingDebug;
-                }
-            }
-
-            if (showingDebug) {
-                lines.add("ST: " + serverTickTimeNanos/1000000 + ", CT: " + clientTickTimeNanos/1000000);
-                lines.add("RT: " + renderTimeNanos/1000000 + ", ET: " + encodeTimeNanos/1000000);
-                lines.add("DT: " + downloadTimeNanos/1000000);
-            } else {
-                lines.add("Press [F3] to show debug info");
-            }
-
-            lines.add("");
-
-            if (currentFrame == totalFrames) {
-                lines.add("Saving...");
-            } else if (GLFW.glfwGetKey(Minecraft.getInstance().getWindow().getWindow(), GLFW.GLFW_KEY_ESCAPE) != GLFW.GLFW_RELEASE) {
+        if (showCancel) {
+            if (GLFW.glfwGetKey(Minecraft.getInstance().getWindow().getWindow(), GLFW.GLFW_KEY_ESCAPE) != GLFW.GLFW_RELEASE) {
                 long current = System.currentTimeMillis();
                 if (this.escapeCancelStartMillis <= 0 || current < this.escapeCancelStartMillis) {
                     this.escapeCancelStartMillis = current;
@@ -647,54 +694,55 @@ public class ExportJob {
                 lines.add("Hold [ESC] to cancel");
                 this.escapeCancelStartMillis = -1;
             }
+        }
 
-            int x = scaledWidth / 2;
-            int y = scaledHeight / 2 - font.lineHeight * (lines.size() + 1)/2;
-            for (String line : lines) {
-                if (line.isEmpty()) {
-                    y += font.lineHeight / 2 + 1;
-                } else {
-                    font.drawInBatch(line, x - font.width(line)/2f, y,
-                            -1, true, matrix, bufferSource, Font.DisplayMode.NORMAL, 0, 0xF000F0);
-                    y += font.lineHeight;
-                }
+        var bufferSource = Minecraft.getInstance().renderBuffers().bufferSource();
+        int x = scaledWidth / 2;
+        int y = scaledHeight / 2 - font.lineHeight * (lines.size() + 1)/2;
+        for (String line : lines) {
+            if (line.isEmpty()) {
+                y += font.lineHeight / 2 + 1;
+            } else {
+                font.drawInBatch(line, x - font.width(line)/2f, y,
+                    -1, true, poseMatrix, bufferSource, Font.DisplayMode.NORMAL, 0, 0xF000F0);
+                y += font.lineHeight;
             }
+        }
 
-            double mouseX = ReplayUI.imguiGlfw.rawMouseX / window.getScreenWidth() * scaledWidth;
-            double mouseY = ReplayUI.imguiGlfw.rawMouseY / window.getScreenHeight() * scaledHeight;
+        double mouseX = ReplayUI.imguiGlfw.rawMouseX / window.getScreenWidth() * scaledWidth;
+        double mouseY = ReplayUI.imguiGlfw.rawMouseY / window.getScreenHeight() * scaledHeight;
 
-            y += font.lineHeight / 2 + 1;
+        y += font.lineHeight / 2 + 1;
 
-            String patreon = "https://www.patreon.com/flashbackmod";
-            int patreonWidth = font.width(patreon);
-            if (mouseX > x - patreonWidth/2f && mouseX < x + patreonWidth/2f && mouseY > y && mouseY < y + font.lineHeight) {
-                font.drawInBatch(Component.literal(patreon).withStyle(ChatFormatting.UNDERLINE), x - patreonWidth/2f, y,
-                    -1, true, matrix, bufferSource, Font.DisplayMode.NORMAL, 0, 0xF000F0);
+        String patreon = "https://www.patreon.com/flashbackmod";
+        int patreonWidth = font.width(patreon);
+        if (mouseX > x - patreonWidth/2f && mouseX < x + patreonWidth/2f && mouseY > y && mouseY < y + font.lineHeight) {
+            var underlined = Component.literal(patreon).withStyle(ChatFormatting.UNDERLINE);
+            font.drawInBatch(underlined, x - patreonWidth / 2f, y,
+                -1, true, poseMatrix, bufferSource, Font.DisplayMode.NORMAL, 0, 0xF000F0);
 
-                if (GLFW.glfwGetMouseButton(window.getWindow(), GLFW.GLFW_MOUSE_BUTTON_LEFT) != 0) {
-                    if (!this.patreonLinkClicked) {
-                        this.patreonLinkClicked = true;
-                        Util.getPlatform().openUri(patreon);
-                    }
-                } else {
-                    this.patreonLinkClicked = false;
+            if (GLFW.glfwGetMouseButton(window.getWindow(), GLFW.GLFW_MOUSE_BUTTON_LEFT) != 0) {
+                if (!this.patreonLinkClicked) {
+                    this.patreonLinkClicked = true;
+                    Util.getPlatform().openUri(patreon);
                 }
             } else {
-                font.drawInBatch(patreon, x - patreonWidth/2f, y,
-                    -1, true, matrix, bufferSource, Font.DisplayMode.NORMAL, 0, 0xF000F0);
                 this.patreonLinkClicked = false;
             }
-
-            bufferSource.endBatch();
-
-            if (!window.isMinimized()) {
-                int windowFramebufferWidth = WindowSizeTracker.getWidth(window);
-                int windowFramebufferHeight = WindowSizeTracker.getHeight(window);
-
-                FramebufferUtils.blitToScreenPartial(framebuffer, windowFramebufferWidth, windowFramebufferHeight, 0, 0, 1, 1);
-            }
-            window.updateDisplay(null);
+        } else {
+            font.drawInBatch(patreon, x - patreonWidth/2f, y,
+                -1, true, poseMatrix, bufferSource, Font.DisplayMode.NORMAL, 0, 0xF000F0);
+            this.patreonLinkClicked = false;
         }
+
+        bufferSource.endBatch();
+
+        ((MinecraftExt)Minecraft.getInstance()).flashback$popMainRenderTarget();
+
+        if (!window.isMinimized()) {
+            displayTarget.blitToScreen();
+        }
+        window.updateDisplay(null);
 
         return cancel;
     }
