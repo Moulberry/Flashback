@@ -189,6 +189,8 @@
     "flashback.spectate": "旁觀",
     "flashback.hide_all": "全部隱藏",
     "flashback.show_all": "全部顯示",
+    "flashback.glow_all": "全部發光",
+    "flashback.unglow_all": "取消全部發光",
     "flashback.keyframes": "關鍵幀",
     "flashback.render_filter_affirmation": "我，%s，鄭重承諾（或宣誓）不會在“渲染過濾”選單裡關掉某項後又在 Flashback 支援群裡詢問為何實體不見了。",
     "flashback.render_filter_sign": "簽名：%s。",

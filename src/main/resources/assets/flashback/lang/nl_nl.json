@@ -222,6 +222,8 @@
   "flashback.spectate": "Bekijk",
   "flashback.hide_all": "Alles Verbergen",
   "flashback.show_all": "Alles Tonen",
+  "flashback.glow_all": "Alles Laten Gloeien",
+  "flashback.unglow_all": "Niets Laten Gloeien",
   "flashback.keyframes": "Keyframes",
   "flashback.render_filter_affirmation": "Ik, %s, zweer plechtig (of verklaar) dat ik niets zal uitschakelen in het 'Render Filter' menu en daarna in Flashback support zal vragen waarom de entity niet wordt gerenderd.",
   "flashback.render_filter_sign": "Ondertekend, %s.",

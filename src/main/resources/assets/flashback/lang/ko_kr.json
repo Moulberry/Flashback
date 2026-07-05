@@ -212,6 +212,8 @@
   "flashback.spectate": "관전",
   "flashback.hide_all": "모두 숨기기",
   "flashback.show_all": "모두 나타내기",
+  "flashback.glow_all": "모두 발광",
+  "flashback.unglow_all": "모두 발광 해제",
   "flashback.keyframes": "키프레임",
   "flashback.render_filter_affirmation": "나, %s(은)는 '렌더링 필터' 메뉴에서 어떤 항목을 끄고 나중에 플래시백 지원에서 엔티티가 렌더링되지 않는 이유를 묻는 일이 없을 것을 엄숙히 맹세(또는 확언)합니다.",
   "flashback.render_filter_sign": "서명, %s.",

@@ -220,6 +220,8 @@
   "flashback.spectate": "Amati",
   "flashback.hide_all": "Sembunyikan Semua",
   "flashback.show_all": "Tampilkan Semua",
+  "flashback.glow_all": "Buat Semua Berkilau",
+  "flashback.unglow_all": "Hapus Kilau Semua",
   "flashback.keyframes": "Keyframe",
   "flashback.render_filter_affirmation": "Saya, %s, bersumpah (atau menyatakan) dengan sungguh-sungguh bahwa saya tidak akan menonaktifkan sesuatu di menu 'Filter Render' dan kemudian bertanya kepada bantuan Flashback mengapa entitas tersebut tidak ditampilkan.",
   "flashback.render_filter_sign": "Tertanda, %s.",

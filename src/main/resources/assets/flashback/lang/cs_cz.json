@@ -212,6 +212,8 @@
   "flashback.spectate": "Pozorovat",
   "flashback.hide_all": "Schovat vše",
   "flashback.show_all": "Zobrazit vše",
+  "flashback.glow_all": "Rozzářit vše",
+  "flashback.unglow_all": "Zhasnout vše",
   "flashback.keyframes": "Značky",
   "flashback.render_filter_affirmation": "Já, %s, slavnostně přísahám (nebo prohlašuji), že nebudu vypínat žádné položky v okně 'Filtr vykreslování' a poté se dožadovat vysvětlení, proč se entita nevykresluje.",
   "flashback.render_filter_sign": "Podepsáno, %s.",

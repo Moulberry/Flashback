@@ -220,6 +220,8 @@
   "flashback.spectate": "Наблюдать",
   "flashback.hide_all": "Скрыть всех",
   "flashback.show_all": "Показать всех",
+  "flashback.glow_all": "Подсветить всех",
+  "flashback.unglow_all": "Убрать свечение у всех",
   "flashback.keyframes": "Ключевые кадры",
   "flashback.render_filter_affirmation": "Я, %s, торжественно клянусь (или подтверждаю), что не буду отключать что-либо в меню «Фильтр рендеринга», а затем спрашивать в службе поддержки Flashback, почему объект не рендерится.",
   "flashback.render_filter_sign": "Подписано, %s.",
