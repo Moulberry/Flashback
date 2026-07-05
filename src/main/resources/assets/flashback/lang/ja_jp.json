@@ -220,6 +220,8 @@
   "flashback.spectate": "視点観戦",
   "flashback.hide_all": "すべて非表示",
   "flashback.show_all": "すべて表示",
+  "flashback.glow_all": "すべて発光",
+  "flashback.unglow_all": "すべて発光解除",
   "flashback.keyframes": "キーフレーム",
   "flashback.render_filter_affirmation": "私 %s はレンダーフィルターで何らかをオフに設定した後、FlashBackチームに「エンティティが表示されない」と絶対に報告しないことを誓います (または、確認します。)。",
   "flashback.render_filter_sign": "おなまえ %s",

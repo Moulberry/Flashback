@@ -220,6 +220,8 @@
   "flashback.spectate": "Obserwuj z pierwszej osoby",
   "flashback.hide_all": "Ukryj wszystkie",
   "flashback.show_all": "Pokaż wszystkie",
+  "flashback.glow_all": "Rozświetl wszystkie",
+  "flashback.unglow_all": "Usuń blask wszystkich",
   "flashback.keyframes": "Punkty kluczowe",
   "flashback.render_filter_affirmation": "Ja, %s, przysięgam że nie wyłączę czegoś w okienku 'Filtr renderowania' a potem będę się skarżyć Flashbackowi że coś się nie renderuje.",
   "flashback.render_filter_sign": "Podpisane, %s.",

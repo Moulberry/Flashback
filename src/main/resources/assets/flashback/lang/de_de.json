@@ -222,6 +222,8 @@
   "flashback.spectate": "Zuschauen",
   "flashback.hide_all": "Alle ausblenden",
   "flashback.show_all": "Alle einblenden",
+  "flashback.glow_all": "Alle leuchten lassen",
+  "flashback.unglow_all": "Leuchten für alle entfernen",
   "flashback.keyframes": "Keyframes",
   "flashback.render_filter_affirmation": "Ich, %s, schwöre (oder versichere), dass ich nichts im Menü 'Renderfilter' deaktivieren und später beim Flashback-Support fragen werde, warum das Objekt nicht gerendert wird",
   "flashback.render_filter_sign": "Unterzeichnet, %s.",

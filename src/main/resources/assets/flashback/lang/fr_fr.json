@@ -189,6 +189,8 @@
   "flashback.spectate": "Spectateur",
   "flashback.hide_all": "Tout masquer",
   "flashback.show_all": "Tout afficher",
+  "flashback.glow_all": "Tout faire briller",
+  "flashback.unglow_all": "Retirer toute brillance",
   "flashback.keyframes": "Images clés",
   "flashback.render_filter_affirmation": "Je, %s, jure solennellement (ou affirme) que je ne désactiverai rien dans le menu 'Filtre de rendu' et que je ne demanderai pas plus tard dans le support Flashback pourquoi une entité n'est plus affichée.",
   "flashback.render_filter_sign": "Signé, %s.",

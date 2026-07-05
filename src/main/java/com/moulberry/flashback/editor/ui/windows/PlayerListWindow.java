@@ -2,6 +2,7 @@ package com.moulberry.flashback.editor.ui.windows;
 
 import com.mojang.authlib.GameProfile;
 import com.moulberry.flashback.Flashback;
+import com.moulberry.flashback.combo_options.GlowingOverride;
 import com.moulberry.flashback.editor.ui.ImGuiHelper;
 import com.moulberry.flashback.editor.ui.WindowOpenState;
 import com.moulberry.flashback.state.EditorState;
@@ -177,9 +178,55 @@ public class PlayerListWindow {
                     changeVisibilityOfAll(editorState, true);
                     lastUpdate = currentTime;
                 }
+                if (ImGui.button(I18n.get("flashback.glow_all"))) {
+                    changeGlowOfAll(editorState, true);
+                    lastUpdate = currentTime;
+                }
+                ImGui.sameLine();
+                if (ImGui.button(I18n.get("flashback.unglow_all"))) {
+                    changeGlowOfAll(editorState, false);
+                    lastUpdate = currentTime;
+                }
             }
         }
         ImGui.end();
+    }
+
+    private static void changeGlowOfAll(EditorState editorState, boolean glow) {
+        ClientPacketListener connection = Minecraft.getInstance().getConnection();
+        if (connection == null) {
+            return;
+        }
+
+        String searchLower = lastSearch.toLowerCase(Locale.ROOT);
+        boolean blankSearch = lastSearch.isBlank();
+
+        for (PlayerInfo playerInfo : connection.getOnlinePlayers()) {
+            GameProfile profile = playerInfo.getProfile();
+
+            if (profile.id().equals(Minecraft.getInstance().player.getUUID())) {
+                continue;
+            }
+
+            if (profile.id().version() != 4 && !includeNpcs) {
+                continue;
+            }
+
+            if (!blankSearch) {
+                String nameLower = profile.name().toLowerCase(Locale.ROOT);
+                if (!nameLower.contains(searchLower)) {
+                    continue;
+                }
+            }
+
+            if (glow) {
+                editorState.glowingOverride.put(profile.id(), GlowingOverride.FORCE_GLOW);
+            } else {
+                editorState.glowingOverride.remove(profile.id());
+            }
+        }
+
+        editorState.markDirty();
     }
 
     private static void changeVisibilityOfAll(EditorState editorState, boolean visible) {

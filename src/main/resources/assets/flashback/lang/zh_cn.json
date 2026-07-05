@@ -189,6 +189,8 @@
   "flashback.spectate": "旁观",
   "flashback.hide_all": "全部隐藏",
   "flashback.show_all": "全部显示",
+  "flashback.glow_all": "全部发光",
+  "flashback.unglow_all": "取消全部发光",
   "flashback.keyframes": "关键帧",
   "flashback.render_filter_affirmation": "我，%s，郑重承诺（或宣誓）不会在“渲染过滤”菜单里关掉某项后又在 Flashback 支持群里询问为何实体不见了。",
   "flashback.render_filter_sign": "签名：%s。",
