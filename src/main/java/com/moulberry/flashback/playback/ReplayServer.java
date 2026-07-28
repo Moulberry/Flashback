@@ -116,6 +116,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -142,6 +143,10 @@ public class ReplayServer extends IntegratedServer {
 
     public volatile boolean failedToLoadRegistryDataWarning = false;
     public volatile boolean failedToSpawnPlayerWarning = false;
+
+    private volatile long lastTimeRtc = 0L;
+    private volatile long timeRtc = 0L;
+    private long pendingTimeRtc = 0L;
 
     private boolean hasNonSpectatorReplayViewer = false;
 
@@ -595,13 +600,60 @@ public class ReplayServer extends IntegratedServer {
         return this.gamePacketHandler.localPlayerId;
     }
 
+    public void setTimeRtc(long rtc) {
+        this.pendingTimeRtc = rtc;
+    }
+
+    public void updateTimeRtc(byte delta) {
+        if (this.pendingTimeRtc == 0) {
+            this.pendingTimeRtc = this.timeRtc;
+        }
+        this.pendingTimeRtc += 50L + delta;
+    }
+
+    public boolean hasRtcData() {
+        return this.lastTimeRtc != 0 || this.timeRtc != 0 || this.pendingTimeRtc != 0;
+    }
+
+    public long getInterpolatedRtc() {
+        if (this.replayPaused || this.isPaused() || this.timeRtc < this.lastTimeRtc) {
+            return this.timeRtc;
+        } else {
+            long currentNanos = Util.getNanos();
+            long nanosPerTick = this.tickRateManager().nanosecondsPerTick();
+
+            double partial = (currentNanos - this.lastTickTimeNanos) / (double) nanosPerTick;
+            partial = Math.max(0, Math.min(1, partial));
+
+            return this.lastTimeRtc + (long)((this.timeRtc - this.lastTimeRtc) * partial);
+        }
+    }
+
     public void handleNextTick() {
         if (this.isProcessingSnapshot) {
             throw new IllegalStateException("Can't go to next tick while processing snapshot");
         }
 
         this.gamePacketHandler.flushPendingEntities();
-        currentTick += 1;
+        this.currentTick += 1;
+        this.updateRtc();
+    }
+
+    private void updateRtc() {
+        if (!this.hasRtcData()) {
+            return;
+        }
+
+        if (this.pendingTimeRtc == 0 && this.timeRtc != 0) {
+            this.pendingTimeRtc = this.timeRtc + 50L;
+        }
+        if (this.lastTimeRtc == 0 || this.lastTimeRtc > this.pendingTimeRtc) {
+            this.lastTimeRtc = this.pendingTimeRtc;
+        } else {
+            this.lastTimeRtc = this.timeRtc;
+        }
+        this.timeRtc = this.pendingTimeRtc;
+        this.pendingTimeRtc = 0L;
     }
 
     public void handleConfigurationPacket(RegistryFriendlyByteBuf friendlyByteBuf) {
@@ -862,6 +914,7 @@ public class ReplayServer extends IntegratedServer {
             ReplayReader replayReader = this.playableChunksByStart.get(0).getOrLoadReplayReader(this.registryAccess());
             replayReader.handleSnapshot(this);
             this.gamePacketHandler.flushPendingEntities();
+            this.updateRtc();
         }
 
         EditorState editorState = this.getEditorState();
@@ -1437,6 +1490,7 @@ public class ReplayServer extends IntegratedServer {
         this.clearDataForPlayingSnapshot();
         replayReader.handleSnapshot(this);
         this.gamePacketHandler.flushPendingEntities();
+        this.updateRtc();
 
         replayReader.resetToStart();
     }

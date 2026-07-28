@@ -307,6 +307,15 @@ public class VisualsWindow {
                 editorState.markDirty();
             }
 
+            if (replayServer.hasRtcData()) {
+                var config = Flashback.getConfig();
+                if (ImGui.checkbox(I18n.get("flashback.overlay.rtc_overlay"), config.overlay.rtcOverlay)) {
+                    config.overlay.rtcOverlay = !config.overlay.rtcOverlay;
+                    config.delayedSaveToDefaultFolder();
+                }
+                ImGui.setItemTooltip(I18n.get("flashback.overlay.rtc_overlay.description"));
+            }
+
             if (ImGui.checkbox(I18n.get("flashback.camera_path"), visuals.cameraPath)) {
                 visuals.cameraPath = !visuals.cameraPath;
                 editorState.markDirty();

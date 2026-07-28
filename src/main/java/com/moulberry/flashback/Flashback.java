@@ -51,7 +51,6 @@ import com.moulberry.flashback.visuals.AccurateEntityPositionHandler;
 import com.moulberry.lattice.Lattice;
 import com.moulberry.lattice.element.LatticeElements;
 import com.seibel.distanthorizons.api.DhApi;
-import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.api.ModInitializer;
@@ -62,11 +61,13 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
+import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.ChatFormatting;
+import net.minecraft.client.gui.Font;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.protocol.common.ClientCommonPacketListener;
@@ -129,7 +130,11 @@ import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributeView;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -271,6 +276,7 @@ public class Flashback implements ModInitializer, ClientModInitializer {
         ActionRegistry.register(ActionMoveEntities.INSTANCE);
         ActionRegistry.register(ActionLevelChunkCached.INSTANCE);
         ActionRegistry.register(ActionAccuratePlayerPosition.INSTANCE);
+        ActionRegistry.register(ActionRealTimeClock.INSTANCE);
 
         KeyframeRegistry.register(CameraKeyframeType.INSTANCE);
         KeyframeRegistry.register(CameraOrbitKeyframeType.INSTANCE);
@@ -539,6 +545,34 @@ public class Flashback implements ModInitializer, ClientModInitializer {
             synchronizeTickingCanTickServer.set(true);
         });
 
+        HudElementRegistry.addLast(Identifier.fromNamespaceAndPath("flashback", "hud"), (graphics, delta) -> {
+            ReplayServer replayServer = Flashback.getReplayServer();
+            if (replayServer == null) {
+                return;
+            }
+            if (Flashback.config.overlay.rtcOverlay) {
+                long millis = replayServer.getInterpolatedRtc();
+                if (millis != 0) {
+                    ZonedDateTime dateTime = Instant.ofEpochMilli(millis).atZone(ZoneId.systemDefault());
+                    String dateString = DateTimeFormatter.ofPattern("dd/MMM/uuuu HH:mm:ss.SSS zzz").format(dateTime);
+
+                    Font font = Minecraft.getInstance().font;
+                    int dateWidth = font.width(dateString);
+
+                    final int outerPadding = 2;
+                    final int innerPadding = 2;
+
+                    int dateLeft = graphics.guiWidth() - outerPadding - innerPadding - dateWidth;
+                    int fillLeft = dateLeft - innerPadding;
+
+                    int textTop = outerPadding + innerPadding;
+
+                    graphics.fill(fillLeft, outerPadding, graphics.guiWidth() - 2, 4 + font.lineHeight-1 + 2, 0x80000000);
+                    graphics.text(font, dateString, dateLeft, textTop, -1, true);
+                }
+            }
+        });
+
         ClientTickEvents.START_CLIENT_TICK.register(minecraft -> {
             if (RECORDER != null && Flashback.config.advanced.synchronizeTicking && minecraft.hasSingleplayerServer()) {
                 boolean isLevelLoaded = !(minecraft.gui.screen() instanceof LevelLoadingScreen);
@@ -568,6 +602,10 @@ public class Flashback implements ModInitializer, ClientModInitializer {
             }
 
             updateIsInReplay();
+
+            if (RECORDER != null) {
+                RECORDER.startTick();
+            }
 
             if (createMarker1KeyBind.consumeClick()) {
                 addMarker(Flashback.config.marker.markerOptions1);
