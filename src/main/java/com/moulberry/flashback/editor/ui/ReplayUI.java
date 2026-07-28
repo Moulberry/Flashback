@@ -413,7 +413,6 @@ public class ReplayUI {
 
     private static void setSelectedEntity(UUID uuid) {
         selectedEntity = uuid;
-        Minecraft.getInstance().levelExtractor.debugRenderer.refreshRendererList();
     }
 
     public static boolean isMovingCamera() {
