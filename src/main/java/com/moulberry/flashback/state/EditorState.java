@@ -199,7 +199,7 @@ public class EditorState {
     }
 
     public boolean isEntityHidden(Entity entity) {
-        if (this.hideAllSpectators && entity instanceof Player player && player.gameMode() == GameType.SPECTATOR) {
+        if (this.hideAllSpectators && entity instanceof Player player && player.isSpectator()) {
             return true;
         } else {
             return this.hideDuringExport.contains(entity.getUUID());
