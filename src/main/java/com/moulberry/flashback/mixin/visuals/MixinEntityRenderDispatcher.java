@@ -44,7 +44,7 @@ public abstract class MixinEntityRenderDispatcher {
     public void renderBefore(Entity entity, double d, double e, double f, float g, PoseStack poseStack, MultiBufferSource multiBufferSource, int i, EntityRenderer entityRenderer, CallbackInfo ci) {
         if (Flashback.isExporting()) {
             EditorState editorState = EditorStateManager.getCurrent();
-            if (editorState != null && editorState.hideDuringExport.contains(entity.getUUID())) {
+            if (editorState != null && editorState.isEntityHidden(entity)) {
                 ci.cancel();
             }
         }
