@@ -314,7 +314,8 @@ public class ExportJob {
             long pauseScreenStart = System.currentTimeMillis();
             int additionalDummyFrames = this.extraDummyFrames;
             while (Minecraft.getInstance().getOverlay() != null || Minecraft.getInstance().screen != null || additionalDummyFrames > 0) {
-                if (Minecraft.getInstance().getOverlay() != null || Minecraft.getInstance().screen != null) {
+                boolean overlayOrScreen = Minecraft.getInstance().getOverlay() != null || Minecraft.getInstance().screen != null;
+                if (overlayOrScreen) {
                     this.runClientTick(frozen);
                 }
                 if (additionalDummyFrames > 0) {
@@ -326,14 +327,14 @@ public class ExportJob {
                 RenderSystem.getDevice().createCommandEncoder().clearColorAndDepthTextures(renderTarget.getColorTexture(), 0, renderTarget.getDepthTexture(), 1.0);
                 Minecraft.getInstance().gameRenderer.render(Minecraft.getInstance().deltaTracker, true);
 
-                this.shouldChangeFramebufferSize = false;
-                if (!Minecraft.getInstance().getWindow().isMinimized()) {
-                    renderTarget.blitToScreen();
-                }
-                window.updateDisplay(null);
-                this.shouldChangeFramebufferSize = true;
+                if (overlayOrScreen) {
+                    this.shouldChangeFramebufferSize = false;
+                    if (!mc.getWindow().isMinimized()) {
+                        renderTarget.blitToScreen();
+                    }
+                    RenderSystem.flipFrame(null);
+                    this.shouldChangeFramebufferSize = true;
 
-                if (Minecraft.getInstance().getOverlay() != null || Minecraft.getInstance().screen != null) {
                     LockSupport.parkNanos("waiting for pause overlay to disappear", 50_000_000L);
 
                     // Force remove screens/overlays after 5s/15s respectively
