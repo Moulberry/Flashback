@@ -30,7 +30,7 @@ import net.minecraft.network.protocol.configuration.ClientConfigurationPacketLis
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundLevelChunkWithLightPacket;
 import net.minecraft.network.protocol.game.ClientboundLoginPacket;
-import net.minecraft.util.Util;
+import net.minecraft.Util;
 
 import java.io.IOException;
 import java.nio.file.Files;
