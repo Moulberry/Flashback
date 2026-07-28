@@ -736,11 +736,22 @@ public class ExportJob {
         int count = endTick - startTick;
         int startFrozen = -1;
         while (currentTick <= count) {
-            capture.tickrate = 20.0f;
-            capture.frozen = false;
-            editorState.applyKeyframes(capture, startTick + currentTick + (float) residual);
+            double remainingFrame = 1.0;
 
-            residual += capture.tickrate / fps;
+            while (remainingFrame > 0.0) {
+                capture.tickrate = 20.0f;
+                capture.frozen = false;
+                editorState.applyKeyframes(capture, startTick + currentTick + (float) residual);
+
+                double ticksThisFrame = capture.tickrate / fps * remainingFrame;
+                if (residual + ticksThisFrame > 1) {
+                    residual += 1.0;
+                    remainingFrame -= 1.0 / ticksThisFrame;
+                } else {
+                    residual += capture.tickrate / fps;
+                    break;
+                }
+            }
 
             int roundedResidual = (int) residual;
             residual -= roundedResidual;
