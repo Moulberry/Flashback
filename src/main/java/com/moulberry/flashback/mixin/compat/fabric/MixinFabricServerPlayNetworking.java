@@ -1,6 +1,6 @@
 package com.moulberry.flashback.mixin.compat.fabric;
 
-import com.moulberry.flashback.playback.FakePlayer;
+import com.moulberry.flashback.playback.FlashbackFakePlayer;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.Identifier;
@@ -17,21 +17,21 @@ public class MixinFabricServerPlayNetworking {
 
     @Inject(method = "canSend(Lnet/minecraft/server/network/ServerGamePacketListenerImpl;Lnet/minecraft/network/protocol/common/custom/CustomPacketPayload$Type;)Z", at = @At("HEAD"), cancellable = true, require = 0)
     private static void canSend1(ServerGamePacketListenerImpl handler, CustomPacketPayload.Type<?> type, CallbackInfoReturnable<Boolean> cir) {
-        if (handler.player instanceof FakePlayer) {
+        if (handler.player instanceof FlashbackFakePlayer) {
             cir.setReturnValue(true);
         }
     }
 
     @Inject(method = "canSend(Lnet/minecraft/server/network/ServerGamePacketListenerImpl;Lnet/minecraft/resources/Identifier;)Z", at = @At("HEAD"), cancellable = true, require = 0)
     private static void canSend2(ServerGamePacketListenerImpl handler, Identifier channelName, CallbackInfoReturnable<Boolean> cir) {
-        if (handler.player instanceof FakePlayer) {
+        if (handler.player instanceof FlashbackFakePlayer) {
             cir.setReturnValue(true);
         }
     }
 
     @Inject(method = "send", at = @At("HEAD"), cancellable = true, require = 0)
     private static void send(ServerPlayer player, CustomPacketPayload payload, CallbackInfo ci) {
-        if (player instanceof FakePlayer) {
+        if (player instanceof FlashbackFakePlayer) {
             ci.cancel();
         }
     }
