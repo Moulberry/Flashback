@@ -172,3 +172,7 @@ accessible field net/minecraft/world/entity/player/Player DATA_PLAYER_MAIN_HAND 
 accessible field net/minecraft/client/resources/language/ClientLanguage storage Ljava/util/Map;
 
 accessible field net/minecraft/world/level/storage/PrimaryLevelData settings Lnet/minecraft/world/level/LevelSettings;
+
+# Allow updating server playerinfo
+accessible method net/minecraft/client/multiplayer/PlayerInfo setLatency (I)V
+accessible method net/minecraft/client/multiplayer/PlayerInfo setGameMode (Lnet/minecraft/world/level/GameType;)V
