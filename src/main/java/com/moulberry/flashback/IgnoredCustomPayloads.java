@@ -1,6 +1,6 @@
 package com.moulberry.flashback;
 
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 
 import java.util.HashSet;
 import java.util.Objects;
@@ -11,12 +11,12 @@ public class IgnoredCustomPayloads {
     private static final Set<String> DEFAULT_IGNORED_NAMESPACES = Set.of(
         "fabric-screen-handler-api"
     );
-    private static final Set<Identifier> DEFAULT_IGNORED_IDENTIFIERS = Set.of(
-        Identifier.fromNamespaceAndPath("fabric", "recipe_sync")
+    private static final Set<ResourceLocation> DEFAULT_IGNORED_IDENTIFIERS = Set.of(
+        ResourceLocation.fromNamespaceAndPath("fabric", "recipe_sync")
     );
 
     private final HashSet<String> ignoredNamespaces = new HashSet<>(DEFAULT_IGNORED_NAMESPACES);
-    private final HashSet<Identifier> ignoredIdentifiers = new HashSet<>(DEFAULT_IGNORED_IDENTIFIERS);
+    private final HashSet<ResourceLocation> ignoredIdentifiers = new HashSet<>(DEFAULT_IGNORED_IDENTIFIERS);
     private String lastConfigString = null;
 
     public void setFromConfigString(String configString) {
@@ -56,7 +56,7 @@ public class IgnoredCustomPayloads {
                 }
             } else {
                 try {
-                    Identifier identifier = Identifier.parse(line);
+                    ResourceLocation identifier = ResourceLocation.parse(line);
                     if (reallow) {
                         this.ignoredIdentifiers.remove(identifier);
                     } else {
@@ -69,7 +69,7 @@ public class IgnoredCustomPayloads {
         }
     }
 
-    public boolean isIgnored(Identifier identifier) {
+    public boolean isIgnored(ResourceLocation identifier) {
         return ignoredNamespaces.contains(identifier.getNamespace()) || ignoredIdentifiers.contains(identifier);
     }
 
