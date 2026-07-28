@@ -99,7 +99,7 @@ public abstract class MixinItemInHandRenderer implements ItemInHandRendererExt {
     @Override
     public void flashback$renderHandsWithItems(float partialTick, PoseStack poseStack, MultiBufferSource.BufferSource bufferSource, AbstractClientPlayer clientPlayer, int i, @Nullable Set<InteractionHand> renderableArms) {
         EditorState editorState = EditorStateManager.getCurrent();
-        if (editorState != null && editorState.hideDuringExport.contains(clientPlayer.getUUID())) {
+        if (editorState != null && editorState.isEntityHidden(clientPlayer)) {
             return;
         }
 
