@@ -787,11 +787,11 @@ public class ExportJob {
                 editorState.applyKeyframes(capture, startTick + currentTick + (float) residual);
 
                 double ticksThisFrame = capture.tickrate / fps * remainingFrame;
-                if (residual + ticksThisFrame > 1) {
+                if (ticksThisFrame > 1) {
                     residual += 1.0;
                     remainingFrame -= 1.0 / ticksThisFrame;
                 } else {
-                    residual += capture.tickrate / fps;
+                    residual += ticksThisFrame;
                     break;
                 }
             }
