@@ -363,7 +363,8 @@ public class ExportJob {
             long pauseScreenStart = System.currentTimeMillis();
             int additionalDummyFrames = this.extraDummyFrames;
             while (mc.getOverlay() != null || mc.screen != null || additionalDummyFrames > 0) {
-                if (mc.getOverlay() != null || mc.screen != null) {
+                boolean overlayOrScreen = mc.getOverlay() != null || mc.screen != null;
+                if (overlayOrScreen) {
                     this.runClientTick(frozen);
                 }
                 if (additionalDummyFrames > 0) {
@@ -373,14 +374,14 @@ public class ExportJob {
                 RenderTarget renderTarget = mc.mainRenderTarget;
                 render(renderTarget, mc.deltaTracker);
 
-                this.shouldChangeFramebufferSize = false;
-                if (!mc.getWindow().isMinimized()) {
-                    renderTarget.blitToScreen();
-                }
-                RenderSystem.flipFrame(null);
-                this.shouldChangeFramebufferSize = true;
+                if (overlayOrScreen) {
+                    this.shouldChangeFramebufferSize = false;
+                    if (!mc.getWindow().isMinimized()) {
+                        renderTarget.blitToScreen();
+                    }
+                    RenderSystem.flipFrame(null);
+                    this.shouldChangeFramebufferSize = true;
 
-                if (mc.getOverlay() != null || mc.screen != null) {
                     LockSupport.parkNanos("waiting for pause overlay to disappear", 50_000_000L);
 
                     // Force remove screens/overlays after 5s/15s respectively
