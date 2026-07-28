@@ -944,7 +944,35 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
             PlayerInfo playerInfo = new PlayerInfo(Objects.requireNonNull(entry.profile()), false);
             this.playerInfoMap.putIfAbsent(entry.profileId(), playerInfo);
         }
+        for (ClientboundPlayerInfoUpdatePacket.Entry entry : clientboundPlayerInfoUpdatePacket.entries()) {
+            var playerInfo = this.playerInfoMap.get(entry.profileId());
+            for (ClientboundPlayerInfoUpdatePacket.Action action : clientboundPlayerInfoUpdatePacket.actions()) {
+                this.applyPlayerInfoUpdate(action, entry, playerInfo);
+            }
+        }
         forward(clientboundPlayerInfoUpdatePacket);
+    }
+
+    private void applyPlayerInfoUpdate(ClientboundPlayerInfoUpdatePacket.Action action, ClientboundPlayerInfoUpdatePacket.Entry entry, PlayerInfo playerInfo) {
+        switch (action) {
+            case ADD_PLAYER, INITIALIZE_CHAT, UPDATE_LISTED -> {
+            }
+            case UPDATE_GAME_MODE -> {
+                playerInfo.setGameMode(entry.gameMode());
+            }
+            case UPDATE_LATENCY -> {
+                playerInfo.setLatency(entry.latency());
+            }
+            case UPDATE_DISPLAY_NAME -> {
+                playerInfo.setTabListDisplayName(entry.displayName());
+            }
+            case UPDATE_LIST_ORDER -> {
+                playerInfo.setTabListOrder(entry.listOrder());
+            }
+            case UPDATE_HAT -> {
+                playerInfo.setShowHat(entry.showHat());
+            }
+        }
     }
 
     @Override
