@@ -973,12 +973,6 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
             case UPDATE_DISPLAY_NAME -> {
                 playerInfo.setTabListDisplayName(entry.displayName());
             }
-            case UPDATE_LIST_ORDER -> {
-                playerInfo.setTabListOrder(entry.listOrder());
-            }
-            case UPDATE_HAT -> {
-                playerInfo.setShowHat(entry.showHat());
-            }
         }
     }
 
