@@ -227,6 +227,8 @@
   "flashback.spectate": "Spectate",
   "flashback.hide_all": "Hide All",
   "flashback.show_all": "Show All",
+  "flashback.hide_all_spectators": "Hide All Spectators",
+  "flashback.hidden_because_spectator": "Hidden because 'Hide All Spectators' is enabled",
   "flashback.keyframes": "Keyframes",
   "flashback.render_filter_affirmation": "I, %s, do solemnly swear (or affirm) that I will not toggle something off in the 'Render Filter' menu and then later ask in Flashback support why the entity is not being rendered.",
   "flashback.render_filter_sign": "Signed, %s.",
