@@ -316,6 +316,9 @@ public class ExportJob {
 
             long pauseScreenStart = System.currentTimeMillis();
             int additionalDummyFrames = this.extraDummyFrames;
+            if (tickIndex == 0) {
+                additionalDummyFrames += 60;
+            }
             while (Minecraft.getInstance().getOverlay() != null || Minecraft.getInstance().screen != null || additionalDummyFrames > 0) {
                 boolean overlayOrScreen = Minecraft.getInstance().getOverlay() != null || Minecraft.getInstance().screen != null;
                 if (overlayOrScreen) {
@@ -331,13 +334,12 @@ public class ExportJob {
                 Minecraft.getInstance().gameRenderer.render(Minecraft.getInstance().deltaTracker, true);
 
                 if (overlayOrScreen) {
-                    this.shouldChangeFramebufferSize = false;
-                    if (!mc.getWindow().isMinimized()) {
-                        renderTarget.blitToScreen();
-                    }
-                    RenderSystem.flipFrame(null);
-                    this.shouldChangeFramebufferSize = true;
+                    finishFrame(renderTarget, new ArrayList<>(List.of("Waiting for overlay to disappear")), true, false);
+                } else if (tickIndex == 0) {
+                    finishFrame(renderTarget, new ArrayList<>(List.of("Warming up... " + additionalDummyFrames + "/60")), true, false);
+                }
 
+                if (overlayOrScreen) {
                     LockSupport.parkNanos("waiting for pause overlay to disappear", 50_000_000L);
 
                     // Force remove screens/overlays after 5s/15s respectively
