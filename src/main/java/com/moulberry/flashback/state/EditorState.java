@@ -208,6 +208,10 @@ public class EditorState {
         }
     }
 
+    public boolean maybeHasHiddenEntities() {
+        return this.hideAllSpectators || !this.hideDuringExport.isEmpty();
+    }
+
     public void applyKeyframes(KeyframeHandler keyframeHandler, float tick) {
         this.applyKeyframes(keyframeHandler, tick, 0);
     }
