@@ -1,10 +1,6 @@
 package com.moulberry.flashback.mixin.visuals;
 
-import com.moulberry.flashback.Flashback;
-import com.moulberry.flashback.editor.ui.ReplayUI;
-import com.moulberry.flashback.state.EditorState;
-import com.moulberry.flashback.state.EditorStateManager;
-import com.moulberry.flashback.visuals.FlashbackEntityHighlightDebugRenderer;
+import com.moulberry.flashback.visuals.FlashbackDebugRenderer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.debug.DebugRenderer;
 import org.spongepowered.asm.mixin.Final;
@@ -15,8 +11,6 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.List;
-import java.util.Objects;
-import java.util.UUID;
 
 @Mixin(DebugRenderer.class)
 public class MixinDebugRenderer {
@@ -27,24 +21,7 @@ public class MixinDebugRenderer {
 
     @Inject(method = "refreshRendererList", at = @At("RETURN"))
     public void refreshRendererList(CallbackInfo ci) {
-        if (Flashback.isInReplay()) {
-            EditorState editorState = EditorStateManager.getCurrent();
-            if (editorState == null) {
-                return;
-            }
-
-            if (Flashback.isExporting() || !ReplayUI.isActive()) {
-                return;
-            }
-
-            UUID selectedEntity = ReplayUI.getSelectedEntity();
-            if (selectedEntity != null) {
-                this.renderers.add(new FlashbackEntityHighlightDebugRenderer(Minecraft.getInstance(), selectedEntity, 0xFFFFFF00));
-            }
-            if (editorState.audioSourceEntity != null && !Objects.equals(editorState.audioSourceEntity, selectedEntity)) {
-                this.renderers.add(new FlashbackEntityHighlightDebugRenderer(Minecraft.getInstance(), editorState.audioSourceEntity, 0xFF00FFFF));
-            }
-        }
+        this.renderers.add(new FlashbackDebugRenderer(Minecraft.getInstance()));
     }
 
 }
