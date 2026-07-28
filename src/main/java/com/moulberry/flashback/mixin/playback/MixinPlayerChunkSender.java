@@ -2,7 +2,7 @@ package com.moulberry.flashback.mixin.playback;
 
 import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.ext.ServerLevelExt;
-import com.moulberry.flashback.playback.FakePlayer;
+import com.moulberry.flashback.playback.FlashbackFakePlayer;
 import com.moulberry.flashback.playback.ReplayServer;
 import it.unimi.dsi.fastutil.longs.LongSet;
 import net.minecraft.server.level.ServerPlayer;
@@ -40,7 +40,7 @@ public class MixinPlayerChunkSender {
             this.batchQuota = 0.0f;
             this.desiredChunksPerTick = Math.max(this.desiredChunksPerTick, 256.0f);
 
-            if (serverPlayer instanceof FakePlayer) {
+            if (serverPlayer instanceof FlashbackFakePlayer) {
                 this.pendingChunks.clear();
                 ci.cancel();
             }
