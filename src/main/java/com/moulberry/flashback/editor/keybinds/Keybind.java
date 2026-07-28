@@ -336,10 +336,12 @@ public class Keybind implements KeybindInterface {
 
         if (ReplayUI.isActive() && ReplayUI.isImGuiContextActive()) {
             ImGuiIO io = ReplayUI.getIO();
+
+            // ImGui swaps getKeyCtrl/getKeySuper, so we don't have to
             if (!isShift(this.key) && this.shiftMod != io.getKeyShift()) return false;
-            if (!isCtrl(this.key) && ctrlMod != io.getKeyCtrl()) return false;
+            if (!isCtrl(this.key) && this.ctrlMod != io.getKeyCtrl()) return false;
             if (!isAlt(this.key) && this.altMod != io.getKeyAlt()) return false;
-            if (!isSuper(this.key) && superMod != io.getKeySuper()) return false;
+            if (!isSuper(this.key) && this.superMod != io.getKeySuper()) return false;
         } else {
             Minecraft minecraft = Minecraft.getInstance();
 
