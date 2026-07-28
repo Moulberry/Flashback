@@ -181,3 +181,7 @@ mutable field net/minecraft/client/gui/components/debug/DebugScreenEntries PROFI
 accessible field net/minecraft/world/level/storage/PrimaryLevelData settings Lnet/minecraft/world/level/LevelSettings;
 
 accessible method net/minecraft/client/renderer/rendertype/RenderType create (Ljava/lang/String;Lnet/minecraft/client/renderer/rendertype/RenderSetup;)Lnet/minecraft/client/renderer/rendertype/RenderType;
+
+# Allow updating server playerinfo
+accessible method net/minecraft/client/multiplayer/PlayerInfo setLatency (I)V
+accessible method net/minecraft/client/multiplayer/PlayerInfo setGameMode (Lnet/minecraft/world/level/GameType;)V
