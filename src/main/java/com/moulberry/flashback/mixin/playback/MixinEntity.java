@@ -38,7 +38,7 @@ public abstract class MixinEntity {
         ReplayServer replayServer = Flashback.getReplayServer();
         if (replayServer != null && player == Minecraft.getInstance().player) {
             EditorState editorState = EditorStateManager.getCurrent();
-            if (editorState != null && editorState.hideDuringExport.contains(this.getUUID())) {
+            if (editorState != null && editorState.isEntityHidden((Entity) (Object) this)) {
                 cir.setReturnValue(true);
             }
 

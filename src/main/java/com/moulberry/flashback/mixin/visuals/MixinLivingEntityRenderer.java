@@ -15,7 +15,7 @@ public class MixinLivingEntityRenderer {
     @Inject(method = "isBodyVisible", at = @At("HEAD"), cancellable = true, require = 0)
     public void isBodyVisible(LivingEntity livingEntity, CallbackInfoReturnable<Boolean> cir) {
         EditorState editorState = EditorStateManager.getCurrent();
-        if (editorState != null && editorState.hideDuringExport.contains(livingEntity.getUUID())) {
+        if (editorState != null && editorState.isEntityHidden(livingEntity)) {
             cir.setReturnValue(false);
         }
     }

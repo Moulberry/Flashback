@@ -19,6 +19,7 @@ import net.minecraft.client.multiplayer.PlayerInfo;
 import net.minecraft.client.resources.language.I18n;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.GameType;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -147,7 +148,12 @@ public class PlayerListWindow {
                 }
                 if (editorState != null) {
                     ImGui.sameLine();
-                    if (editorState.hideDuringExport.contains(profile.getId())) {
+                    if (editorState.hideAllSpectators && playerInfo.getGameMode() == GameType.SPECTATOR) {
+                        ImGui.beginDisabled();
+                        ImGui.smallButton(I18n.get("flashback.show"));
+                        ImGui.endDisabled();
+                        ImGui.setItemTooltip(I18n.get("flashback.hidden_because_spectator"));
+                    } else if (editorState.hideDuringExport.contains(profile.getId())) {
                         if (ImGui.smallButton(I18n.get("flashback.show"))) {
                             editorState.hideDuringExport.remove(profile.getId());
                             lastUpdate = currentTime;
@@ -176,6 +182,9 @@ public class PlayerListWindow {
                 if (ImGui.button(I18n.get("flashback.show_all"))) {
                     changeVisibilityOfAll(editorState, true);
                     lastUpdate = currentTime;
+                }
+                if (ImGui.checkbox(I18n.get("flashback.hide_all_spectators"), editorState.hideAllSpectators)) {
+                    editorState.hideAllSpectators = !editorState.hideAllSpectators;
                 }
             }
         }

@@ -23,7 +23,7 @@ public class MixinEntityRenderer {
                 ci.cancel();
             } else if (editorState.hideNametags.contains(entity.getUUID())) {
                 ci.cancel();
-            } else if (editorState.hideDuringExport.contains(entity.getUUID())) {
+            } else if (editorState.isEntityHidden(entity)) {
                 ci.cancel();
             }
         }
