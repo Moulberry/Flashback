@@ -242,7 +242,14 @@ public class TimelineWindow {
 
         timelineWidth = width - middleX;
         float shownTicks = Math.round((editorState.zoomMax - editorState.zoomMin) * totalTicks);
-        int targetMajorSize = 60;
+
+        int targetMajorSize;
+        if (currentReplayTick + (int)shownTicks > 20*60*60) {
+            int numHours = (currentReplayTick + (int)shownTicks) / (20*60*60);
+            targetMajorSize = (int) ImGuiHelper.calcTextWidth("9".repeat((int) Math.log10(numHours)+1) + ":99:99") + 20;
+        } else {
+            targetMajorSize = (int) ImGuiHelper.calcTextWidth("99:99") + 20;
+        }
 
         float targetTicksPerMajor = 1f / (timelineWidth / shownTicks / targetMajorSize);
         int minorsPerMajor;
