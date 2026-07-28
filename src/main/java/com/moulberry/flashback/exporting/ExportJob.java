@@ -387,6 +387,8 @@ public class ExportJob {
                     finishFrame(renderTarget, new ArrayList<>(List.of("Waiting for overlay to disappear")), true, false);
                 } else if (tickIndex == 0) {
                     finishFrame(renderTarget, new ArrayList<>(List.of("Warming up... " + additionalDummyFrames + "/60")), true, false);
+                } else {
+                    finishHiddenFrame();
                 }
 
                 if (overlayOrScreen) {
@@ -439,6 +441,7 @@ public class ExportJob {
                     PerfectFrames.waitUntilFrameReady();
                     start = System.nanoTime();
                     render(renderTarget, timer);
+                    finishHiddenFrame();
                     renderTimeNanos += System.nanoTime() - start;
 
                     // Capture audio if necessary
@@ -465,6 +468,7 @@ public class ExportJob {
                 PerfectFrames.waitUntilFrameReady();
                 start = System.nanoTime();
                 render(renderTarget, timer);
+                finishHiddenFrame();
                 renderTimeNanos += System.nanoTime() - start;
 
                 // Capture audio if necessary
@@ -851,6 +855,14 @@ public class ExportJob {
         List<String> lines = new ArrayList<>();
         lines.add(customProgress);
         this.finishFrame(framebuffer, lines, forceShow, false);
+    }
+
+    private static void finishHiddenFrame() {
+        RenderSystem.executePendingTasks();
+        RenderSystem.pollEvents();
+        RenderSystem.getDevice().createCommandEncoder().submit();
+        RenderSystem.getDynamicUniforms().reset();
+        Minecraft.getInstance().levelRenderer.endFrame();
     }
 
     private boolean finishFrame(RenderTarget framebuffer, List<String> lines, boolean forceShow, boolean showCancel) {
