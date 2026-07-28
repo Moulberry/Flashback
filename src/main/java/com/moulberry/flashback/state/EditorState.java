@@ -16,7 +16,9 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.player.PlayerModelPart;
+import net.minecraft.world.level.GameType;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.Nullable;
 
@@ -48,6 +50,7 @@ public class EditorState {
 
     public UUID audioSourceEntity = null;
     public Set<UUID> hideDuringExport = new HashSet<>();
+    public boolean hideAllSpectators = false;
     public Set<UUID> muteVoice = new HashSet<>();
     public Set<UUID> hideNametags = new HashSet<>();
     public Map<UUID, GameProfile> skinOverride = new HashMap<>();
@@ -193,6 +196,14 @@ public class EditorState {
             scene.keyframeTracks.clear();
         }
         return editorState;
+    }
+
+    public boolean isEntityHidden(Entity entity) {
+        if (this.hideAllSpectators && entity instanceof Player player && player.gameMode() == GameType.SPECTATOR) {
+            return true;
+        } else {
+            return this.hideDuringExport.contains(entity.getUUID());
+        }
     }
 
     public void applyKeyframes(KeyframeHandler keyframeHandler, float tick) {

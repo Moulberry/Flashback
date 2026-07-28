@@ -22,7 +22,7 @@ public class MixinEntityRenderer {
     @WrapOperation(method = "extractRenderState", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/entity/Entity;isInvisible()Z"))
     public boolean isInvisible(Entity instance, Operation<Boolean> original) {
         EditorState editorState = EditorStateManager.getCurrent();
-        if (editorState != null && editorState.hideDuringExport.contains(instance.getUUID())) {
+        if (editorState != null && editorState.isEntityHidden(instance)) {
             return true;
         }
         return original.call(instance);
@@ -36,7 +36,7 @@ public class MixinEntityRenderer {
                 return false;
             } else if (editorState.hideNametags.contains(entity.getUUID())) {
                 return false;
-            } else if (editorState.hideDuringExport.contains(entity.getUUID())) {
+            } else if (editorState.isEntityHidden(entity)) {
                 return false;
             }
         }
@@ -51,7 +51,7 @@ public class MixinEntityRenderer {
                 cir.setReturnValue(false);
             } else if (editorState.hideNametags.contains(entity.getUUID())) {
                 cir.setReturnValue(false);
-            } else if (editorState.hideDuringExport.contains(entity.getUUID())) {
+            } else if (editorState.isEntityHidden(entity)) {
                 cir.setReturnValue(false);
             }
         }

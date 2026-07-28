@@ -27,6 +27,7 @@ import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.player.PlayerModelPart;
+import net.minecraft.world.level.GameType;
 import net.minecraft.world.scores.DisplaySlot;
 import net.minecraft.world.scores.Objective;
 import net.minecraft.world.scores.PlayerTeam;
@@ -105,14 +106,23 @@ public class SelectedEntityPopup {
             }
         }
 
-        boolean isHiddenDuringExport = editorState.hideDuringExport.contains(entity.getUUID());
-        if (ImGui.checkbox(I18n.get("flashback.hide_during_export"), isHiddenDuringExport)) {
-            if (isHiddenDuringExport) {
-                editorState.hideDuringExport.remove(entity.getUUID());
-            } else {
-                editorState.hideDuringExport.add(entity.getUUID());
+        boolean isHiddenDuringExport;
+        if (editorState.hideAllSpectators && entity instanceof Player player && player.gameMode() == GameType.SPECTATOR) {
+            isHiddenDuringExport = true;
+            ImGui.beginDisabled();
+            ImGui.checkbox(I18n.get("flashback.hide_during_export"), true);
+            ImGui.endDisabled();
+            ImGui.setItemTooltip(I18n.get("flashback.hidden_because_spectator"));
+        } else {
+            isHiddenDuringExport = editorState.hideDuringExport.contains(entity.getUUID());
+            if (ImGui.checkbox(I18n.get("flashback.hide_during_export"), isHiddenDuringExport)) {
+                if (isHiddenDuringExport) {
+                    editorState.hideDuringExport.remove(entity.getUUID());
+                } else {
+                    editorState.hideDuringExport.add(entity.getUUID());
+                }
+                editorState.markDirty();
             }
-            editorState.markDirty();
         }
 
         if (!isHiddenDuringExport) {
