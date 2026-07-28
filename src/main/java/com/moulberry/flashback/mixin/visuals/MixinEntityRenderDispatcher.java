@@ -26,7 +26,7 @@ public abstract class MixinEntityRenderDispatcher {
                     return;
                 }
             }
-            if (editorState.hideDuringExport.contains(entity.getUUID())) {
+            if (editorState.isEntityHidden(entity)) {
                 cir.setReturnValue(false);
             }
         }
