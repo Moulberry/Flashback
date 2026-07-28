@@ -253,6 +253,15 @@ public class FlashbackConfigV1 {
         }
     }
 
+    @LatticeCategory(name = "flashback.overlay")
+    public SubcategoryOverlay overlay = new SubcategoryOverlay();
+
+    public static class SubcategoryOverlay {
+        @LatticeOption(title = "flashback.overlay.rtc_overlay", description = "!!.description")
+        @LatticeWidgetButton
+        public boolean rtcOverlay = false;
+    }
+
     @LatticeCategory(name = "flashback.advanced")
     public SubcategoryAdvanced advanced = new SubcategoryAdvanced();
 

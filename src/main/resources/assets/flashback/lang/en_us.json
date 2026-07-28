@@ -67,6 +67,10 @@
   "flashback.color": "Color",
   "flashback.description": "Description",
 
+  "flashback.overlay": "Overlay",
+  "flashback.overlay.rtc_overlay": "RTC Overlay",
+  "flashback.overlay.rtc_overlay.description": "Show the realtime clock of the recording",
+
   "flashback.advanced": "Advanced",
   "flashback.advanced_description": "Don't change any of these unless you know what you're doing!! If you change one of these and then ask for support you will be made fun of!!",
   "flashback.disable_first_person_updates": "Disable increased first-person updates",

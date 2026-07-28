@@ -95,6 +95,7 @@ import org.jetbrains.annotations.Nullable;
 import java.io.File;
 import java.lang.ref.WeakReference;
 import java.nio.file.Path;
+import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ForkJoinPool;
@@ -144,6 +145,9 @@ public class Recorder {
     private float lastSaturationLevel = -1;
     private boolean wasSwinging = false;
     private int lastSwingTime = -1;
+
+    private long lastRtcEpochMilli = 0;
+    private boolean forceRtcSync = true;
 
     private boolean isConfiguring = false;
     private boolean finishedConfiguration = false;
@@ -255,11 +259,51 @@ public class Recorder {
         this.partialPositions.put(partialTick, new PositionAndAngle(x, y, z, yaw, pitch));
     }
 
+    public void startTick() {
+        writeRtc(this.forceRtcSync);
+        this.forceRtcSync = false;
+    }
+
+    private void writeRtc(boolean force) {
+        if (this.needsInitialSnapshot || this.closeForWriting) {
+            return;
+        }
+
+        Instant now = Instant.now();
+        long epochMilli = now.toEpochMilli();
+
+        long predicted = this.lastRtcEpochMilli + 50;
+        this.lastRtcEpochMilli = epochMilli;
+
+        long delta = epochMilli - predicted;
+        if (!force && delta == 0) {
+            return;
+        }
+
+        byte byteDelta = (byte) delta;
+
+        if (force || byteDelta != delta) {
+            this.asyncReplaySaver.submit(writer -> {
+                writer.startAction(ActionRealTimeClock.INSTANCE);
+                writer.friendlyByteBuf().writeByte(0);
+                writer.friendlyByteBuf().writeLong(epochMilli);
+                writer.finishAction(ActionRealTimeClock.INSTANCE);
+            });
+        } else {
+            if (byteDelta == 0) throw new IllegalStateException();
+            this.asyncReplaySaver.submit(writer -> {
+                writer.startAction(ActionRealTimeClock.INSTANCE);
+                writer.friendlyByteBuf().writeByte(byteDelta);
+                writer.finishAction(ActionRealTimeClock.INSTANCE);
+            });
+        }
+    }
+
     public void endTickWithContext(boolean close) {
         this.runWithClientPacketContext(() -> this.endTick(close));
     }
 
-    public void endTick(boolean close) {
+    private void endTick(boolean close) {
         if (this.closeForWriting) {
             return;
         } else if (close) {
@@ -875,6 +919,12 @@ public class Recorder {
 
         if (asActualSnapshot) {
             this.asyncReplaySaver.submit(ReplayWriter::startSnapshot);
+        }
+
+        if (this.lastRtcEpochMilli == 0) {
+            this.writeRtc(true);
+        } else {
+            this.forceRtcSync = true;
         }
 
         ClientLevel level = minecraft.level;

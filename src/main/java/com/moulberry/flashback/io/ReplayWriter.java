@@ -28,7 +28,7 @@ public class ReplayWriter {
     private static final int STATE_EMPTY = 0;
     private static final int STATE_WRITING_SNAPSHOT = 1;
     private static final int STATE_WRITING_DATA = 2;
-    public int state = STATE_EMPTY;
+    private int state = STATE_EMPTY;
 
     public ReplayWriter(RegistryAccess registryAccess) {
         this.dataBufferInner = Unpooled.buffer();
@@ -102,6 +102,9 @@ public class ReplayWriter {
         if (this.writingAction != null) {
             throw new RuntimeException("startAndFinishAction() called while still writing " + action.name());
         }
+        if (this.state == STATE_EMPTY) {
+            throw new IllegalStateException("Cannot start action while replay is empty");
+        }
 
         int id = this.registeredActions.getInt(action);
         if (id >= 0) {
@@ -115,6 +118,10 @@ public class ReplayWriter {
     }
 
     public void startAction(Action action) {
+        if (this.state == STATE_EMPTY) {
+            throw new IllegalStateException("Cannot start action while replay is empty");
+        }
+
         Objects.requireNonNull(action);
         if (this.writingAction != null) {
             throw new RuntimeException("startAction() called while still writing " + action.name());
