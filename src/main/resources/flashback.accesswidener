@@ -173,3 +173,7 @@ accessible class net/minecraft/server/network/config/PrepareSpawnTask$Ready
 mutable field net/minecraft/client/gui/components/debug/DebugScreenEntries PROFILES Ljava/util/Map;
 
 accessible field net/minecraft/world/level/storage/PrimaryLevelData settings Lnet/minecraft/world/level/LevelSettings;
+
+# Allow updating server playerinfo
+accessible method net/minecraft/client/multiplayer/PlayerInfo setLatency (I)V
+accessible method net/minecraft/client/multiplayer/PlayerInfo setGameMode (Lnet/minecraft/world/level/GameType;)V
