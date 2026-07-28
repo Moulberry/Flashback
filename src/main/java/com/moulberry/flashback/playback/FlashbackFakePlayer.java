@@ -17,9 +17,9 @@ import net.minecraft.world.item.crafting.RecipeHolder;
 import java.util.Collection;
 import java.util.UUID;
 
-public class FakePlayer extends ServerPlayer {
+public class FlashbackFakePlayer extends ServerPlayer {
 
-    public FakePlayer(MinecraftServer minecraftServer, ServerLevel serverLevel, GameProfile gameProfile, ClientInformation clientInformation) {
+    public FlashbackFakePlayer(MinecraftServer minecraftServer, ServerLevel serverLevel, GameProfile gameProfile, ClientInformation clientInformation) {
         super(minecraftServer, serverLevel, gameProfile, clientInformation);
     }
 

@@ -294,7 +294,7 @@ public class ReplayServer extends IntegratedServer {
 
             @Override
             public void sendPlayerPermissionLevel(ServerPlayer serverPlayer) {
-                if (serverPlayer instanceof FakePlayer) {
+                if (serverPlayer instanceof FlashbackFakePlayer) {
                     return;
                 }
                 super.sendPlayerPermissionLevel(serverPlayer);
@@ -302,7 +302,7 @@ public class ReplayServer extends IntegratedServer {
 
             @Override
             public void sendAllPlayerInfo(ServerPlayer serverPlayer) {
-                if (serverPlayer instanceof FakePlayer) {
+                if (serverPlayer instanceof FlashbackFakePlayer) {
                     return;
                 }
                 super.sendAllPlayerInfo(serverPlayer);
@@ -352,7 +352,7 @@ public class ReplayServer extends IntegratedServer {
 
             @Override
             public void sendLevelInfo(ServerPlayer serverPlayer, ServerLevel serverLevel) {
-                if (serverPlayer instanceof FakePlayer) {
+                if (serverPlayer instanceof FlashbackFakePlayer) {
                     return;
                 }
 
