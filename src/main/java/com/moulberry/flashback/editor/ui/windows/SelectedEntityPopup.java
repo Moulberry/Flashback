@@ -106,7 +106,7 @@ public class SelectedEntityPopup {
         }
 
         boolean isHiddenDuringExport;
-        if (editorState.hideAllSpectators && entity instanceof Player player && player.gameMode() == GameType.SPECTATOR) {
+        if (editorState.hideAllSpectators && entity instanceof Player player && player.isSpectator()) {
             isHiddenDuringExport = true;
             ImGui.beginDisabled();
             ImGui.checkbox(I18n.get("flashback.hide_during_export"), true);
