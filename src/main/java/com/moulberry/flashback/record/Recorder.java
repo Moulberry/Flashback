@@ -895,7 +895,14 @@ public class Recorder {
 
         LocalPlayer localPlayer = Minecraft.getInstance().player;
         if (localPlayer != null) {
-            int localPlayerId = localPlayer.getId();
+            int localPlayerId;
+            try {
+                localPlayerId = localPlayer.getId();
+            } catch (IllegalStateException e) {
+                // Player exists but has no entity id yet. Happens on proxied servers while the
+                // client is being moved between backends.
+                localPlayerId = -1;
+            }
             if (packet instanceof ClientboundSetEntityDataPacket entityDataPacket && entityDataPacket.id() == localPlayerId) {
                 return;
             }
