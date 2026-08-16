@@ -159,6 +159,7 @@ public class ExportJob {
         String tempFileName = "replay_export_temp/" + uuid + "." + this.settings.container().extension();
         Path exportTempFile = Path.of(tempFileName);
         Path exportTempFolder = exportTempFile.getParent();
+        boolean keepTempFile = false;
 
         int oldGuiScale = Minecraft.getInstance().options.guiScale().get();
 
@@ -172,20 +173,28 @@ public class ExportJob {
                 doExport(encoder, downloader);
             }
 
+            Path outputLocation = this.settings.output();
+            boolean errorMovingToOutput = false;
             if (this.settings.container() != VideoContainer.PNG_SEQUENCE) {
-                Files.move(exportTempFile, this.settings.output(), StandardCopyOption.REPLACE_EXISTING);
+                try {
+                    Files.move(exportTempFile, this.settings.output(), StandardCopyOption.REPLACE_EXISTING);
+                } catch (IOException e) {
+                    Flashback.LOGGER.error("Error while moving temp file to export output", e);
+                    outputLocation = exportTempFile;
+                    errorMovingToOutput = true;
+                    keepTempFile = true;
+                }
             }
 
             try {
                 long size = 0;
                 double duration = this.writtenFrames / this.settings.framerate();
 
-                Path output = this.settings.output();
-                if (this.settings.container() != VideoContainer.PNG_SEQUENCE && Files.exists(output) && Files.isRegularFile(output)) {
-                    size = Files.size(output);
+                if (this.settings.container() != VideoContainer.PNG_SEQUENCE && Files.exists(outputLocation) && Files.isRegularFile(outputLocation)) {
+                    size = Files.size(outputLocation);
                 }
 
-                ExportDoneWindow.addFinishedExportEntry(new ExportDoneWindow.FinishedExportEntry(this.settings, this.firstFrame, duration, size));
+                ExportDoneWindow.addFinishedExportEntry(new ExportDoneWindow.FinishedExportEntry(this.settings, outputLocation, errorMovingToOutput, this.firstFrame, duration, size));
                 this.firstFrame = null;
             } catch (IOException ignored) {}
         } catch (IOException e) {
@@ -214,18 +223,14 @@ public class ExportJob {
                 this.firstFrame = null;
             }
 
-            try {
-                Files.deleteIfExists(exportTempFile);
-            } catch (IOException ignored) {}
+            if (!keepTempFile) {
+                try {
+                    Files.deleteIfExists(exportTempFile);
+                } catch (IOException ignored) {}
+            }
 
             try {
-                boolean empty;
-                try (var stream = Files.newDirectoryStream(exportTempFolder)) {
-                    empty = !stream.iterator().hasNext();
-                }
-                if (empty) {
-                    Files.deleteIfExists(exportTempFolder);
-                }
+                Files.deleteIfExists(exportTempFolder);
             } catch (IOException ignored) {}
         }
     }
