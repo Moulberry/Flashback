@@ -953,6 +953,9 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
         }
         for (ClientboundPlayerInfoUpdatePacket.Entry entry : clientboundPlayerInfoUpdatePacket.entries()) {
             var playerInfo = this.playerInfoMap.get(entry.profileId());
+            if (playerInfo == null) {
+                continue;
+            }
             for (ClientboundPlayerInfoUpdatePacket.Action action : clientboundPlayerInfoUpdatePacket.actions()) {
                 this.applyPlayerInfoUpdate(action, entry, playerInfo);
             }
