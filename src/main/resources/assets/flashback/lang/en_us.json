@@ -268,6 +268,7 @@
   "flashback.audio_source.camera": "Audio Source: Camera",
   "flashback.incompatible_with_exporting": "Incompatible Mods",
   "flashback.incompatible_with_exporting_description": "You have some mods installed which are known to cause crashes/rendering issues.\nIf you encounter problems exporting, please try removing the following mods:",
+  "flashback.export_disable_fullscreen": "Fullscreen causes various issues when exporting. Please disable fullscreen before exporting",
   "flashback.start_export": "Start Export",
   "flashback.add_to_queue": "Add to Queue",
   "flashback.job_name": "Job Name",
