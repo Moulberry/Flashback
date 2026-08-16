@@ -269,6 +269,7 @@
   "flashback.incompatible_with_exporting": "Incompatible Mods",
   "flashback.incompatible_with_exporting_description": "You have some mods installed which are known to cause crashes/rendering issues.\nIf you encounter problems exporting, please try removing the following mods:",
   "flashback.export_disable_fullscreen": "Fullscreen causes various issues when exporting. Please disable fullscreen before exporting",
+  "flashback.error_moving_to_output": "There was an error writing the file to the output location. Usually this is caused by missing write permissions to the folder you selected. The export has been left in a temp folder instead",
   "flashback.start_export": "Start Export",
   "flashback.add_to_queue": "Add to Queue",
   "flashback.job_name": "Job Name",

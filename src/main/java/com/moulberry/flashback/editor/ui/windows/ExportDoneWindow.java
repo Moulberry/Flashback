@@ -30,6 +30,8 @@ public class ExportDoneWindow {
 
     public static final class FinishedExportEntry {
         private final ExportSettings settings;
+        private final Path outputLocation;
+        private final boolean errorMovingToOutput;
         private final @Nullable NativeImage thumbnail;
         private final double duration;
         private final long fileSize;
@@ -40,8 +42,10 @@ public class ExportDoneWindow {
         private boolean checkedCanUpload = false;
         private @Nullable MedalTvUploading.CannotUploadReason cannotUploadReason = null;
 
-        public FinishedExportEntry(ExportSettings settings, @Nullable NativeImage thumbnail, double duration, long fileSize) {
+        public FinishedExportEntry(ExportSettings settings, Path outputLocation, boolean errorMovingToOutput, @Nullable NativeImage thumbnail, double duration, long fileSize) {
             this.settings = settings;
+            this.outputLocation = outputLocation;
+            this.errorMovingToOutput = errorMovingToOutput;
             this.thumbnail = thumbnail;
             this.duration = duration;
             this.fileSize = fileSize;
@@ -94,13 +98,17 @@ public class ExportDoneWindow {
             int index = 0;
             for (FinishedExportEntry entry : entries) {
                 ImGui.pushID(index++);
-                Path output = entry.settings.output();
 
                 String name = entry.settings.name();
                 if (name == null) {
-                    name = output.getFileName().toString();
+                    name = entry.outputLocation.getFileName().toString();
                 }
                 ImGuiHelper.separatorWithText(name);
+
+                if (entry.errorMovingToOutput) {
+                    ImGui.textWrapped(I18n.get("flashback.error_moving_to_output"));
+                    ImGui.separator();
+                }
 
                 final int DESIRED_W = 240;
                 final int DESIRED_H = 135;
@@ -126,10 +134,10 @@ public class ExportDoneWindow {
                     }
 
                     if (ImGui.imageButton("ExportThumbnail", id, new ImVec2(width, height))) {
-                        Util.getPlatform().openPath(output);
+                        Util.getPlatform().openPath(entry.outputLocation);
                     }
                 } else if (ImGui.button(I18n.get("flashback.export_done.missing_thumbnail"), DESIRED_W+padding.x*2, DESIRED_H+padding.y*2)) {
-                    Util.getPlatform().openPath(output);
+                    Util.getPlatform().openPath(entry.outputLocation);
                 }
 
                 ImGui.sameLine();
@@ -154,14 +162,14 @@ public class ExportDoneWindow {
 
                 if (entry.outputIsFolder) {
                     if (ImGui.button(I18n.get("flashback.open_folder"))) {
-                        Util.getPlatform().openPath(output);
+                        Util.getPlatform().openPath(entry.outputLocation);
                     }
                 } else {
                     if (ImGui.button(I18n.get("flashback.open_file"))) {
-                        Util.getPlatform().openPath(output);
+                        Util.getPlatform().openPath(entry.outputLocation);
                     }
                     if (ImGui.button(I18n.get("flashback.open_folder"))) {
-                        Util.getPlatform().openPath(output.getParent());
+                        Util.getPlatform().openPath(entry.outputLocation.getParent());
                     }
                 }
 
