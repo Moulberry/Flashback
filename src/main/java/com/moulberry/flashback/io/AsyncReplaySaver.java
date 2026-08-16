@@ -50,6 +50,8 @@ import java.util.function.Consumer;
 
 public class AsyncReplaySaver {
 
+    public static final ThreadLocal<Boolean> WRITING_PACKET = ThreadLocal.withInitial(() -> false);
+
     private final ArrayBlockingQueue<Consumer<ReplayWriter>> tasks = new ArrayBlockingQueue<>(1024);
     private final AtomicReference<Throwable> error = new AtomicReference<>(null);
     private final AtomicBoolean shouldStop = new AtomicBoolean(false);
@@ -171,25 +173,31 @@ public class AsyncReplaySaver {
                     continue;
                 }
 
-                if (packet instanceof ClientboundCustomPayloadPacket) {
-                    // Some mods might throw errors when encoding packets, so this
-                    // attempts to encode the packet before starting the action
-                    try {
-                        if (customPayloadTempBuffer == null) {
-                            customPayloadTempBuffer = new RegistryFriendlyByteBuf(Unpooled.buffer(), writer.registryAccess());
-                        }
+                try {
+                    WRITING_PACKET.set(true);
 
-                        customPayloadTempBuffer.clear();
-                        gamePacketCodec.encode(customPayloadTempBuffer, packet);
+                    if (packet instanceof ClientboundCustomPayloadPacket) {
+                        // Some mods might throw errors when encoding packets, so this
+                        // attempts to encode the packet before starting the action
+                        try {
+                            if (customPayloadTempBuffer == null) {
+                                customPayloadTempBuffer = new RegistryFriendlyByteBuf(Unpooled.buffer(), writer.registryAccess());
+                            }
 
+                            customPayloadTempBuffer.clear();
+                            gamePacketCodec.encode(customPayloadTempBuffer, packet);
+
+                            writer.startAction(ActionGamePacket.INSTANCE);
+                            writer.friendlyByteBuf().writeBytes(customPayloadTempBuffer);
+                            writer.finishAction(ActionGamePacket.INSTANCE);
+                        } catch (Exception ignored) {}
+                    } else {
                         writer.startAction(ActionGamePacket.INSTANCE);
-                        writer.friendlyByteBuf().writeBytes(customPayloadTempBuffer);
+                        gamePacketCodec.encode(writer.friendlyByteBuf(), packet);
                         writer.finishAction(ActionGamePacket.INSTANCE);
-                    } catch (Exception ignored) {}
-                } else {
-                    writer.startAction(ActionGamePacket.INSTANCE);
-                    gamePacketCodec.encode(writer.friendlyByteBuf(), packet);
-                    writer.finishAction(ActionGamePacket.INSTANCE);
+                    }
+                } finally {
+                    WRITING_PACKET.set(false);
                 }
             }
 
