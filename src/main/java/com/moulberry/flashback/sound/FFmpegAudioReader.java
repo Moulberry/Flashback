@@ -19,7 +19,6 @@ import org.bytedeco.javacpp.BytePointer;
 import org.bytedeco.javacpp.IntPointer;
 import org.bytedeco.javacpp.Pointer;
 import org.bytedeco.javacpp.PointerPointer;
-import org.bytedeco.javacv.FFmpegFrameGrabber;
 import org.lwjgl.BufferUtils;
 
 import javax.sound.sampled.AudioFormat;

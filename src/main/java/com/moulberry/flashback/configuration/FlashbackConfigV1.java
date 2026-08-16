@@ -128,6 +128,10 @@ public class FlashbackConfigV1 {
         @LatticeIntRange(min = 0, max = 60, clampMin = 0)
         @LatticeWidgetSlider
         public int exportRenderDummyFrames = 0;
+
+        @LatticeOption(title = "flashback.use_system_ffmpeg", description = "!!.description")
+        @LatticeWidgetButton
+        public boolean useSystemFFmpeg = false;
     }
 
     @LatticeCategory(name = "flashback.option.keyframes")
