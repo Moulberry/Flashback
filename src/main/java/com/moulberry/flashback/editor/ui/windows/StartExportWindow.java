@@ -222,8 +222,15 @@ public class StartExportWindow {
 
             ImGui.dummy(0, 10 * ReplayUI.getUiScale());
 
+            boolean isFullscreen = Minecraft.getInstance().getWindow().isFullscreen();
+            if (isFullscreen) {
+                ImGui.separator();
+                ImGui.textWrapped(I18n.get("flashback.export_disable_fullscreen"));
+            }
+
             float buttonSize = (ImGui.getContentRegionAvailX() - ImGui.getStyle().getItemSpacingX()) / 2f;
-            if (ImGui.button(I18n.get("flashback.start_export"), buttonSize, ReplayUI.scaleUi(25))) {
+            if (isFullscreen) ImGui.beginDisabled();
+            if (ImGui.button(I18n.get("flashback.start_export"), buttonSize, ReplayUI.scaleUi(25)) && !isFullscreen) {
                 createExportSettings(null, config).thenAccept(settings -> {
                     if (settings != null) {
                         close = true;
@@ -234,16 +241,18 @@ public class StartExportWindow {
                 });
             }
             ImGui.sameLine();
-            if (ImGui.button(I18n.get("flashback.add_to_queue"), buttonSize, ReplayUI.scaleUi(25))) {
+            if (ImGui.button(I18n.get("flashback.add_to_queue"), buttonSize, ReplayUI.scaleUi(25)) && !isFullscreen) {
                 jobName.set(I18n.get("flashback.job_n", ExportJobQueue.count()+1));
                 ImGui.openPopup("QueuedJobName");
             }
+            if (isFullscreen) ImGui.endDisabled();
 
             if (ImGuiHelper.beginPopup("QueuedJobName")) {
                 ImGui.setNextItemWidth(100);
                 ImGui.inputText(I18n.get("flashback.job_name"), jobName);
 
-                if (ImGui.button(I18n.get("flashback.queue_job")) || ReplayUI.consumeConfirm()) {
+                if (isFullscreen) ImGui.beginDisabled();
+                if ((ImGui.button(I18n.get("flashback.queue_job")) || ReplayUI.consumeConfirm()) && !isFullscreen) {
                     createExportSettings(ImGuiHelper.getString(jobName), config).thenAccept(settings -> {
                         if (settings != null) {
                             close = true;
@@ -252,6 +261,7 @@ public class StartExportWindow {
                         }
                     });
                 }
+                if (isFullscreen) ImGui.endDisabled();
                 ImGui.sameLine();
                 if (ImGui.button(I18n.get("gui.back")) || ReplayUI.consumeCancel()) {
                     ImGui.closeCurrentPopup();
