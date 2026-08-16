@@ -86,6 +86,7 @@
     "compat.voice_chat.MixinVoiceChatRenderEvents",
     "compat.voice_chat.MixinVoiceChatSoundManager",
     "norandom.MixinEntityNoRandom",
+    "packet_fix.MixinStringUtils",
     "playback.MixinAttributeInstance",
     "playback.MixinChunkHolder",
     "playback.MixinEntity",
