@@ -323,7 +323,7 @@ public class ExportJob {
             long pauseScreenStart = System.currentTimeMillis();
             int additionalDummyFrames = this.extraDummyFrames;
             if (tickIndex == 0) {
-                additionalDummyFrames += 60;
+                additionalDummyFrames = Math.max(this.extraDummyFrames, 60);
             }
             while (Minecraft.getInstance().getOverlay() != null || Minecraft.getInstance().screen != null || additionalDummyFrames > 0) {
                 boolean overlayOrScreen = Minecraft.getInstance().getOverlay() != null || Minecraft.getInstance().screen != null;
@@ -343,7 +343,7 @@ public class ExportJob {
                 if (overlayOrScreen) {
                     finishFrame(renderTarget, new ArrayList<>(List.of("Waiting for overlay to disappear")), true, false);
                 } else if (tickIndex == 0) {
-                    finishFrame(renderTarget, new ArrayList<>(List.of("Warming up... " + additionalDummyFrames + "/60")), true, false);
+                    finishFrame(renderTarget, new ArrayList<>(List.of("Warming up... " + Math.max(0, 60 - additionalDummyFrames) + "/60")), true, false);
                 }
 
                 if (overlayOrScreen) {
