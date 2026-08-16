@@ -235,6 +235,10 @@ public class Flashback implements ModInitializer, ClientModInitializer {
         config = FlashbackConfigV1.tryLoadFromFolder(configFolder);
         configElements = LatticeElements.fromAnnotations(FlashbackTextComponents.FLASHBACK_OPTIONS, config);
 
+        if (config.exporting.useSystemFFmpeg) {
+            System.setProperty("org.bytedeco.javacpp.pathsfirst", "true");
+        }
+
         if (FabricLoader.getInstance().isDevelopmentEnvironment()) {
             Minecraft.getInstance().schedule(() -> Lattice.performTest(configElements));
         }

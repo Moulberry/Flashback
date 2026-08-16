@@ -160,6 +160,10 @@ public enum VideoCodec implements ComboOption {
             int pixelFormat = PixelFormatHelper.getBestPixelFormat(codec.name().getString(), false);
             codecContext.pix_fmt(pixelFormat);
 
+            if (pixelFormat == AV_PIX_FMT_VULKAN || pixelFormat == AV_PIX_FMT_OPENCL) {
+                return false;
+            }
+
             if ((codec.capabilities() & AV_CODEC_CAP_EXPERIMENTAL) != 0) {
                 codecContext.strict_std_compliance(FF_COMPLIANCE_EXPERIMENTAL);
             }
