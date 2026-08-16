@@ -167,7 +167,7 @@ public enum VideoCodec implements ComboOption {
             return avcodec.avcodec_open2(codecContext, codec, options) >= 0;
         } finally {
             if (codecContext != null) {
-                avcodec.avcodec_close(codecContext);
+                avcodec.avcodec_free_context(codecContext);
                 codecContext.close();
             }
             avutil.av_dict_free(options);

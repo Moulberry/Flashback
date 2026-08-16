@@ -82,7 +82,7 @@ dependencies {
     compileOnly("maven.modrinth:scalablelux:gYbHVCz8")
 
     // FFmpeg
-    shadow(implementation("org.bytedeco:javacv-platform:1.5.10") {
+    shadow(implementation("org.bytedeco:javacv-platform:1.5.14") {
         exclude group: "org.bytedeco", module: "artoolkitplus"
         exclude group: "org.bytedeco", module: "artoolkitplus-platform"
         exclude group: "org.bytedeco", module: "flycapture"
