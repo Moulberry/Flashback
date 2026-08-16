@@ -87,7 +87,14 @@ public class ExportScreenshotWindow {
                 }
             }
 
-            if (editorState != null && ImGui.button(I18n.get("flashback.take_screenshot"))) {
+            boolean isFullscreen = Minecraft.getInstance().getWindow().isFullscreen();
+            if (isFullscreen) {
+                ImGui.separator();
+                ImGui.textWrapped(I18n.get("flashback.export_disable_fullscreen"));
+            }
+
+            if (isFullscreen) ImGui.beginDisabled();
+            if (editorState != null && ImGui.button(I18n.get("flashback.take_screenshot")) && !isFullscreen) {
                 String defaultName = StartExportWindow.getDefaultFilename(null, "png", config);
                 String defaultExportPathString = config.internalExport.defaultExportPath;
 
@@ -121,6 +128,7 @@ public class ExportScreenshotWindow {
                     }
                 });
             }
+            if (isFullscreen) ImGui.endDisabled();
 
             ImGuiHelper.endPopupModalCloseable();
         }
