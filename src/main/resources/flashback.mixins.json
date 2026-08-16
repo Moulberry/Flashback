@@ -83,6 +83,7 @@
     "compat.voice_chat.MixinVoiceChatSoundManager",
     "millis.MixinWorldBorderMovingBorderExtent",
     "norandom.MixinEntityNoRandom",
+    "packet_fix.MixinStringUtils",
     "playback.MixinAttributeInstance",
     "playback.MixinChunkHolder",
     "playback.MixinEntity",
