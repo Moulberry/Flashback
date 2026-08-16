@@ -79,6 +79,7 @@
     "millis.MixinWorldBorderMovingBorderExtent",
     "playback.MixinAbstractMinecart",
     "norandom.MixinEntityNoRandom",
+    "packet_fix.MixinStringUtils",
     "playback.MixinAttributeInstance",
     "playback.MixinBoat",
     "playback.MixinChunkHolder",
