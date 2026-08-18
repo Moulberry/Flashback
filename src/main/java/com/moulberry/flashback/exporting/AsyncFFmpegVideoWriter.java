@@ -4,7 +4,6 @@ import com.mojang.blaze3d.platform.NativeImage;
 import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.SneakyThrow;
 import com.moulberry.flashback.combo_options.AudioCodec;
-import it.unimi.dsi.fastutil.ints.IntSet;
 import org.bytedeco.ffmpeg.avutil.AVFrame;
 import org.bytedeco.ffmpeg.avutil.AVPixFmtDescriptor;
 import org.bytedeco.ffmpeg.global.avutil;
@@ -81,33 +80,6 @@ public class AsyncFFmpegVideoWriter implements AutoCloseable, VideoWriter {
     }
 
     public AsyncFFmpegVideoWriter(ExportSettings settings, String filename) {
-        int width = settings.resolutionX();
-        int height = settings.resolutionY();
-
-        final int maxResolutionArea = 3840 * 2160;
-        if (width*height > maxResolutionArea) {
-            double factor = (width*height) / (double) maxResolutionArea;
-            factor = Math.sqrt(factor);
-            width = (int) Math.floor(width / factor);
-            height = (int) Math.floor(height / factor);
-        }
-
-        int maxBitrate = Math.min(288_000_000, 5000 + (int) Math.ceil(width * height * settings.framerate()));
-
-        if (settings.encoder().equals("libsvtav1")) {
-            maxBitrate = Math.min(100_000_000, maxBitrate);
-        }
-
-        int bitrate;
-        if (settings.bitrate() <= 0) {
-            bitrate = maxBitrate;
-        } else {
-            bitrate = Math.min(settings.bitrate(), maxBitrate);
-        }
-        double fps = settings.framerate();
-
-        String extension = settings.container().extension();
-
         try {
             FFmpegLogCallback.set();
 
@@ -115,7 +87,53 @@ public class AsyncFFmpegVideoWriter implements AutoCloseable, VideoWriter {
 
             int dstPixelFormat = PixelFormatHelper.getBestPixelFormat(settings.encoder(), wantTransparency);
             Flashback.LOGGER.info("Encoding video with pixel format {}", PixelFormatHelper.pixelFormatToString(dstPixelFormat));
-            boolean needsRescale = ExportJob.SRC_PIXEL_FORMAT != dstPixelFormat;
+
+            int width = settings.resolutionX();
+            int height = settings.resolutionY();
+
+            double scaleUpFactor = 1.0;
+            double scaleDownFactor = 1.0;
+
+            int minimumSize = EncoderQuirks.minimumFrameSize(settings.encoder());
+            scaleUpFactor = Math.max(scaleUpFactor, (double) minimumSize / width);
+            scaleUpFactor = Math.max(scaleUpFactor, (double) minimumSize / height);
+
+            int maximumSize = EncoderQuirks.maximumFrameSize(settings.encoder());
+            scaleDownFactor = Math.min(scaleDownFactor, (double) maximumSize / width);
+            scaleDownFactor = Math.min(scaleDownFactor, (double) maximumSize / height);
+
+            int maximumArea = EncoderQuirks.maximumFrameArea(settings.encoder());
+            scaleDownFactor = Math.min(scaleDownFactor, Math.sqrt((double) maximumArea / (double) width / (double) height));
+
+            if (scaleUpFactor != 1.0 && scaleDownFactor != 1.0) {
+                width = Math.max(minimumSize, Math.min(maximumSize, width));
+                height = Math.max(minimumSize, Math.min(maximumSize, height));
+            } else if (scaleUpFactor != 1.0) {
+                width = (int) Math.ceil(scaleUpFactor * width);
+                height = (int) Math.ceil(scaleUpFactor * height);
+            } else if (scaleDownFactor != 1.0) {
+                width = (int) Math.floor(scaleDownFactor * width);
+                height = (int) Math.floor(scaleDownFactor * height);
+            }
+
+            boolean needsRescale = ExportJob.SRC_PIXEL_FORMAT != dstPixelFormat || width != settings.resolutionX() || height != settings.resolutionY();
+
+            // 288m is the hard cap of libopenh264. Some encoders e.g. h264_amf support up to 1.1b, but the quality is near identical
+            int maxBitrate = (int) Math.min(288_000_000, 4096L + av_image_get_buffer_size(dstPixelFormat, width, height, 1) * 8L * settings.framerate());
+
+            if (settings.encoder().equals("libsvtav1")) {
+                maxBitrate = Math.min(100_000_000, maxBitrate);
+            }
+
+            int bitrate;
+            if (settings.bitrate() <= 0) {
+                bitrate = maxBitrate;
+            } else {
+                bitrate = Math.min(settings.bitrate(), maxBitrate);
+            }
+            double fps = settings.framerate();
+
+            String extension = settings.container().extension();
 
             int audioChannels = 0;
             if (settings.recordAudio()) {
