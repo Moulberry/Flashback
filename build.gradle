@@ -107,7 +107,20 @@ dependencies {
         exclude group: "org.bytedeco", module: "tesseract-platform"
         exclude group: "org.bytedeco", module: "videoinput"
         exclude group: "org.bytedeco", module: "videoinput-platform"
+        exclude group: "org.bytedeco", module: "ffmpeg"
+        exclude group: "org.bytedeco", module: "javacpp"
     })
+    // Include bytedeco ffmpeg & natives
+    shadow(implementation(group: "org.bytedeco", name: "ffmpeg", version: "8.1.2-1.5.14", classifier: ""))
+    shadow(api(rootProject.files('ffmpeg/ffmpeg-natives-linux.jar'))) // Custom natives are from https://github.com/BtbN/FFmpeg-Builds/
+    shadow(api(rootProject.files('ffmpeg/ffmpeg-natives-windows.jar')))
+    shadow(implementation(group: "org.bytedeco", name: "ffmpeg", version: "8.1.2-1.5.14", classifier: "macosx-x86_64"))
+    shadow(implementation(group: "org.bytedeco", name: "ffmpeg", version: "8.1.2-1.5.14", classifier: "macosx-arm64"))
+    // Include only platforms we use
+    shadow(implementation(group: "org.bytedeco", name: "javacpp", version: "1.5.14", classifier: "linux-x86_64"))
+    shadow(implementation(group: "org.bytedeco", name: "javacpp", version: "1.5.14", classifier: "windows-x86_64"))
+    shadow(implementation(group: "org.bytedeco", name: "javacpp", version: "1.5.14", classifier: "macosx-x86_64"))
+    shadow(implementation(group: "org.bytedeco", name: "javacpp", version: "1.5.14", classifier: "macosx-arm64"))
 
     // ImGui
     shadow(implementation(rootProject.files('deps/imgui-binding-1.90.0.jar')))
@@ -201,21 +214,3 @@ tasks.register("mergeShadowWithIncludes", Jar) {
     }
 }
 project.assemble.dependsOn(mergeShadowWithIncludes)
-
-// configure the maven publication
-publishing {
-    publications {
-        create("mavenJava", MavenPublication) {
-            artifactId = project.archives_base_name
-            from components.java
-        }
-    }
-
-    // See https://docs.gradle.org/current/userguide/publishing_maven.html for information on how to set up publishing.
-    repositories {
-        // Add repositories to publish to here.
-        // Notice: This block does NOT have the same function as the block in the top level.
-        // The repositories here will be used for publishing your artifact, not for
-        // retrieving dependencies.
-    }
-}
