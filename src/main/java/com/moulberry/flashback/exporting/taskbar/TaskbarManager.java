@@ -34,6 +34,7 @@ public class TaskbarManager {
             started = false;
         });
         taskbarThread.setName("Flashback-Taskbar-Updater");
+        taskbarThread.setDaemon(true);
         taskbarThread.start();
     }
 
