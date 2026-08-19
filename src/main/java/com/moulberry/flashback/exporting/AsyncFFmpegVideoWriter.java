@@ -145,6 +145,16 @@ public class AsyncFFmpegVideoWriter implements AutoCloseable, VideoWriter {
             if (settings.encoder().equals("exr")) {
                 recorder.setVideoOption("compression", "zip1");
             }
+            if (settings.bitrate() == 0) {
+                if (settings.encoder().endsWith("_nvenc")) {
+                    recorder.setVideoOption("preset", "p7");
+                } else if (settings.encoder().endsWith("_amf")) {
+                    recorder.setVideoOption("usage", "high_quality");
+                    recorder.setVideoOption("quality", "quality");
+                } else if (settings.encoder().equals("libx264")) {
+                    recorder.setVideoOption("preset", "slower");
+                }
+            }
 
             if (settings.recordAudio()) {
                 recorder.setAudioCodec(settings.audioCodec().codecId());
