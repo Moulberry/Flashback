@@ -39,7 +39,7 @@
         "iris": "<1.10.9"
     },
 	"depends": {
-		"fabricloader": ">=0.15.10",
+		"fabricloader": ">=0.19.0",
 		"minecraft": "~26.1",
 		"java": ">=21",
 		"fabric-api": ">=0.107.0"

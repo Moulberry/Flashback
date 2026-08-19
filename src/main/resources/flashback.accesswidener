@@ -1,4 +1,4 @@
-classTweaker v1 official
+classTweaker v2 official
 
 # Options
 accessible class net/minecraft/client/OptionInstance$IntRangeBase
@@ -187,3 +187,5 @@ accessible method net/minecraft/client/renderer/rendertype/RenderType create (Lj
 # Allow updating server playerinfo
 accessible method net/minecraft/client/multiplayer/PlayerInfo setLatency (I)V
 accessible method net/minecraft/client/multiplayer/PlayerInfo setGameMode (Lnet/minecraft/world/level/GameType;)V
+
+extend-enum com/mojang/blaze3d/textures/TextureFormat FLASHBACK_R32_FLOAT

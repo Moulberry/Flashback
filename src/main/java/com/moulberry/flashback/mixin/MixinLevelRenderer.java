@@ -113,6 +113,14 @@ public abstract class MixinLevelRenderer {
         }
     }
 
+    @Inject(method = "renderLevel", at = @At("RETURN"))
+    public void renderLevelRet(CallbackInfo ci) {
+        ExportJob exportJob = Flashback.EXPORT_JOB;
+        if (exportJob != null && exportJob.isRunning()) {
+            exportJob.tryDepthDownload();
+        }
+    }
+
     @Unique
     private GpuTexture roundAlphaBuffer = null;
     @Unique

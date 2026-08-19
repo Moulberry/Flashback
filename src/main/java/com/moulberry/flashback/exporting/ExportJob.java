@@ -94,7 +94,7 @@ public class ExportJob {
     private NativeImage firstFrame = null;
     private int writtenFrames = 0;
 
-    public static final int SRC_PIXEL_FORMAT = avutil.AV_PIX_FMT_RGBA;
+    public Runnable saveDepthAfterLevel = null;
 
     public ExportJob(ExportSettings settings) {
         this.settings = settings;
@@ -164,6 +164,8 @@ public class ExportJob {
         return this.settings;
     }
 
+    private record TempFileInfo(String name, Path file, Path folder) {}
+
     public void run() {
         ReplayServer replayServer = Flashback.getReplayServer();
         if (this.running || replayServer == null) {
@@ -178,9 +180,13 @@ public class ExportJob {
 
         UUID uuid = UUID.randomUUID();
 
-        String tempFileName = "replay_export_temp/" + uuid + "." + this.settings.container().extension();
-        Path exportTempFile = Path.of(tempFileName);
-        Path exportTempFolder = exportTempFile.getParent();
+        TempFileInfo tempFileInfo = null;
+        if (!this.settings.container().isImageSequence() || this.settings.pngSequenceFormat() == null) {
+            String tempFileName = "replay_export_temp/" + uuid + "." + this.settings.container().extension();
+            Path exportTempFile = Path.of(tempFileName);
+            Path exportTempFolder = exportTempFile.getParent();
+            tempFileInfo = new TempFileInfo(tempFileName, exportTempFile, exportTempFolder);
+        }
         boolean keepTempFile = false;
 
         int oldGuiScale = Minecraft.getInstance().options.guiScale().get();
@@ -188,7 +194,9 @@ public class ExportJob {
         this.extraDummyFrames = Flashback.getConfig().exporting.exportRenderDummyFrames;
 
         try {
-            Files.createDirectories(exportTempFolder);
+            if (tempFileInfo != null) {
+                Files.createDirectories(tempFileInfo.folder);
+            }
 
             int resolutionX = this.settings.resolutionX();
             int resolutionY = this.settings.resolutionY();
@@ -203,19 +211,19 @@ public class ExportJob {
                 camera.enablePanoramicMode();
             }
 
-            try (VideoWriter encoder = createVideoWriter(this.settings, tempFileName);
+            try (VideoWriter encoder = createVideoWriter(this.settings, tempFileInfo);
                  SaveableFramebufferQueue downloader = new SaveableFramebufferQueue(resolutionX, resolutionY)) {
                 doExport(encoder, downloader);
             }
 
             Path outputLocation = this.settings.output();
             boolean errorMovingToOutput = false;
-            if (this.settings.container() != VideoContainer.PNG_SEQUENCE) {
+            if (tempFileInfo != null) {
                 try {
-                    Files.move(exportTempFile, this.settings.output(), StandardCopyOption.REPLACE_EXISTING);
+                    Files.move(tempFileInfo.file, this.settings.output(), StandardCopyOption.REPLACE_EXISTING);
                 } catch (IOException e) {
                     Flashback.LOGGER.error("Error while moving temp file to export output", e);
-                    outputLocation = exportTempFile;
+                    outputLocation = tempFileInfo.file;
                     errorMovingToOutput = true;
                     keepTempFile = true;
                 }
@@ -263,24 +271,49 @@ public class ExportJob {
                 this.firstFrame = null;
             }
 
-            if (!keepTempFile) {
+            if (tempFileInfo != null) {
+                if (!keepTempFile) {
+                    try {
+                        Files.deleteIfExists(tempFileInfo.file);
+                    } catch (IOException ignored) {}
+                }
+
                 try {
-                    Files.deleteIfExists(exportTempFile);
+                    Files.deleteIfExists(tempFileInfo.folder);
                 } catch (IOException ignored) {}
             }
-
-            try {
-                Files.deleteIfExists(exportTempFolder);
-            } catch (IOException ignored) {}
         }
     }
 
-    private static VideoWriter createVideoWriter(ExportSettings settings, String tempFileName) {
-        if (settings.container() == VideoContainer.PNG_SEQUENCE) {
-            return new PNGSequenceVideoWriter(settings);
+    private static VideoWriter createVideoWriter(ExportSettings settings, TempFileInfo tempFileInfo) {
+        String filename;
+        if (tempFileInfo != null) {
+            filename = tempFileInfo.name;
+        } else if (settings.pngSequenceFormat() != null) {
+            String prefix;
+            Path folder;
+
+            if (Files.isDirectory(settings.output())) {
+                prefix = "";
+                folder = settings.output();
+            } else {
+                prefix = settings.output().getFileName().toString() + "-";
+                folder = settings.output().getParent();
+            }
+
+            String formatter = prefix + settings.pngSequenceFormat();
+
+            // Add extension if missing
+            String extension = "." + settings.container().extension();
+            if (!formatter.endsWith(extension)) {
+                formatter = formatter + extension;
+            }
+
+            filename = folder.resolve(formatter).toString();
         } else {
-            return new AsyncFFmpegVideoWriter(settings, tempFileName);
+            throw new IllegalStateException("settings.pngSequenceFormat() must not be null");
         }
+        return new AsyncFFmpegVideoWriter(settings, filename);
     }
 
     private void doExport(VideoWriter videoWriter, SaveableFramebufferQueue downloader) {
@@ -434,6 +467,13 @@ public class ExportJob {
                     }
                     player.setOldRot();
 
+                    SaveableFramebuffer saveable = downloader.take();
+                    if (this.settings.depthMap()) {
+                        this.saveDepthAfterLevel = () -> {
+                            downloader.startDepthDownload(renderTarget, saveable);
+                        };
+                    }
+
                     // Perform rendering
                     PerfectFrames.waitUntilFrameReady();
                     start = System.nanoTime();
@@ -454,12 +494,22 @@ public class ExportJob {
                         audioBuffer = ByteBuffer.allocateDirect(renderSamples * 4 * channels).order(ByteOrder.nativeOrder()).asFloatBuffer();
                         SOFTLoopback.alcRenderSamplesSOFT(device, audioBuffer, renderSamples);
                     }
-
-                    SaveableFramebuffer saveable = downloader.take();
                     saveable.audioBuffer = audioBuffer;
-                    downloader.startDownload(renderTarget, saveable, this.settings.ssaa());
+
+                    if (this.settings.depthMap()) {
+                        this.tryDepthDownload();
+                    } else {
+                        downloader.startDownload(renderTarget, saveable, this.settings.ssaa());
+                    }
                 }
             } else {
+                SaveableFramebuffer saveable = downloader.take();
+                if (this.settings.depthMap()) {
+                    this.saveDepthAfterLevel = () -> {
+                        downloader.startDepthDownload(renderTarget, saveable);
+                    };
+                }
+
                 // Perform rendering
                 PerfectFrames.waitUntilFrameReady();
                 start = System.nanoTime();
@@ -480,10 +530,13 @@ public class ExportJob {
                     audioBuffer = ByteBuffer.allocateDirect(renderSamples * 4 * channels).order(ByteOrder.nativeOrder()).asFloatBuffer();
                     SOFTLoopback.alcRenderSamplesSOFT(device, audioBuffer, renderSamples);
                 }
-
-                SaveableFramebuffer saveable = downloader.take();
                 saveable.audioBuffer = audioBuffer;
-                downloader.startDownload(renderTarget, saveable, this.settings.ssaa());
+
+                if (this.settings.depthMap()) {
+                    this.tryDepthDownload();
+                } else {
+                    downloader.startDownload(renderTarget, saveable, this.settings.ssaa());
+                }
             }
 
             submitDownloadedFrames(videoWriter, downloader, false);
@@ -508,6 +561,13 @@ public class ExportJob {
         });
     }
 
+    public void tryDepthDownload() {
+        if (this.saveDepthAfterLevel != null) {
+            this.saveDepthAfterLevel.run();
+            this.saveDepthAfterLevel = null;
+        }
+    }
+
     private static void render(RenderTarget renderTarget, DeltaTracker.Timer timer) {
         Minecraft minecraft = Minecraft.getInstance();
 
@@ -518,8 +578,7 @@ public class ExportJob {
         minecraft.gameRenderer.extract(timer, true);
         RenderSystem.executePendingTasks();
 
-        var commandEncoder = RenderSystem.getDevice().createCommandEncoder();
-        commandEncoder.clearColorAndDepthTextures(renderTarget.getColorTexture(), 0, renderTarget.getDepthTexture(), 1.0);
+        FramebufferUtils.clear(renderTarget, 0);
         minecraft.gameRenderer.render(timer, true);
 
     }
@@ -687,18 +746,11 @@ public class ExportJob {
                     }
                 }
 
-                FloatBuffer audioBuffer = null;
-                for (SaveableFramebufferQueue.DownloadedFrame frame : frames) {
-                    if (frame.audioBuffer() != null) {
-                        audioBuffer = frame.audioBuffer();
-                        break;
-                    }
-                }
-
                 int resolutionX = this.settings.resolutionX();
                 int resolutionY = this.settings.resolutionY();
 
-                NativeImage target = new NativeImage(resolutionX, resolutionY, true);
+                ImageFrame target = new ImageFrame(resolutionX, resolutionY, frames[0].format, true);
+                target.audioBuffer = frames[0].audioBuffer;
 
                 if (this.settings.projection() == ExportProjection.CUBE_MAP) {
                     for (int i = 0; i < frames.length; i++) {
@@ -718,10 +770,10 @@ public class ExportJob {
                             break;
                         }
 
-                        NativeImage image = frames[i].image();
-                        int sizeX = Math.min(image.getWidth(), target.getWidth() - positionX);
-                        int sizeY = Math.min(image.getHeight(), target.getHeight() - positionY);
-                        image.copyRect(target, 0, 0, positionX, positionY, sizeX, sizeY, false, false);
+                        ImageFrame image = frames[i];
+                        int sizeX = Math.min(image.width, target.height - positionX);
+                        int sizeY = Math.min(image.width, target.height - positionY);
+                        image.copyRect(target, 0, 0, positionX, positionY, sizeX, sizeY);
                     }
                 } else {
                     for (int y = 0; y < resolutionY; y++) {
@@ -741,60 +793,60 @@ public class ExportJob {
                             double cz = sz / a;
 
                             if (cy == -1.0) {
-                                NativeImage image = frames[4].image();
-                                int imageX = (int) Math.round((cx+1)/2 * (image.getWidth()-1));
-                                int imageY = (int) Math.round((cz+1)/2 * (image.getHeight()-1));
+                                ImageFrame image = frames[4];
+                                int imageX = (int) Math.round((cx+1)/2 * (image.width-1));
+                                int imageY = (int) Math.round((cz+1)/2 * (image.height-1));
 
-                                target.setPixel(x, y, image.getPixel(imageX, imageY));
+                                image.copyPixel(target, x, y, imageX, imageY);
                             } else if (cy == 1.0) {
-                                NativeImage image = frames[5].image();
-                                int imageX = (int) Math.round((cx+1)/2 * (image.getWidth()-1));
-                                int imageY = image.getHeight()-1 - (int) Math.round((cz+1)/2 * (image.getHeight()-1));
+                                ImageFrame image = frames[5];
+                                int imageX = (int) Math.round((cx+1)/2 * (image.width-1));
+                                int imageY = image.height-1 - (int) Math.round((cz+1)/2 * (image.height-1));
 
-                                target.setPixel(x, y, image.getPixel(imageX, imageY));
+                                image.copyPixel(target, x, y, imageX, imageY);
                             } else if (cz == -1.0) {
-                                NativeImage image = frames[3].image();
-                                int imageX = image.getWidth()-1 - (int) Math.round((cx+1)/2 * (image.getWidth()-1));
-                                int imageY = (int) Math.round((cy+1)/2 * (image.getHeight()-1));
+                                ImageFrame image = frames[3];
+                                int imageX = image.width-1 - (int) Math.round((cx+1)/2 * (image.width-1));
+                                int imageY = (int) Math.round((cy+1)/2 * (image.height-1));
 
-                                target.setPixel(x, y, image.getPixel(imageX, imageY));
+                                image.copyPixel(target, x, y, imageX, imageY);
                             } else if (cz == 1.0) {
-                                NativeImage image = frames[1].image();
-                                int imageX = (int) Math.round((cx+1)/2 * (image.getWidth()-1));
-                                int imageY = (int) Math.round((cy+1)/2 * (image.getHeight()-1));
+                                ImageFrame image = frames[1];
+                                int imageX = (int) Math.round((cx+1)/2 * (image.width-1));
+                                int imageY = (int) Math.round((cy+1)/2 * (image.height-1));
 
-                                target.setPixel(x, y, image.getPixel(imageX, imageY));
+                                image.copyPixel(target, x, y, imageX, imageY);
                             } else if (cx == 1.0) {
-                                NativeImage image = frames[2].image();
-                                int imageX = image.getWidth()-1 - (int) Math.round((cz+1)/2 * (image.getWidth()-1));
-                                int imageY = (int) Math.round((cy+1)/2 * (image.getHeight()-1));
+                                ImageFrame image = frames[2];
+                                int imageX = image.width-1 - (int) Math.round((cz+1)/2 * (image.width-1));
+                                int imageY = (int) Math.round((cy+1)/2 * (image.height-1));
 
-                                target.setPixel(x, y, image.getPixel(imageX, imageY));
+                                image.copyPixel(target, x, y, imageX, imageY);
                             } else if (cx == -1.0) {
-                                NativeImage image = frames[0].image();
-                                int imageX = (int) Math.round((cz+1)/2 * (image.getWidth()-1));
-                                int imageY = (int) Math.round((cy+1)/2 * (image.getHeight()-1));
+                                ImageFrame image = frames[0];
+                                int imageX = (int) Math.round((cz+1)/2 * (image.width-1));
+                                int imageY = (int) Math.round((cy+1)/2 * (image.height-1));
 
-                                target.setPixel(x, y, image.getPixel(imageX, imageY));
+                                image.copyPixel(target, x, y, imageX, imageY);
                             }
                         }
                     }
                 }
 
-                for (SaveableFramebufferQueue.DownloadedFrame frame : frames) {
-                    frame.image().close();
+                for (ImageFrame frame : frames) {
+                    frame.close();
                 }
 
                 if (this.firstFrame == null) {
-                    this.firstFrame = target.mappedCopy(x -> 0xFF000000 | x);
+                    this.firstFrame = target.toOpaqueRgbaU8NativeImage();
                 }
                 this.writtenFrames += 1;
 
                 long encodeStart = System.nanoTime();
-                videoWriter.encode(target, audioBuffer);
+                videoWriter.encode(target);
                 encodeTimeNanos += System.nanoTime() - encodeStart;
             } else {
-                SaveableFramebufferQueue.DownloadedFrame frame = downloader.finishDownload();
+                ImageFrame frame = downloader.finishDownload();
 
                 if (frame == null) {
                     if (drain && !downloader.isEmpty()) {
@@ -806,12 +858,12 @@ public class ExportJob {
                 }
 
                 if (this.firstFrame == null) {
-                    this.firstFrame = frame.image().mappedCopy(x -> 0xFF000000 | x);
+                    this.firstFrame = frame.toOpaqueRgbaU8NativeImage();
                 }
                 this.writtenFrames += 1;
 
                 long encodeStart = System.nanoTime();
-                videoWriter.encode(frame.image(), frame.audioBuffer());
+                videoWriter.encode(frame);
                 encodeTimeNanos += System.nanoTime() - encodeStart;
             }
         }
