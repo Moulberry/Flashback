@@ -303,7 +303,7 @@ public class FlashbackFFmpegFrameRecorder {
         this.videoCodec = videoCodec;
     }
 
-    public void setVideoCodecName(String name) {
+    public void setVideoCodecName(String videoCodecName) {
         this.videoCodecName = videoCodecName;
     }
 
