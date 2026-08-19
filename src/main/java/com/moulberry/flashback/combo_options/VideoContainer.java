@@ -99,7 +99,7 @@ public enum VideoContainer implements ComboOption {
     public AudioCodec[] getSupportedAudioCodecs() {
         if (this.supportedAudioCodecs == null) {
             List<AudioCodec> supportedCodecs = new ArrayList<>();
-            if (this.isImageSequence()) {
+            if (!this.isImageSequence()) {
                 try (AVOutputFormat outputFormat = avformat.av_guess_format(this.extension, "test."+this.extension, null)) {
                     for (AudioCodec codec : AudioCodec.values()) {
                         if (codec.getEncoders().length == 0) {
