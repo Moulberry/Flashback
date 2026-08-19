@@ -18,23 +18,27 @@ import static org.bytedeco.ffmpeg.global.avutil.av_find_nearest_q_idx;
 
 public enum VideoCodec implements ComboOption {
 
-    H264("H264 (AVC)", avcodec.AV_CODEC_ID_H264),
-    H265("H265 (HEVC)", avcodec.AV_CODEC_ID_H265),
-    AV1("AV1", avcodec.AV_CODEC_ID_AV1),
-    VP9("VP9", avcodec.AV_CODEC_ID_VP9),
-    PRO_RES("Apple ProRes", avcodec.AV_CODEC_ID_PRORES),
-    QUICK_TIME("QuickTime", avcodec.AV_CODEC_ID_QTRLE),
-    WEBP("WebP", AV_CODEC_ID_WEBP),
-    GIF("GIF", AV_CODEC_ID_GIF);
+    H264("H264 (AVC)", avcodec.AV_CODEC_ID_H264, null),
+    H265("H265 (HEVC)", avcodec.AV_CODEC_ID_H265, null),
+    AV1("AV1", avcodec.AV_CODEC_ID_AV1, Set.of(VideoContainer.MP4)),
+    VP9("VP9", avcodec.AV_CODEC_ID_VP9, null),
+    PRO_RES("Apple ProRes", avcodec.AV_CODEC_ID_PRORES, null),
+    QUICK_TIME("QuickTime", avcodec.AV_CODEC_ID_QTRLE, null),
+    WEBP("WebP", AV_CODEC_ID_WEBP, Set.of(VideoContainer.WEBP)),
+    GIF("GIF", AV_CODEC_ID_GIF, Set.of(VideoContainer.GIF)),
+    PNG("PNG", AV_CODEC_ID_PNG, Set.of(VideoContainer.PNG_SEQUENCE)),
+    EXR("EXR", AV_CODEC_ID_EXR, Set.of(VideoContainer.EXR_SEQUENCE));
 
     private final String text;
     private final int codecId;
     private String[] encoders;
     private boolean supportsTransparency = false;
+    private final Set<VideoContainer> validContainers;
 
-    VideoCodec(String text, int codecId) {
+    VideoCodec(String text, int codecId, Set<VideoContainer> validContainers) {
         this.text = text;
         this.codecId = codecId;
+        this.validContainers = validContainers;
     }
 
     @Override
@@ -44,6 +48,10 @@ public enum VideoCodec implements ComboOption {
 
     public int codecId() {
         return this.codecId;
+    }
+
+    public Set<VideoContainer> validContainers() {
+        return this.validContainers;
     }
 
     public boolean supportsTransparency() {
@@ -157,7 +165,7 @@ public enum VideoCodec implements ComboOption {
             AVRational time_base = av_inv_q(frameRate);
             codecContext.time_base(time_base);
 
-            int pixelFormat = PixelFormatHelper.getBestPixelFormat(codec.name().getString(), false);
+            int pixelFormat = PixelFormatHelper.getBestPixelFormat(codec.name().getString(), AV_PIX_FMT_RGBA, false);
             codecContext.pix_fmt(pixelFormat);
 
             if (pixelFormat == AV_PIX_FMT_VULKAN || pixelFormat == AV_PIX_FMT_OPENCL) {

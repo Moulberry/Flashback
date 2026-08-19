@@ -19,36 +19,38 @@ import java.util.Map;
 
 public class PixelFormatHelper {
 
-    private static final Map<String, Integer> bestPixelFormats = new HashMap<>();
-    private static final Map<String, Integer> bestPixelFormatsTransparent = new HashMap<>();
+    private record BestFormatKey(String codec, int srcPixelFormat, boolean transparent) {}
+    private static final Map<BestFormatKey, Integer> bestPixelFormats = new HashMap<>();
 
-    public static int getBestPixelFormat(String codecName, boolean transparent) {
-        Map<String, Integer> best = transparent ? bestPixelFormatsTransparent : bestPixelFormats;
+    public static int getBestPixelFormat(String codecName, int srcPixelFormat, boolean transparent) {
+        BestFormatKey key = new BestFormatKey(codecName, srcPixelFormat, transparent);
 
-        if (best.containsKey(codecName)) {
-            return best.get(codecName);
+        if (bestPixelFormats.containsKey(key)) {
+            return bestPixelFormats.get(key);
         }
 
-        int bestPixelFormat = calculateBestPixelFormat(codecName, transparent);
+        int bestPixelFormat = calculateBestPixelFormat(codecName, srcPixelFormat, transparent);
 
         if (bestPixelFormat == avutil.AV_PIX_FMT_NONE) {
             throw new RuntimeException("Unable to determine best alternate pixel format for " + codecName);
         }
         if (bestPixelFormat != avutil.AV_PIX_FMT_YUV420P) {
-            Flashback.LOGGER.info("Chose to use alternate pixel format {} for codec {} with transparent={}", pixelFormatToString(bestPixelFormat), codecName, transparent);
+            Flashback.LOGGER.info("Chose to use pixel format {} for codec {} with transparent={} and srcPixelFormat={}",
+                pixelFormatToString(bestPixelFormat), codecName, transparent, pixelFormatToString(srcPixelFormat));
         }
 
-        best.put(codecName, bestPixelFormat);
+        bestPixelFormats.put(key, bestPixelFormat);
         return bestPixelFormat;
     }
 
-    private static int calculateBestPixelFormat(String codecName, boolean transparent) {
+    private static int calculateBestPixelFormat(String codecName, int srcPixelFormat, boolean transparent) {
         try (AVCodec codec = avcodec.avcodec_find_encoder_by_name(codecName)) {
             IntList supportedFormats = new IntArrayList();
 
             IntPointer pixFmts = codec.pix_fmts();
 
             if (pixFmts == null) {
+                Flashback.LOGGER.info("Encoder {} does not provide a list of supported pixel formats, falling back to YUV420P", codecName);
                 return avutil.AV_PIX_FMT_YUV420P;
             }
 
@@ -70,13 +72,13 @@ public class PixelFormatHelper {
             supportedFormats.add(avutil.AV_PIX_FMT_NONE);
 
             if (transparent) {
-                int format = avcodec.avcodec_find_best_pix_fmt_of_list(supportedFormats.toIntArray(), ExportJob.SRC_PIXEL_FORMAT, 1, new int[1]);
+                int format = avcodec.avcodec_find_best_pix_fmt_of_list(supportedFormats.toIntArray(), srcPixelFormat, 1, new int[1]);
                 if (format != avutil.AV_PIX_FMT_NONE) {
                     return format;
                 }
             }
 
-            return avcodec.avcodec_find_best_pix_fmt_of_list(supportedFormats.toIntArray(), ExportJob.SRC_PIXEL_FORMAT, 0, new int[1]);
+            return avcodec.avcodec_find_best_pix_fmt_of_list(supportedFormats.toIntArray(), srcPixelFormat, 0, new int[1]);
         }
     }
 

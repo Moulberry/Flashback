@@ -2,23 +2,26 @@ package com.moulberry.flashback.exporting;
 
 import com.mojang.blaze3d.buffers.GpuBuffer;
 import com.mojang.blaze3d.buffers.GpuBufferSlice;
-import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.blaze3d.systems.CommandEncoder;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.textures.GpuTexture;
+import com.moulberry.flashback.editor.ui.ReplayUI;
 import org.jetbrains.annotations.Nullable;
+import org.joml.Matrix4f;
 import org.lwjgl.system.MemoryUtil;
 
 import java.nio.FloatBuffer;
 
 public class SaveableFramebuffer implements AutoCloseable {
     public @Nullable FloatBuffer audioBuffer;
-    private NativeImage downloaded = null;
+    private ImageFrame downloaded = null;
     private final int width;
     private final int height;
     private GpuBuffer pbo;
 
     private boolean isDownloading = false;
+
+    public static boolean fixDepthDownload = false;
 
     public SaveableFramebuffer(int width, int height) {
         this.width = width;
@@ -37,16 +40,25 @@ public class SaveableFramebuffer implements AutoCloseable {
             throw new IllegalStateException();
         }
 
+        ImageFrame.Format format = switch (gpuTexture.getFormat()) {
+            case RGBA8_UNORM -> ImageFrame.Format.RGBA_U8;
+            case R32_FLOAT, D32_FLOAT -> ImageFrame.Format.GRAY_F32;
+            default -> throw new IllegalStateException("Don't know how to download format " + gpuTexture.getFormat());
+        };
+
         CommandEncoder commandEncoder = RenderSystem.getDevice().createCommandEncoder();
         Runnable runnable = () -> {
             try (GpuBufferSlice.MappedView mappedView = this.pbo.map(true, false)) {
-                NativeImage nativeImage = new NativeImage(NativeImage.Format.RGBA, width, height, false);
-                MemoryUtil.memCopy(MemoryUtil.memAddress(mappedView.data()), nativeImage.pixels, nativeImage.size);
-                this.downloaded = nativeImage;
+                this.downloaded = new ImageFrame(MemoryUtil.memAddress(mappedView.data()), width, height, format);
             }
         };
 
-        commandEncoder.copyTextureToBuffer(gpuTexture, this.pbo, 0, runnable, 0);
+        try {
+            fixDepthDownload = true;
+            commandEncoder.copyTextureToBuffer(gpuTexture, this.pbo, 0, runnable, 0);
+        } finally {
+            fixDepthDownload = false;
+        }
     }
 
     public boolean canFinishDownload() {
@@ -56,7 +68,7 @@ public class SaveableFramebuffer implements AutoCloseable {
         return this.downloaded != null;
     }
 
-    public NativeImage finishDownload() {
+    public ImageFrame finishDownload() {
         if (!this.isDownloading) {
             throw new IllegalStateException("Can't finish downloading before download has started");
         }
@@ -65,7 +77,7 @@ public class SaveableFramebuffer implements AutoCloseable {
         }
 
         this.isDownloading = false;
-        NativeImage downloaded = this.downloaded;
+        ImageFrame downloaded = this.downloaded;
         this.downloaded = null;
         return downloaded;
     }

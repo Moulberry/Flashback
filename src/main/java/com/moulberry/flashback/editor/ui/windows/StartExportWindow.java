@@ -198,6 +198,15 @@ public class StartExportWindow {
             }
             ImGuiHelper.tooltip(I18n.get("flashback.no_gui_tooltip"));
 
+            if (ImGui.checkbox(I18n.get("flashback.depth_map"), config.internalExport.depthMap)) {
+                config.internalExport.depthMap = !config.internalExport.depthMap;
+            }
+            ImGuiHelper.tooltip(I18n.get("flashback.depth_map_tooltip"));
+
+            if (config.internalExport.depthMap && config.internalExport.container != VideoContainer.EXR_SEQUENCE) {
+                ImGui.textWrapped("EXR Sequence is recommended for exporting depth maps. Using " + config.internalExport.container.text() + " may result in reduced precision!");
+            }
+
             ImGuiHelper.separatorWithText(I18n.get("flashback.video_options"));
 
             renderVideoOptions(editorState, config);
@@ -324,13 +333,12 @@ public class StartExportWindow {
 
         config.internalExport.container = ImGuiHelper.enumCombo(I18n.get("flashback.container"), config.internalExport.container, containers);
 
-        if (config.internalExport.container == VideoContainer.PNG_SEQUENCE) {
+        if (config.internalExport.container.isImageSequence()) {
             ImGui.inputText(I18n.get("flashback.filenames"), pngSequenceFormat);
             return;
         }
 
         VideoCodec[] codecs = config.internalExport.container.getSupportedVideoCodecs(config.internalExport.transparentBackground);
-
         if (codecs.length == 0) {
             ImGui.textUnformatted(I18n.get("flashback.no_supported_codecs_found"));
             return;
@@ -423,19 +431,16 @@ public class StartExportWindow {
                 }
 
                 boolean transparent = config.internalExport.transparentBackground && !editorState.replayVisuals.renderSky;
-                String encoder = config.internalExport.videoCodec.getEncoders()[config.internalExport.selectedVideoEncoder[0]];
 
                 VideoCodec useVideoCodec = config.internalExport.videoCodec;
-                AudioCodec useAudioCodec = config.internalExport.audioCodec;
-                boolean shouldRecordAudio = config.internalExport.recordAudio;
-
-                if (config.internalExport.container == VideoContainer.PNG_SEQUENCE) {
-                    useVideoCodec = null;
-                    encoder = null;
-                    shouldRecordAudio = false;
+                VideoCodec[] codecs = config.internalExport.container.getSupportedVideoCodecs(transparent);
+                if (useVideoCodec == null || !Arrays.asList(codecs).contains(useVideoCodec)) {
+                    useVideoCodec = codecs[0];
                 }
+                String encoder = useVideoCodec.getEncoders()[config.internalExport.selectedVideoEncoder[0]];
 
-                if (!shouldRecordAudio) {
+                AudioCodec useAudioCodec = config.internalExport.audioCodec;
+                if (!config.internalExport.recordAudio || config.internalExport.container.getSupportedAudioCodecs().length == 0) {
                     useAudioCodec = null;
                 }
 
@@ -445,8 +450,9 @@ public class StartExportWindow {
                     player.position(), player.getYRot(), player.getXRot(),
                     config.internalExport.resolution[0], config.internalExport.resolution[1], start, end,
                     config.internalExport.projection, config.internalExport.orthographicZoom[0],
-                    Math.max(1, config.internalExport.framerate[0]), config.internalExport.resetRng, config.internalExport.container, useVideoCodec, encoder, numBitrate, transparent, config.internalExport.ssaa, config.internalExport.noGui,
-                    shouldRecordAudio, config.internalExport.stereoAudio, useAudioCodec,
+                    Math.max(1, config.internalExport.framerate[0]), config.internalExport.resetRng, config.internalExport.depthMap,
+                    config.internalExport.container, useVideoCodec, encoder, numBitrate, transparent, config.internalExport.ssaa, config.internalExport.noGui,
+                    config.internalExport.stereoAudio, useAudioCodec,
                     path, ImGuiHelper.getString(pngSequenceFormat));
             }
 
@@ -454,7 +460,7 @@ public class StartExportWindow {
         };
 
         String defaultExportPathString = config.internalExport.defaultExportPath;
-        if (config.internalExport.container == VideoContainer.PNG_SEQUENCE) {
+        if (config.internalExport.container.isImageSequence()) {
             return AsyncFileDialogs.openFolderDialog(defaultExportPathString).thenApply(callback);
         } else {
             return AsyncFileDialogs.saveFileDialog(defaultExportPathString, defaultName,

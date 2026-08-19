@@ -320,6 +320,7 @@ public class FlashbackConfigV1 {
         public boolean resetRng = false;
         public boolean ssaa = false;
         public boolean noGui = false;
+        public boolean depthMap = false;
 
         public VideoContainer container = null;
         public VideoCodec videoCodec = null;

@@ -199,6 +199,8 @@
   "flashback.resolution": "Resolution",
   "flashback.ssaa": "SSAA",
   "flashback.ssaa_tooltip": "Supersampling Anti-Aliasing: Remove jagged edges by rendering the game at double resolution and downscaling",
+  "flashback.depth_map": "Depth Map",
+  "flashback.depth_map_tooltip": "Export the depth map as grayscale",
   "flashback.no_gui": "No GUI",
   "flashback.no_gui_tooltip": "Removes all UI from the screen, rendering only the world",
   "flashback.transparent_sky": "Transparent Sky",

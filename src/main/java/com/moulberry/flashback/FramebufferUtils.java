@@ -28,13 +28,11 @@ public class FramebufferUtils {
         GpuTexture colourTexture = renderTarget.getColorTexture();
         GpuTexture depthTexture = renderTarget.getDepthTexture();
         if (colourTexture != null && !colourTexture.isClosed() && depthTexture != null && !depthTexture.isClosed()) {
-            float minDepth = RenderSystem.getDevice().getDeviceInfo().isZZeroToOne() ? 0.0f : -1.0f;
-            RenderSystem.getDevice().createCommandEncoder().clearColorAndDepthTextures(colourTexture, clearColour, depthTexture, minDepth);
+            RenderSystem.getDevice().createCommandEncoder().clearColorAndDepthTextures(colourTexture, clearColour, depthTexture, 0.0f);
         } else if (colourTexture != null && !colourTexture.isClosed()) {
             RenderSystem.getDevice().createCommandEncoder().clearColorTexture(colourTexture, clearColour);
         } else if (depthTexture != null && !depthTexture.isClosed()) {
-            float minDepth = RenderSystem.getDevice().getDeviceInfo().isZZeroToOne() ? 0.0f : -1.0f;
-            RenderSystem.getDevice().createCommandEncoder().clearDepthTexture(depthTexture, minDepth);
+            RenderSystem.getDevice().createCommandEncoder().clearDepthTexture(depthTexture, 0.0f);
         }
     }
 

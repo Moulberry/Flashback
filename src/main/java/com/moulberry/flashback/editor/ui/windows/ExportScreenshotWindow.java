@@ -3,6 +3,7 @@ package com.moulberry.flashback.editor.ui.windows;
 import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.Utils;
 import com.moulberry.flashback.combo_options.ExportProjection;
+import com.moulberry.flashback.combo_options.VideoCodec;
 import com.moulberry.flashback.combo_options.VideoContainer;
 import com.moulberry.flashback.configuration.FlashbackConfigV1;
 import com.moulberry.flashback.editor.ui.ImGuiHelper;
@@ -112,12 +113,15 @@ public class ExportScreenshotWindow {
 
                         EditorState copiedEditorState = editorState.copyWithoutKeyframes();
 
+                        VideoCodec codec = VideoContainer.PNG_SEQUENCE.getSupportedVideoCodecs(transparent)[0];
+                        String encoder = codec.getEncoders()[0];
                         ExportSettings settings = new ExportSettings(null, copiedEditorState,
                             player.position(), player.getYRot(), player.getXRot(),
                             config.internalExport.resolution[0], config.internalExport.resolution[1], tick, tick,
                             config.internalExport.projection, config.internalExport.orthographicZoom[0],
-                            1, false, VideoContainer.PNG_SEQUENCE, null, null, 0, transparent, ssaa, noGui,
-                            false, false, null,
+                            1, false, false,
+                            VideoContainer.PNG_SEQUENCE, codec, encoder, 0, transparent, ssaa, noGui,
+                            false, null,
                             path, null);
 
                         close = true;

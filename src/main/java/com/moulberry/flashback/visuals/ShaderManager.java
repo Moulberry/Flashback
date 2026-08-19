@@ -1,6 +1,8 @@
 package com.moulberry.flashback.visuals;
 
+import com.mojang.blaze3d.GpuFormat;
 import com.mojang.blaze3d.PrimitiveTopology;
+import com.mojang.blaze3d.pipeline.BindGroupLayout;
 import com.mojang.blaze3d.pipeline.BlendFunction;
 import com.mojang.blaze3d.pipeline.ColorTargetState;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
@@ -61,6 +63,19 @@ public class ShaderManager {
                       .withVertexShader(Identifier.fromNamespaceAndPath("flashback", "core/screenquad_flip"))
                       .withFragmentShader("core/blit_screen")
                       .withBindGroupLayout(BindGroupLayouts.IN_SAMPLER)
+                      .withDepthStencilState(Optional.empty())
+                      .withCull(false)
+                      .withPrimitiveTopology(PrimitiveTopology.TRIANGLES)
+                      .build()
+    );
+
+    public static final RenderPipeline BLIT_TRANSFORM_DEPTH = RenderPipelines.register(
+        RenderPipeline.builder()
+                      .withLocation(Identifier.fromNamespaceAndPath("flashback", "pipeline/flashback_blit_depth"))
+                      .withVertexShader(Identifier.fromNamespaceAndPath("flashback", "core/screenquad_flip"))
+                      .withFragmentShader(Identifier.fromNamespaceAndPath("flashback", "core/blit_transform_depth"))
+                      .withColorTargetState(new ColorTargetState(Optional.empty(), GpuFormat.R32_FLOAT, ColorTargetState.WRITE_ALL))
+                      .withBindGroupLayout(BindGroupLayout.builder().withSampler("InSampler").withUniform("TransformDepth", UniformType.UNIFORM_BUFFER).build())
                       .withDepthStencilState(Optional.empty())
                       .withCull(false)
                       .withPrimitiveTopology(PrimitiveTopology.TRIANGLES)

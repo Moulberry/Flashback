@@ -16,12 +16,17 @@ public record ExportSettings(@Nullable String name, EditorState editorState,
                              // Capture
                              int resolutionX, int resolutionY, int startTick, int endTick,
                              ExportProjection projection, float orthographicZoom,
-                             double framerate, boolean resetRng,
+                             double framerate, boolean resetRng, boolean depthMap,
                              // Video
                              VideoContainer container, VideoCodec codec, String encoder, int bitrate, boolean transparent, boolean ssaa, boolean noGui,
                              // Audio
-                             boolean recordAudio, boolean stereoAudio, AudioCodec audioCodec,
+                             boolean stereoAudio, AudioCodec audioCodec,
                              // Output
                              Path output, @Nullable String pngSequenceFormat) {
+
+
+    public boolean recordAudio() {
+        return this.audioCodec != null;
+    }
 
 }
