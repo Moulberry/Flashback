@@ -15,7 +15,12 @@ import org.joml.Vector3d;
 import java.util.UUID;
 
 public record KeyframeChangeTrackEntity(UUID target, TrackingBodyPart trackingBodyPart, float yawOffset, float pitchOffset,
-                                        Vector3d positionOffset, Vector3d viewOffset, float roll) implements KeyframeChange {
+                                        Vector3d positionOffset, Vector3d viewOffset, float roll, boolean hidePlayerBody) implements KeyframeChange {
+
+    public KeyframeChangeTrackEntity(UUID target, TrackingBodyPart trackingBodyPart, float yawOffset, float pitchOffset,
+                                     Vector3d positionOffset, Vector3d viewOffset, float roll) {
+        this(target, trackingBodyPart, yawOffset, pitchOffset, positionOffset, viewOffset, roll, false);
+    }
 
     @Override
     public void apply(KeyframeHandler keyframeHandler) {
@@ -63,6 +68,16 @@ public record KeyframeChangeTrackEntity(UUID target, TrackingBodyPart trackingBo
                 yaw = 0.0f;
                 pitch = 0.0f;
             }
+            case FIRST_PERSON -> {
+                limbPosition = entity.getEyePosition(partialTick);
+                if (entity instanceof LivingEntity livingEntity) {
+                    yaw = Mth.rotLerp(partialTick, livingEntity.yHeadRotO, livingEntity.yHeadRot);
+                    pitch = livingEntity.getViewXRot(partialTick);
+                } else {
+                    yaw = entity.getYHeadRot();
+                    pitch = entity.getXRot();
+                }
+            }
             default -> throw new UnsupportedOperationException();
         }
 
@@ -93,11 +108,12 @@ public record KeyframeChangeTrackEntity(UUID target, TrackingBodyPart trackingBo
         return new KeyframeChangeTrackEntity(
             amount < 0.5 ? this.target : other.target,
             amount < 0.5 ? this.trackingBodyPart : other.trackingBodyPart,
-            (float) Interpolation.linear(this.yawOffset, other.yawOffset, amount),
-            (float) Interpolation.linear(this.pitchOffset, other.pitchOffset, amount),
-            this.positionOffset.lerp(other.positionOffset, amount, new Vector3d()),
-            this.viewOffset.lerp(other.viewOffset, amount, new Vector3d()),
-            (float) Interpolation.linearAngle(this.roll, other.roll, amount)
+            (float) Interpolation.lerp(this.yawOffset, other.yawOffset, amount),
+            (float) Interpolation.lerp(this.pitchOffset, other.pitchOffset, amount),
+            Interpolation.lerp(this.positionOffset, other.positionOffset, amount),
+            Interpolation.lerp(this.viewOffset, other.viewOffset, amount),
+            (float) Interpolation.lerp(this.roll, other.roll, amount),
+            amount < 0.5 ? this.hidePlayerBody : other.hidePlayerBody
         );
     }
 }
