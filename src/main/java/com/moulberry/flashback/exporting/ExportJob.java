@@ -41,6 +41,8 @@ import org.lwjgl.glfw.GLFW;
 import org.lwjgl.openal.SOFTLoopback;
 
 import java.io.IOException;
+import java.math.BigDecimal;
+import java.math.MathContext;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
@@ -788,7 +790,8 @@ public class ExportJob {
 
         ticks.add(new TickInfo(0, 0, false));
 
-        double residual = 0;
+        BigDecimal residual = BigDecimal.ZERO;
+        BigDecimal fpsReciprocal = BigDecimal.ONE.divide(BigDecimal.valueOf(fps), MathContext.DECIMAL128);
         int currentTick = 0;
 
         TickrateKeyframeCapture capture = new TickrateKeyframeCapture();
@@ -796,32 +799,37 @@ public class ExportJob {
         int count = endTick - startTick;
         int startFrozen = -1;
         while (currentTick <= count) {
-            double remainingFrame = 1.0;
+            BigDecimal remainingFrame = BigDecimal.ONE;
 
-            while (remainingFrame > 0.0) {
+            while (remainingFrame.compareTo(BigDecimal.ZERO) > 0) {
                 capture.tickrate = 20.0f;
                 capture.frozen = false;
-                editorState.applyKeyframes(capture, startTick + currentTick + (float) residual);
+                editorState.applyKeyframes(capture, startTick + currentTick + residual.floatValue());
 
-                double ticksThisFrame = capture.tickrate / fps * remainingFrame;
-                if (ticksThisFrame > 1) {
-                    residual += 1.0;
-                    remainingFrame -= 1.0 / ticksThisFrame;
+                BigDecimal ticksThisFrame = BigDecimal.valueOf(capture.tickrate).multiply(fpsReciprocal).multiply(remainingFrame);
+                if (ticksThisFrame.compareTo(BigDecimal.ONE) > 0) {
+                    residual = residual.add(BigDecimal.ONE);
+                    // remainingFrame *= 1 - 1/ticksThisFrame
+                    remainingFrame = remainingFrame.multiply(BigDecimal.ONE.subtract(BigDecimal.ONE.divide(ticksThisFrame, MathContext.DECIMAL128))).round(MathContext.DECIMAL128);
                 } else {
-                    residual += ticksThisFrame;
+                    residual = residual.add(ticksThisFrame);
                     break;
                 }
             }
 
-            int roundedResidual = (int) residual;
-            residual -= roundedResidual;
+            int roundedResidual = residual.intValue();
+            residual = residual.subtract(BigDecimal.valueOf(roundedResidual));
             currentTick += roundedResidual;
 
-            if (currentTick > count) {
+            if (currentTick >= count) {
                 break;
             }
 
-            double currentTickDouble = currentTick + residual;
+            double currentTickDouble = currentTick + residual.doubleValue();
+            if (currentTickDouble % 1.0 == 0.0) {
+                residual = BigDecimal.ZERO;
+            }
+
             if (!capture.frozen) {
                 startFrozen = -1;
                 ticks.add(new TickInfo(currentTickDouble, currentTickDouble, false));
