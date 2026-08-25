@@ -46,14 +46,13 @@ public class ShaderManager {
 
     public static final RenderPipeline BLIT_SCREEN_ROUND_ALPHA = RenderPipelines.register(
         RenderPipeline.builder()
-                      .withLocation(Identifier.fromNamespaceAndPath("flashback", "pipeline/flashback_blit_screen_flip"))
+                      .withLocation(Identifier.fromNamespaceAndPath("flashback", "pipeline/flashback_blit_screen_round_alpha"))
                       .withVertexShader("core/screenquad")
                       .withFragmentShader(Identifier.fromNamespaceAndPath("flashback", "core/blit_screen_round_alpha"))
                       .withBindGroupLayout(BindGroupLayouts.IN_SAMPLER)
                       .withDepthStencilState(Optional.empty())
                       .withCull(false)
-                      .withVertexBinding(0, DefaultVertexFormat.POSITION_TEX)
-                      .withPrimitiveTopology(PrimitiveTopology.QUADS)
+                      .withPrimitiveTopology(PrimitiveTopology.TRIANGLES)
                       .build()
     );
 

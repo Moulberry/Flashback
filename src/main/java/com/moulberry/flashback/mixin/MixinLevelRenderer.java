@@ -150,14 +150,14 @@ public abstract class MixinLevelRenderer {
                 renderPass.setPipeline(ShaderManager.BLIT_SCREEN);
                 RenderSystem.bindDefaultUniforms(renderPass);
                 renderPass.bindTexture("InSampler", main.getColorTextureView(), RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST));
-                renderPass.draw(3, 0, 0, 0);
+                renderPass.draw(3, 1, 0, 0);
             }
 
             try (RenderPass renderPass = RenderSystem.getDevice().createCommandEncoder().createRenderPass(() -> "flashback round alpha render pass 2", main.getColorTextureView(), Optional.empty())) {
                 renderPass.setPipeline(ShaderManager.BLIT_SCREEN_ROUND_ALPHA);
                 RenderSystem.bindDefaultUniforms(renderPass);
                 renderPass.bindTexture("InSampler", this.roundAlphaBufferView, RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST));
-                renderPass.draw(3, 0, 0, 0);
+                renderPass.draw(3, 1, 0, 0);
             }
         }
     }
