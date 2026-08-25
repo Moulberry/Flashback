@@ -782,8 +782,8 @@ public class ExportJob {
                         }
 
                         ImageFrame image = frames[i];
-                        int sizeX = Math.min(image.width, target.height - positionX);
-                        int sizeY = Math.min(image.width, target.height - positionY);
+                        int sizeX = Math.min(image.width, target.width - positionX);
+                        int sizeY = Math.min(image.height, target.height - positionY);
                         image.copyRect(target, 0, 0, positionX, positionY, sizeX, sizeY);
                     }
                 } else {
@@ -808,37 +808,37 @@ public class ExportJob {
                                 int imageX = (int) Math.round((cx+1)/2 * (image.width-1));
                                 int imageY = (int) Math.round((cz+1)/2 * (image.height-1));
 
-                                image.copyPixel(target, x, y, imageX, imageY);
+                                image.copyPixel(target, imageX, imageY, x, y);
                             } else if (cy == 1.0) {
                                 ImageFrame image = frames[5];
                                 int imageX = (int) Math.round((cx+1)/2 * (image.width-1));
                                 int imageY = image.height-1 - (int) Math.round((cz+1)/2 * (image.height-1));
 
-                                image.copyPixel(target, x, y, imageX, imageY);
+                                image.copyPixel(target, imageX, imageY, x, y);
                             } else if (cz == -1.0) {
                                 ImageFrame image = frames[3];
                                 int imageX = image.width-1 - (int) Math.round((cx+1)/2 * (image.width-1));
                                 int imageY = (int) Math.round((cy+1)/2 * (image.height-1));
 
-                                image.copyPixel(target, x, y, imageX, imageY);
+                                image.copyPixel(target, imageX, imageY, x, y);
                             } else if (cz == 1.0) {
                                 ImageFrame image = frames[1];
                                 int imageX = (int) Math.round((cx+1)/2 * (image.width-1));
                                 int imageY = (int) Math.round((cy+1)/2 * (image.height-1));
 
-                                image.copyPixel(target, x, y, imageX, imageY);
+                                image.copyPixel(target, imageX, imageY, x, y);
                             } else if (cx == 1.0) {
                                 ImageFrame image = frames[2];
                                 int imageX = image.width-1 - (int) Math.round((cz+1)/2 * (image.width-1));
                                 int imageY = (int) Math.round((cy+1)/2 * (image.height-1));
 
-                                image.copyPixel(target, x, y, imageX, imageY);
+                                image.copyPixel(target, imageX, imageY, x, y);
                             } else if (cx == -1.0) {
                                 ImageFrame image = frames[0];
                                 int imageX = (int) Math.round((cz+1)/2 * (image.width-1));
                                 int imageY = (int) Math.round((cy+1)/2 * (image.height-1));
 
-                                image.copyPixel(target, x, y, imageX, imageY);
+                                image.copyPixel(target, imageX, imageY, x, y);
                             }
                         }
                     }

@@ -1,12 +1,8 @@
 package com.moulberry.flashback.exporting;
 
 import com.mojang.blaze3d.platform.NativeImage;
-import com.mojang.blaze3d.systems.RenderSystem;
 import org.bytedeco.ffmpeg.global.avutil;
-import org.bytedeco.javacv.Frame;
 import org.jetbrains.annotations.Nullable;
-import org.joml.Matrix4f;
-import org.joml.Vector4f;
 import org.lwjgl.system.MemoryUtil;
 
 import java.nio.FloatBuffer;
@@ -27,8 +23,8 @@ public class ImageFrame implements AutoCloseable {
         if (toY + sizeY > target.height) throw new IllegalArgumentException("toY + sizeY > target.height");
 
         for (int y = 0; y < sizeY; y++) {
-            long fromOffset = (fromX + y * (long) this.width) * this.format.bytes();
-            long toOffset = (toX + y * (long) target.width) * target.format.bytes();
+            long fromOffset = (fromX + (fromY+y) * (long) this.width) * this.format.bytes();
+            long toOffset = (toX + (toY+y) * (long) target.width) * target.format.bytes();
             MemoryUtil.memCopy(this.pixels + fromOffset, target.pixels + toOffset, (long) sizeX * this.format.bytes());
         }
     }
