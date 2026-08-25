@@ -671,7 +671,10 @@ public class Flashback implements ModInitializer, ClientModInitializer {
     }
 
     public static Screen createConfigScreen(Screen oldScreen) {
-        return Lattice.createConfigScreen(configElements, config::saveToDefaultFolder, oldScreen);
+        return Lattice.createConfigScreen(configElements, () -> {
+            config.saveToDefaultFolder();
+            Minecraft.getInstance().options.save();
+        }, oldScreen);
     }
 
     public static void openConfigScreen(Screen oldScreen) {
