@@ -895,13 +895,15 @@ public class Recorder {
 
         LocalPlayer localPlayer = Minecraft.getInstance().player;
         if (localPlayer != null) {
-            int localPlayerId = localPlayer.getId();
-            if (packet instanceof ClientboundSetEntityDataPacket entityDataPacket && entityDataPacket.id() == localPlayerId) {
-                return;
-            }
-            if (packet instanceof ClientboundSetEquipmentPacket entityEquipmentPacket && entityEquipmentPacket.getEntity() == localPlayerId) {
-                return;
-            }
+            try {
+                int localPlayerId = localPlayer.getId();
+                if (packet instanceof ClientboundSetEntityDataPacket entityDataPacket && entityDataPacket.id() == localPlayerId) {
+                    return;
+                }
+                if (packet instanceof ClientboundSetEquipmentPacket entityEquipmentPacket && entityEquipmentPacket.getEntity() == localPlayerId) {
+                    return;
+                }
+            } catch (Exception ignored) {} // getId can throw if id hasn't been assigned
         }
 
         this.pendingPackets.add(new PacketWithPhase(packet, phase));
