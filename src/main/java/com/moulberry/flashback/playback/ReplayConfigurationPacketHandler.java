@@ -80,17 +80,23 @@ public class ReplayConfigurationPacketHandler implements ClientConfigurationPack
         }
 
         List<Registry.PendingTags<?>> pendingTags = new ArrayList<>();
+        Map<ResourceKey<? extends Registry<?>>, TagNetworkSerialization.NetworkPayload> synchronizedRegistryTags = new HashMap<>();
 
         if (this.pendingTags != null && !this.pendingTags.isEmpty()) {
             this.pendingTags.forEach((resourceKey, networkPayload) -> {
                 var registry = this.replayServer.registryAccess().lookupOrThrow(resourceKey);
-                var loadResult = networkPayload.resolve(registry);
                 if (this.pendingRegistryMap != null) {
                     var entry = this.pendingRegistryMap.get(resourceKey);
                     if (entry != null) {
+                        // Resolving these tags against the current registry would make resource
+                        // reloads retain its holders. Registry-aware codecs cannot encode those
+                        // holders against the recorded registry, disconnecting replay playback.
                         this.pendingRegistryMap.put(resourceKey, new RegistryDataLoader.NetworkedRegistryData(entry.elements(), networkPayload));
+                        synchronizedRegistryTags.put(resourceKey, networkPayload);
+                        return;
                     }
                 }
+                var loadResult = networkPayload.resolve(registry);
                 pendingTags.add(registry.prepareTagReload(loadResult));
             });
             pendingTags.forEach(Registry.PendingTags::apply);
@@ -108,6 +114,18 @@ public class ReplayConfigurationPacketHandler implements ClientConfigurationPack
             } else {
                 synchronizeRegistries = tryUpdateRegistries(pendingTags, ResourceProvider.EMPTY);
             }
+        }
+
+        if (!synchronizeRegistries) {
+            // A registry is not replaced when its elements are unchanged, even if its tags differ.
+            // Apply those recorded tags to the registry that remains active so they are not lost.
+            synchronizedRegistryTags.forEach((resourceKey, networkPayload) -> {
+                var registry = this.replayServer.registryAccess().lookupOrThrow(resourceKey);
+                var loadResult = networkPayload.resolve(registry);
+                var pending = registry.prepareTagReload(loadResult);
+                pending.apply();
+                pendingTags.add(pending);
+            });
         }
 
         if (synchronizeRegistries) {
