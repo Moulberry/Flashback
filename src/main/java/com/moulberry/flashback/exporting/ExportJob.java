@@ -748,6 +748,12 @@ public class ExportJob {
                     }
                 }
 
+                if (!this.settings.transparent()) {
+                    for (ImageFrame frame : frames) {
+                        frame.makeOpaque();
+                    }
+                }
+
                 int resolutionX = this.settings.resolutionX();
                 int resolutionY = this.settings.resolutionY();
 
@@ -857,6 +863,10 @@ public class ExportJob {
                     } else {
                         break;
                     }
+                }
+
+                if (!this.settings.transparent()) {
+                    frame.makeOpaque();
                 }
 
                 if (this.firstFrame == null) {
