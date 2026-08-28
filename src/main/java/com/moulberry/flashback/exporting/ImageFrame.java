@@ -50,10 +50,28 @@ public class ImageFrame implements AutoCloseable {
         return copy;
     }
 
+    public void makeOpaque() {
+        int bytes = this.format.bytes();
+        for (int y = 0; y < this.height; y++) {
+            for (int x = 0; x < this.width; x++) {
+                long fromOffset = (x + y * (long) this.width) * bytes;
+                this.format.makeOpaque(this.pixels + fromOffset);
+            }
+        }
+    }
+
     public enum Format {
         RGBA_U8,
         GRAY_F32,
         CUSTOM;
+
+        public void makeOpaque(long ptr) {
+            switch (this) {
+                case RGBA_U8 -> MemoryUtil.memPutInt(ptr, MemoryUtil.memGetInt(ptr) | 0xFF000000);
+                case GRAY_F32 -> {}
+                case CUSTOM -> throw new UnsupportedOperationException();
+            }
+        }
 
         public int toOpaqueRgbaU8(long mem) {
             return switch (this) {
