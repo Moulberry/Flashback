@@ -308,6 +308,8 @@ public class FlashbackConfigV1 {
 
         public float defaultOverrideFov = 70.0f;
         public boolean enableOverrideFovByDefault = false;
+
+        public boolean nfdUsePortal = true;
     }
 
     public SubcategoryInternalExport internalExport = new SubcategoryInternalExport();

@@ -238,6 +238,9 @@ public class Flashback implements ModInitializer, ClientModInitializer {
         if (config.exporting.useSystemFFmpeg) {
             System.setProperty("org.bytedeco.javacpp.pathsfirst", "true");
         }
+        if (config.internal.nfdUsePortal) {
+            System.setProperty("org.lwjgl.nfd.linux.portal", "true");
+        }
 
         if (FabricLoader.getInstance().isDevelopmentEnvironment()) {
             Minecraft.getInstance().schedule(() -> Lattice.performTest(configElements));
