@@ -1,5 +1,6 @@
 package com.moulberry.flashback.exporting;
 
+import com.moulberry.flashback.utils.NamedDaemonThreadFactory;
 import net.minecraft.client.Minecraft;
 import org.lwjgl.PointerBuffer;
 import org.lwjgl.system.MemoryStack;
@@ -13,7 +14,7 @@ import java.util.concurrent.Executors;
 public class AsyncFileDialogs {
 
     private static CompletableFuture<String> currentSaveOrOpenFileDialog = null;
-    private static final ExecutorService dialogThread = Executors.newSingleThreadExecutor();
+    private static final ExecutorService dialogThread = Executors.newSingleThreadExecutor(new NamedDaemonThreadFactory("FlashbackFileDialogs"));
     private static boolean initializedNfd = false;
 
     public static boolean hasDialog() {
