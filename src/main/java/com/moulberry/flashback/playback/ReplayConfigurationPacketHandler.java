@@ -80,7 +80,6 @@ public class ReplayConfigurationPacketHandler implements ClientConfigurationPack
         }
 
         if (this.pendingTags != null && !this.pendingTags.isEmpty()) {
-            List<Registry.PendingTags<?>> pendingTags = new ArrayList<>();
             this.pendingTags.forEach((resourceKey, networkPayload) -> {
                 var registry = this.replayServer.registryAccess().lookupOrThrow(resourceKey);
                 var loadResult = networkPayload.resolve(registry);
@@ -90,9 +89,8 @@ public class ReplayConfigurationPacketHandler implements ClientConfigurationPack
                         this.pendingRegistryMap.put(resourceKey, new RegistryDataLoader.NetworkedRegistryData(entry.elements(), networkPayload));
                     }
                 }
-                pendingTags.add(registry.prepareTagReload(loadResult));
+                registry.prepareTagReload(loadResult).apply();
             });
-            pendingTags.forEach(Registry.PendingTags::apply);
             sendTags = true;
             this.pendingTags = null;
         }
