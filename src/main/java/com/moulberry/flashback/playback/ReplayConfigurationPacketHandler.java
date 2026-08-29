@@ -79,23 +79,23 @@ public class ReplayConfigurationPacketHandler implements ClientConfigurationPack
             this.pendingResetChat = false;
         }
 
+        List<Registry.PendingTags<?>> pendingTags = new ArrayList<>();
+
         if (this.pendingTags != null && !this.pendingTags.isEmpty()) {
             this.pendingTags.forEach((resourceKey, networkPayload) -> {
+                var registry = this.replayServer.registryAccess().lookupOrThrow(resourceKey);
+                var loadResult = networkPayload.resolve(registry);
                 if (this.pendingRegistryMap != null) {
                     var entry = this.pendingRegistryMap.get(resourceKey);
                     if (entry != null) {
                         this.pendingRegistryMap.put(resourceKey, new RegistryDataLoader.NetworkedRegistryData(entry.elements(), networkPayload));
                     }
                 }
-
-                // Apply the tags in case the local registry remains active. If the recorded
-                // registry replaces it, RegistryDataLoader applies the same payload there and
-                // this local tag state is discarded.
-                var localRegistry = this.replayServer.registryAccess().lookupOrThrow(resourceKey);
-                var loadResult = networkPayload.resolve(localRegistry);
-                var pending = localRegistry.prepareTagReload(loadResult);
-                pending.apply();
+                pendingTags.add(registry.prepareTagReload(loadResult));
             });
+            pendingTags.forEach(Registry.PendingTags::apply);
+            // PendingTags retain the local registry's holders, so do not reuse them after the recorded registry may replace it.
+            pendingTags.clear();
             sendTags = true;
             this.pendingTags = null;
         }
@@ -105,10 +105,10 @@ public class ReplayConfigurationPacketHandler implements ClientConfigurationPack
         if (this.pendingRegistryMap != null && !this.pendingRegistryMap.isEmpty()) {
             if (this.packRepository != null) {
                 try (CloseableResourceManager resourceManager = new MultiPackResourceManager(PackType.SERVER_DATA, this.packRepository.openAllSelected())) {
-                    synchronizeRegistries = tryUpdateRegistries(resourceManager);
+                    synchronizeRegistries = tryUpdateRegistries(pendingTags, resourceManager);
                 }
             } else {
-                synchronizeRegistries = tryUpdateRegistries(ResourceProvider.EMPTY);
+                synchronizeRegistries = tryUpdateRegistries(pendingTags, ResourceProvider.EMPTY);
             }
         }
 
@@ -122,7 +122,7 @@ public class ReplayConfigurationPacketHandler implements ClientConfigurationPack
             return;
         }
 
-        this.replayServer.updateRegistry(currentFeatureFlags, initialPackets, configurationTasks, this.knownPackIds);
+        this.replayServer.updateRegistry(currentFeatureFlags, pendingTags, initialPackets, configurationTasks, this.knownPackIds);
 
         // Remove all players
         for (ServerPlayer player : new ArrayList<>(this.replayServer.getPlayerList().getPlayers())) {
@@ -139,11 +139,11 @@ public class ReplayConfigurationPacketHandler implements ClientConfigurationPack
         this.replayServer.loadLevel();
     }
 
-    private boolean tryUpdateRegistries(ResourceProvider resourceProvider) {
+    private boolean tryUpdateRegistries(List<Registry.PendingTags<?>> pendingTags, ResourceProvider resourceProvider) {
         Map<ResourceKey<? extends Registry<?>>, RegistryDataLoader.NetworkedRegistryData> entries = this.pendingRegistryMap;
         this.pendingRegistryMap = null;
 
-        List<HolderLookup.RegistryLookup<?>> updatedLookups = TagLoader.buildUpdatedLookups(this.replayServer.registryAccess(), List.of());
+        List<HolderLookup.RegistryLookup<?>> updatedLookups = TagLoader.buildUpdatedLookups(this.replayServer.registryAccess(), pendingTags);
 
         RegistryAccess.Frozen synchronizedRegistries;
         try {

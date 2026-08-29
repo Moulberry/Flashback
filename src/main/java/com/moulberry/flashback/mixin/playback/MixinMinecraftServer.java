@@ -15,13 +15,15 @@ import java.util.List;
 @Mixin(MinecraftServer.class)
 public class MixinMinecraftServer {
 
-    /* Keep the tags already installed on replay registries instead of replacing
-     * them with tags from the replay server's empty datapack repository. */
+    /*
+     * Keep the tags already installed on replay registries instead of trying
+     * to load them from the replay server's empty datapack repository.
+     */
 
     @WrapOperation(method = "method_29437", at = @At(value = "INVOKE", target = "Lnet/minecraft/tags/TagLoader;loadTagsForExistingRegistries(Lnet/minecraft/server/packs/resources/ResourceManager;Lnet/minecraft/core/RegistryAccess;)Ljava/util/List;"))
     public List<Registry.PendingTags<?>> loadTagsForExistingRegistries(ResourceManager resourceManager, RegistryAccess registryAccess, Operation<List<Registry.PendingTags<?>>> original) {
-        if ((Object) this instanceof ReplayServer) {
-            return List.of();
+        if ((Object) this instanceof ReplayServer replayServer && replayServer.overridePendingTags != null) {
+            return replayServer.overridePendingTags;
         }
         return original.call(resourceManager, registryAccess);
     }
