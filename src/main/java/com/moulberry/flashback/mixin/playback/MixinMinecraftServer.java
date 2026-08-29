@@ -22,8 +22,8 @@ public class MixinMinecraftServer {
 
     @WrapOperation(method = "method_29437", at = @At(value = "INVOKE", target = "Lnet/minecraft/tags/TagLoader;loadTagsForExistingRegistries(Lnet/minecraft/server/packs/resources/ResourceManager;Lnet/minecraft/core/RegistryAccess;)Ljava/util/List;"))
     public List<Registry.PendingTags<?>> loadTagsForExistingRegistries(ResourceManager resourceManager, RegistryAccess registryAccess, Operation<List<Registry.PendingTags<?>>> original) {
-        if ((Object) this instanceof ReplayServer replayServer && replayServer.overridePendingTags != null) {
-            return replayServer.overridePendingTags;
+        if ((Object) this instanceof ReplayServer) {
+            return List.of();
         }
         return original.call(resourceManager, registryAccess);
     }
