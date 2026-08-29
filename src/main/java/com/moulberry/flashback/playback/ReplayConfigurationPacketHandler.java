@@ -96,10 +96,8 @@ public class ReplayConfigurationPacketHandler implements ClientConfigurationPack
                         return;
                     }
                 }
-                var loadResult = networkPayload.resolve(registry);
-                pendingTags.add(registry.prepareTagReload(loadResult));
+                addAndApplyPendingTags(pendingTags, registry, networkPayload);
             });
-            pendingTags.forEach(Registry.PendingTags::apply);
             sendTags = true;
             this.pendingTags = null;
         }
@@ -121,10 +119,7 @@ public class ReplayConfigurationPacketHandler implements ClientConfigurationPack
             // Apply those recorded tags to the registry that remains active so they are not lost.
             synchronizedRegistryTags.forEach((resourceKey, networkPayload) -> {
                 var registry = this.replayServer.registryAccess().lookupOrThrow(resourceKey);
-                var loadResult = networkPayload.resolve(registry);
-                var pending = registry.prepareTagReload(loadResult);
-                pending.apply();
-                pendingTags.add(pending);
+                addAndApplyPendingTags(pendingTags, registry, networkPayload);
             });
         }
 
@@ -153,6 +148,14 @@ public class ReplayConfigurationPacketHandler implements ClientConfigurationPack
 
         // Recreate levels
         this.replayServer.loadLevel();
+    }
+
+    private static <T> void addAndApplyPendingTags(List<Registry.PendingTags<?>> pendingTags, Registry<T> registry,
+                                                   TagNetworkSerialization.NetworkPayload networkPayload) {
+        var loadResult = networkPayload.resolve(registry);
+        var pending = registry.prepareTagReload(loadResult);
+        pending.apply();
+        pendingTags.add(pending);
     }
 
     private boolean tryUpdateRegistries(List<Registry.PendingTags<?>> pendingTags, ResourceProvider resourceProvider) {
