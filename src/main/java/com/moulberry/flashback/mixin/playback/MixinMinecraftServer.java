@@ -16,14 +16,14 @@ import java.util.List;
 public class MixinMinecraftServer {
 
     /*
-     * Force the server to use the pending tags we gathered instead of trying
-     * to load them from the resource pack repository where it doesn't exist
+     * Keep the tags already installed on replay registries instead of trying
+     * to load them from the replay server's empty datapack repository.
      */
 
     @WrapOperation(method = "method_29437", at = @At(value = "INVOKE", target = "Lnet/minecraft/tags/TagLoader;loadTagsForExistingRegistries(Lnet/minecraft/server/packs/resources/ResourceManager;Lnet/minecraft/core/RegistryAccess;)Ljava/util/List;"))
     public List<Registry.PendingTags<?>> loadTagsForExistingRegistries(ResourceManager resourceManager, RegistryAccess registryAccess, Operation<List<Registry.PendingTags<?>>> original) {
-        if ((Object) this instanceof ReplayServer replayServer && replayServer.overridePendingTags != null) {
-            return replayServer.overridePendingTags;
+        if ((Object) this instanceof ReplayServer) {
+            return List.of();
         }
         return original.call(resourceManager, registryAccess);
     }
