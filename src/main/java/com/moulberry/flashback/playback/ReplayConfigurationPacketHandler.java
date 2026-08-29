@@ -79,23 +79,22 @@ public class ReplayConfigurationPacketHandler implements ClientConfigurationPack
             this.pendingResetChat = false;
         }
 
-        Map<ResourceKey<? extends Registry<?>>, TagNetworkSerialization.NetworkPayload> synchronizedRegistryTags = new HashMap<>();
-
         if (this.pendingTags != null && !this.pendingTags.isEmpty()) {
             this.pendingTags.forEach((resourceKey, networkPayload) -> {
-                var registry = this.replayServer.registryAccess().lookupOrThrow(resourceKey);
                 if (this.pendingRegistryMap != null) {
                     var entry = this.pendingRegistryMap.get(resourceKey);
                     if (entry != null) {
-                        // The payload's element ids belong to the recorded registry. Load it with
-                        // that registry, and only resolve it against the local registry if the
-                        // recorded registry is discarded below.
                         this.pendingRegistryMap.put(resourceKey, new RegistryDataLoader.NetworkedRegistryData(entry.elements(), networkPayload));
-                        synchronizedRegistryTags.put(resourceKey, networkPayload);
-                        return;
                     }
                 }
-                applyTags(registry, networkPayload);
+
+                // Apply the tags in case the local registry remains active. If the recorded
+                // registry replaces it, RegistryDataLoader applies the same payload there and
+                // this local tag state is discarded.
+                var localRegistry = this.replayServer.registryAccess().lookupOrThrow(resourceKey);
+                var loadResult = networkPayload.resolve(localRegistry);
+                var pending = localRegistry.prepareTagReload(loadResult);
+                pending.apply();
             });
             sendTags = true;
             this.pendingTags = null;
@@ -111,15 +110,6 @@ public class ReplayConfigurationPacketHandler implements ClientConfigurationPack
             } else {
                 synchronizeRegistries = tryUpdateRegistries(ResourceProvider.EMPTY);
             }
-        }
-
-        if (!synchronizeRegistries) {
-            // A registry is not replaced when its elements are unchanged, even if its tags differ.
-            // Apply those recorded tags to the registry that remains active so they are not lost.
-            synchronizedRegistryTags.forEach((resourceKey, networkPayload) -> {
-                var registry = this.replayServer.registryAccess().lookupOrThrow(resourceKey);
-                applyTags(registry, networkPayload);
-            });
         }
 
         if (synchronizeRegistries) {
@@ -147,12 +137,6 @@ public class ReplayConfigurationPacketHandler implements ClientConfigurationPack
 
         // Recreate levels
         this.replayServer.loadLevel();
-    }
-
-    private static <T> void applyTags(Registry<T> registry, TagNetworkSerialization.NetworkPayload networkPayload) {
-        var loadResult = networkPayload.resolve(registry);
-        var pending = registry.prepareTagReload(loadResult);
-        pending.apply();
     }
 
     private boolean tryUpdateRegistries(ResourceProvider resourceProvider) {
