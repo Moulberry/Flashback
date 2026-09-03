@@ -46,6 +46,7 @@ public class TickrateKeyframe extends Keyframe {
     public void renderEditKeyframe(Consumer<Consumer<Keyframe>> update) {
         ImGui.setNextItemWidth(160);
         float[] input = new float[]{this.tickrate/20f};
+        input[0] = Math.max(KeyframeChangeTickrate.MIN_TICKRATE, input[0]);
         if (ImGui.sliderFloat(I18n.get("flashback.keyframe.speed"), input, 0.1f, 10.0f)) {
             float tickrate = Math.max(0.01f, input[0]*20f);
             if (this.tickrate != tickrate) {

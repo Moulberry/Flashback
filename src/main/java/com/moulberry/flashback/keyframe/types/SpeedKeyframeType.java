@@ -60,6 +60,7 @@ public class SpeedKeyframeType implements KeyframeType<TickrateKeyframe> {
         }
 
         return () -> {
+            speedKeyframeInput[0] = Math.max(KeyframeChangeTickrate.MIN_TICKRATE, speedKeyframeInput[0]);
             ImGui.sliderFloat(I18n.get("flashback.keyframe.speed"), speedKeyframeInput, 0.1f, 10f);
             if (ImGui.button(I18n.get("flashback.add")) || ReplayUI.consumeConfirm()) {
                 return new TickrateKeyframe(speedKeyframeInput[0] * 20.0f);

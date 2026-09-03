@@ -18,6 +18,7 @@ import com.moulberry.flashback.editor.ui.ReplayUI;
 import com.moulberry.flashback.editor.ui.windows.ExportDoneWindow;
 import com.moulberry.flashback.exporting.taskbar.TaskbarManager;
 import com.moulberry.flashback.ext.WindowExt;
+import com.moulberry.flashback.keyframe.change.KeyframeChangeTickrate;
 import com.moulberry.flashback.keyframe.handler.KeyframeHandler;
 import com.moulberry.flashback.keyframe.handler.MinecraftKeyframeHandler;
 import com.moulberry.flashback.keyframe.handler.TickrateKeyframeCapture;
@@ -1165,6 +1166,7 @@ public class ExportJob {
 
         ticks.add(new TickInfo(0, 0, false));
 
+        BigDecimal lastResidual = BigDecimal.ZERO;
         BigDecimal residual = BigDecimal.ZERO;
         BigDecimal fpsReciprocal = BigDecimal.ONE.divide(BigDecimal.valueOf(fps), MathContext.DECIMAL128);
         int currentTick = 0;
@@ -1181,11 +1183,17 @@ public class ExportJob {
                 capture.frozen = false;
                 editorState.applyKeyframes(capture, startTick + currentTick + residual.floatValue());
 
+                capture.tickrate = Math.max(KeyframeChangeTickrate.MIN_TICKRATE, capture.tickrate);
+
                 BigDecimal ticksThisFrame = BigDecimal.valueOf(capture.tickrate).multiply(fpsReciprocal).multiply(remainingFrame);
                 if (ticksThisFrame.compareTo(BigDecimal.ONE) > 0) {
                     residual = residual.add(BigDecimal.ONE);
                     // remainingFrame *= 1 - 1/ticksThisFrame
+                    BigDecimal lastRemainingFrame = remainingFrame;
                     remainingFrame = remainingFrame.multiply(BigDecimal.ONE.subtract(BigDecimal.ONE.divide(ticksThisFrame, MathContext.DECIMAL128))).round(MathContext.DECIMAL128);
+                    if (remainingFrame.compareTo(lastRemainingFrame) >= 0) {
+                        throw new IllegalStateException("remainingFrame >= lastRemainingFrame");
+                    }
                 } else {
                     residual = residual.add(ticksThisFrame);
                     break;
@@ -1201,9 +1209,17 @@ public class ExportJob {
             }
 
             double currentTickDouble = currentTick + residual.doubleValue();
-            if (currentTickDouble % 1.0 == 0.0) {
+            if (roundedResidual > 0 && currentTickDouble % 1.0 == 0.0) {
                 residual = BigDecimal.ZERO;
             }
+
+            // Sanity checks to make sure we don't get into an infinite loop
+            if (roundedResidual < 0) {
+                throw new IllegalStateException("roundedResidual < 0");
+            } else if (roundedResidual == 0 && residual.compareTo(lastResidual) <= 0) {
+                throw new IllegalStateException("roundedResidual == 0 && residual <= lastResidual)");
+            }
+            lastResidual = residual;
 
             if (!capture.frozen) {
                 startFrozen = -1;
