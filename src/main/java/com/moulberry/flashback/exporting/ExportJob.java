@@ -13,7 +13,6 @@ import com.moulberry.flashback.combo_options.VideoContainer;
 import com.moulberry.flashback.editor.ui.ReplayUI;
 import com.moulberry.flashback.editor.ui.windows.ExportDoneWindow;
 import com.moulberry.flashback.exporting.taskbar.TaskbarManager;
-import com.moulberry.flashback.ext.WindowExt;
 import com.moulberry.flashback.keyframe.change.KeyframeChangeTickrate;
 import com.moulberry.flashback.keyframe.handler.KeyframeHandler;
 import com.moulberry.flashback.keyframe.handler.MinecraftKeyframeHandler;
