@@ -83,7 +83,7 @@
     "compat.fabric.MixinFabricServerPlayNetworking",
     "compat.fabric.MixinRecipeSyncImpl",
     "compat.iris.MixinIrisSystemTimeUniforms",
-    "compat.voice_chat.MixinVoiceChatALSpeakerBase",
+    "compat.voice_chat.MixinVoiceChatCameraTracker",
     "compat.voice_chat.MixinVoiceChatClientPlayerStateManager",
     "compat.voice_chat.MixinVoiceChatClientVoicechat",
     "compat.voice_chat.MixinVoiceChatRenderEvents",
