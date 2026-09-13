@@ -439,7 +439,7 @@ public abstract class MixinMinecraft implements MinecraftExt {
                 StoringChunkProgressListener storingChunkProgressListener = StoringChunkProgressListener.createFromGameruleRadius(i);
                 this.progressListener.set(storingChunkProgressListener);
                 return ProcessorChunkProgressListener.createStarted(storingChunkProgressListener, this.progressTasks::add);
-            }, info.playbackUUID(), info.path());
+            }, info);
         }
         return original.call(function);
     }

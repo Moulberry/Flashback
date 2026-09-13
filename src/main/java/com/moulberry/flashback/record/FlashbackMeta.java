@@ -7,11 +7,9 @@ import com.moulberry.flashback.FlashbackGson;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.UUID;
@@ -32,6 +30,7 @@ public class FlashbackMeta {
     public LinkedHashMap<String, FlashbackChunkMeta> chunks = new LinkedHashMap<>();
 
     public LinkedHashMap<String, LinkedHashSet<String>> namespacesForRegistries = null;
+    public LinkedHashMap<String, String> modVersions = null;
 
     public Map<String, File> distantHorizonPaths = new HashMap<>();
 
@@ -92,6 +91,17 @@ public class FlashbackMeta {
             }
 
             meta.add("customNamespacesForRegistries", registriesObj);
+        }
+
+        // Mod versions
+        if (this.modVersions != null) {
+            JsonObject modVersionsObj = new JsonObject();
+
+            for (Map.Entry<String, String> entry : this.modVersions.entrySet()) {
+                modVersionsObj.addProperty(entry.getKey(), entry.getValue());
+            }
+
+            meta.add("modVersions", modVersionsObj);
         }
 
         JsonObject chunksJson = new JsonObject();
@@ -173,6 +183,20 @@ public class FlashbackMeta {
 
                 flashbackMeta.namespacesForRegistries.put(registryName, namespaces);
             }
+        }
+
+        // Mod versions
+        if (meta.has("modVersions")) {
+            flashbackMeta.modVersions = new LinkedHashMap<>();
+
+            JsonObject modVersionsObj = meta.getAsJsonObject("modVersions");
+
+            for (Map.Entry<String, JsonElement> entry : modVersionsObj.entrySet()) {
+                String value = entry.getValue().getAsString();
+                flashbackMeta.modVersions.put(entry.getKey(), value);
+            }
+
+            meta.add("modVersions", modVersionsObj);
         }
 
         // Chunks

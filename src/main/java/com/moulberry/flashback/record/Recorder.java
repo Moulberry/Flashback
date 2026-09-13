@@ -6,6 +6,7 @@ import com.mojang.authlib.GameProfile;
 import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.datafixers.util.Pair;
 import com.moulberry.flashback.Flashback;
+import com.moulberry.flashback.ModListHelper;
 import com.moulberry.flashback.PacketHelper;
 import com.moulberry.flashback.RegistryMetaHelper;
 import com.moulberry.flashback.action.*;
@@ -170,6 +171,7 @@ public class Recorder {
         }
 
         this.metadata.namespacesForRegistries = RegistryMetaHelper.calculateNamespacesForRegistries();
+        this.metadata.modVersions = ModListHelper.calculateModList();
 
         String worldName = null;
         ServerData serverData = Minecraft.getInstance().getCurrentServer();
