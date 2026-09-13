@@ -1539,6 +1539,7 @@ public class ReplayServer extends IntegratedServer {
             }
         }
         this.bossEvents.clear();
+        this.gamePacketHandler.clearDataForPlayingSnapshot();
     }
 
     public void blockChangeOccurred(BlockPos blockPos, BlockState result) {
