@@ -911,8 +911,7 @@ public class Recorder {
         this.writeCreateLocalPlayer();
 
         // Create player info update packet
-        var infoUpdatePacket = new ClientboundPlayerInfoUpdatePacket(EnumSet.of(ClientboundPlayerInfoUpdatePacket.Action.ADD_PLAYER,
-            ClientboundPlayerInfoUpdatePacket.Action.UPDATE_LISTED, ClientboundPlayerInfoUpdatePacket.Action.UPDATE_DISPLAY_NAME), List.of());
+        var infoUpdatePacket = ClientboundPlayerInfoUpdatePacket.createPlayerInitializing(List.of());
         infoUpdatePacket.entries = new ArrayList<>();
         Set<UUID> addedEntries = new HashSet<>();
         Set<UUID> addedWithValidProperties = new HashSet<>();
