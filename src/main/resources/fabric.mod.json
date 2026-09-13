@@ -35,6 +35,9 @@
 	"mixins": [
 		"flashback.mixins.json"
 	],
+    "breaks": {
+        "voicechat": "<2.6.23"
+    },
 	"depends": {
 		"fabricloader": ">=0.15.10",
 		"minecraft": ">=1.21.6 <1.21.9",
