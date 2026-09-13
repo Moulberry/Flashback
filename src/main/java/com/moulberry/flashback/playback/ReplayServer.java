@@ -127,7 +127,6 @@ import java.util.function.Function;
 
 public class ReplayServer extends IntegratedServer {
 
-    private static final Gson GSON = new Gson();
     public static int REPLAY_VIEWER_IDS_START = -981723987;
     public static String REPLAY_VIEWER_NAME = "Replay Viewer";
 
@@ -184,46 +183,34 @@ public class ReplayServer extends IntegratedServer {
     private final Map<ResourceKey<Level>, IntSet> needsPositionUpdate = new HashMap<>();
 
     private Component shutdownReason = null;
-    private FileSystem playbackFileSystem = null;
+    private FileSystem playbackFileSystem;
     private boolean initializedWithSnapshot = false;
 
     private final IgnoredCustomPayloads ignoredCustomPayloads = new IgnoredCustomPayloads();
 
     public ReplayServer(Thread thread, Minecraft minecraft, LevelStorageSource.LevelStorageAccess levelStorageAccess, PackRepository packRepository, WorldStem worldStem, Services services,
-                        ChunkProgressListenerFactory chunkProgressListenerFactory, UUID playbackUUID, Path path) {
+                        ChunkProgressListenerFactory chunkProgressListenerFactory, MinecraftExt.StartReplayServerInfo info) {
         super(thread, minecraft, levelStorageAccess, packRepository, worldStem, services, chunkProgressListenerFactory);
-        this.playbackUUID = playbackUUID;
+        this.playbackUUID = info.playbackUUID();
+        this.playbackFileSystem = info.playbackFileSystem();
+        this.metadata = info.metadata();
+
         this.gamePacketHandler = new ReplayGamePacketHandler(this);
         this.configurationPacketHandler = new ReplayConfigurationPacketHandler(this);
 
         this.gamePacketCodec = GameProtocols.CLIENTBOUND_TEMPLATE.bind(RegistryFriendlyByteBuf.decorator(this.registryAccess())).codec();
         this.configurationPacketCodec = ConfigurationProtocols.CLIENTBOUND.codec();
 
-        try {
-            this.playbackFileSystem = FileSystems.newFileSystem(path);
-
-            Path metadataPath = this.playbackFileSystem.getPath("/metadata.json");
-            String metadataJson = Files.readString(metadataPath);
-            this.metadata = FlashbackMeta.fromJson(GSON.fromJson(metadataJson, JsonObject.class));
-            if (this.metadata == null) {
-                throw new RuntimeException("Invalid metadata file");
-            }
-
-            int ticks = 0;
-            for (Map.Entry<String, FlashbackChunkMeta> entry : this.metadata.chunks.entrySet()) {
-                var chunkMetaWithPath = new PlayableChunk(entry.getValue(), this.playbackFileSystem.getPath("/"+entry.getKey()));
-                this.playableChunksByStart.put(ticks, chunkMetaWithPath);
-                ticks += entry.getValue().duration;
-            }
-
-            this.totalTicks = ticks;
-
-            this.replayChunkCache = new ReplayChunkCache(this.playbackFileSystem);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+        int ticks = 0;
+        for (Map.Entry<String, FlashbackChunkMeta> entry : this.metadata.chunks.entrySet()) {
+            var chunkMetaWithPath = new PlayableChunk(entry.getValue(), this.playbackFileSystem.getPath("/"+entry.getKey()));
+            this.playableChunksByStart.put(ticks, chunkMetaWithPath);
+            ticks += entry.getValue().duration;
         }
 
-        this.getEditorState().usedByPaths.add(path.toString());
+        this.totalTicks = ticks;
+
+        this.replayChunkCache = new ReplayChunkCache(this.playbackFileSystem);
     }
 
     public FlashbackMeta getMetadata() {
