@@ -81,8 +81,6 @@ public class ReplayConfigurationPacketHandler implements ClientConfigurationPack
             this.pendingResetChat = false;
         }
 
-        List<Registry.PendingTags<?>> pendingTags = new ArrayList<>();
-
         if (this.pendingTags != null && !this.pendingTags.isEmpty()) {
             this.pendingTags.forEach((resourceKey, networkPayload) -> {
                 var registry = this.replayServer.registryAccess().lookupOrThrow(resourceKey);
@@ -93,9 +91,8 @@ public class ReplayConfigurationPacketHandler implements ClientConfigurationPack
                         this.pendingRegistryMap.put(resourceKey, new RegistryDataLoader.NetworkedRegistryData(entry.elements(), networkPayload));
                     }
                 }
-                pendingTags.add(registry.prepareTagReload(loadResult));
+                registry.prepareTagReload(loadResult).apply();
             });
-            pendingTags.forEach(Registry.PendingTags::apply);
             sendTags = true;
             this.pendingTags = null;
         }
@@ -105,10 +102,10 @@ public class ReplayConfigurationPacketHandler implements ClientConfigurationPack
         if (this.pendingRegistryMap != null && !this.pendingRegistryMap.isEmpty()) {
             if (this.packRepository != null) {
                 try (CloseableResourceManager resourceManager = new MultiPackResourceManager(PackType.SERVER_DATA, this.packRepository.openAllSelected())) {
-                    synchronizeRegistries = tryUpdateRegistries(pendingTags, resourceManager);
+                    synchronizeRegistries = tryUpdateRegistries(resourceManager);
                 }
             } else {
-                synchronizeRegistries = tryUpdateRegistries(pendingTags, ResourceProvider.EMPTY);
+                synchronizeRegistries = tryUpdateRegistries(ResourceProvider.EMPTY);
             }
         }
 
@@ -122,7 +119,7 @@ public class ReplayConfigurationPacketHandler implements ClientConfigurationPack
             return;
         }
 
-        this.replayServer.updateRegistry(currentFeatureFlags, pendingTags, initialPackets, configurationTasks, this.knownPackIds);
+        this.replayServer.updateRegistry(currentFeatureFlags, initialPackets, configurationTasks, this.knownPackIds);
 
         // Remove all players
         for (ServerPlayer player : new ArrayList<>(this.replayServer.getPlayerList().getPlayers())) {
@@ -139,11 +136,11 @@ public class ReplayConfigurationPacketHandler implements ClientConfigurationPack
         this.replayServer.loadLevel();
     }
 
-    private boolean tryUpdateRegistries(List<Registry.PendingTags<?>> pendingTags, ResourceProvider resourceProvider) {
+    private boolean tryUpdateRegistries(ResourceProvider resourceProvider) {
         Map<ResourceKey<? extends Registry<?>>, RegistryDataLoader.NetworkedRegistryData> entries = this.pendingRegistryMap;
         this.pendingRegistryMap = null;
 
-        List<HolderLookup.RegistryLookup<?>> updatedLookups = TagLoader.buildUpdatedLookups(this.replayServer.registryAccess(), pendingTags);
+        List<HolderLookup.RegistryLookup<?>> updatedLookups = TagLoader.buildUpdatedLookups(this.replayServer.registryAccess(), List.of());
 
         RegistryAccess.Frozen synchronizedRegistries;
         try {

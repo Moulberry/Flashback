@@ -52,7 +52,6 @@ import net.minecraft.util.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.server.IntegratedServer;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Registry;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.Connection;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -233,9 +232,7 @@ public class ReplayServer extends IntegratedServer {
         return this.metadata;
     }
 
-    public List<Registry.PendingTags<?>> overridePendingTags = null;
-
-    public void updateRegistry(FeatureFlagSet featureFlagSet, List<Registry.PendingTags<?>> pendingTags,
+    public void updateRegistry(FeatureFlagSet featureFlagSet,
                                List<Packet<? super ClientConfigurationPacketListener>> initialPackets,
                                List<ConfigurationTask> configurationTasks,
                                @Nullable Collection<String> knownPackIds) {
@@ -259,7 +256,6 @@ public class ReplayServer extends IntegratedServer {
 
         this.gameRules = this.gameRules.copy(featureFlagSet);
 
-        overridePendingTags = pendingTags;
         this.reloadResources(knownPackIds != null ? knownPackIds : this.getPackRepository().getSelectedIds());
         this.clockManager().init(this);
 
