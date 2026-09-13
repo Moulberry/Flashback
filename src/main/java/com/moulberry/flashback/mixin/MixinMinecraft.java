@@ -389,7 +389,7 @@ public abstract class MixinMinecraft extends ReentrantBlockableEventLoop<Runnabl
         StartReplayServerInfo info = this.info.get();
         if (info != null) {
             function = thread -> new ReplayServer(thread, (Minecraft) (Object) this,
-                levelStorageAccess, packRepository, stem, gameRules, this.services, levelLoadListener, info.playbackUUID(), info.path());
+                levelStorageAccess, packRepository, stem, gameRules, this.services, levelLoadListener, info);
         }
         return original.call(function);
     }

@@ -1184,7 +1184,36 @@ public class Flashback implements ModInitializer, ClientModInitializer {
         config.delayedSaveToDefaultFolder();
 
         // Actually load
+        FileSystem playbackFileSystem = null;
         try {
+            FlashbackMeta metadata;
+            try {
+                Flashback.LOGGER.info("Loading replay from {}", path);
+
+                playbackFileSystem = FileSystems.newFileSystem(path);
+
+                // Try load metadata
+                Path metadataPath = playbackFileSystem.getPath("/metadata.json");
+                String metadataJson = Files.readString(metadataPath);
+                metadata = FlashbackMeta.fromJson(FlashbackGson.PRETTY.fromJson(metadataJson, JsonObject.class));
+                if (metadata == null) {
+                    Flashback.LOGGER.error("Unable to read metadata from {}", path);
+                    return;
+                }
+
+                // Log any changes to mod list
+                if (metadata.modVersions != null) {
+                    ModListHelper.calculateChanges(metadata.modVersions).log();
+                }
+
+                // Mark that editor state was used by this path so it doesn't get automatically cleaned up
+                var editorState = EditorStateManager.get(metadata.replayIdentifier);
+                editorState.usedByPaths.add(path.toString());
+            } catch (Exception e) {
+                Flashback.LOGGER.error("Unable to read replay file", e);
+                return;
+            }
+
             isOpeningReplay = true;
 
             UUID replayUuid = UUID.randomUUID();
@@ -1221,12 +1250,19 @@ public class Flashback implements ModInitializer, ClientModInitializer {
                 ), complete.dimensionsRegistryAccess());
             }, WorldStem::new, Util.backgroundExecutor(), executor)).get();
 
-            ((MinecraftExt)Minecraft.getInstance()).flashback$startReplayServer(access, packRepository, worldStem, Optional.of(gameRules), new MinecraftExt.StartReplayServerInfo(replayUuid, path));
+            ((MinecraftExt)Minecraft.getInstance()).flashback$startReplayServer(access, packRepository, worldStem, Optional.of(gameRules), new MinecraftExt.StartReplayServerInfo(replayUuid, playbackFileSystem, metadata));
+            playbackFileSystem = null;
 
             TaskbarManager.launchTaskbarManager();
         } catch (Exception e) {
             throw new RuntimeException(e);
         } finally {
+            if (playbackFileSystem != null) {
+                try {
+                    playbackFileSystem.close();
+                } catch (Exception ignored) {}
+            }
+
             isOpeningReplay = false;
         }
     }
