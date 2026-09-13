@@ -112,6 +112,10 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
         this.replayServer = replayServer;
     }
 
+    public void clearDataForPlayingSnapshot() {
+        this.playerInfoMap.clear();
+    }
+
     private void forward(Packet<?> packet) {
         for (ServerPlayer replayViewer : this.replayServer.getReplayViewers()) {
             replayViewer.connection.send(packet);
