@@ -6,7 +6,8 @@ public enum TrackingBodyPart implements ComboOption {
 
     HEAD("flashback.tracking_body_part.head"),
     BODY("flashback.tracking_body_part.body"),
-    ROOT("flashback.tracking_body_part.root");
+    ROOT("flashback.tracking_body_part.root"),
+    FIRST_PERSON("flashback.tracking_body_part.first_person");
 
     private final String text;
 
