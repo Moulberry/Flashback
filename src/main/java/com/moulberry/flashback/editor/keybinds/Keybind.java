@@ -2,6 +2,7 @@ package com.moulberry.flashback.editor.keybinds;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import com.moulberry.flashback.Flashback;
+import com.moulberry.flashback.editor.ui.CustomImGuiImplSdl;
 import com.moulberry.flashback.editor.ui.ImGuiHelper;
 import com.moulberry.flashback.editor.ui.ReplayUI;
 import com.moulberry.lattice.keybind.KeybindInterface;
@@ -13,7 +14,6 @@ import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.resources.language.I18n;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.Util;
-import org.lwjgl.glfw.GLFW;
 
 import java.util.Collection;
 import java.util.List;
@@ -21,7 +21,7 @@ import java.util.Locale;
 
 public class Keybind implements KeybindInterface {
 
-    public static final int FAKE_SCROLL_KEY = 17;
+    public static final int FAKE_SCROLL_KEY = Integer.MIN_VALUE;
 
     private final String description;
     private int key;
@@ -102,7 +102,7 @@ public class Keybind implements KeybindInterface {
             return "none";
         }
 
-        String key = KeybindHelper.glfwToConfig(this.key);
+        String key = KeybindHelper.keyToConfig(this.key);
         if (key.equals("none")) {
             return "none";
         }
@@ -148,7 +148,7 @@ public class Keybind implements KeybindInterface {
                 configValue = configValue.substring(6);
             } else {
                 configValue = configValue.substring(configValue.lastIndexOf("+")+1);
-                int key = KeybindHelper.configToGlfw(configValue);
+                int key = KeybindHelper.configToKey(configValue);
                 if (key != 0) {
                     int oldKey = this.key;
                     this.key = key;
@@ -245,39 +245,35 @@ public class Keybind implements KeybindInterface {
     }
 
     private static boolean isShift(int key) {
-        return key == GLFW.GLFW_KEY_LEFT_SHIFT || key == GLFW.GLFW_KEY_RIGHT_SHIFT;
+        return key == InputConstants.KEY_LSHIFT || key == InputConstants.KEY_RSHIFT;
     }
 
     private static boolean isCtrl(int key) {
-        return key == GLFW.GLFW_KEY_LEFT_CONTROL || key == GLFW.GLFW_KEY_RIGHT_CONTROL;
+        return key == InputConstants.KEY_LCONTROL || key == InputConstants.KEY_RCONTROL;
     }
 
     private static boolean isAlt(int key) {
-        return key == GLFW.GLFW_KEY_LEFT_ALT || key == GLFW.GLFW_KEY_RIGHT_ALT;
+        return key == InputConstants.KEY_LALT || key == InputConstants.KEY_RALT;
     }
 
     private static boolean isSuper(int key) {
-        return key == GLFW.GLFW_KEY_LEFT_SUPER || key == GLFW.GLFW_KEY_RIGHT_SUPER;
+        return key == InputConstants.KEY_LGUI || key == InputConstants.KEY_RGUI;
     }
 
-    public static boolean isShiftDownGLFW(long window) {
-        return GLFW.glfwGetKey(window, GLFW.GLFW_KEY_LEFT_SHIFT) == GLFW.GLFW_PRESS ||
-            GLFW.glfwGetKey(window, GLFW.GLFW_KEY_RIGHT_SHIFT) == GLFW.GLFW_PRESS;
+    public static boolean isShiftDown() {
+        return CustomImGuiImplSdl.isKeyDown(InputConstants.KEY_LSHIFT) || CustomImGuiImplSdl.isKeyDown(InputConstants.KEY_RSHIFT);
     }
 
-    public static boolean isCtrlDownGLFW(long window) {
-        return GLFW.glfwGetKey(window, GLFW.GLFW_KEY_LEFT_CONTROL) == GLFW.GLFW_PRESS ||
-            GLFW.glfwGetKey(window, GLFW.GLFW_KEY_RIGHT_CONTROL) == GLFW.GLFW_PRESS;
+    public static boolean isCtrlDown() {
+        return CustomImGuiImplSdl.isKeyDown(InputConstants.KEY_LCONTROL) || CustomImGuiImplSdl.isKeyDown(InputConstants.KEY_RCONTROL);
     }
 
-    public static boolean isAltDownGLFW(long window) {
-        return GLFW.glfwGetKey(window, GLFW.GLFW_KEY_LEFT_ALT) == GLFW.GLFW_PRESS ||
-            GLFW.glfwGetKey(window, GLFW.GLFW_KEY_RIGHT_ALT) == GLFW.GLFW_PRESS;
+    public static boolean isAltDown() {
+        return CustomImGuiImplSdl.isKeyDown(InputConstants.KEY_LALT) || CustomImGuiImplSdl.isKeyDown(InputConstants.KEY_RALT);
     }
 
-    public static boolean isSuperDownGLFW(long window) {
-        return GLFW.glfwGetKey(window, GLFW.GLFW_KEY_LEFT_SUPER) == GLFW.GLFW_PRESS ||
-            GLFW.glfwGetKey(window, GLFW.GLFW_KEY_RIGHT_SUPER) == GLFW.GLFW_PRESS;
+    public static boolean isSuperDown() {
+        return CustomImGuiImplSdl.isKeyDown(InputConstants.KEY_LGUI) || CustomImGuiImplSdl.isKeyDown(InputConstants.KEY_RGUI);
     }
 
     public boolean isDown() {
@@ -290,13 +286,12 @@ public class Keybind implements KeybindInterface {
         }
 
         if (ReplayUI.isActive() && ReplayUI.isImGuiContextActive()) {
-            return ImGuiHelper.isGlfwBindingDown(this.key);
+            return ImGuiHelper.isBindingDown(this.key);
         } else {
-            long window = Minecraft.getInstance().getWindow().handle();
             if (this.key < 0) {
-                return GLFW.glfwGetMouseButton(window, -this.key-1) != GLFW.GLFW_RELEASE;
+                return CustomImGuiImplSdl.isMouseButtonDown(-this.key-1);
             } else {
-                return GLFW.glfwGetKey(window, this.key) != GLFW.GLFW_RELEASE;
+                return CustomImGuiImplSdl.isKeyDown(this.key);
             }
         }
     }
@@ -311,7 +306,7 @@ public class Keybind implements KeybindInterface {
         }
 
         if (ReplayUI.isActive() && ReplayUI.isImGuiContextActive()) {
-            return ImGuiHelper.isGlfwBindingClicked(this.key, repeat);
+            return ImGuiHelper.isBindingClicked(this.key, repeat);
         } else {
             boolean down = this.isDownIgnoreMods();
             boolean wasDown = this.ingameDownLastTime;
@@ -343,13 +338,10 @@ public class Keybind implements KeybindInterface {
             if (!isAlt(this.key) && this.altMod != io.getKeyAlt()) return false;
             if (!isSuper(this.key) && this.superMod != io.getKeySuper()) return false;
         } else {
-            Minecraft minecraft = Minecraft.getInstance();
-
-            long window = minecraft.getWindow().handle();
-            if (!isShift(this.key) && this.shiftMod != isShiftDownGLFW(window)) return false;
-            if (!isCtrl(this.key) && ctrlMod != isCtrlDownGLFW(window)) return false;
-            if (!isAlt(this.key) && this.altMod != isAltDownGLFW(window)) return false;
-            if (!isSuper(this.key) && superMod != isSuperDownGLFW(window)) return false;
+            if (!isShift(this.key) && this.shiftMod != isShiftDown()) return false;
+            if (!isCtrl(this.key) && ctrlMod != isCtrlDown()) return false;
+            if (!isAlt(this.key) && this.altMod != isAltDown()) return false;
+            if (!isSuper(this.key) && superMod != isSuperDown()) return false;
         }
 
         return true;

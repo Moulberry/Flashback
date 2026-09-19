@@ -8,7 +8,6 @@ import net.minecraft.world.phys.Vec2;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Intersectionf;
 import org.joml.Vector3f;
-import org.lwjgl.glfw.GLFW;
 
 public abstract sealed class EditorMovementControls permits EditorMovementControls.None, EditorMovementControls.Rotate, EditorMovementControls.Pan, EditorMovementControls.Arcball {
 
@@ -99,7 +98,7 @@ public abstract sealed class EditorMovementControls permits EditorMovementContro
 
         @Override
         public boolean shouldStop(boolean isGrabbed) {
-            return !ImGui.isMouseDown(GLFW.GLFW_MOUSE_BUTTON_LEFT);
+            return !ImGui.isMouseDown(imgui.moulberry90.flag.ImGuiMouseButton.Left);
         }
 
         @Override
@@ -161,7 +160,7 @@ public abstract sealed class EditorMovementControls permits EditorMovementContro
 
         @Override
         public boolean shouldStop(boolean isGrabbed) {
-            return !ImGui.isMouseDown(GLFW.GLFW_MOUSE_BUTTON_RIGHT);
+            return !ImGui.isMouseDown(imgui.moulberry90.flag.ImGuiMouseButton.Right);
 //            return !Keybinds.PAN_CAMERA.isDownIgnoreMods();
         }
 

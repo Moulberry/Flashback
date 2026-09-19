@@ -5,10 +5,10 @@ import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.llamalad7.mixinextras.sugar.Local;
 import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.platform.Window;
-import com.mojang.blaze3d.systems.CommandEncoder;
-import com.mojang.blaze3d.systems.GpuSurface;
+import com.mojang.renderpearl.api.commands.CommandEncoder;
+import com.mojang.renderpearl.api.device.GpuSurface;
 import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.textures.GpuTextureView;
+import com.mojang.renderpearl.api.textures.GpuTextureView;
 import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.FramebufferUtils;
 import com.moulberry.flashback.FreezeSlowdownFormula;
@@ -115,7 +115,7 @@ public abstract class MixinMinecraft extends ReentrantBlockableEventLoop<Runnabl
     @Unique
     private RenderTarget compositeRenderTarget = null;
 
-    @WrapOperation(method = "renderFrame", at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/systems/GpuSurface;blitFromTexture(Lcom/mojang/blaze3d/systems/CommandEncoder;Lcom/mojang/blaze3d/textures/GpuTextureView;)V"))
+    @WrapOperation(method = "renderFrame", at = @At(value = "INVOKE", target = "Lcom/mojang/renderpearl/api/device/GpuSurface;blitFromTexture(Lcom/mojang/renderpearl/api/commands/CommandEncoder;Lcom/mojang/renderpearl/api/textures/GpuTextureView;)V"))
     public void renderFrame(GpuSurface instance, CommandEncoder commandEncoder, GpuTextureView textureView, Operation<Void> original) {
         if (ReplayUI.isActive() && ReplayUI.compositeOnTop != null) {
             var window = Minecraft.getInstance().getWindow();
@@ -184,7 +184,7 @@ public abstract class MixinMinecraft extends ReentrantBlockableEventLoop<Runnabl
         original.call(instance, camera);
     }
 
-    @Inject(method = "renderFrame", at= @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/GameRenderer;render(Lnet/minecraft/client/DeltaTracker;Z)V", shift = At.Shift.AFTER))
+    @Inject(method = "renderFrame", at= @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/GameRenderer;render()V", shift = At.Shift.AFTER))
     public void afterMainRender(boolean bl, CallbackInfo ci) {
         if (!RenderSystem.isOnRenderThread()) return;
         ReplayUI.drawOverlay();

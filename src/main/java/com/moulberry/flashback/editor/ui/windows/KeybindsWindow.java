@@ -25,7 +25,6 @@ import net.minecraft.core.particles.ParticleType;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.EntityType;
-import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -108,11 +107,10 @@ public class KeybindsWindow {
                     ImGui.button(longKeyIdent+"##KeybindPreview", -1, 0);
                     if (keybind.isForceScrollKey()) {
                         if (ImGui.isItemClicked()) {
-                            long window = ImGui.getWindowViewport().getPlatformHandle();
-                            boolean shiftDown = Keybind.isShiftDownGLFW(window);
-                            boolean ctrlDown = Keybind.isCtrlDownGLFW(window);
-                            boolean altDown = Keybind.isAltDownGLFW(window);
-                            boolean superDown = Keybind.isSuperDownGLFW(window);
+                            boolean shiftDown = Keybind.isShiftDown();
+                            boolean ctrlDown = Keybind.isCtrlDown();
+                            boolean altDown = Keybind.isAltDown();
+                            boolean superDown = Keybind.isSuperDown();
 
                             keybind.set(Keybind.FAKE_SCROLL_KEY, shiftDown,
                                 InputQuirks.REPLACE_CTRL_KEY_WITH_CMD_KEY ? superDown : ctrlDown,
@@ -122,11 +120,10 @@ public class KeybindsWindow {
                     } else if (ImGui.isItemHovered()) {
                         for (int i = 0; i < ImGuiMouseButton.COUNT; i++) {
                             if (ImGui.isMouseClicked(i)) {
-                                long window = ImGui.getWindowViewport().getPlatformHandle();
-                                boolean shiftDown = Keybind.isShiftDownGLFW(window);
-                                boolean ctrlDown = Keybind.isCtrlDownGLFW(window);
-                                boolean altDown = Keybind.isAltDownGLFW(window);
-                                boolean superDown = Keybind.isSuperDownGLFW(window);
+                                    boolean shiftDown = Keybind.isShiftDown();
+                                boolean ctrlDown = Keybind.isCtrlDown();
+                                boolean altDown = Keybind.isAltDown();
+                                boolean superDown = Keybind.isSuperDown();
 
                                 keybind.set(-i-1, shiftDown,
                                     InputQuirks.REPLACE_CTRL_KEY_WITH_CMD_KEY ? superDown : ctrlDown,

@@ -10,7 +10,7 @@ import org.spongepowered.asm.mixin.injection.At;
 @Mixin(WorldBorderRenderer.class)
 public class MixinWorldBorderRenderer {
 
-    @WrapOperation(method = "render", at = @At(value = "INVOKE", target = "Lnet/minecraft/util/Util;getMillis()J"), require = 0)
+    @WrapOperation(method = "prepareDynamicTransforms", at = @At(value = "INVOKE", target = "Lnet/minecraft/util/Util;getMillis()J"), require = 0)
     private static long render(Operation<Long> original) {
         if (Flashback.isInReplay()) {
             return Flashback.getVisualMillis();

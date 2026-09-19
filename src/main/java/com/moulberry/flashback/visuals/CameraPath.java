@@ -1,7 +1,7 @@
 package com.moulberry.flashback.visuals;
 
-import com.mojang.blaze3d.PrimitiveTopology;
-import com.mojang.blaze3d.buffers.GpuBuffer;
+import com.mojang.renderpearl.api.pipeline.PrimitiveTopology;
+import com.mojang.renderpearl.api.buffers.GpuBuffer;
 import com.mojang.blaze3d.platform.Window;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.BufferBuilder;
@@ -9,7 +9,7 @@ import com.mojang.blaze3d.vertex.ByteBufferBuilder;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.MeshData;
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.VertexFormat;
+import com.mojang.renderpearl.api.vertex.VertexFormat;
 import com.moulberry.flashback.Utils;
 import com.moulberry.flashback.combo_options.Sizing;
 import com.moulberry.flashback.editor.ui.windows.TimelineWindow;
@@ -115,7 +115,7 @@ public class CameraPath {
 
                     try (FlashbackDrawBuffer drawBuffer = new FlashbackDrawBuffer(GpuBuffer.USAGE_MAP_WRITE)) {
                         drawBuffer.upload(bufferBuilder.buildOrThrow());
-                        drawBuffer.drawRenderType(RenderTypes.LINES.prepare());
+                        drawBuffer.draw(RenderTypes.LINES.prepare());
                     }
                 }
             }
@@ -267,7 +267,7 @@ public class CameraPath {
     private static void renderCamera(BufferBuilder bufferBuilder, Vector3d position, Quaterniond angle, float fov, int rgb, float opacity) {
         cameraPoseStack.pushPose();
         cameraPoseStack.translate(position.x, position.y, position.z);
-        cameraPoseStack.mulPose(new Quaternionf(angle));
+        cameraPoseStack.rotate(new Quaternionf(angle));
 
         PoseStack.Pose pose = cameraPoseStack.last();
 

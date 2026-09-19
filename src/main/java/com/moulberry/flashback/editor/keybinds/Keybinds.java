@@ -1,7 +1,7 @@
 package com.moulberry.flashback.editor.keybinds;
 
 import com.moulberry.flashback.configuration.FlashbackConfigV1;
-import org.lwjgl.glfw.GLFW;
+import com.mojang.blaze3d.platform.InputConstants;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -13,20 +13,20 @@ public class Keybinds {
 
     public static Map<Integer, Set<Keybind>> keybindsForKey = new HashMap<>();
 
-    public static final Keybind PAUSE = new Keybind("pause", GLFW.GLFW_KEY_P, false, false, false, false);
+    public static final Keybind PAUSE = new Keybind("pause", InputConstants.KEY_P, false, false, false, false);
 
-    public static final Keybind COPY = new Keybind("copy", GLFW.GLFW_KEY_C, false, true, false, false);
-    public static final Keybind PASTE = new Keybind("paste", GLFW.GLFW_KEY_V, false, true, false, false);
-    public static final Keybind UNDO = new Keybind("undo", GLFW.GLFW_KEY_Z, false, true, false, false);
-    public static final Keybind REDO = new Keybind("redo", GLFW.GLFW_KEY_Y, false, true, false, false);
+    public static final Keybind COPY = new Keybind("copy", InputConstants.KEY_C, false, true, false, false);
+    public static final Keybind PASTE = new Keybind("paste", InputConstants.KEY_V, false, true, false, false);
+    public static final Keybind UNDO = new Keybind("undo", InputConstants.KEY_Z, false, true, false, false);
+    public static final Keybind REDO = new Keybind("redo", InputConstants.KEY_Y, false, true, false, false);
 
-    public static final Keybind MARK_IN = new Keybind("mark_in", GLFW.GLFW_KEY_I, false, false, false, false);
-    public static final Keybind MARK_OUT = new Keybind("mark_out", GLFW.GLFW_KEY_O, false, false, false, false);
-    public static final Keybind CLEAR_IN = new Keybind("clear_in", GLFW.GLFW_KEY_I, false, true, false, false);
-    public static final Keybind CLEAR_OUT = new Keybind("clear_out", GLFW.GLFW_KEY_O, false, true, false, false);
+    public static final Keybind MARK_IN = new Keybind("mark_in", InputConstants.KEY_I, false, false, false, false);
+    public static final Keybind MARK_OUT = new Keybind("mark_out", InputConstants.KEY_O, false, false, false, false);
+    public static final Keybind CLEAR_IN = new Keybind("clear_in", InputConstants.KEY_I, false, true, false, false);
+    public static final Keybind CLEAR_OUT = new Keybind("clear_out", InputConstants.KEY_O, false, true, false, false);
 
-    public static final Keybind ZOOM_IN = new Keybind("zoom_in", GLFW.GLFW_KEY_EQUAL, false, false, false, false);
-    public static final Keybind ZOOM_OUT = new Keybind("zoom_out", GLFW.GLFW_KEY_MINUS, false, false, false, false);
+    public static final Keybind ZOOM_IN = new Keybind("zoom_in", InputConstants.KEY_EQUALS, false, false, false, false);
+    public static final Keybind ZOOM_OUT = new Keybind("zoom_out", InputConstants.KEY_MINUS, false, false, false, false);
 
     public static final Keybind ADD_CAMERA = new Keybind("add_camera", 0, false, false, false, false);
 

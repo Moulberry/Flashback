@@ -19,6 +19,7 @@ import net.minecraft.world.level.levelgen.GenerationStep;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.levelgen.RandomState;
 import net.minecraft.world.level.levelgen.blending.Blender;
+import net.minecraft.world.level.levelgen.densityfunction.SamplerContext;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -37,19 +38,13 @@ public class EmptyLevelSource extends ChunkGenerator {
     }
 
     @Override
-    public void applyCarvers(WorldGenRegion worldGenRegion, long l, RandomState randomState, BiomeManager biomeManager, StructureManager structureManager, ChunkAccess chunkAccess) {
-    }
-
-    @Override
-    public void buildSurface(WorldGenRegion worldGenRegion, StructureManager structureManager, RandomState randomState, ChunkAccess chunkAccess) {
-    }
-
-    @Override
     public void applyBiomeDecoration(WorldGenLevel worldGenLevel, ChunkAccess chunkAccess, StructureManager structureManager) {
     }
 
     @Override
-    public CompletableFuture<ChunkAccess> fillFromNoise(Blender blender, RandomState randomState, StructureManager structureManager, ChunkAccess chunkAccess) {
+    public CompletableFuture<ChunkAccess> buildTerrain(ChunkAccess chunkAccess, Blender blender, RandomState randomState,
+                                                       StructureManager structureManager, BiomeManager biomeManager,
+                                                       WorldGenRegion carverBiomeRegion, java.util.Set<Holder<Biome>> possibleBiomes) {
         return CompletableFuture.completedFuture(chunkAccess);
     }
 
@@ -64,7 +59,7 @@ public class EmptyLevelSource extends ChunkGenerator {
     }
 
     @Override
-    public void addDebugScreenInfo(List<String> list, RandomState randomState, BlockPos blockPos) {
+    public void addDebugScreenInfo(List<String> list, RandomState randomState, BlockPos blockPos, SamplerContext samplerContext) {
     }
 
     @Override

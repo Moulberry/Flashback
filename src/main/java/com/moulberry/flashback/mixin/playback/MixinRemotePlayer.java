@@ -17,6 +17,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(RemotePlayer.class)
 public class MixinRemotePlayer extends AbstractClientPlayer implements RemotePlayerExt {
 
+
     @Unique
     private boolean wasSwinging = false;
 
@@ -38,10 +39,10 @@ public class MixinRemotePlayer extends AbstractClientPlayer implements RemotePla
     @Inject(method = "aiStep", at = @At("RETURN"))
     public void aiStep(CallbackInfo ci) {
         if (Flashback.isInReplay()) {
-            if (!this.wasSwinging && this.swinging) {
+            if (!this.wasSwinging && this.isSwinging()) {
                 this.resetAttackStrengthTicker();
             }
-            this.wasSwinging = this.swinging;
+            this.wasSwinging = this.isSwinging();
 
             this.xBobO = xBob;
             this.xBob += Mth.wrapDegrees(this.getXRot() - this.xBob) * 0.5f;

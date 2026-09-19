@@ -1,7 +1,7 @@
 package com.moulberry.flashback.visuals;
 
-import com.mojang.blaze3d.PrimitiveTopology;
-import com.mojang.blaze3d.buffers.GpuBuffer;
+import com.mojang.renderpearl.api.pipeline.PrimitiveTopology;
+import com.mojang.renderpearl.api.buffers.GpuBuffer;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.ByteBufferBuilder;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
@@ -76,7 +76,7 @@ public class WorldRenderHook {
                         position.position().y - camera.pos.y,
                         position.position().z - camera.pos.z
                     );
-                    poseStack.mulPose(camera.orientation);
+                    poseStack.rotate(camera.orientation);
 
                     final float width = 0.2f;
                     circleBufferBuilder.addVertex(poseStack.last(), -width, -width, 0.0f).setUv(0f, 0f).setColor(marker.colour() | 0xFF000000);
@@ -109,7 +109,7 @@ public class WorldRenderHook {
                 if (circleMeshData != null) {
                     try (FlashbackDrawBuffer drawBuffer = new FlashbackDrawBuffer(GpuBuffer.USAGE_MAP_WRITE)) {
                         drawBuffer.upload(circleMeshData);
-                        drawBuffer.drawRenderType(MARKER_CIRCLE_RENDER_TYPE.prepare());
+                        drawBuffer.draw(MARKER_CIRCLE_RENDER_TYPE.prepare());
                     }
                 }
 
@@ -127,7 +127,7 @@ public class WorldRenderHook {
                                 renderableAt.location().y - camera.pos.y,
                                 renderableAt.location().z - camera.pos.z
                             );
-                            poseStack.mulPose(camera.orientation);
+                            poseStack.rotate(camera.orientation);
 
                             Matrix4f matrix4f = poseStack.last().pose();
                             matrix4f.rotate((float)Math.PI, 0.0f, 1.0f, 0.0f);
@@ -143,7 +143,7 @@ public class WorldRenderHook {
                         if (meshData != null) {
                             try (FlashbackDrawBuffer drawBuffer = new FlashbackDrawBuffer(GpuBuffer.USAGE_MAP_WRITE)) {
                                 drawBuffer.upload(meshData);
-                                drawBuffer.drawRenderType(renderType.prepare());
+                                drawBuffer.draw(renderType.prepare());
                             }
                         }
                     }

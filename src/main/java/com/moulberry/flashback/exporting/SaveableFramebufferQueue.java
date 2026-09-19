@@ -1,12 +1,12 @@
 package com.moulberry.flashback.exporting;
 
-import com.mojang.blaze3d.GpuFormat;
+import com.mojang.renderpearl.api.GpuFormat;
 import com.mojang.blaze3d.pipeline.RenderTarget;
-import com.mojang.blaze3d.systems.RenderPass;
+import com.mojang.renderpearl.api.commands.RenderPass;
 import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.textures.FilterMode;
-import com.mojang.blaze3d.textures.GpuTexture;
-import com.mojang.blaze3d.textures.GpuTextureView;
+import com.mojang.renderpearl.api.textures.FilterMode;
+import com.mojang.renderpearl.api.textures.GpuTexture;
+import com.mojang.renderpearl.api.textures.GpuTextureView;
 import com.moulberry.flashback.editor.ui.ReplayUI;
 import com.moulberry.flashback.visuals.ShaderManager;
 import org.jetbrains.annotations.Nullable;
@@ -59,9 +59,9 @@ public class SaveableFramebufferQueue implements AutoCloseable {
         FilterMode filterMode = supersampling ? FilterMode.LINEAR : FilterMode.NEAREST;
 
         try (RenderPass renderPass = RenderSystem.getDevice().createCommandEncoder().createRenderPass(() -> "flashback flip pass", this.flipBufferView, Optional.of(CLEAR_COLOR))) {
-            renderPass.setPipeline(ShaderManager.BLIT_SCREEN_FLIP);
+            renderPass.setPipeline(RenderSystem.getCompiledPipeline(ShaderManager.BLIT_SCREEN_FLIP));
             RenderSystem.bindDefaultUniforms(renderPass);
-            renderPass.bindTexture("InSampler", src.getColorTextureView(), RenderSystem.getSamplerCache().getClampToEdge(filterMode));
+            renderPass.setUniform("InSampler", src.getColorTextureView(), RenderSystem.getSamplerCache().getClampToEdge(filterMode));
             renderPass.draw(3, 1, 0, 0);
         }
     }
@@ -70,10 +70,10 @@ public class SaveableFramebufferQueue implements AutoCloseable {
         var uniforms = this.transformDepthUniform.getOrUpdate(ReplayUI.lastProjectionMatrix);
 
         try (RenderPass renderPass = RenderSystem.getDevice().createCommandEncoder().createRenderPass(() -> "flashback depth flip pass", this.flipDepthBufferView, Optional.of(CLEAR_COLOR))) {
-            renderPass.setPipeline(ShaderManager.BLIT_TRANSFORM_DEPTH);
+            renderPass.setPipeline(RenderSystem.getCompiledPipeline(ShaderManager.BLIT_TRANSFORM_DEPTH));
             RenderSystem.bindDefaultUniforms(renderPass);
             renderPass.setUniform("TransformDepth", uniforms);
-            renderPass.bindTexture("InSampler", src.getDepthTextureView(), RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST));
+            renderPass.setUniform("InSampler", src.getDepthTextureView(), RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST));
             renderPass.draw(3, 1, 0, 0);
         }
     }

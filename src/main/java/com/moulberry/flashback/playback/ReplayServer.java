@@ -85,6 +85,7 @@ import net.minecraft.world.clock.WorldClocks;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.ExperienceOrb;
 import net.minecraft.world.entity.PositionMoveRotation;
+import net.minecraft.world.entity.PositionPath;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
@@ -794,8 +795,8 @@ public class ReplayServer extends IntegratedServer {
             this.gamePacketHandler.flushPendingEntities();
 
             try {
-                int x = packet.getX();
-                int z = packet.getZ();
+                int x = packet.x();
+                int z = packet.z();
                 LevelChunk chunk = this.gamePacketHandler.level().getChunk(x, z);
 
                 if (Flashback.EXPORT_JOB != null || !doesCachedChunkIdMatch(chunk, index) || this.gamePacketHandler.forceSendChunksDueToMovingPistonShenanigans.contains(ChunkPos.pack(x, z))) {
@@ -1209,8 +1210,9 @@ public class ReplayServer extends IntegratedServer {
                         byte quantizedXRot = (byte) Mth.floor(serverEntity.entity.getXRot() * 256.0F / 360.0F);
 
                         if (!serverEntity.entity.isPassenger() && !serverEntity.positionCodec.getBase().equals(trackingPosition)) {
+                            PositionMoveRotation moveRotation = PositionMoveRotation.of(serverEntity.entity);
                             trackedEntity.sendToTrackingPlayers(new ClientboundEntityPositionSyncPacket(serverEntity.entity.getId(),
-                                    PositionMoveRotation.of(serverEntity.entity), serverEntity.wasOnGround));
+                                    PositionPath.of(moveRotation.position()), moveRotation.yRot(), moveRotation.xRot(), serverEntity.wasOnGround));
                             serverEntity.positionCodec.setBase(trackingPosition);
                             serverEntity.lastSentYRot = quantizedYRot;
                             serverEntity.lastSentXRot = quantizedXRot;

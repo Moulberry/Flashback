@@ -1,12 +1,18 @@
 package com.moulberry.flashback.mixin.record;
 
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.record.Recorder;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.multiplayer.prediction.BlockStatePredictionHandler;
+import net.minecraft.client.resources.sounds.SoundInstance;
+import net.minecraft.client.sounds.SoundEngine;
+import net.minecraft.client.sounds.SoundManager;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.ConnectionProtocol;
 import net.minecraft.network.protocol.game.ClientboundBlockUpdatePacket;
 import net.minecraft.network.protocol.game.ClientboundSoundEntityPacket;
@@ -25,6 +31,9 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
+import java.util.Optional;
+import java.util.concurrent.ThreadLocalRandom;
+
 @Mixin(ClientLevel.class)
 public class MixinClientLevel {
 
@@ -35,6 +44,30 @@ public class MixinClientLevel {
     @Shadow
     @Final
     private BlockStatePredictionHandler blockStatePredictionHandler;
+
+    @WrapOperation(method = "playBreakingSound", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/sounds/SoundManager;play(Lnet/minecraft/client/resources/sounds/SoundInstance;)Lnet/minecraft/client/sounds/SoundEngine$PlayResult;"))
+    public SoundEngine.PlayResult playBreakingSound(SoundManager instance, SoundInstance soundInstance, Operation<SoundEngine.PlayResult> original) {
+        var result = original.call(instance, soundInstance);
+
+        if (Flashback.RECORDER != null && !Flashback.RECORDER.isPaused()) {
+            if (soundInstance.getSound() == null) {
+                return result;
+            }
+
+            Optional<Holder.Reference<SoundEvent>> builtinSoundEvent = BuiltInRegistries.SOUND_EVENT.get(soundInstance.getIdentifier());
+            Holder<SoundEvent> holder;
+            if (builtinSoundEvent.isEmpty()) {
+                holder = Holder.direct(SoundEvent.createVariableRangeEvent(soundInstance.getIdentifier()));
+            } else {
+                holder = builtinSoundEvent.get();
+            }
+
+            Flashback.RECORDER.writeSound(holder, soundInstance.getSource(), soundInstance.getX(), soundInstance.getY(), soundInstance.getZ(),
+                soundInstance.getVolume(), soundInstance.getPitch(), ThreadLocalRandom.current().nextLong());
+        }
+
+        return result;
+    }
 
     @Inject(method = "setBlock", at = @At("HEAD"))
     public void setBlock(BlockPos blockPos, BlockState blockState, int i, int j, CallbackInfoReturnable<Boolean> cir) {

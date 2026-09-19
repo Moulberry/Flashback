@@ -1,15 +1,15 @@
 package com.moulberry.flashback;
 
-import com.mojang.blaze3d.GpuFormat;
-import com.mojang.blaze3d.PrimitiveTopology;
-import com.mojang.blaze3d.buffers.GpuBuffer;
+import com.mojang.renderpearl.api.GpuFormat;
+import com.mojang.renderpearl.api.pipeline.PrimitiveTopology;
+import com.mojang.renderpearl.api.buffers.GpuBuffer;
 import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.pipeline.TextureTarget;
-import com.mojang.blaze3d.systems.RenderPass;
+import com.mojang.renderpearl.api.commands.RenderPass;
 import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.textures.FilterMode;
-import com.mojang.blaze3d.textures.GpuTexture;
-import com.mojang.blaze3d.textures.GpuTextureView;
+import com.mojang.renderpearl.api.textures.FilterMode;
+import com.mojang.renderpearl.api.textures.GpuTexture;
+import com.mojang.renderpearl.api.textures.GpuTextureView;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.ByteBufferBuilder;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
@@ -38,7 +38,7 @@ public class FramebufferUtils {
 
     public static RenderTarget resizeOrCreateFramebuffer(RenderTarget renderTarget, int width, int height, boolean useDepth) {
         if (renderTarget == null) {
-            renderTarget = new TextureTarget(null, width, height, useDepth, GpuFormat.RGBA8_UNORM);
+            renderTarget = new TextureTarget(null, width, height, GpuFormat.RGBA8_UNORM, useDepth ? GpuFormat.D32_FLOAT : null);
         } else if (renderTarget.width != width || renderTarget.height != height) {
             renderTarget.resize(width, height);
         }
@@ -61,11 +61,11 @@ public class FramebufferUtils {
                 GpuBuffer indexBuffer = autoStorageIndexBuffer.getBuffer(6);
 
                 try (RenderPass renderPass = RenderSystem.getDevice().createCommandEncoder().createRenderPass(() -> "flashback blit", to.getColorTextureView(), Optional.empty())) {
-                    renderPass.setPipeline(ShaderManager.BLIT_SCREEN_WITH_UV);
+                    renderPass.setPipeline(RenderSystem.getCompiledPipeline(ShaderManager.BLIT_SCREEN_WITH_UV));
                     RenderSystem.bindDefaultUniforms(renderPass);
                     renderPass.setVertexBuffer(0, drawBuffer.getVertexBuffer().slice());
                     renderPass.setIndexBuffer(indexBuffer, autoStorageIndexBuffer.type());
-                    renderPass.bindTexture("InSampler", from, RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST));
+                    renderPass.setUniform("InSampler", from, RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST));
                     renderPass.drawIndexed(6, 1, 0, 0, 0);
                 }
             }

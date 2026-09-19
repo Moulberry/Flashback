@@ -4,7 +4,6 @@ import imgui.moulberry90.ImGui;
 import imgui.moulberry90.ImGuiStyle;
 import imgui.moulberry90.flag.ImGuiCol;
 import net.minecraft.client.Minecraft;
-import org.lwjgl.glfw.GLFW;
 
 public class ReplayUIDefaults {
 

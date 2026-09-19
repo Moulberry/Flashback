@@ -299,6 +299,11 @@ public class ReplayConfigurationPacketHandler implements ClientConfigurationPack
     }
 
     @Override
+    public void handlePostEffects(ClientboundPostEffectsPacket clientboundPostEffectsPacket) {
+        // Replay viewers receive post effects through the replayed game packets
+    }
+
+    @Override
     public void handleCustomPayload(ClientboundCustomPayloadPacket clientboundCustomPayloadPacket) {
     }
 
@@ -328,7 +333,7 @@ public class ReplayConfigurationPacketHandler implements ClientConfigurationPack
         if (this.pendingTags == null) {
             this.pendingTags = new HashMap<>();
         }
-        this.pendingTags.putAll(clientboundUpdateTagsPacket.getTags());
+        this.pendingTags.putAll(clientboundUpdateTagsPacket.tags());
     }
 
     @Override

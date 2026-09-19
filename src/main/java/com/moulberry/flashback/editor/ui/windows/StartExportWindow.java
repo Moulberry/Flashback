@@ -249,7 +249,7 @@ public class StartExportWindow {
 
             ImGui.dummy(0, 10 * ReplayUI.getUiScale());
 
-            boolean isFullscreen = Minecraft.getInstance().getWindow().isFullscreen();
+            boolean isFullscreen = Minecraft.getInstance().getWindow().isExclusiveFullscreen();
             if (isFullscreen) {
                 ImGui.separator();
                 ImGui.textWrapped(I18n.get("flashback.export_disable_fullscreen"));

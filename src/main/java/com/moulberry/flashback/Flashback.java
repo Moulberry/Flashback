@@ -169,13 +169,13 @@ public class Flashback implements ModInitializer, ClientModInitializer {
 
     private static final KeyMapping.Category category = KeyMapping.Category.register(createIdentifier("keybind"));
     public static final KeyMapping createMarker1KeyBind = KeyMappingHelper.registerKeyMapping(new KeyMapping("flashback.keybind.create_marker_1",
-        InputConstants.Type.KEYSYM, InputConstants.UNKNOWN.getValue(), category));
+        InputConstants.Type.KEYBOARD, InputConstants.UNKNOWN.getValue(), category));
     public static final KeyMapping createMarker2KeyBind = KeyMappingHelper.registerKeyMapping(new KeyMapping("flashback.keybind.create_marker_2",
-        InputConstants.Type.KEYSYM, InputConstants.UNKNOWN.getValue(), category));
+        InputConstants.Type.KEYBOARD, InputConstants.UNKNOWN.getValue(), category));
     public static final KeyMapping createMarker3KeyBind = KeyMappingHelper.registerKeyMapping(new KeyMapping("flashback.keybind.create_marker_3",
-        InputConstants.Type.KEYSYM, InputConstants.UNKNOWN.getValue(), category));
+        InputConstants.Type.KEYBOARD, InputConstants.UNKNOWN.getValue(), category));
     public static final KeyMapping createMarker4KeyBind = KeyMappingHelper.registerKeyMapping(new KeyMapping("flashback.keybind.create_marker_4",
-        InputConstants.Type.KEYSYM, InputConstants.UNKNOWN.getValue(), category));
+        InputConstants.Type.KEYBOARD, InputConstants.UNKNOWN.getValue(), category));
 
     public static final Identifier RECORDING_INFO_DEBUG_SCREEN_ID = createIdentifier("recording_info");
 
@@ -324,7 +324,8 @@ public class Flashback implements ModInitializer, ClientModInitializer {
                 for (Entity entity : Minecraft.getInstance().level.entitiesForRendering()) {
                     if (entity.isInterpolating()) {
                         var interpolation = entity.getInterpolation();
-                        entity.snapTo(interpolation.position(), interpolation.yRot(), interpolation.xRot());
+                        var target = interpolation.target();
+                        entity.snapTo(target.position(), target.yRot(), target.xRot());
                         interpolation.cancel();
                     } else {
                         entity.setOldPosAndRot();
@@ -1238,8 +1239,8 @@ public class Flashback implements ModInitializer, ClientModInitializer {
             WorldStem worldStem = Util.blockUntilDone(executor -> WorldLoader.load(initConfig, dataLoadContext -> {
                 Registry<LevelStem> registry = new MappedRegistry<>(Registries.LEVEL_STEM, Lifecycle.stable()).freeze();
 
-                Holder.Reference<Biome> plains = dataLoadContext.datapackWorldgen().lookupOrThrow(Registries.BIOME).get(Biomes.PLAINS).get();
-                Holder.Reference<DimensionType> overworld = dataLoadContext.datapackWorldgen().lookupOrThrow(Registries.DIMENSION_TYPE).get(BuiltinDimensionTypes.OVERWORLD).get();
+                Holder.Reference<Biome> plains = dataLoadContext.datapackWorldRegistries().lookupOrThrow(Registries.BIOME).get(Biomes.PLAINS).get();
+                Holder.Reference<DimensionType> overworld = dataLoadContext.datapackDimensions().lookupOrThrow(Registries.DIMENSION_TYPE).get(BuiltinDimensionTypes.OVERWORLD).get();
 
                 WorldDimensions worldDimensions = new WorldDimensions(Map.of(LevelStem.OVERWORLD, new LevelStem(overworld, new EmptyLevelSource(plains))));
                 WorldDimensions.Complete complete = worldDimensions.bake(registry);

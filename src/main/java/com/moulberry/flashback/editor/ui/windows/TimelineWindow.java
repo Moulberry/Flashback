@@ -54,7 +54,7 @@ import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector2f;
 import org.joml.Vector3d;
-import org.lwjgl.glfw.GLFW;
+import imgui.moulberry90.flag.ImGuiKey;
 
 import java.time.Instant;
 import java.util.*;
@@ -291,8 +291,8 @@ public class TimelineWindow {
         }
 
         if (grabbedPlayback && !editorScene.keyframeTracks.isEmpty()) {
-            boolean isCtrlDown = ImGui.isKeyDown(GLFW.GLFW_KEY_LEFT_CONTROL) || ImGui.isKeyDown(GLFW.GLFW_KEY_RIGHT_CONTROL);
-            boolean isShiftDown = ImGui.isKeyDown(GLFW.GLFW_KEY_LEFT_SHIFT) || ImGui.isKeyDown(GLFW.GLFW_KEY_RIGHT_SHIFT);
+            boolean isCtrlDown = ImGui.isKeyDown(ImGuiKey.LeftCtrl) || ImGui.isKeyDown(ImGuiKey.RightCtrl);
+            boolean isShiftDown = ImGui.isKeyDown(ImGuiKey.LeftShift) || ImGui.isKeyDown(ImGuiKey.RightShift);
 
             if (isShiftDown) {
                 int closestTick = findClosestKeyframeForSnap(cursorTicks);
@@ -634,7 +634,7 @@ public class TimelineWindow {
 
                     int target = timelineXToReplayTick(mouseX - x);
 
-                    if (ImGui.isKeyDown(GLFW.GLFW_KEY_LEFT_SHIFT) || ImGui.isKeyDown(GLFW.GLFW_KEY_RIGHT_SHIFT)) {
+                    if (ImGui.isKeyDown(ImGuiKey.LeftShift) || ImGui.isKeyDown(ImGuiKey.RightShift)) {
                         int closestTick = findClosestKeyframeForSnap(target);
                         if (closestTick != -1) {
                             target = closestTick;
@@ -650,7 +650,7 @@ public class TimelineWindow {
 
                     int target = timelineXToReplayTick(mouseX - x);
 
-                    if (ImGui.isKeyDown(GLFW.GLFW_KEY_LEFT_SHIFT) || ImGui.isKeyDown(GLFW.GLFW_KEY_RIGHT_SHIFT)) {
+                    if (ImGui.isKeyDown(ImGuiKey.LeftShift) || ImGui.isKeyDown(ImGuiKey.RightShift)) {
                         int closestTick = findClosestKeyframeForSnap(target);
                         if (closestTick != -1) {
                             target = closestTick;
@@ -688,7 +688,7 @@ public class TimelineWindow {
                 if (grabbedPlayback) {
                     int desiredTick = timelineXToReplayTick(mouseX - x);
 
-                    if (ImGui.isKeyDown(GLFW.GLFW_KEY_LEFT_SHIFT) || ImGui.isKeyDown(GLFW.GLFW_KEY_RIGHT_SHIFT)) {
+                    if (ImGui.isKeyDown(ImGuiKey.LeftShift) || ImGui.isKeyDown(ImGuiKey.RightShift)) {
                         int closestTick = findClosestKeyframeForSnap(desiredTick);
                         if (closestTick != -1) {
                             desiredTick = closestTick;
@@ -754,23 +754,23 @@ public class TimelineWindow {
         boolean pressedCopy = Keybinds.COPY.isPressed(false);
         boolean pressedPaste = Keybinds.PASTE.isPressed(false);
 
-        boolean pressedDelete = ImGui.isKeyPressed(GLFW.GLFW_KEY_DELETE, false) || ImGui.isKeyPressed(GLFW.GLFW_KEY_BACKSPACE, false);
+        boolean pressedDelete = ImGui.isKeyPressed(ImGuiKey.Delete, false) || ImGui.isKeyPressed(ImGuiKey.Backspace, false);
 
         if (Keybinds.PAUSE.isPressed(false)) {
             togglePaused(replayServer);
         }
-        if (ImGui.isKeyPressed(GLFW.GLFW_KEY_LEFT, false)) {
+        if (ImGui.isKeyPressed(ImGuiKey.LeftArrow, false)) {
             pendingStepBackwardsTicks += ReplayUI.isCtrlOrCmdDown() ? 5 : 1;
-        } else if (pendingStepBackwardsTicks > 0 && !ImGui.isKeyDown(GLFW.GLFW_KEY_LEFT)) {
+        } else if (pendingStepBackwardsTicks > 0 && !ImGui.isKeyDown(ImGuiKey.LeftArrow)) {
             replayServer.goToReplayTick(Math.max(0, replayServer.getReplayTick() - pendingStepBackwardsTicks));
             replayServer.forceApplyKeyframes.set(true);
             pendingStepBackwardsTicks = 0;
         }
-        if (ImGui.isKeyPressed(GLFW.GLFW_KEY_RIGHT, false)) {
+        if (ImGui.isKeyPressed(ImGuiKey.RightArrow, false)) {
             replayServer.goToReplayTick(Math.min(totalTicks, cursorTicks + (ReplayUI.isCtrlOrCmdDown() ? 5 : 1)));
             replayServer.forceApplyKeyframes.set(true);
         }
-        if (ImGui.isKeyPressed(GLFW.GLFW_KEY_UP, false)) {
+        if (ImGui.isKeyPressed(ImGuiKey.UpArrow, false)) {
             int nextKeyframeTick;
             if (editorScene.exportStartTicks >= 0 && editorScene.exportStartTicks > cursorTicks) {
                 nextKeyframeTick = editorScene.exportStartTicks;
@@ -795,7 +795,7 @@ public class TimelineWindow {
             replayServer.goToReplayTick(nextKeyframeTick);
             replayServer.forceApplyKeyframes.set(true);
         }
-        if (ImGui.isKeyPressed(GLFW.GLFW_KEY_DOWN, false)) {
+        if (ImGui.isKeyPressed(ImGuiKey.DownArrow, false)) {
             int previousKeyframeTick;
             if (editorScene.exportEndTicks >= 0 && editorScene.exportEndTicks < cursorTicks) {
                 previousKeyframeTick = editorScene.exportEndTicks;
@@ -1513,7 +1513,7 @@ public class TimelineWindow {
         if (grabbedPlayback) {
             int desiredTick = timelineXToReplayTick(mouseX - x);
 
-            if (ImGui.isKeyDown(GLFW.GLFW_KEY_LEFT_SHIFT) || ImGui.isKeyDown(GLFW.GLFW_KEY_RIGHT_SHIFT)) {
+            if (ImGui.isKeyDown(ImGuiKey.LeftShift) || ImGui.isKeyDown(ImGuiKey.RightShift)) {
                 int closestTick = findClosestKeyframeForSnap(desiredTick);
                 if (closestTick != -1) {
                     desiredTick = closestTick;
@@ -1613,7 +1613,7 @@ public class TimelineWindow {
             grabbedKeyframe = false;
         }
 
-        if (pendingStepBackwardsTicks > 0 && !ImGui.isKeyDown(GLFW.GLFW_KEY_LEFT)) {
+        if (pendingStepBackwardsTicks > 0 && !ImGui.isKeyDown(ImGuiKey.LeftArrow)) {
             replayServer.goToReplayTick(Math.max(0, replayServer.getReplayTick() - pendingStepBackwardsTicks));
             replayServer.forceApplyKeyframes.set(true);
             pendingStepBackwardsTicks = 0;
@@ -1627,7 +1627,7 @@ public class TimelineWindow {
         int grabbedScalePivotTick = -1;
         float grabbedScaleFactor = 0f;
 
-        if (ImGui.isKeyDown(GLFW.GLFW_KEY_LEFT_ALT) || ImGui.isKeyDown(GLFW.GLFW_KEY_RIGHT_ALT)) {
+        if (ImGui.isKeyDown(ImGuiKey.LeftAlt) || ImGui.isKeyDown(ImGuiKey.RightAlt)) {
             int minTick = totalTicks;
             int maxTick = 0;
 
@@ -1664,7 +1664,7 @@ public class TimelineWindow {
             enableKeyframeMovement = true;
             grabbedDelta = timelineDeltaToReplayTickDelta(mouseX - grabbedKeyframeMouseX);
 
-            boolean isShiftDown = ImGui.isKeyDown(GLFW.GLFW_KEY_LEFT_SHIFT) || ImGui.isKeyDown(GLFW.GLFW_KEY_RIGHT_SHIFT);
+            boolean isShiftDown = ImGui.isKeyDown(ImGuiKey.LeftShift) || ImGui.isKeyDown(ImGuiKey.RightShift);
 
             if (isShiftDown) {
                 int closestTick = -1;

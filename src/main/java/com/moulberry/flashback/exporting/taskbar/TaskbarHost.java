@@ -5,9 +5,10 @@ import com.sun.jna.Pointer;
 import com.sun.jna.platform.win32.*;
 import com.sun.jna.ptr.PointerByReference;
 import net.minecraft.client.Minecraft;
-import org.lwjgl.glfw.GLFWNativeWin32;
+import org.lwjgl.sdl.SDLProperties;
+import org.lwjgl.sdl.SDLVideo;
 
-import static com.moulberry.flashback.editor.ui.CustomImGuiImplGlfw.IS_WINDOWS;
+import static com.moulberry.flashback.editor.ui.CustomImGuiImplSdl.IS_WINDOWS;
 
 public class TaskbarHost {
     public static ITaskbar createTaskbar() {
@@ -35,7 +36,13 @@ public class TaskbarHost {
         }
 
 
-        var hwnd = new WinDef.HWND(new Pointer(GLFWNativeWin32.glfwGetWin32Window(Minecraft.getInstance().getWindow().handle())));
+        long windowHandle = Minecraft.getInstance().getWindow().handle();
+        long hwndPointer = SDLProperties.SDL_GetPointerProperty(SDLVideo.SDL_GetWindowProperties(windowHandle),
+            "SDL.window.win32.hwnd", 0L);
+        if (hwndPointer == 0L) {
+            throw new IllegalStateException("Window has no win32 hwnd property");
+        }
+        var hwnd = new WinDef.HWND(new Pointer(hwndPointer));
         return new WindowsTaskbar(itaskbar3res.getValue(), hwnd);
     }
 }

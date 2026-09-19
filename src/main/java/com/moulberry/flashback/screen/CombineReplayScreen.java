@@ -169,8 +169,8 @@ public class CombineReplayScreen extends Screen {
                 WorldStem worldStem = Util.blockUntilDone(executor -> WorldLoader.load(initConfig, dataLoadContext -> {
                     Registry<LevelStem> registry = new MappedRegistry<>(Registries.LEVEL_STEM, Lifecycle.stable()).freeze();
 
-                    Holder.Reference<Biome> plains = dataLoadContext.datapackWorldgen().lookupOrThrow(Registries.BIOME).get(Biomes.PLAINS).get();
-                    Holder.Reference<DimensionType> overworld = dataLoadContext.datapackWorldgen().lookupOrThrow(Registries.DIMENSION_TYPE).get(BuiltinDimensionTypes.OVERWORLD).get();
+                    Holder.Reference<Biome> plains = dataLoadContext.datapackWorldRegistries().lookupOrThrow(Registries.BIOME).get(Biomes.PLAINS).get();
+                    Holder.Reference<DimensionType> overworld = dataLoadContext.datapackDimensions().lookupOrThrow(Registries.DIMENSION_TYPE).get(BuiltinDimensionTypes.OVERWORLD).get();
 
                     WorldDimensions worldDimensions = new WorldDimensions(Map.of(LevelStem.OVERWORLD, new LevelStem(overworld, new EmptyLevelSource(plains))));
                     WorldDimensions.Complete complete = worldDimensions.bake(registry);

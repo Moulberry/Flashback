@@ -3,16 +3,16 @@ package com.moulberry.flashback.mixin;
 import com.llamalad7.mixinextras.injector.v2.WrapWithCondition;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
-import com.mojang.blaze3d.GpuFormat;
-import com.mojang.blaze3d.buffers.GpuBufferSlice;
+import com.mojang.renderpearl.api.GpuFormat;
+import com.mojang.renderpearl.api.buffers.GpuBufferSlice;
 import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.resource.GraphicsResourceAllocator;
-import com.mojang.blaze3d.systems.RenderPass;
+import com.mojang.renderpearl.api.commands.RenderPass;
 import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.textures.FilterMode;
-import com.mojang.blaze3d.textures.GpuSampler;
-import com.mojang.blaze3d.textures.GpuTexture;
-import com.mojang.blaze3d.textures.GpuTextureView;
+import com.mojang.renderpearl.api.textures.FilterMode;
+import com.mojang.renderpearl.api.textures.GpuSampler;
+import com.mojang.renderpearl.api.textures.GpuTexture;
+import com.mojang.renderpearl.api.textures.GpuTextureView;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.combo_options.ExportProjection;
@@ -122,8 +122,8 @@ public abstract class MixinLevelRenderer {
         }
     }
 
-    @WrapOperation(method = "lambda$addMainPass$0", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/chunk/ChunkSectionsToRender;renderGroup(Lnet/minecraft/client/renderer/chunk/ChunkSectionLayerGroup;Lcom/mojang/blaze3d/textures/GpuSampler;)V"))
-    public void method_62214_renderChunkGroup(ChunkSectionsToRender instance, ChunkSectionLayerGroup chunkSectionLayerGroup, GpuSampler gpuSampler, Operation<Void> original) {
+    @WrapOperation(method = "executeSolid", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/chunk/ChunkSectionsToRender;renderGroup(Lnet/minecraft/client/renderer/chunk/ChunkSectionLayerGroup;Lcom/mojang/renderpearl/api/commands/RenderPass;Lcom/mojang/renderpearl/api/textures/GpuSampler;Lcom/mojang/renderpearl/api/textures/GpuTextureView;Z)V"))
+    public void method_62214_renderChunkGroup(ChunkSectionsToRender instance, ChunkSectionLayerGroup chunkSectionLayerGroup, RenderPass groupRenderPass, GpuSampler gpuSampler, GpuTextureView textureView, boolean wireframe, Operation<Void> original) {
         EditorState editorState = EditorStateManager.getCurrent();
         if (editorState != null) {
             if (!editorState.replayVisuals.renderBlocks) {
@@ -131,7 +131,7 @@ public abstract class MixinLevelRenderer {
             }
         }
 
-        original.call(instance, chunkSectionLayerGroup, gpuSampler);
+        original.call(instance, chunkSectionLayerGroup, groupRenderPass, gpuSampler, textureView, wireframe);
 
         if (chunkSectionLayerGroup == ChunkSectionLayerGroup.OPAQUE && Flashback.isExporting() && Flashback.EXPORT_JOB.getSettings().transparent()) {
             RenderTarget main = Minecraft.getInstance().gameRenderer.mainRenderTarget();
@@ -147,16 +147,16 @@ public abstract class MixinLevelRenderer {
             }
 
             try (RenderPass renderPass = RenderSystem.getDevice().createCommandEncoder().createRenderPass(() -> "flashback round alpha render pass 1", this.roundAlphaBufferView, Optional.empty())) {
-                renderPass.setPipeline(ShaderManager.BLIT_SCREEN);
+                renderPass.setPipeline(RenderSystem.getCompiledPipeline(ShaderManager.BLIT_SCREEN));
                 RenderSystem.bindDefaultUniforms(renderPass);
-                renderPass.bindTexture("InSampler", main.getColorTextureView(), RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST));
+                renderPass.setUniform("InSampler", main.getColorTextureView(), RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST));
                 renderPass.draw(3, 1, 0, 0);
             }
 
             try (RenderPass renderPass = RenderSystem.getDevice().createCommandEncoder().createRenderPass(() -> "flashback round alpha render pass 2", main.getColorTextureView(), Optional.empty())) {
-                renderPass.setPipeline(ShaderManager.BLIT_SCREEN_ROUND_ALPHA);
+                renderPass.setPipeline(RenderSystem.getCompiledPipeline(ShaderManager.BLIT_SCREEN_ROUND_ALPHA));
                 RenderSystem.bindDefaultUniforms(renderPass);
-                renderPass.bindTexture("InSampler", this.roundAlphaBufferView, RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST));
+                renderPass.setUniform("InSampler", this.roundAlphaBufferView, RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST));
                 renderPass.draw(3, 1, 0, 0);
             }
         }
@@ -203,8 +203,8 @@ public abstract class MixinLevelRenderer {
         }
     }
 
-    @Inject(method = "addCloudsPass", at = @At("HEAD"), cancellable = true)
-    public void addCloudsPass(CallbackInfo ci) {
+    @Inject(method = "prepareTranslucents", at = @At("HEAD"), cancellable = true)
+    public void prepareTranslucents(CallbackInfo ci) {
         ExportJob exportJob = Flashback.EXPORT_JOB;
         if (exportJob != null && exportJob.getSettings().projection() == ExportProjection.ORTHOGRAPHIC) {
             ci.cancel();

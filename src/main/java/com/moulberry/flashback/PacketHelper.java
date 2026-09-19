@@ -10,6 +10,8 @@ import net.minecraft.world.entity.ExperienceOrb;
 import net.minecraft.world.entity.Marker;
 import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.PositionMoveRotation;
+import net.minecraft.world.entity.PositionPath;
+import net.minecraft.world.entity.UpdateInterval;
 import net.minecraft.world.entity.Relative;
 import net.minecraft.world.entity.boss.enderdragon.EnderDragonPart;
 import net.minecraft.world.entity.decoration.ItemFrame;
@@ -45,7 +47,9 @@ public class PacketHelper {
     public static Packet<ClientGamePacketListener> createTeleportForUnknown(int id, double x, double y, double z, byte yRot, byte xRot, boolean onGround) {
         return new ClientboundEntityPositionSyncPacket(
             id,
-            new PositionMoveRotation(new Vec3(x, y, z), Vec3.ZERO, yRot, xRot),
+            PositionPath.of(new Vec3(x, y, z)),
+            yRot,
+            xRot,
             onGround
         );
     }
@@ -55,7 +59,7 @@ public class PacketHelper {
 
         // Try to construct ServerEntity with dummy values
         try {
-            serverEntity = new ServerEntity(null, entity, 1, false, EMPTY_SYNCHRONIZER);
+            serverEntity = new ServerEntity(null, entity, UpdateInterval.NEVER, false, EMPTY_SYNCHRONIZER);
         } catch (Exception e) {}
 
         // Error while trying to construct, possibly mod incompatibility? Try bypassing the constructor

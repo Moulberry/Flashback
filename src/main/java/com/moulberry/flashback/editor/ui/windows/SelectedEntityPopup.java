@@ -1,7 +1,7 @@
 package com.moulberry.flashback.editor.ui.windows;
 
 import com.mojang.authlib.GameProfile;
-import com.mojang.authlib.yggdrasil.ProfileResult;
+import com.mojang.authlib.services.ProfileResult;
 import com.mojang.blaze3d.platform.Window;
 import com.moulberry.flashback.FilePlayerSkin;
 import com.moulberry.flashback.Flashback;
@@ -33,7 +33,6 @@ import net.minecraft.world.scores.Objective;
 import net.minecraft.world.scores.PlayerTeam;
 import net.minecraft.world.scores.Scoreboard;
 import net.minecraft.world.scores.Team;
-import org.lwjgl.glfw.GLFW;
 
 import java.nio.file.Path;
 import java.util.EnumSet;
