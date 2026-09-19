@@ -5,14 +5,14 @@ import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.llamalad7.mixinextras.sugar.Local;
 import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.platform.Window;
-import com.mojang.blaze3d.systems.CommandEncoder;
-import com.mojang.blaze3d.systems.GpuSurface;
 import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.textures.GpuTextureView;
+import com.mojang.renderpearl.api.commands.CommandEncoder;
+import com.mojang.renderpearl.api.device.GpuSurface;
+import com.mojang.renderpearl.api.textures.GpuTextureView;
 import com.moulberry.flashback.Flashback;
-import com.moulberry.flashback.FramebufferUtils;
+import com.moulberry.flashback.utils.FramebufferUtils;
 import com.moulberry.flashback.FreezeSlowdownFormula;
-import com.moulberry.flashback.WindowSizeTracker;
+import com.moulberry.flashback.utils.WindowSizeTracker;
 import com.moulberry.flashback.combo_options.GlowingOverride;
 import com.moulberry.flashback.configuration.FlashbackConfigV1;
 import com.moulberry.flashback.exporting.ExportJob;
@@ -34,15 +34,11 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.progress.LevelLoadListener;
 import net.minecraft.util.Util;
 import net.minecraft.client.*;
-import net.minecraft.client.gui.screens.Overlay;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.multiplayer.ClientLevel;
-import net.minecraft.client.multiplayer.chat.report.ReportEnvironment;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.LevelRenderer;
-import net.minecraft.client.server.IntegratedServer;
 import net.minecraft.client.sounds.SoundManager;
-import net.minecraft.network.Connection;
 import net.minecraft.server.Services;
 import net.minecraft.server.WorldStem;
 import net.minecraft.server.packs.repository.PackRepository;
@@ -51,7 +47,6 @@ import net.minecraft.world.TickRateManager;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.gamerules.GameRules;
 import net.minecraft.world.level.storage.LevelStorageSource;
-import org.apache.commons.math3.analysis.function.Min;
 import org.jetbrains.annotations.Nullable;
 import org.objectweb.asm.Opcodes;
 import org.spongepowered.asm.mixin.Final;
@@ -63,7 +58,6 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-import java.io.File;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
@@ -115,8 +109,12 @@ public abstract class MixinMinecraft extends ReentrantBlockableEventLoop<Runnabl
     @Unique
     private RenderTarget compositeRenderTarget = null;
 
-    @WrapOperation(method = "renderFrame", at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/systems/GpuSurface;blitFromTexture(Lcom/mojang/blaze3d/systems/CommandEncoder;Lcom/mojang/blaze3d/textures/GpuTextureView;)V"))
+    @WrapOperation(method = "renderFrame", at = @At(value = "INVOKE", target = "Lcom/mojang/renderpearl/api/device/GpuSurface;blitFromTexture(Lcom/mojang/renderpearl/api/commands/CommandEncoder;Lcom/mojang/renderpearl/api/textures/GpuTextureView;)V"))
     public void renderFrame(GpuSurface instance, CommandEncoder commandEncoder, GpuTextureView textureView, Operation<Void> original) {
+        if (RenderSystem.isOnRenderThread()) {
+            ReplayUI.drawOverlay();
+            ((WindowExt)(Object)Minecraft.getInstance().getWindow()).flashback$updateScaledFramebuffer(true);
+        }
         if (ReplayUI.isActive() && ReplayUI.compositeOnTop != null) {
             var window = Minecraft.getInstance().getWindow();
             int framebufferWidth = WindowSizeTracker.getWidth(window);
@@ -182,13 +180,6 @@ public abstract class MixinMinecraft extends ReentrantBlockableEventLoop<Runnabl
         }
 
         original.call(instance, camera);
-    }
-
-    @Inject(method = "renderFrame", at= @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/GameRenderer;render(Lnet/minecraft/client/DeltaTracker;Z)V", shift = At.Shift.AFTER))
-    public void afterMainRender(boolean bl, CallbackInfo ci) {
-        if (!RenderSystem.isOnRenderThread()) return;
-        ReplayUI.drawOverlay();
-        ((WindowExt)(Object)Minecraft.getInstance().getWindow()).flashback$updateScaledFramebuffer(true);
     }
 
     @Unique

@@ -5,6 +5,7 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.protocol.game.ClientboundLevelChunkPacketData;
 import net.minecraft.network.protocol.game.ClientboundLevelChunkWithLightPacket;
+import net.minecraft.network.protocol.game.ClientboundLightUpdatePacketData;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 
 import java.lang.invoke.MethodHandles;
@@ -27,8 +28,8 @@ public class CachedChunkPacket {
 
     public CachedChunkPacket(ClientboundLevelChunkWithLightPacket packet, int index) {
         //keysmash random numbers used
-        this.x = packet.getX();
-        this.z = packet.getZ();
+        this.x = packet.x();
+        this.z = packet.z();
         this.bigHash = computePacketBigHash(packet);
         if (this.bigHash.length == 64) {//sha-512
             long hash = 982374698276290847L;
@@ -64,13 +65,13 @@ public class CachedChunkPacket {
             }
         }
 
-        digest.update(intToByteArray(packet.getX()));
-        digest.update(intToByteArray(packet.getZ()));
-        digest.update(packet.getChunkData().buffer);
+        digest.update(intToByteArray(packet.x()));
+        digest.update(intToByteArray(packet.z()));
+        digest.update(packet.chunkData().buffer);
 
         FriendlyByteBuf frenBuffer = new FriendlyByteBuf(Unpooled.buffer());
 
-        packet.lightData.write(frenBuffer);
+        ClientboundLightUpdatePacketData.STREAM_CODEC.encode(frenBuffer, packet.lightData);
         digest.update(frenBuffer.array(), 0, frenBuffer.writerIndex());
         frenBuffer.resetWriterIndex();
 
@@ -78,15 +79,15 @@ public class CachedChunkPacket {
         frenBuffer.resetWriterIndex();
 
         // Sort to ensure stable ordering
-        var copy = new ArrayList<>(packet.getChunkData().blockEntitiesData);
-        copy.sort(Comparator.comparingInt(a -> (a.y << 8) | a.packedXZ));
+        var copy = new ArrayList<>(packet.chunkData().blockEntitiesData);
+        copy.sort(Comparator.comparingInt(a -> (a.y() << 8) | a.packedXZ()));
 
         for (ClientboundLevelChunkPacketData.BlockEntityInfo blockEntitiesData : copy) {
-            digest.update((byte) blockEntitiesData.packedXZ);
-            digest.update(intToByteArray(blockEntitiesData.y));
-            digest.update(BuiltInRegistries.BLOCK_ENTITY_TYPE.getKey(blockEntitiesData.type).toString().getBytes(StandardCharsets.UTF_8));
-            if (blockEntitiesData.tag != null) {
-                frenBuffer.writeNbt(blockEntitiesData.tag);
+            digest.update(blockEntitiesData.packedXZ());
+            digest.update(intToByteArray(blockEntitiesData.y()));
+            digest.update(BuiltInRegistries.BLOCK_ENTITY_TYPE.getKey(blockEntitiesData.type()).toString().getBytes(StandardCharsets.UTF_8));
+            if (blockEntitiesData.tag().isPresent()) {
+                frenBuffer.writeNbt(blockEntitiesData.tag().get());
                 digest.update(frenBuffer.array(), 0, frenBuffer.writerIndex());
                 frenBuffer.resetWriterIndex();
             } else {

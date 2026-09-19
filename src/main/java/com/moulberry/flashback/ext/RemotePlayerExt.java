@@ -1,8 +1,9 @@
 package com.moulberry.flashback.ext;
 
+import net.minecraft.client.renderer.state.level.FirstPersonHandsAndItemsRenderState;
+
 public interface RemotePlayerExt {
 
-    float flashback$getXBob(float partialTick);
-    float flashback$getYBob(float partialTick);
+    void flashback$extractFirstPersonHandsAndItems(float partialTick, FirstPersonHandsAndItemsRenderState state);
 
 }

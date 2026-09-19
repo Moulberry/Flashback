@@ -111,13 +111,6 @@ public abstract class MixinWindow implements WindowExt {
         }
     }
 
-    @Inject(method = "onResize", at=@At("HEAD"), cancellable = true)
-    public void onResize(long l, int i, int j, CallbackInfo ci) {
-        if (l != this.handle) {
-            ci.cancel();
-        }
-    }
-
     @Inject(method = "calculateScale", at=@At("HEAD"), cancellable = true)
     public void calculateScale(int scale, boolean forceEven, CallbackInfoReturnable<Integer> cir) {
         if (Flashback.EXPORT_JOB != null && Flashback.EXPORT_JOB.shouldChangeFramebufferSize()) {

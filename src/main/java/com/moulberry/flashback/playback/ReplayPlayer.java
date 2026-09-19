@@ -16,6 +16,7 @@ import net.minecraft.world.level.biome.BiomeManager;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
+import java.util.Optional;
 import java.util.UUID;
 
 public class ReplayPlayer extends ServerPlayer {
@@ -41,7 +42,7 @@ public class ReplayPlayer extends ServerPlayer {
     public CommonPlayerSpawnInfo createCommonSpawnInfo(ServerLevel serverLevel) {
         return new CommonPlayerSpawnInfo(serverLevel.dimensionTypeRegistration(), serverLevel.dimension(),
             ((ServerLevelExt)serverLevel).flashback$getSeedHash(), this.gameMode.getGameModeForPlayer(),
-            this.gameMode.getPreviousGameModeForPlayer(),
+            Optional.ofNullable(this.gameMode.getPreviousGameModeForPlayer()),
             serverLevel.isDebug(), serverLevel.isFlat(), this.getLastDeathLocation(), this.getPortalCooldown(), serverLevel.getSeaLevel());
     }
 

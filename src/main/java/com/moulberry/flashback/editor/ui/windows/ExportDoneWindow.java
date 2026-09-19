@@ -1,5 +1,6 @@
 package com.moulberry.flashback.editor.ui.windows;
 
+import com.mojang.blaze3d.Blaze3D;
 import com.mojang.blaze3d.platform.NativeImage;
 import com.moulberry.flashback.MedalTvUploading;
 import com.moulberry.flashback.Utils;
@@ -134,10 +135,10 @@ public class ExportDoneWindow {
                     }
 
                     if (ImGui.imageButton("ExportThumbnail", id, new ImVec2(width, height))) {
-                        Util.getPlatform().openPath(entry.outputLocation);
+                        Blaze3D.openPath(entry.outputLocation);
                     }
                 } else if (ImGui.button(I18n.get("flashback.export_done.missing_thumbnail"), DESIRED_W+padding.x*2, DESIRED_H+padding.y*2)) {
-                    Util.getPlatform().openPath(entry.outputLocation);
+                    Blaze3D.openPath(entry.outputLocation);
                 }
 
                 ImGui.sameLine();
@@ -162,14 +163,14 @@ public class ExportDoneWindow {
 
                 if (entry.outputIsFolder) {
                     if (ImGui.button(I18n.get("flashback.open_folder"))) {
-                        Util.getPlatform().openPath(entry.outputLocation);
+                        Blaze3D.openPath(entry.outputLocation);
                     }
                 } else {
                     if (ImGui.button(I18n.get("flashback.open_file"))) {
-                        Util.getPlatform().openPath(entry.outputLocation);
+                        Blaze3D.openPath(entry.outputLocation);
                     }
                     if (ImGui.button(I18n.get("flashback.open_folder"))) {
-                        Util.getPlatform().openPath(entry.outputLocation.getParent());
+                        Blaze3D.openPath(entry.outputLocation.getParent());
                     }
                 }
 
@@ -274,7 +275,7 @@ public class ExportDoneWindow {
                 ImGui.textColored(0xFFF4A903, shareUrlStr);
                 if (ImGui.isItemClicked()) {
                     try {
-                        Util.getPlatform().openUri(shareUrl);
+                        Blaze3D.openUri(shareUrl);
                     } catch (Exception ignored) {}
                 }
                 String clipboard = Minecraft.getInstance().keyboardHandler.getClipboard();

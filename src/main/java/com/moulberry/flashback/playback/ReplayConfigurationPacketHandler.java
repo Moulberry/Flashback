@@ -328,7 +328,7 @@ public class ReplayConfigurationPacketHandler implements ClientConfigurationPack
         if (this.pendingTags == null) {
             this.pendingTags = new HashMap<>();
         }
-        this.pendingTags.putAll(clientboundUpdateTagsPacket.getTags());
+        this.pendingTags.putAll(clientboundUpdateTagsPacket.tags());
     }
 
     @Override
@@ -357,6 +357,10 @@ public class ReplayConfigurationPacketHandler implements ClientConfigurationPack
 
     @Override
     public void handleShowDialog(ClientboundShowDialogPacket clientboundShowDialogPacket) {
+    }
+
+    @Override
+    public void handlePostEffects(ClientboundPostEffectsPacket packet) {
     }
 
     @Override

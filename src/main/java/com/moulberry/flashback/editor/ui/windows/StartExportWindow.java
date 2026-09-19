@@ -14,10 +14,10 @@ import com.moulberry.flashback.exporting.ExportJobQueue;
 import com.moulberry.flashback.state.EditorState;
 import com.moulberry.flashback.state.EditorStateManager;
 import com.moulberry.flashback.editor.ui.ImGuiHelper;
-import com.moulberry.flashback.exporting.AsyncFileDialogs;
 import com.moulberry.flashback.exporting.ExportJob;
 import com.moulberry.flashback.exporting.ExportSettings;
 import com.moulberry.flashback.playback.ReplayServer;
+import com.moulberry.flashback.utils.AsyncFileDialogs;
 import imgui.moulberry90.ImGui;
 import imgui.moulberry90.flag.ImGuiWindowFlags;
 import imgui.moulberry90.type.ImString;
@@ -249,7 +249,7 @@ public class StartExportWindow {
 
             ImGui.dummy(0, 10 * ReplayUI.getUiScale());
 
-            boolean isFullscreen = Minecraft.getInstance().getWindow().isFullscreen();
+            boolean isFullscreen = Minecraft.getInstance().getWindow().isExclusiveFullscreen();
             if (isFullscreen) {
                 ImGui.separator();
                 ImGui.textWrapped(I18n.get("flashback.export_disable_fullscreen"));
@@ -304,6 +304,9 @@ public class StartExportWindow {
         if (editorState != null && !editorState.replayVisuals.renderSky) {
             if (ImGui.checkbox(I18n.get("flashback.transparent_sky"), config.internalExport.transparentBackground)) {
                 config.internalExport.transparentBackground = !config.internalExport.transparentBackground;
+            }
+            if (config.internalExport.transparentBackground && !Minecraft.getInstance().options.improvedTransparency().get()) {
+                ImGui.textWrapped("It is recommended to enable 'Improved Transparency' in the Minecraft video options");
             }
         } else {
             config.internalExport.transparentBackground = false;

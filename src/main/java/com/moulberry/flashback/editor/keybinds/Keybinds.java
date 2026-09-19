@@ -1,7 +1,7 @@
 package com.moulberry.flashback.editor.keybinds;
 
 import com.moulberry.flashback.configuration.FlashbackConfigV1;
-import org.lwjgl.glfw.GLFW;
+import imgui.moulberry90.flag.ImGuiKey;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -13,20 +13,20 @@ public class Keybinds {
 
     public static Map<Integer, Set<Keybind>> keybindsForKey = new HashMap<>();
 
-    public static final Keybind PAUSE = new Keybind("pause", GLFW.GLFW_KEY_P, false, false, false, false);
+    public static final Keybind PAUSE = new Keybind("pause", ImGuiKey.P, false, false, false, false);
 
-    public static final Keybind COPY = new Keybind("copy", GLFW.GLFW_KEY_C, false, true, false, false);
-    public static final Keybind PASTE = new Keybind("paste", GLFW.GLFW_KEY_V, false, true, false, false);
-    public static final Keybind UNDO = new Keybind("undo", GLFW.GLFW_KEY_Z, false, true, false, false);
-    public static final Keybind REDO = new Keybind("redo", GLFW.GLFW_KEY_Y, false, true, false, false);
+    public static final Keybind COPY = new Keybind("copy", ImGuiKey.C, false, true, false, false);
+    public static final Keybind PASTE = new Keybind("paste", ImGuiKey.V, false, true, false, false);
+    public static final Keybind UNDO = new Keybind("undo", ImGuiKey.Z, false, true, false, false);
+    public static final Keybind REDO = new Keybind("redo", ImGuiKey.Y, false, true, false, false);
 
-    public static final Keybind MARK_IN = new Keybind("mark_in", GLFW.GLFW_KEY_I, false, false, false, false);
-    public static final Keybind MARK_OUT = new Keybind("mark_out", GLFW.GLFW_KEY_O, false, false, false, false);
-    public static final Keybind CLEAR_IN = new Keybind("clear_in", GLFW.GLFW_KEY_I, false, true, false, false);
-    public static final Keybind CLEAR_OUT = new Keybind("clear_out", GLFW.GLFW_KEY_O, false, true, false, false);
+    public static final Keybind MARK_IN = new Keybind("mark_in", ImGuiKey.I, false, false, false, false);
+    public static final Keybind MARK_OUT = new Keybind("mark_out", ImGuiKey.O, false, false, false, false);
+    public static final Keybind CLEAR_IN = new Keybind("clear_in", ImGuiKey.I, false, true, false, false);
+    public static final Keybind CLEAR_OUT = new Keybind("clear_out", ImGuiKey.O, false, true, false, false);
 
-    public static final Keybind ZOOM_IN = new Keybind("zoom_in", GLFW.GLFW_KEY_EQUAL, false, false, false, false);
-    public static final Keybind ZOOM_OUT = new Keybind("zoom_out", GLFW.GLFW_KEY_MINUS, false, false, false, false);
+    public static final Keybind ZOOM_IN = new Keybind("zoom_in", ImGuiKey.Equal, false, false, false, false);
+    public static final Keybind ZOOM_OUT = new Keybind("zoom_out", ImGuiKey.Minus, false, false, false, false);
 
     public static final Keybind ADD_CAMERA = new Keybind("add_camera", 0, false, false, false, false);
 

@@ -1,16 +1,18 @@
 package com.moulberry.flashback.exporting;
 
+import com.mojang.blaze3d.Blaze3D;
 import com.mojang.blaze3d.ProjectionType;
-import com.mojang.blaze3d.buffers.GpuBuffer;
 import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.blaze3d.platform.Window;
-import com.mojang.blaze3d.systems.GpuSurface;
 import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.systems.SurfaceException;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.ByteBufferBuilder;
 import com.mojang.blaze3d.vertex.MeshData;
+import com.mojang.renderpearl.api.buffers.GpuBuffer;
+import com.mojang.renderpearl.api.commands.RenderPass;
+import com.mojang.renderpearl.api.device.GpuSurface;
+import com.mojang.renderpearl.api.device.SurfaceException;
 import com.moulberry.flashback.*;
 import com.moulberry.flashback.combo_options.ExportProjection;
 import com.moulberry.flashback.combo_options.VideoContainer;
@@ -25,17 +27,20 @@ import com.moulberry.flashback.keyframe.handler.TickrateKeyframeCapture;
 import com.moulberry.flashback.sound.FlashbackAudioManager;
 import com.moulberry.flashback.state.EditorState;
 import com.moulberry.flashback.playback.ReplayServer;
+import com.moulberry.flashback.utils.FramebufferUtils;
+import com.moulberry.flashback.utils.InputHelper;
+import com.moulberry.flashback.utils.WindowSizeTracker;
 import com.moulberry.flashback.visuals.AccurateEntityPositionHandler;
 import com.moulberry.flashback.visuals.FlashbackDrawBuffer;
+import imgui.moulberry90.flag.ImGuiKey;
+import imgui.moulberry90.flag.ImGuiMouseButton;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.font.TextRenderable;
 import net.minecraft.client.renderer.Projection;
 import net.minecraft.client.renderer.ProjectionMatrixBuffer;
-import net.minecraft.client.renderer.rendertype.OutputTarget;
 import net.minecraft.client.renderer.rendertype.PreparedRenderType;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.util.LightCoordsUtil;
-import net.minecraft.util.Util;
 import net.minecraft.client.Camera;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
@@ -48,15 +53,15 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.Vec3;
-import org.bytedeco.ffmpeg.global.avutil;
 import org.joml.Matrix4f;
 import org.joml.Vector4f;
-import org.lwjgl.glfw.GLFW;
 import org.lwjgl.openal.SOFTLoopback;
 
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.MathContext;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
@@ -592,7 +597,7 @@ public class ExportJob {
         RenderSystem.executePendingTasks();
 
         FramebufferUtils.clear(renderTarget, EMPTY_CLEAR_COLOUR);
-        minecraft.gameRenderer.render(timer, true);
+        minecraft.gameRenderer.render();
     }
 
     private void updateRandoms(Random random, Random mathRandom) {
@@ -931,7 +936,7 @@ public class ExportJob {
 
     private static void finishHiddenFrame() {
         RenderSystem.executePendingTasks();
-        RenderSystem.pollEvents();
+        RenderSystem.pollEvents(Minecraft.getInstance().sdlEventHandler);
         RenderSystem.getDevice().createCommandEncoder().submit();
         RenderSystem.getDynamicUniforms().reset();
         Minecraft.getInstance().levelRenderer.endFrame();
@@ -939,7 +944,7 @@ public class ExportJob {
 
     private boolean finishFrame(RenderTarget framebuffer, List<String> lines, boolean forceShow, boolean showCancel) {
         RenderSystem.executePendingTasks();
-        RenderSystem.pollEvents();
+        RenderSystem.pollEvents(Minecraft.getInstance().sdlEventHandler);
 
         long currentTime = System.currentTimeMillis();
         if (currentTime - this.lastRenderMillis > 1000/60 || forceShow) {
@@ -1002,7 +1007,7 @@ public class ExportJob {
 
         lines.add("");
 
-        boolean debugPressed = GLFW.glfwGetKey(Minecraft.getInstance().getWindow().handle(), GLFW.GLFW_KEY_F3) != GLFW.GLFW_RELEASE;
+        boolean debugPressed = InputHelper.isKeyDownRaw(ImGuiKey.F3);
         if (pressedDebugKey != debugPressed) {
             pressedDebugKey = debugPressed;
             if (pressedDebugKey) {
@@ -1020,7 +1025,7 @@ public class ExportJob {
         lines.add("");
 
         if (showCancel) {
-            if (GLFW.glfwGetKey(Minecraft.getInstance().getWindow().handle(), GLFW.GLFW_KEY_ESCAPE) != GLFW.GLFW_RELEASE) {
+            if (InputHelper.isKeyDownRaw(ImGuiKey.Escape)) {
                 long current = System.currentTimeMillis();
                 if (this.escapeCancelStartMillis <= 0 || current < this.escapeCancelStartMillis) {
                     this.escapeCancelStartMillis = current;
@@ -1052,8 +1057,8 @@ public class ExportJob {
             }
         }
 
-        double mouseX = ReplayUI.imguiGlfw.rawMouseX / window.getScreenWidth() * scaledWidth;
-        double mouseY = ReplayUI.imguiGlfw.rawMouseY / window.getScreenHeight() * scaledHeight;
+        double mouseX = ReplayUI.imguiWindower.getRawMouseX() / window.getScreenWidth() * scaledWidth;
+        double mouseY = ReplayUI.imguiWindower.getRawMouseY() / window.getScreenHeight() * scaledHeight;
 
         y += font.lineHeight / 2 + 1;
 
@@ -1064,10 +1069,14 @@ public class ExportJob {
             var prepared = font.prepareText(underlined.getVisualOrderText(), x - patreonWidth/2f, y, -1, true, false, 0);
             preparedTexts.add(prepared);
 
-            if (GLFW.glfwGetMouseButton(window.handle(), GLFW.GLFW_MOUSE_BUTTON_LEFT) != 0) {
+            if (InputHelper.isMouseDownRaw(ImGuiMouseButton.Left)) {
                 if (!this.patreonLinkClicked) {
                     this.patreonLinkClicked = true;
-                    Util.getPlatform().openUri(patreon);
+                    try {
+                        Blaze3D.openUri(new URI(patreon));
+                    } catch (URISyntaxException e) {
+                        throw new RuntimeException(e);
+                    }
                 }
             } else {
                 this.patreonLinkClicked = false;
@@ -1109,15 +1118,19 @@ public class ExportJob {
                     try (FlashbackDrawBuffer drawBuffer = new FlashbackDrawBuffer(GpuBuffer.USAGE_MAP_WRITE)) {
                         drawBuffer.upload(meshData);
                         PreparedRenderType prepared = renderType.prepare();
-                        PreparedRenderType withCustomTarget = new PreparedRenderType(prepared.pipeline(), new OutputTarget("Flashback Info", () -> displayTarget),
-                            prepared.dynamicTransforms(), prepared.scissorState(), prepared.textures());
-                        drawBuffer.drawRenderType(withCustomTarget);
+                        try (RenderPass renderPass = RenderSystem.getDevice().createCommandEncoder().createRenderPass(
+                            () -> "flashback export overlay",
+                            Objects.requireNonNull(displayTarget.getColorTextureView()),
+                            Optional.empty())
+                        ) {
+                            drawBuffer.drawRenderType(prepared, renderPass);
+                        }
                     }
                 }
             }
         }
 
-        if (!window.isMinimized()) {
+        if (!window.isIconified()) {
             var windowSurface = Minecraft.getInstance().windowSurface();
 
             try {

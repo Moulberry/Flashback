@@ -1,15 +1,14 @@
 package com.moulberry.flashback.visuals;
 
-import com.mojang.blaze3d.GpuFormat;
-import com.mojang.blaze3d.PrimitiveTopology;
-import com.mojang.blaze3d.pipeline.BindGroupLayout;
-import com.mojang.blaze3d.pipeline.BlendFunction;
-import com.mojang.blaze3d.pipeline.ColorTargetState;
-import com.mojang.blaze3d.pipeline.RenderPipeline;
-import com.mojang.blaze3d.platform.BlendFactor;
-import com.mojang.blaze3d.shaders.UniformType;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
-import com.mojang.blaze3d.vertex.VertexFormat;
+import com.mojang.renderpearl.api.GpuFormat;
+import com.mojang.renderpearl.api.pipeline.BindGroupLayout;
+import com.mojang.renderpearl.api.pipeline.BlendFactor;
+import com.mojang.renderpearl.api.pipeline.BlendFunction;
+import com.mojang.renderpearl.api.pipeline.ColorTargetState;
+import com.mojang.renderpearl.api.pipeline.PrimitiveTopology;
+import com.mojang.renderpearl.api.pipeline.RenderPipeline;
+import com.mojang.renderpearl.api.pipeline.UniformType;
 import net.minecraft.client.renderer.BindGroupLayouts;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.resources.Identifier;
@@ -74,7 +73,7 @@ public class ShaderManager {
                       .withVertexShader(Identifier.fromNamespaceAndPath("flashback", "core/screenquad_flip"))
                       .withFragmentShader(Identifier.fromNamespaceAndPath("flashback", "core/blit_transform_depth"))
                       .withColorTargetState(new ColorTargetState(Optional.empty(), GpuFormat.R32_FLOAT, ColorTargetState.WRITE_ALL))
-                      .withBindGroupLayout(BindGroupLayout.builder().withSampler("InSampler").withUniform("TransformDepth", UniformType.UNIFORM_BUFFER).build())
+                      .withBindGroupLayout(BindGroupLayout.builder().withUniform("InSampler", UniformType.COMBINED_IMAGE_SAMPLER).withUniform("TransformDepth", UniformType.UNIFORM_BUFFER).build())
                       .withDepthStencilState(Optional.empty())
                       .withCull(false)
                       .withPrimitiveTopology(PrimitiveTopology.TRIANGLES)

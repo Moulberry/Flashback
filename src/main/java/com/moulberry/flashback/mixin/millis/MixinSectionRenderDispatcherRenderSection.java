@@ -10,11 +10,11 @@ import org.spongepowered.asm.mixin.Mixin;
 public class MixinSectionRenderDispatcherRenderSection {
 
     @WrapMethod(method = "getVisibility")
-    public float getVisibility(long now, Operation<Float> original) {
+    public float getVisibility(long now, long fadeDuration, Operation<Float> original) {
         if (Flashback.isInReplay()) {
             return 1.0f;
         }
-        return original.call(now);
+        return original.call(now, fadeDuration);
     }
 
 }

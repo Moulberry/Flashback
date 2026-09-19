@@ -14,7 +14,6 @@ import imgui.moulberry90.type.ImBoolean;
 import imgui.moulberry90.type.ImFloat;
 import imgui.moulberry90.type.ImInt;
 import imgui.moulberry90.type.ImString;
-import org.lwjgl.glfw.GLFW;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -26,11 +25,6 @@ public class ImGuiHelper {
 
     private static boolean closeableModalOnTopLast = false;
     private static boolean closeableModalOnTop = false;
-    private static boolean wantSpecialInputLastFrame = false;
-    private static boolean wantSpecialInputThisFrame = false;
-
-    private static StringBuilder specialInput = new StringBuilder();
-    private static int backspaceCount = 0;
 
     private static boolean handledFocusNext = false;
     private static boolean focusNext = false;
@@ -40,17 +34,12 @@ public class ImGuiHelper {
     public static void endFrame() {
         closeableModalOnTopLast = closeableModalOnTop;
 
-        wantSpecialInputLastFrame = wantSpecialInputThisFrame;
-        wantSpecialInputThisFrame = false;
-
         editingKeybindLastFrame = editingKeybindThisFrame;
         editingKeybindThisFrame = null;
 
         handledFocusNext = false;
         focusNext = false;
         focusIndex = 0;
-
-        if (!wantSpecialInputLastFrame) specialInput.setLength(0);
     }
 
 
@@ -165,7 +154,7 @@ public class ImGuiHelper {
         return changed;
     }
 
-    public static boolean isGlfwBindingDown(int key) {
+    public static boolean isImGuiBindingDown(int key) {
         if (key == 0) {
             return false;
         }
@@ -177,15 +166,14 @@ public class ImGuiHelper {
             }
             return ImGui.isMouseDown(mouse);
         } else {
-            int namedKey = CustomImGuiImplGlfw.glfwKeyToImGuiKey(key);
-            if (namedKey < ImGuiKey.NamedKey_BEGIN || namedKey >= ImGuiKey.NamedKey_END) {
+            if (key < ImGuiKey.NamedKey_BEGIN || key >= ImGuiKey.NamedKey_END) {
                 return false;
             }
-            return ImGui.isKeyDown(namedKey);
+            return ImGui.isKeyDown(key);
         }
     }
 
-    public static boolean isGlfwBindingClicked(int key, boolean repeat) {
+    public static boolean isImGuiBindingClicked(int key, boolean repeat) {
         if (key == 0) {
             return false;
         }
@@ -197,54 +185,11 @@ public class ImGuiHelper {
             }
             return ImGui.isMouseClicked(mouse, repeat);
         } else {
-            int namedKey = CustomImGuiImplGlfw.glfwKeyToImGuiKey(key);
-            if (namedKey < ImGuiKey.NamedKey_BEGIN || namedKey >= ImGuiKey.NamedKey_END) {
+            if (key < ImGuiKey.NamedKey_BEGIN || key >= ImGuiKey.NamedKey_END) {
                 return false;
             }
-            return ImGui.isKeyPressed(namedKey, repeat);
+            return ImGui.isKeyPressed(key, repeat);
         }
-    }
-
-    public static String modifyFromInput(String existing) {
-        wantSpecialInputThisFrame = true;
-        String newInput = specialInput.toString();
-
-        existing = existing.substring(0, Math.max(0, existing.length() - backspaceCount));
-        existing += newInput;
-
-        specialInput.setLength(0);
-        backspaceCount = 0;
-        return existing;
-    }
-
-    public static boolean getWantsSpecialInput() {
-        return wantSpecialInputLastFrame;
-    }
-
-    public static boolean addInputCharacter(char c) {
-        if (wantSpecialInputLastFrame) {
-            specialInput.append(c);
-            return true;
-        }
-        return false;
-    }
-
-    public static boolean backspaceInput(int mods) {
-        if (wantSpecialInputLastFrame) {
-            if ((mods & GLFW.GLFW_MOD_CONTROL) != 0) {
-                specialInput.setLength(0);
-                backspaceCount = 10000;
-                return true;
-            }
-
-            if (specialInput.length() > 0) {
-                specialInput.setLength(specialInput.length() - 1);
-            } else {
-                backspaceCount += 1;
-            }
-            return true;
-        }
-        return false;
     }
 
     public static boolean beginPopup(String id) {
@@ -429,9 +374,9 @@ public class ImGuiHelper {
                 }
             }
 
-            if (!handledFocusNext && ImGui.isItemActive() && ImGui.isKeyPressed(GLFW.GLFW_KEY_TAB, false)) {
+            if (!handledFocusNext && ImGui.isItemActive() && ImGui.isKeyPressed(ImGuiKey.Tab, false)) {
                 handledFocusNext = true;
-                if (ImGui.isKeyDown(GLFW.GLFW_KEY_LEFT_SHIFT) || ImGui.isKeyDown(GLFW.GLFW_KEY_RIGHT_SHIFT)) {
+                if (ImGui.isKeyDown(ImGuiKey.LeftShift) || ImGui.isKeyDown(ImGuiKey.RightShift)) {
                     focusLastIndex = focusIndex - 1;
                 } else {
                     focusNext = true;
@@ -502,9 +447,9 @@ public class ImGuiHelper {
                 }
             }
 
-            if (!handledFocusNext && ImGui.isItemActive() && ImGui.isKeyPressed(GLFW.GLFW_KEY_TAB, false)) {
+            if (!handledFocusNext && ImGui.isItemActive() && ImGui.isKeyPressed(ImGuiKey.Tab, false)) {
                 handledFocusNext = true;
-                if (ImGui.isKeyDown(GLFW.GLFW_KEY_LEFT_SHIFT) || ImGui.isKeyDown(GLFW.GLFW_KEY_RIGHT_SHIFT)) {
+                if (ImGui.isKeyDown(ImGuiKey.LeftShift) || ImGui.isKeyDown(ImGuiKey.RightShift)) {
                     focusLastIndex = focusIndex - 1;
                 } else {
                     focusNext = true;

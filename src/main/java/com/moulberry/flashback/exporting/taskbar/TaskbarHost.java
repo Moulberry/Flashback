@@ -5,13 +5,13 @@ import com.sun.jna.Pointer;
 import com.sun.jna.platform.win32.*;
 import com.sun.jna.ptr.PointerByReference;
 import net.minecraft.client.Minecraft;
-import org.lwjgl.glfw.GLFWNativeWin32;
-
-import static com.moulberry.flashback.editor.ui.CustomImGuiImplGlfw.IS_WINDOWS;
+import net.minecraft.util.Util;
+import org.lwjgl.sdl.SDLProperties;
+import org.lwjgl.sdl.SDLVideo;
 
 public class TaskbarHost {
     public static ITaskbar createTaskbar() {
-        if (IS_WINDOWS) {
+        if (Util.getPlatform() == Util.OS.WINDOWS) {
             try {
                 return createWindowsInterface();
             } catch (Exception e) {
@@ -34,8 +34,12 @@ public class TaskbarHost {
             throw new IllegalStateException("Failed to create ITaskbar3");
         }
 
-
-        var hwnd = new WinDef.HWND(new Pointer(GLFWNativeWin32.glfwGetWin32Window(Minecraft.getInstance().getWindow().handle())));
+        int windowProperties = SDLVideo.SDL_GetWindowProperties(Minecraft.getInstance().getWindow().handle());
+        long win32Hwnd = SDLProperties.SDL_GetPointerProperty(windowProperties, SDLVideo.SDL_PROP_WINDOW_WIN32_HWND_POINTER, 0);
+        if (win32Hwnd == 0) {
+            throw new RuntimeException("Failed to get Win32 Window");
+        }
+        var hwnd = new WinDef.HWND(new Pointer(win32Hwnd));
         return new WindowsTaskbar(itaskbar3res.getValue(), hwnd);
     }
 }

@@ -23,29 +23,33 @@ public class MixinClientClockManager implements ClientClockManagerExt {
 
     @Shadow
     @Final
-    private Map<Holder<WorldClock>, ClientClockManager.ClockInstance> clocks;
+    private Map<Holder<WorldClock>, ClientClockManager.ClientClockInstance> clocks;
 
     public Map<Holder<WorldClock>, ClockNetworkState> flashback$encodeClockUpdates() {
         Map<Holder<WorldClock>, ClockNetworkState> data = new HashMap<>();
 
-        for (Map.Entry<Holder<WorldClock>, ClientClockManager.ClockInstance> entry : this.clocks.entrySet()) {
+        for (Map.Entry<Holder<WorldClock>, ClientClockManager.ClientClockInstance> entry : this.clocks.entrySet()) {
             var clock = entry.getValue();
             data.put(entry.getKey(), new ClockNetworkState(
-                clock.totalTicks,
-                clock.partialTick,
-                clock.rate
+                clock.totalTicks(),
+                clock.partialTick(),
+                clock.rate()
             ));
         }
 
         return data;
     }
 
-    @Inject(method = "getTotalTicks", at = @At("HEAD"), cancellable = true)
-    public void getTotalTicks(Holder<WorldClock> definition, CallbackInfoReturnable<Long> cir) {
+    @Inject(method = "getInstance(Lnet/minecraft/core/Holder;)Lnet/minecraft/client/ClientClockManager$ClientClockInstance;", at = @At("HEAD"), cancellable = true)
+    public void getTotalTicks(Holder<WorldClock> definition, CallbackInfoReturnable<ClientClockManager.ClientClockInstance> cir) {
         if (definition.is(WorldClocks.OVERWORLD)) {
             EditorState editorState = EditorStateManager.getCurrent();
             if (editorState != null && editorState.replayVisuals.overrideTimeOfDay >= 0) {
-                cir.setReturnValue(editorState.replayVisuals.overrideTimeOfDay);
+                ClientClockManager.ClientClockInstance instance = new ClientClockManager.ClientClockInstance();
+                instance.totalTicks = editorState.replayVisuals.overrideTimeOfDay;
+                instance.partialTick = 0.0f;
+                instance.rate = 0.0f;
+                cir.setReturnValue(instance);
             }
         }
     }

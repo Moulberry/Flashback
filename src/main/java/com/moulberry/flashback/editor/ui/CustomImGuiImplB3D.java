@@ -1,25 +1,25 @@
 package com.moulberry.flashback.editor.ui;
 
-import com.mojang.blaze3d.GpuFormat;
-import com.mojang.blaze3d.IndexType;
-import com.mojang.blaze3d.PrimitiveTopology;
-import com.mojang.blaze3d.buffers.GpuBuffer;
-import com.mojang.blaze3d.pipeline.BindGroupLayout;
-import com.mojang.blaze3d.pipeline.BlendFunction;
-import com.mojang.blaze3d.pipeline.ColorTargetState;
-import com.mojang.blaze3d.pipeline.RenderPipeline;
+import com.mojang.renderpearl.api.GpuFormat;
+import com.mojang.renderpearl.api.pipeline.IndexType;
+import com.mojang.renderpearl.api.pipeline.PrimitiveTopology;
+import com.mojang.renderpearl.api.buffers.GpuBuffer;
+import com.mojang.renderpearl.api.pipeline.BindGroupLayout;
+import com.mojang.renderpearl.api.pipeline.BlendFunction;
+import com.mojang.renderpearl.api.pipeline.ColorTargetState;
+import com.mojang.renderpearl.api.pipeline.RenderPipeline;
 import com.mojang.blaze3d.pipeline.RenderTarget;
-import com.mojang.blaze3d.shaders.UniformType;
-import com.mojang.blaze3d.systems.CommandEncoder;
-import com.mojang.blaze3d.systems.GpuDevice;
-import com.mojang.blaze3d.systems.RenderPass;
+import com.mojang.renderpearl.api.pipeline.UniformType;
+import com.mojang.renderpearl.api.commands.CommandEncoder;
+import com.mojang.renderpearl.api.device.GpuDevice;
+import com.mojang.renderpearl.api.commands.RenderPass;
 import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.textures.FilterMode;
-import com.mojang.blaze3d.textures.GpuSampler;
-import com.mojang.blaze3d.textures.GpuTexture;
-import com.mojang.blaze3d.textures.GpuTextureView;
-import com.mojang.blaze3d.vertex.VertexFormat;
-import com.moulberry.flashback.FramebufferUtils;
+import com.mojang.renderpearl.api.textures.FilterMode;
+import com.mojang.renderpearl.api.textures.GpuSampler;
+import com.mojang.renderpearl.api.textures.GpuTexture;
+import com.mojang.renderpearl.api.textures.GpuTextureView;
+import com.mojang.renderpearl.api.vertex.VertexFormat;
+import com.moulberry.flashback.utils.FramebufferUtils;
 import imgui.moulberry90.ImDrawData;
 import imgui.moulberry90.ImFontAtlas;
 import imgui.moulberry90.ImVec2;
@@ -83,7 +83,7 @@ public class CustomImGuiImplB3D implements CustomImGuiRenderer {
 
         var bindGroupLayout = BindGroupLayout.builder()
             .withUniform("UBO", UniformType.UNIFORM_BUFFER)
-            .withSampler("Sampler0")
+            .withUniform("Sampler0", UniformType.COMBINED_IMAGE_SAMPLER)
             .build();
         var vertexFormat = VertexFormat.builder(0)
             .addAttribute("Position", GpuFormat.RG32_FLOAT)
@@ -282,7 +282,7 @@ public class CustomImGuiImplB3D implements CustomImGuiRenderer {
             renderPass.setVertexBuffer(0, this.vertexBuffer.slice());
             renderPass.setIndexBuffer(this.indexBuffer, indexType);
             renderPass.setUniform("UBO", this.uniforms);
-            renderPass.setPipeline(this.renderPipeline);
+            renderPass.setPipeline(RenderSystem.getCompiledPipeline(this.renderPipeline));
 
             ImVec2 clipOffset = drawData.getDisplayPos();
             ImVec2 clipScale = drawData.getFramebufferScale();
@@ -304,7 +304,7 @@ public class CustomImGuiImplB3D implements CustomImGuiRenderer {
                             if (this.nearestTextures.contains((int) textureId)) {
                                 sampler = this.samplerNearest;
                             }
-                            renderPass.bindTexture("Sampler0", view, sampler);
+                            renderPass.setUniform("Sampler0", view, sampler);
                         }
                     }
 

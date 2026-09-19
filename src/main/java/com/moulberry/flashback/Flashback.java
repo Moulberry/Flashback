@@ -17,7 +17,6 @@ import com.moulberry.flashback.compat.simple_voice_chat.SimpleVoiceChatPlayback;
 import com.moulberry.flashback.configuration.FlashbackConfigV1;
 import com.moulberry.flashback.editor.keybinds.Keybinds;
 import com.moulberry.flashback.editor.ui.ReplayUI;
-import com.moulberry.flashback.exporting.AsyncFileDialogs;
 import com.moulberry.flashback.exporting.ExportJob;
 import com.moulberry.flashback.exporting.taskbar.TaskbarManager;
 import com.moulberry.flashback.ext.MinecraftExt;
@@ -47,6 +46,7 @@ import com.moulberry.flashback.screen.SaveReplayScreen;
 import com.moulberry.flashback.screen.UnsupportedLoaderScreen;
 import com.moulberry.flashback.state.EditorState;
 import com.moulberry.flashback.state.EditorStateManager;
+import com.moulberry.flashback.utils.AsyncFileDialogs;
 import com.moulberry.flashback.visuals.AccurateEntityPositionHandler;
 import com.moulberry.lattice.Lattice;
 import com.moulberry.lattice.element.LatticeElements;
@@ -169,13 +169,13 @@ public class Flashback implements ModInitializer, ClientModInitializer {
 
     private static final KeyMapping.Category category = KeyMapping.Category.register(createIdentifier("keybind"));
     public static final KeyMapping createMarker1KeyBind = KeyMappingHelper.registerKeyMapping(new KeyMapping("flashback.keybind.create_marker_1",
-        InputConstants.Type.KEYSYM, InputConstants.UNKNOWN.getValue(), category));
+        InputConstants.Type.KEYBOARD, InputConstants.UNKNOWN.getValue(), category));
     public static final KeyMapping createMarker2KeyBind = KeyMappingHelper.registerKeyMapping(new KeyMapping("flashback.keybind.create_marker_2",
-        InputConstants.Type.KEYSYM, InputConstants.UNKNOWN.getValue(), category));
+        InputConstants.Type.KEYBOARD, InputConstants.UNKNOWN.getValue(), category));
     public static final KeyMapping createMarker3KeyBind = KeyMappingHelper.registerKeyMapping(new KeyMapping("flashback.keybind.create_marker_3",
-        InputConstants.Type.KEYSYM, InputConstants.UNKNOWN.getValue(), category));
+        InputConstants.Type.KEYBOARD, InputConstants.UNKNOWN.getValue(), category));
     public static final KeyMapping createMarker4KeyBind = KeyMappingHelper.registerKeyMapping(new KeyMapping("flashback.keybind.create_marker_4",
-        InputConstants.Type.KEYSYM, InputConstants.UNKNOWN.getValue(), category));
+        InputConstants.Type.KEYBOARD, InputConstants.UNKNOWN.getValue(), category));
 
     public static final Identifier RECORDING_INFO_DEBUG_SCREEN_ID = createIdentifier("recording_info");
 
@@ -324,7 +324,7 @@ public class Flashback implements ModInitializer, ClientModInitializer {
                 for (Entity entity : Minecraft.getInstance().level.entitiesForRendering()) {
                     if (entity.isInterpolating()) {
                         var interpolation = entity.getInterpolation();
-                        entity.snapTo(interpolation.position(), interpolation.yRot(), interpolation.xRot());
+                        entity.snapTo(interpolation.target().position(), interpolation.target().yRot(), interpolation.target().xRot());
                         interpolation.cancel();
                     } else {
                         entity.setOldPosAndRot();
@@ -1238,8 +1238,8 @@ public class Flashback implements ModInitializer, ClientModInitializer {
             WorldStem worldStem = Util.blockUntilDone(executor -> WorldLoader.load(initConfig, dataLoadContext -> {
                 Registry<LevelStem> registry = new MappedRegistry<>(Registries.LEVEL_STEM, Lifecycle.stable()).freeze();
 
-                Holder.Reference<Biome> plains = dataLoadContext.datapackWorldgen().lookupOrThrow(Registries.BIOME).get(Biomes.PLAINS).get();
-                Holder.Reference<DimensionType> overworld = dataLoadContext.datapackWorldgen().lookupOrThrow(Registries.DIMENSION_TYPE).get(BuiltinDimensionTypes.OVERWORLD).get();
+                Holder.Reference<Biome> plains = dataLoadContext.datapackWorldRegistries().lookupOrThrow(Registries.BIOME).get(Biomes.PLAINS).get();
+                Holder.Reference<DimensionType> overworld = dataLoadContext.datapackWorldRegistries().lookupOrThrow(Registries.DIMENSION_TYPE).get(BuiltinDimensionTypes.OVERWORLD).get();
 
                 WorldDimensions worldDimensions = new WorldDimensions(Map.of(LevelStem.OVERWORLD, new LevelStem(overworld, new EmptyLevelSource(plains))));
                 WorldDimensions.Complete complete = worldDimensions.bake(registry);

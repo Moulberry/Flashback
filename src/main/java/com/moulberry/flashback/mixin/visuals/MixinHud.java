@@ -3,13 +3,12 @@ package com.moulberry.flashback.mixin.visuals;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.moulberry.flashback.Flashback;
+import com.moulberry.flashback.editor.ui.MouseHandledBy;
 import com.moulberry.flashback.state.EditorState;
 import com.moulberry.flashback.state.EditorStateManager;
-import com.moulberry.flashback.editor.ui.CustomImGuiImplGlfw;
 import com.moulberry.flashback.editor.ui.ReplayUI;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.Gui;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.Hud;
 import net.minecraft.client.multiplayer.MultiPlayerGameMode;
@@ -187,7 +186,7 @@ public abstract class MixinHud {
     @Inject(method = "canRenderCrosshairForSpectator", at = @At("HEAD"), cancellable = true, require = 0)
     public void canRenderCrosshairForSpectator(HitResult hitResult, CallbackInfoReturnable<Boolean> cir) {
         if (Flashback.isInReplay()) {
-            if (!Flashback.isExporting() && ReplayUI.isActive() && ReplayUI.imguiGlfw.getMouseHandledBy() == CustomImGuiImplGlfw.MouseHandledBy.GAME) {
+            if (!Flashback.isExporting() && ReplayUI.isActive() && ReplayUI.imguiWindower.getMouseHandledBy() == MouseHandledBy.GAME) {
                 cir.setReturnValue(true);
                 return;
             }

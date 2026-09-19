@@ -4,16 +4,17 @@ import com.mojang.blaze3d.platform.InputConstants;
 import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.editor.ui.ImGuiHelper;
 import com.moulberry.flashback.editor.ui.ReplayUI;
+import com.moulberry.flashback.utils.InputHelper;
 import com.moulberry.lattice.keybind.KeybindInterface;
 import com.moulberry.lattice.keybind.LatticeInputType;
 import imgui.moulberry90.ImGuiIO;
+import imgui.moulberry90.flag.ImGuiKey;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.input.InputQuirks;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.resources.language.I18n;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.Util;
-import org.lwjgl.glfw.GLFW;
 
 import java.util.Collection;
 import java.util.List;
@@ -102,7 +103,7 @@ public class Keybind implements KeybindInterface {
             return "none";
         }
 
-        String key = KeybindHelper.glfwToConfig(this.key);
+        String key = KeybindHelper.imguiToConfig(this.key);
         if (key.equals("none")) {
             return "none";
         }
@@ -148,7 +149,7 @@ public class Keybind implements KeybindInterface {
                 configValue = configValue.substring(6);
             } else {
                 configValue = configValue.substring(configValue.lastIndexOf("+")+1);
-                int key = KeybindHelper.configToGlfw(configValue);
+                int key = KeybindHelper.configToImgui(configValue);
                 if (key != 0) {
                     int oldKey = this.key;
                     this.key = key;
@@ -244,40 +245,28 @@ public class Keybind implements KeybindInterface {
         return true;
     }
 
+    private boolean checkKeyRaw() {
+        if (this.key < 0) {
+            return InputHelper.isMouseDownRaw(-this.key-1);
+        } else {
+            return InputHelper.isKeyDownRaw(this.key);
+        }
+    }
+
     private static boolean isShift(int key) {
-        return key == GLFW.GLFW_KEY_LEFT_SHIFT || key == GLFW.GLFW_KEY_RIGHT_SHIFT;
+        return key == ImGuiKey.LeftShift || key == ImGuiKey.RightShift;
     }
 
     private static boolean isCtrl(int key) {
-        return key == GLFW.GLFW_KEY_LEFT_CONTROL || key == GLFW.GLFW_KEY_RIGHT_CONTROL;
+        return key == ImGuiKey.LeftCtrl || key == ImGuiKey.RightCtrl;
     }
 
     private static boolean isAlt(int key) {
-        return key == GLFW.GLFW_KEY_LEFT_ALT || key == GLFW.GLFW_KEY_RIGHT_ALT;
+        return key == ImGuiKey.LeftAlt || key == ImGuiKey.RightAlt;
     }
 
     private static boolean isSuper(int key) {
-        return key == GLFW.GLFW_KEY_LEFT_SUPER || key == GLFW.GLFW_KEY_RIGHT_SUPER;
-    }
-
-    public static boolean isShiftDownGLFW(long window) {
-        return GLFW.glfwGetKey(window, GLFW.GLFW_KEY_LEFT_SHIFT) == GLFW.GLFW_PRESS ||
-            GLFW.glfwGetKey(window, GLFW.GLFW_KEY_RIGHT_SHIFT) == GLFW.GLFW_PRESS;
-    }
-
-    public static boolean isCtrlDownGLFW(long window) {
-        return GLFW.glfwGetKey(window, GLFW.GLFW_KEY_LEFT_CONTROL) == GLFW.GLFW_PRESS ||
-            GLFW.glfwGetKey(window, GLFW.GLFW_KEY_RIGHT_CONTROL) == GLFW.GLFW_PRESS;
-    }
-
-    public static boolean isAltDownGLFW(long window) {
-        return GLFW.glfwGetKey(window, GLFW.GLFW_KEY_LEFT_ALT) == GLFW.GLFW_PRESS ||
-            GLFW.glfwGetKey(window, GLFW.GLFW_KEY_RIGHT_ALT) == GLFW.GLFW_PRESS;
-    }
-
-    public static boolean isSuperDownGLFW(long window) {
-        return GLFW.glfwGetKey(window, GLFW.GLFW_KEY_LEFT_SUPER) == GLFW.GLFW_PRESS ||
-            GLFW.glfwGetKey(window, GLFW.GLFW_KEY_RIGHT_SUPER) == GLFW.GLFW_PRESS;
+        return key == ImGuiKey.LeftSuper || key == ImGuiKey.RightSuper;
     }
 
     public boolean isDown() {
@@ -290,14 +279,9 @@ public class Keybind implements KeybindInterface {
         }
 
         if (ReplayUI.isActive() && ReplayUI.isImGuiContextActive()) {
-            return ImGuiHelper.isGlfwBindingDown(this.key);
+            return ImGuiHelper.isImGuiBindingDown(this.key);
         } else {
-            long window = Minecraft.getInstance().getWindow().handle();
-            if (this.key < 0) {
-                return GLFW.glfwGetMouseButton(window, -this.key-1) != GLFW.GLFW_RELEASE;
-            } else {
-                return GLFW.glfwGetKey(window, this.key) != GLFW.GLFW_RELEASE;
-            }
+            return this.checkKeyRaw();
         }
     }
 
@@ -311,7 +295,7 @@ public class Keybind implements KeybindInterface {
         }
 
         if (ReplayUI.isActive() && ReplayUI.isImGuiContextActive()) {
-            return ImGuiHelper.isGlfwBindingClicked(this.key, repeat);
+            return ImGuiHelper.isImGuiBindingClicked(this.key, repeat);
         } else {
             boolean down = this.isDownIgnoreMods();
             boolean wasDown = this.ingameDownLastTime;
@@ -343,13 +327,10 @@ public class Keybind implements KeybindInterface {
             if (!isAlt(this.key) && this.altMod != io.getKeyAlt()) return false;
             if (!isSuper(this.key) && this.superMod != io.getKeySuper()) return false;
         } else {
-            Minecraft minecraft = Minecraft.getInstance();
-
-            long window = minecraft.getWindow().handle();
-            if (!isShift(this.key) && this.shiftMod != isShiftDownGLFW(window)) return false;
-            if (!isCtrl(this.key) && ctrlMod != isCtrlDownGLFW(window)) return false;
-            if (!isAlt(this.key) && this.altMod != isAltDownGLFW(window)) return false;
-            if (!isSuper(this.key) && superMod != isSuperDownGLFW(window)) return false;
+            if (!isShift(this.key) && this.shiftMod != InputHelper.isShiftDownRaw()) return false;
+            if (!isCtrl(this.key) && ctrlMod != InputHelper.isCtrlDownRaw()) return false;
+            if (!isAlt(this.key) && this.altMod != InputHelper.isAltDownRaw()) return false;
+            if (!isSuper(this.key) && superMod != InputHelper.isSuperDownRaw()) return false;
         }
 
         return true;
@@ -373,13 +354,13 @@ public class Keybind implements KeybindInterface {
         int oldKey = this.key;
         switch (type) {
             case KEYSYM -> {
-                this.key = value;
-            }
-            case SCANCODE -> {
                 return;
             }
+            case SCANCODE -> {
+                this.key = InputHelper.sdlScancodeToImguiKey(value);
+            }
             case MOUSE -> {
-                this.key = -value-1;
+                this.key = -InputHelper.sdlMouseToImguiMouse(value)-1;
             }
         }
         this.shiftMod = shiftMod;

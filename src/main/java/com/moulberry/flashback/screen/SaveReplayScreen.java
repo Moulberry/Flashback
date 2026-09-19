@@ -2,8 +2,8 @@ package com.moulberry.flashback.screen;
 
 import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.FlashbackTextComponents;
-import com.moulberry.flashback.exporting.AsyncFileDialogs;
 import com.moulberry.flashback.record.ReplayExporter;
+import com.moulberry.flashback.utils.AsyncFileDialogs;
 import net.minecraft.util.FileUtil;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.Button;
@@ -13,13 +13,10 @@ import net.minecraft.client.gui.layouts.FrameLayout;
 import net.minecraft.client.gui.layouts.GridLayout;
 import net.minecraft.client.gui.screens.AlertScreen;
 import net.minecraft.client.gui.screens.ConfirmScreen;
-import net.minecraft.client.gui.screens.PauseScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 import org.apache.commons.io.FileUtils;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 import java.nio.file.Files;

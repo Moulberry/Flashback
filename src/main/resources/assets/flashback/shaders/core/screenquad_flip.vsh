@@ -1,6 +1,7 @@
 #version 330
+#extension GL_ARB_separate_shader_objects : require
 
-out vec2 texCoord;
+layout(location = 0) out vec2 texCoord;
 
 void main() {
     vec2 uv = vec2((gl_VertexID << 1) & 2, 1-(gl_VertexID & 2));

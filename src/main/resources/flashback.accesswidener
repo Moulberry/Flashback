@@ -98,10 +98,6 @@ mutable field net/minecraft/network/protocol/game/ClientboundAddEntityPacket id 
 
 accessible field net/minecraft/network/protocol/game/ClientboundLevelChunkPacketData blockEntitiesData Ljava/util/List;
 accessible class net/minecraft/network/protocol/game/ClientboundLevelChunkPacketData$BlockEntityInfo
-accessible field net/minecraft/network/protocol/game/ClientboundLevelChunkPacketData$BlockEntityInfo packedXZ I
-accessible field net/minecraft/network/protocol/game/ClientboundLevelChunkPacketData$BlockEntityInfo y I
-accessible field net/minecraft/network/protocol/game/ClientboundLevelChunkPacketData$BlockEntityInfo type Lnet/minecraft/world/level/block/entity/BlockEntityType;
-accessible field net/minecraft/network/protocol/game/ClientboundLevelChunkPacketData$BlockEntityInfo tag Lnet/minecraft/nbt/CompoundTag;
 accessible field net/minecraft/network/protocol/game/ClientboundLevelChunkPacketData buffer [B
 
 # Recording
@@ -118,11 +114,7 @@ accessible field net/minecraft/server/level/ServerEntity lastSentXRot B
 accessible field net/minecraft/server/level/ServerEntity lastSentYHeadRot B
 accessible field net/minecraft/server/level/ServerEntity wasOnGround Z
 accessible field net/minecraft/server/level/ServerEntity trackedDataValues Ljava/util/List;
-accessible field net/minecraft/server/level/ServerEntity updateInterval I
-accessible class net/minecraft/client/ClientClockManager$ClockInstance
-accessible field net/minecraft/client/ClientClockManager$ClockInstance totalTicks J
-accessible field net/minecraft/client/ClientClockManager$ClockInstance partialTick F
-accessible field net/minecraft/client/ClientClockManager$ClockInstance rate F
+accessible field net/minecraft/server/level/ServerEntity interpolationTracker Lnet/minecraft/world/entity/InterpolationTracker;
 
 # Replay UI
 accessible field net/minecraft/client/gui/screens/Screen renderables Ljava/util/List;
@@ -185,3 +177,12 @@ accessible method net/minecraft/client/renderer/rendertype/RenderType create (Lj
 # Allow updating server playerinfo
 accessible method net/minecraft/client/multiplayer/PlayerInfo setLatency (I)V
 accessible method net/minecraft/client/multiplayer/PlayerInfo setGameMode (Lnet/minecraft/world/level/GameType;)V
+
+accessible field net/minecraft/client/Minecraft sdlEventHandler Lcom/mojang/blaze3d/platform/SDLEventHandler;
+
+accessible field net/minecraft/client/ClientClockManager$ClientClockInstance totalTicks J
+accessible field net/minecraft/client/ClientClockManager$ClientClockInstance partialTick F
+accessible field net/minecraft/client/ClientClockManager$ClientClockInstance rate F
+
+accessible field net/minecraft/world/entity/LivingEntity swingState Lnet/minecraft/world/entity/LivingEntity$SwingState;
+accessible field net/minecraft/world/entity/LivingEntity$SwingState ticks I

@@ -65,7 +65,7 @@ dependencies {
     include(implementation(annotationProcessor("com.github.bawnorton.mixinsquared:mixinsquared-fabric:0.3.7-beta.1")))
 
     // Lattice (config)
-    include(implementation("com.moulberry:lattice:2.1.0"))
+    include(implementation("com.moulberry:lattice:2.2.0"))
 
     // Apache stuff
     include(implementation("org.apache.commons:commons-math3:3.6.1"))
@@ -125,38 +125,6 @@ dependencies {
     // ImGui
     shadow(implementation(rootProject.files('deps/imgui-binding-1.90.0.jar')))
     shadow(api(rootProject.files('deps/imgui-natives.jar')))
-
-    // Native File Dialogs
-    String nfdVersion = "org.lwjgl:lwjgl-nfd:3.3.3";
-
-    shadow(implementation(nfdVersion) {
-        exclude group: 'org.lwjgl'
-        exclude group: 'org.lwjgl.lwjgl'
-    })
-    shadow(api("org.lwjgl:lwjgl-nfd::natives-macos") {
-        exclude group: 'org.lwjgl'
-        exclude group: 'org.lwjgl.lwjgl'
-    })
-    shadow(api("org.lwjgl:lwjgl-nfd::natives-linux") {
-        exclude group: 'org.lwjgl'
-        exclude group: 'org.lwjgl.lwjgl'
-    })
-    shadow(api("org.lwjgl:lwjgl-nfd::natives-windows") {
-        exclude group: 'org.lwjgl'
-        exclude group: 'org.lwjgl.lwjgl'
-    })
-    shadow(api("org.lwjgl:lwjgl-nfd::natives-macos-arm64") {
-        exclude group: 'org.lwjgl'
-        exclude group: 'org.lwjgl.lwjgl'
-    })
-    shadow(api("org.lwjgl:lwjgl-nfd::natives-linux-arm64") {
-        exclude group: 'org.lwjgl'
-        exclude group: 'org.lwjgl.lwjgl'
-    })
-    shadow(api("org.lwjgl:lwjgl-nfd::natives-windows-arm64") {
-        exclude group: 'org.lwjgl'
-        exclude group: 'org.lwjgl.lwjgl'
-    })
 }
 
 processResources {

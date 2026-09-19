@@ -1,26 +1,21 @@
 package com.moulberry.flashback.editor.ui.windows;
 
 import com.mojang.authlib.GameProfile;
-import com.mojang.authlib.yggdrasil.ProfileResult;
-import com.mojang.blaze3d.platform.Window;
+import com.mojang.authlib.services.ProfileResult;
 import com.moulberry.flashback.FilePlayerSkin;
-import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.Utils;
 import com.moulberry.flashback.combo_options.GlowingOverride;
 import com.moulberry.flashback.editor.ui.ImGuiHelper;
 import com.moulberry.flashback.editor.ui.ReplayUI;
-import com.moulberry.flashback.exporting.AsyncFileDialogs;
 import com.moulberry.flashback.state.EditorState;
+import com.moulberry.flashback.utils.AsyncFileDialogs;
 import imgui.moulberry90.ImGui;
 import imgui.moulberry90.type.ImString;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.multiplayer.PlayerInfo;
 import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.resources.language.I18n;
 import net.minecraft.commands.arguments.EntityAnchorArgument;
-import net.minecraft.network.chat.CommonComponents;
-import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.Avatar;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EquipmentSlot;
@@ -32,8 +27,6 @@ import net.minecraft.world.scores.DisplaySlot;
 import net.minecraft.world.scores.Objective;
 import net.minecraft.world.scores.PlayerTeam;
 import net.minecraft.world.scores.Scoreboard;
-import net.minecraft.world.scores.Team;
-import org.lwjgl.glfw.GLFW;
 
 import java.nio.file.Path;
 import java.util.EnumSet;

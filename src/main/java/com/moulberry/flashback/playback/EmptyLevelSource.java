@@ -19,8 +19,11 @@ import net.minecraft.world.level.levelgen.GenerationStep;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.levelgen.RandomState;
 import net.minecraft.world.level.levelgen.blending.Blender;
+import net.minecraft.world.level.levelgen.densityfunction.SamplerContext;
+import org.jspecify.annotations.Nullable;
 
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
@@ -37,20 +40,7 @@ public class EmptyLevelSource extends ChunkGenerator {
     }
 
     @Override
-    public void applyCarvers(WorldGenRegion worldGenRegion, long l, RandomState randomState, BiomeManager biomeManager, StructureManager structureManager, ChunkAccess chunkAccess) {
-    }
-
-    @Override
-    public void buildSurface(WorldGenRegion worldGenRegion, StructureManager structureManager, RandomState randomState, ChunkAccess chunkAccess) {
-    }
-
-    @Override
     public void applyBiomeDecoration(WorldGenLevel worldGenLevel, ChunkAccess chunkAccess, StructureManager structureManager) {
-    }
-
-    @Override
-    public CompletableFuture<ChunkAccess> fillFromNoise(Blender blender, RandomState randomState, StructureManager structureManager, ChunkAccess chunkAccess) {
-        return CompletableFuture.completedFuture(chunkAccess);
     }
 
     @Override
@@ -64,7 +54,7 @@ public class EmptyLevelSource extends ChunkGenerator {
     }
 
     @Override
-    public void addDebugScreenInfo(List<String> list, RandomState randomState, BlockPos blockPos) {
+    public void addDebugScreenInfo(List<String> result, RandomState randomState, BlockPos feetPos, SamplerContext samplerContext) {
     }
 
     @Override
@@ -79,6 +69,11 @@ public class EmptyLevelSource extends ChunkGenerator {
     @Override
     public int getGenDepth() {
         return 384;
+    }
+
+    @Override
+    public CompletableFuture<ChunkAccess> buildTerrain(ChunkAccess chunk, Blender blender, RandomState randomState, StructureManager structureManager, BiomeManager biomeManager, @Nullable WorldGenRegion carverBiomeRegion, Set<Holder<Biome>> possibleBiomes) {
+        return CompletableFuture.completedFuture(chunk);
     }
 
     @Override

@@ -634,12 +634,13 @@ public class Recorder {
         }
 
         // Update swinging
-        if (player.swinging && (!this.wasSwinging || this.lastSwingTime > player.swingTime)) {
-            int animation = player.swingingArm == InteractionHand.MAIN_HAND ? ClientboundAnimatePacket.SWING_MAIN_HAND : ClientboundAnimatePacket.SWING_OFF_HAND;
-            gamePackets.add(new ClientboundAnimatePacket(player, animation));
+        var currentSwing = player.getCurrentSwing();
+        int swingTime = player.swingState.ticks;
+        if (currentSwing != null && (!this.wasSwinging || this.lastSwingTime > swingTime)) {
+            gamePackets.add(new ClientboundSwingAnimationPacket(player, currentSwing.hand(), currentSwing.animation()));
         }
-        this.lastSwingTime = player.swingTime;
-        this.wasSwinging = player.swinging;
+        this.lastSwingTime = swingTime;
+        this.wasSwinging = currentSwing != null;
 
         gamePackets.add(new ClientboundSetEntityMotionPacket(player.getId(), player.getDeltaMovement()));
 
@@ -682,14 +683,8 @@ public class Recorder {
                 headRot = livingEntity.lerpHeadSteps > 0 ? (float) livingEntity.lerpYHeadRot : livingEntity.getYHeadRot();
             }
 
-            var interpolation = entity.getInterpolation();
-            if (interpolation != null && interpolation.hasActiveInterpolation()) {
-                var xyz = interpolation.position();
-                position = new Position(xyz.x, xyz.y, xyz.z, interpolation.yRot(), interpolation.xRot(), headRot, entity.onGround());
-            } else {
-                var xyz = entity.trackingPosition();
-                position = new Position(xyz.x, xyz.y, xyz.z, entity.getYRot(), entity.getXRot(), headRot, entity.onGround());
-            }
+            var xyz = entity.trackingPosition();
+            position = new Position(xyz.x, xyz.y, xyz.z, entity.getYRot(), entity.getXRot(), headRot, entity.onGround());
             Position lastPosition = this.lastPositions.get(entity);
 
             if (!Objects.equals(position, lastPosition)) {
@@ -876,7 +871,7 @@ public class Recorder {
         // Convert player chat packets into system chat packets
         if (packet instanceof ClientboundPlayerChatPacket playerChatPacket) {
             try {
-                Component content = playerChatPacket.unsignedContent() != null ? playerChatPacket.unsignedContent() : Component.literal(playerChatPacket.body().content());
+                Component content = playerChatPacket.unsignedContent().orElse(Component.literal(playerChatPacket.body().content()));
                 Component decorated = playerChatPacket.chatType().decorate(content);
                 packet = new ClientboundSystemChatPacket(decorated, false);
             } catch (Exception e) {
@@ -976,7 +971,7 @@ public class Recorder {
         // Login packet
         long hashedSeed = level.getBiomeManager().biomeZoomSeed;
         CommonPlayerSpawnInfo commonPlayerSpawnInfo = new CommonPlayerSpawnInfo(level.dimensionTypeRegistration(), level.dimension(), hashedSeed,
-            gameMode.getPlayerMode(), gameMode.getPreviousPlayerMode(), level.isDebug(), level.getLevelData().isFlat, Optional.empty(), 0,
+            gameMode.getPlayerMode(), Optional.ofNullable(gameMode.getPreviousPlayerMode()), level.isDebug(), level.getLevelData().isFlat, Optional.empty(), 0,
                 level.getSeaLevel());
         var loginPacket = new ClientboundLoginPacket(localPlayer.getId(), level.getLevelData().isHardcore(), connection.levels(),
             1, minecraft.options.getEffectiveRenderDistance(), level.getServerSimulationDistance(),
@@ -1250,8 +1245,8 @@ public class Recorder {
             int centerX = localPlayer.getBlockX() >> 4;
             int centerZ = localPlayer.getBlockZ() >> 4;
             levelChunkPackets.sort(Comparator.comparingInt(task -> {
-                int dx = task.getX() - centerX;
-                int dz = task.getZ() - centerZ;
+                int dx = task.x() - centerX;
+                int dz = task.z() - centerZ;
                 return dx*dx + dz*dz;
             }));
 

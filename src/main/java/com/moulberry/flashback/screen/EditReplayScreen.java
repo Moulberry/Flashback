@@ -1,10 +1,8 @@
 package com.moulberry.flashback.screen;
 
-import com.google.gson.JsonObject;
 import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.FlashbackGson;
 import com.moulberry.flashback.FlashbackTextComponents;
-import com.moulberry.flashback.exporting.AsyncFileDialogs;
 import com.moulberry.flashback.record.FlashbackMeta;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.Button;
@@ -13,7 +11,6 @@ import net.minecraft.client.gui.components.StringWidget;
 import net.minecraft.client.gui.layouts.FrameLayout;
 import net.minecraft.client.gui.layouts.GridLayout;
 import net.minecraft.client.gui.screens.AlertScreen;
-import net.minecraft.client.gui.screens.ConfirmScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
@@ -25,7 +22,6 @@ import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Objects;
-import java.util.concurrent.CompletableFuture;
 
 public class EditReplayScreen extends Screen {
 

@@ -1,9 +1,9 @@
 package com.moulberry.flashback.exporting;
 
-import com.mojang.blaze3d.buffers.GpuBuffer;
 import com.mojang.blaze3d.buffers.Std140Builder;
 import com.mojang.blaze3d.buffers.Std140SizeCalculator;
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.renderpearl.api.buffers.GpuBuffer;
 import org.joml.Matrix4fc;
 import org.lwjgl.system.MemoryStack;
 

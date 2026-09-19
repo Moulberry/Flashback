@@ -1,7 +1,5 @@
 package com.moulberry.flashback.visuals;
 
-import com.mojang.blaze3d.PrimitiveTopology;
-import com.mojang.blaze3d.buffers.GpuBuffer;
 import com.mojang.blaze3d.platform.Window;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.BufferBuilder;
@@ -9,7 +7,9 @@ import com.mojang.blaze3d.vertex.ByteBufferBuilder;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.MeshData;
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.VertexFormat;
+import com.mojang.renderpearl.api.buffers.GpuBuffer;
+import com.mojang.renderpearl.api.commands.RenderPass;
+import com.mojang.renderpearl.api.pipeline.PrimitiveTopology;
 import com.moulberry.flashback.Utils;
 import com.moulberry.flashback.combo_options.Sizing;
 import com.moulberry.flashback.editor.ui.windows.TimelineWindow;
@@ -28,6 +28,9 @@ import net.minecraft.world.phys.Vec3;
 import org.joml.Quaterniond;
 import org.joml.Quaternionf;
 import org.joml.Vector3d;
+
+import java.util.Objects;
+import java.util.Optional;
 
 public class CameraPath {
 
@@ -113,9 +116,15 @@ public class CameraPath {
                     renderCamera(bufferBuilder, handler.position.sub(basePosition, new Vector3d()), handler.angle, fovHandler.fov,
                         getCameraColour(false, true), 1.0f);
 
-                    try (FlashbackDrawBuffer drawBuffer = new FlashbackDrawBuffer(GpuBuffer.USAGE_MAP_WRITE)) {
-                        drawBuffer.upload(bufferBuilder.buildOrThrow());
-                        drawBuffer.drawRenderType(RenderTypes.LINES.prepare());
+                    try (RenderPass renderPass = RenderSystem.getDevice().createCommandEncoder().createRenderPass(
+                        () -> "flashback camera path lines",
+                        Objects.requireNonNull(Minecraft.getInstance().gameRenderer.mainRenderTarget().getColorTextureView()),
+                        Optional.empty())
+                    ) {
+                        try (FlashbackDrawBuffer drawBuffer = new FlashbackDrawBuffer(GpuBuffer.USAGE_MAP_WRITE)) {
+                            drawBuffer.upload(bufferBuilder.buildOrThrow());
+                            drawBuffer.drawRenderType(RenderTypes.LINES.prepare(), renderPass);
+                        }
                     }
                 }
             }
@@ -267,7 +276,7 @@ public class CameraPath {
     private static void renderCamera(BufferBuilder bufferBuilder, Vector3d position, Quaterniond angle, float fov, int rgb, float opacity) {
         cameraPoseStack.pushPose();
         cameraPoseStack.translate(position.x, position.y, position.z);
-        cameraPoseStack.mulPose(new Quaternionf(angle));
+        cameraPoseStack.last().rotate(new Quaternionf(angle));
 
         PoseStack.Pose pose = cameraPoseStack.last();
 

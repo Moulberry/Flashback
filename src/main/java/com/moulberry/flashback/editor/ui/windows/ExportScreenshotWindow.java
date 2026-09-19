@@ -7,11 +7,11 @@ import com.moulberry.flashback.combo_options.VideoCodec;
 import com.moulberry.flashback.combo_options.VideoContainer;
 import com.moulberry.flashback.configuration.FlashbackConfigV1;
 import com.moulberry.flashback.editor.ui.ImGuiHelper;
-import com.moulberry.flashback.exporting.AsyncFileDialogs;
 import com.moulberry.flashback.exporting.ExportJob;
 import com.moulberry.flashback.exporting.ExportSettings;
 import com.moulberry.flashback.state.EditorState;
 import com.moulberry.flashback.state.EditorStateManager;
+import com.moulberry.flashback.utils.AsyncFileDialogs;
 import imgui.moulberry90.ImGui;
 import imgui.moulberry90.flag.ImGuiWindowFlags;
 import net.minecraft.client.Minecraft;
@@ -88,7 +88,7 @@ public class ExportScreenshotWindow {
                 }
             }
 
-            boolean isFullscreen = Minecraft.getInstance().getWindow().isFullscreen();
+            boolean isFullscreen = Minecraft.getInstance().getWindow().isExclusiveFullscreen();
             if (isFullscreen) {
                 ImGui.separator();
                 ImGui.textWrapped(I18n.get("flashback.export_disable_fullscreen"));

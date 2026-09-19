@@ -13,6 +13,7 @@ import net.minecraft.server.level.ServerEntity;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.UpdateInterval;
 import org.jspecify.annotations.Nullable;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -35,9 +36,12 @@ public class MixinServerEntity {
     @Shadow public Entity entity;
 
     @ModifyVariable(method = "<init>", at = @At("HEAD"), argsOnly = true)
-    private static int init_modifyUpdateInterval(int updateInterval, @Local(argsOnly = true) ServerLevel level) {
-        if (updateInterval < 20 && level != null && level.getServer() instanceof ReplayServer) {
-            return 1;
+    private static UpdateInterval init_modifyUpdateInterval(UpdateInterval updateInterval, @Local(argsOnly = true) ServerLevel level) {
+        if (level != null && level.getServer() instanceof ReplayServer) {
+            int rate = updateInterval.nextInterval(0);
+            if (rate > 1 && rate < 20) {
+                return UpdateInterval.periodic(1);
+            }
         }
         return updateInterval;
     }

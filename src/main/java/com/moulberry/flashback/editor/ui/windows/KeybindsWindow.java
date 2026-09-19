@@ -8,6 +8,7 @@ import com.moulberry.flashback.editor.ui.ImGuiHelper;
 import com.moulberry.flashback.editor.ui.ReplayUI;
 import com.moulberry.flashback.state.EditorState;
 import com.moulberry.flashback.state.EditorStateManager;
+import com.moulberry.flashback.utils.InputHelper;
 import imgui.moulberry90.ImGui;
 import imgui.moulberry90.ImGuiListClipper;
 import imgui.moulberry90.ImGuiViewport;
@@ -21,15 +22,7 @@ import imgui.moulberry90.type.ImString;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.input.InputQuirks;
 import net.minecraft.client.resources.language.I18n;
-import net.minecraft.core.particles.ParticleType;
-import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.Identifier;
-import net.minecraft.world.entity.EntityType;
-import org.lwjgl.glfw.GLFW;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
 import java.util.Set;
 
 public class KeybindsWindow {
@@ -108,11 +101,10 @@ public class KeybindsWindow {
                     ImGui.button(longKeyIdent+"##KeybindPreview", -1, 0);
                     if (keybind.isForceScrollKey()) {
                         if (ImGui.isItemClicked()) {
-                            long window = ImGui.getWindowViewport().getPlatformHandle();
-                            boolean shiftDown = Keybind.isShiftDownGLFW(window);
-                            boolean ctrlDown = Keybind.isCtrlDownGLFW(window);
-                            boolean altDown = Keybind.isAltDownGLFW(window);
-                            boolean superDown = Keybind.isSuperDownGLFW(window);
+                            boolean shiftDown = InputHelper.isShiftDownRaw();
+                            boolean ctrlDown = InputHelper.isCtrlDownRaw();
+                            boolean altDown = InputHelper.isAltDownRaw();
+                            boolean superDown = InputHelper.isSuperDownRaw();
 
                             keybind.set(Keybind.FAKE_SCROLL_KEY, shiftDown,
                                 InputQuirks.REPLACE_CTRL_KEY_WITH_CMD_KEY ? superDown : ctrlDown,
@@ -122,11 +114,10 @@ public class KeybindsWindow {
                     } else if (ImGui.isItemHovered()) {
                         for (int i = 0; i < ImGuiMouseButton.COUNT; i++) {
                             if (ImGui.isMouseClicked(i)) {
-                                long window = ImGui.getWindowViewport().getPlatformHandle();
-                                boolean shiftDown = Keybind.isShiftDownGLFW(window);
-                                boolean ctrlDown = Keybind.isCtrlDownGLFW(window);
-                                boolean altDown = Keybind.isAltDownGLFW(window);
-                                boolean superDown = Keybind.isSuperDownGLFW(window);
+                                boolean shiftDown = InputHelper.isShiftDownRaw();
+                                boolean ctrlDown = InputHelper.isCtrlDownRaw();
+                                boolean altDown = InputHelper.isAltDownRaw();
+                                boolean superDown = InputHelper.isSuperDownRaw();
 
                                 keybind.set(-i-1, shiftDown,
                                     InputQuirks.REPLACE_CTRL_KEY_WITH_CMD_KEY ? superDown : ctrlDown,

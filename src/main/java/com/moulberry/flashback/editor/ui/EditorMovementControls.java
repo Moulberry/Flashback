@@ -1,6 +1,7 @@
 package com.moulberry.flashback.editor.ui;
 
 import imgui.moulberry90.ImGui;
+import imgui.moulberry90.flag.ImGuiMouseButton;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.util.Mth;
@@ -8,7 +9,6 @@ import net.minecraft.world.phys.Vec2;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Intersectionf;
 import org.joml.Vector3f;
-import org.lwjgl.glfw.GLFW;
 
 public abstract sealed class EditorMovementControls permits EditorMovementControls.None, EditorMovementControls.Rotate, EditorMovementControls.Pan, EditorMovementControls.Arcball {
 
@@ -31,38 +31,6 @@ public abstract sealed class EditorMovementControls permits EditorMovementContro
             Minecraft.getInstance().player.getYRot()
         ));
     }
-
-//    public static EditorMovementControls pan() {
-//        LocalPlayer player = Minecraft.getInstance().player;
-//        if (player == null) return None.INSTANCE;
-//
-//        RayCaster.RaycastResult result = Tool.raycastBlock();
-//        if (result == null) return None.INSTANCE;
-//
-//        Vec3 planePoint = result.getLocation();
-//        return new Pan(player.position(), planePoint.toVector3f(), player.getLookAngle().toVector3f().negate());
-//    }
-
-//    public static EditorMovementControls arcball() {
-//        LocalPlayer player = Minecraft.getInstance().player;
-//        if (player == null) return None.INSTANCE;
-//
-//        var look = ReplayUI.getMouseLookVector();
-//        if (look == null) return None.INSTANCE;
-//
-//        RayCaster.RaycastResult result = RayCaster.raycast(Minecraft.getInstance().level,
-//            player.getEyePosition().toVector3f(), look.toVector3f(), false, false);
-//
-//        Vec3 point;
-//        if (result != null) {
-//            point = result.getLocation();
-//        } else {
-//            return None.INSTANCE;
-//        }
-//
-//        float distance = (float) point.distanceTo(player.getEyePosition());
-//        return new Arcball(point, distance, true);
-//    }
 
     // Implementations
     protected static final class None extends EditorMovementControls {
@@ -99,7 +67,7 @@ public abstract sealed class EditorMovementControls permits EditorMovementContro
 
         @Override
         public boolean shouldStop(boolean isGrabbed) {
-            return !ImGui.isMouseDown(GLFW.GLFW_MOUSE_BUTTON_LEFT);
+            return !ImGui.isMouseDown(ImGuiMouseButton.Left);
         }
 
         @Override
@@ -161,8 +129,7 @@ public abstract sealed class EditorMovementControls permits EditorMovementContro
 
         @Override
         public boolean shouldStop(boolean isGrabbed) {
-            return !ImGui.isMouseDown(GLFW.GLFW_MOUSE_BUTTON_RIGHT);
-//            return !Keybinds.PAN_CAMERA.isDownIgnoreMods();
+            return !ImGui.isMouseDown(ImGuiMouseButton.Right);
         }
 
         @Override

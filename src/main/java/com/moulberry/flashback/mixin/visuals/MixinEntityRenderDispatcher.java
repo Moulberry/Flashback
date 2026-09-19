@@ -1,5 +1,6 @@
 package com.moulberry.flashback.mixin.visuals;
 
+import com.llamalad7.mixinextras.sugar.Local;
 import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.state.EditorState;
 import com.moulberry.flashback.state.EditorStateManager;
@@ -16,7 +17,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 public abstract class MixinEntityRenderDispatcher {
 
     @Inject(method = "shouldRender", at = @At("HEAD"), cancellable = true)
-    public void shouldRender(Entity entity, Frustum frustum, double d, double e, double f, CallbackInfoReturnable<Boolean> cir) {
+    public void shouldRender(CallbackInfoReturnable<Boolean> cir, @Local(argsOnly = true) Entity entity) {
         EditorState editorState = EditorStateManager.getCurrent();
         if (editorState != null) {
             if (!editorState.filteredEntities.isEmpty()) {
