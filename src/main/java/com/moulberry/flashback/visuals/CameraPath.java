@@ -31,6 +31,7 @@ import org.joml.Vector3d;
 
 import java.util.Objects;
 import java.util.Optional;
+import java.util.OptionalDouble;
 
 public class CameraPath {
 
@@ -116,10 +117,11 @@ public class CameraPath {
                     renderCamera(bufferBuilder, handler.position.sub(basePosition, new Vector3d()), handler.angle, fovHandler.fov,
                         getCameraColour(false, true), 1.0f);
 
+                    var mainTarget = Minecraft.getInstance().gameRenderer.mainRenderTarget();
                     try (RenderPass renderPass = RenderSystem.getDevice().createCommandEncoder().createRenderPass(
                         () -> "flashback camera path lines",
-                        Objects.requireNonNull(Minecraft.getInstance().gameRenderer.mainRenderTarget().getColorTextureView()),
-                        Optional.empty())
+                        Objects.requireNonNull(mainTarget.getColorTextureView()), Optional.empty(),
+                        Objects.requireNonNull(mainTarget.getDepthTextureView()), OptionalDouble.empty())
                     ) {
                         try (FlashbackDrawBuffer drawBuffer = new FlashbackDrawBuffer(GpuBuffer.USAGE_MAP_WRITE)) {
                             drawBuffer.upload(bufferBuilder.buildOrThrow());

@@ -33,6 +33,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.OptionalDouble;
 
 public class WorldRenderHook {
 
@@ -57,10 +58,11 @@ public class WorldRenderHook {
 
         FlashbackMeta meta = replayServer.getMetadata();
         if (!meta.replayMarkers.isEmpty()) {
+            var mainTarget = Minecraft.getInstance().gameRenderer.mainRenderTarget();
             try (RenderPass renderPass = RenderSystem.getDevice().createCommandEncoder().createRenderPass(
                 () -> "flashback replay markers",
-                Objects.requireNonNull(Minecraft.getInstance().gameRenderer.mainRenderTarget().getColorTextureView()),
-                Optional.empty())
+                Objects.requireNonNull(mainTarget.getColorTextureView()), Optional.empty(),
+                Objects.requireNonNull(mainTarget.getDepthTextureView()), OptionalDouble.empty())
             ) {
                 try (ByteBufferBuilder byteBufferBuilder = new ByteBufferBuilder(256)) {
                     BufferBuilder circleBufferBuilder = new BufferBuilder(byteBufferBuilder, PrimitiveTopology.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);

@@ -6,6 +6,7 @@
   "client": [
     "MixinDebugScreenEntryList",
     "MixinDebugScreenOverlay",
+    "MixinGlCommandEncoder",
     "MixinLanguageManager",
     "MixinLevelExtractor",
     "MixinLevelRenderer",

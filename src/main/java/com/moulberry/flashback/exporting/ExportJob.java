@@ -1120,8 +1120,8 @@ public class ExportJob {
                         PreparedRenderType prepared = renderType.prepare();
                         try (RenderPass renderPass = RenderSystem.getDevice().createCommandEncoder().createRenderPass(
                             () -> "flashback export overlay",
-                            Objects.requireNonNull(displayTarget.getColorTextureView()),
-                            Optional.empty())
+                            Objects.requireNonNull(displayTarget.getColorTextureView()), Optional.empty(),
+                            Objects.requireNonNull(displayTarget.getDepthTextureView()), OptionalDouble.empty())
                         ) {
                             drawBuffer.drawRenderType(prepared, renderPass);
                         }
@@ -1134,8 +1134,15 @@ public class ExportJob {
             var windowSurface = Minecraft.getInstance().windowSurface();
 
             try {
-                GpuSurface.Configuration config = new GpuSurface.Configuration(windowFramebufferWidth, windowFramebufferHeight, GpuSurface.PresentMode.FIFO);
-                windowSurface.configure(config);
+                boolean needsReconfigure = true;
+                var currentConfig = windowSurface.currentConfiguration().orElse(null);
+                if (currentConfig != null) {
+                    needsReconfigure = currentConfig.width() != windowFramebufferWidth || currentConfig.height() != windowFramebufferHeight;
+                }
+                if (needsReconfigure || windowSurface.isSuboptimal()) {
+                    GpuSurface.Configuration config = new GpuSurface.Configuration(windowFramebufferWidth, windowFramebufferHeight, GpuSurface.PresentMode.FIFO);
+                    windowSurface.configure(config);
+                }
                 windowSurface.acquireNextTexture();
             } catch (SurfaceException ignored) {}
 
