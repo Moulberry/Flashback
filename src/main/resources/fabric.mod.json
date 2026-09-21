@@ -36,7 +36,7 @@
 		"flashback.mixins.json"
 	],
     "breaks": {
-        "voicechat": "<2.6.23"
+        "voicechat_api": "<2.6.24"
     },
 	"depends": {
 		"fabricloader": ">=0.15.10",
