@@ -4,6 +4,7 @@ import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.packet.FlashbackVoiceChatSound;
 import de.maxhenkel.voicechat.api.events.ClientReceiveSoundEvent;
 import de.maxhenkel.voicechat.api.events.ClientSoundEvent;
+import de.maxhenkel.voicechat.api.internal.VoicechatClientApiExtension;
 import de.maxhenkel.voicechat.voice.client.ClientManager;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.phys.Vec3;
@@ -49,7 +50,7 @@ public class SimpleVoiceChatRecorder {
             return;
         }
 
-        UUID id = ClientManager.getPlayerStateManager().getOwnID();
+        UUID id = ((VoicechatClientApiExtension) SimpleVoiceChatPlugin.CLIENT_API).getOwnId();
 
         FlashbackVoiceChatSound soundPacket;
         if (SimpleVoiceChatPlugin.CLIENT_API.getGroup() != null) {
