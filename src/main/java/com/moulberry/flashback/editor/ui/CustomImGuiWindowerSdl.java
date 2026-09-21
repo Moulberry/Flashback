@@ -1,5 +1,6 @@
 package com.moulberry.flashback.editor.ui;
 
+import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.editor.keybinds.Keybind;
 import com.moulberry.flashback.editor.keybinds.Keybinds;
 import com.moulberry.flashback.utils.AsyncFileDialogs;
@@ -237,6 +238,14 @@ public class CustomImGuiWindowerSdl implements CustomImGuiWindower {
                 boolean pressed = event.type() == SDLEvents.SDL_EVENT_MOUSE_BUTTON_DOWN;
 
                 if (!ReplayUI.isActive()) {
+                    // Don't allow mouse presses during export
+                    if (Flashback.isExporting()) {
+                        if (!pressed) {
+                            this.mouseButtonsDownGame &= ~(1 << imguiButton);
+                        }
+                        return true;
+                    }
+
                     if (pressed) {
                         this.mouseButtonsDownGame |= 1 << imguiButton;
                     } else {
@@ -315,6 +324,14 @@ public class CustomImGuiWindowerSdl implements CustomImGuiWindower {
                         if (imguiKey != ImGuiKey.None) {
                             io.addKeyEvent(imguiKey, false);
                         }
+                    }
+
+                    // Don't allow key presses during export
+                    if (Flashback.isExporting()) {
+                        if (!pressed) {
+                            this.gamePressedScancodes.remove(rawScancode);
+                        }
+                        return true;
                     }
 
                     if (pressed) {
