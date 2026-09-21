@@ -1,7 +1,6 @@
 package com.moulberry.flashback.editor.ui.windows;
 
 import com.mojang.blaze3d.platform.NativeImage;
-import com.moulberry.flashback.MedalTvUploading;
 import com.moulberry.flashback.Utils;
 import com.moulberry.flashback.editor.ui.ImGuiHelper;
 import com.moulberry.flashback.exporting.ExportSettings;
@@ -18,7 +17,6 @@ import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.client.resources.language.I18n;
 import org.jetbrains.annotations.Nullable;
 
-import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -36,10 +34,6 @@ public class ExportDoneWindow {
         private final long fileSize;
         private final boolean outputIsFolder;
         private DynamicTexture uploaded = null;
-        private MedalTvUploading.UploadStatus completedUpload = null;
-
-        private boolean checkedCanUpload = false;
-        private @Nullable MedalTvUploading.CannotUploadReason cannotUploadReason = null;
 
         public FinishedExportEntry(ExportSettings settings, Path outputLocation, boolean errorMovingToOutput, @Nullable NativeImage thumbnail, double duration, long fileSize) {
             this.settings = settings;
@@ -63,7 +57,6 @@ public class ExportDoneWindow {
     }
 
     private static final List<FinishedExportEntry> entries = new ArrayList<>();
-    private static @Nullable MedalTvUploading.UploadStatus inProgressUpload = null;
 
     public static void addFinishedExportEntry(FinishedExportEntry entry) {
         entries.add(entry);
@@ -76,8 +69,6 @@ public class ExportDoneWindow {
     public static void render() {
         if (!entries.isEmpty()) {
             renderFinishedExports();
-        } else {
-            renderInProgressUpload();
         }
     }
 
@@ -172,44 +163,6 @@ public class ExportDoneWindow {
                     }
                 }
 
-                if (!entry.checkedCanUpload) {
-                    entry.checkedCanUpload = true;
-                    entry.cannotUploadReason = MedalTvUploading.checkCanUpload(entry.settings);
-                }
-
-                if (entry.cannotUploadReason != MedalTvUploading.CannotUploadReason.UNSUPPORTED_FORMAT) {
-                    String uploadAndCopyLink = I18n.get("flashback.export_done.upload_and_copy_link");
-                    if (entry.cannotUploadReason != null) {
-                        ImGui.beginDisabled();
-                        ImGui.button(uploadAndCopyLink);
-                        ImGui.endDisabled();
-
-                        switch (entry.cannotUploadReason) {
-                            case UNSUPPORTED_FORMAT -> throw new UnsupportedOperationException();
-                            case FILE_MISSING -> {
-                                ImGuiHelper.tooltip("Cannot upload: file is missing", ImGuiHoveredFlags.AllowWhenDisabled);
-                            }
-                            case ERROR_CHECKING_FILE -> {
-                                ImGuiHelper.tooltip("Cannot upload: error while checking file", ImGuiHoveredFlags.AllowWhenDisabled);
-                            }
-                            case OVER_2GB -> {
-                                ImGuiHelper.tooltip("Cannot upload: file is over 2gb limit", ImGuiHoveredFlags.AllowWhenDisabled);
-                            }
-                        }
-                    } else {
-                        if (ImGui.button(uploadAndCopyLink)) {
-                            entry.cannotUploadReason = MedalTvUploading.checkCanUpload(entry.settings);
-                            if (entry.cannotUploadReason == null) {
-                                if (entry.completedUpload == null || entry.completedUpload.shouldCancel) {
-                                    entry.completedUpload = MedalTvUploading.upload(entry.settings);
-                                }
-                                inProgressUpload = entry.completedUpload;
-                            }
-                        }
-                        ImGuiHelper.tooltip("Upload the clip to medal.tv and generate a link to view it");
-                    }
-                }
-
                 ImGui.endGroup();
 
                 ImGui.endGroup();
@@ -217,100 +170,13 @@ public class ExportDoneWindow {
                 ImGui.popID();
             }
 
-            renderInProgressUpload();
-
             ImGui.endPopup();
         }
 
-        if (!open.get() && inProgressUpload == null) {
+        if (!open.get()) {
             entries.clear();
         }
     }
-
-    public static void renderInProgressUpload() {
-        if (inProgressUpload == null) {
-            return;
-        }
-
-        int flags = ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoDocking | ImGuiWindowFlags.NoSavedSettings;
-
-        ImGui.openPopup("###UploadingToMedal");
-        if (ImGui.beginPopupModal("Uploading clip###UploadingToMedal", flags)) {
-            boolean hasError = false;
-
-            boolean finished = inProgressUpload.finished;
-            int progressPercentage = inProgressUpload.progressPercentage;
-
-            ImVec2 cursor = ImGui.getCursorScreenPos();
-            ImGui.dummy(500, 20);
-            ImGui.getForegroundDrawList().addRectFilled(cursor.x, cursor.y, cursor.x+500, cursor.y+20, 0xFF000000);
-            ImGui.getForegroundDrawList().addRectFilled(cursor.x, cursor.y, cursor.x+progressPercentage*5, cursor.y+20, 0xFFF4A903);
-
-            String errorMessage = inProgressUpload.errorMessage;
-            if (errorMessage != null) {
-                ImGui.dummy(0, 10);
-                ImGui.textColored(0xFF0000FF, errorMessage);
-                hasError = true;
-            }
-
-            Throwable throwable = inProgressUpload.throwable;
-            if (throwable != null) {
-                ImGui.dummy(0, 10);
-                ImGui.textColored(0xFF0000FF, throwable.toString());
-                hasError = true;
-            }
-
-            if (!hasError && progressPercentage >= 100) {
-                ImGui.dummy(0, 10);
-
-                URI shareUrl = inProgressUpload.shareUrl;
-                String shareUrlStr = shareUrl.toString();
-
-                ImGui.text("Video is unlisted and expires after 14 days");
-
-                ImGui.text("Share Link:");
-                ImGui.sameLine();
-                ImGui.textColored(0xFFF4A903, shareUrlStr);
-                if (ImGui.isItemClicked()) {
-                    try {
-                        Util.getPlatform().openUri(shareUrl);
-                    } catch (Exception ignored) {}
-                }
-                String clipboard = Minecraft.getInstance().keyboardHandler.getClipboard();
-                if (clipboard.equals(shareUrlStr)) {
-                    ImGui.button("Copied!");
-                } else if (ImGui.button("Copy to Clipboard")) {
-                    Minecraft.getInstance().keyboardHandler.setClipboard(shareUrlStr);
-                }
-            }
-
-            ImGui.dummy(0, 10);
-
-            if (!hasError) {
-                if (!finished) ImGui.beginDisabled();
-                if (ImGui.button("Done") && finished) {
-                    inProgressUpload = null;
-                    ImGui.closeCurrentPopup();
-                }
-                if (!finished) ImGui.endDisabled();
-
-            }
-
-            if (hasError || (!finished && Math.abs(inProgressUpload.startTime - System.currentTimeMillis()) > 5000)) {
-                if (!hasError) {
-                    ImGui.sameLine();
-                }
-                if (ImGui.button("Cancel")) {
-                    inProgressUpload.shouldCancel = true;
-                    inProgressUpload = null;
-                    ImGui.closeCurrentPopup();
-                }
-            }
-
-            ImGui.endPopup();
-        }
-    }
-
 
     private static void clear() {
         for (FinishedExportEntry entry : entries) {
