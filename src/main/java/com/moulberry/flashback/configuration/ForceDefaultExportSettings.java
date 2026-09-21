@@ -16,7 +16,7 @@ public class ForceDefaultExportSettings {
 
     public VideoContainer container = null;
     public VideoCodec videoCodec = null;
-    public int[] selectedVideoEncoder = null;
+    public String selectedVideoEncoder = null;
     public Boolean useMaximumBitrate = null;
 
     public Boolean recordAudio = null;
@@ -49,7 +49,7 @@ public class ForceDefaultExportSettings {
             config.videoCodec = this.videoCodec;
         }
         if (this.selectedVideoEncoder != null) {
-            config.selectedVideoEncoder =  Arrays.copyOf(this.selectedVideoEncoder, 1);
+            config.selectedVideoEncoder = this.selectedVideoEncoder;
         }
         if (this.useMaximumBitrate != null) {
             config.useMaximumBitrate = this.useMaximumBitrate;
