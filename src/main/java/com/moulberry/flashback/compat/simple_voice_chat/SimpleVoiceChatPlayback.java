@@ -11,6 +11,7 @@ import de.maxhenkel.voicechat.api.Position;
 import de.maxhenkel.voicechat.api.audiochannel.ClientEntityAudioChannel;
 import de.maxhenkel.voicechat.api.audiochannel.ClientLocationalAudioChannel;
 import de.maxhenkel.voicechat.api.audiochannel.ClientStaticAudioChannel;
+import de.maxhenkel.voicechat.api.internal.VoicechatClientApiExtension;
 import de.maxhenkel.voicechat.voice.client.ClientManager;
 import de.maxhenkel.voicechat.voice.client.ClientVoicechat;
 import net.minecraft.world.phys.Vec3;
@@ -64,10 +65,7 @@ public class SimpleVoiceChatPlayback {
                 }
             }
 
-            ClientVoicechat client = ClientManager.getClient();
-            if (client != null) {
-                client.getTalkCache().updateLevel(sound.source(), null, whispering, sound.samples());
-            }
+            ((VoicechatClientApiExtension) SimpleVoiceChatPlugin.CLIENT_API).updateAudioLevel(sound.source(), null, whispering, sound.samples());
         } catch (Exception | NoSuchMethodError e) {
             ReplayUI.setInfoOverlay("Error while playing Simple Voice Chat audio. Ensure that both Simple Voice Chat and Flashback are up-to-date");
 
