@@ -57,6 +57,8 @@ dependencies {
 
     // Login in dev environment
     runtimeOnly("me.djtheredstoner:DevAuth-fabric:1.1.2")
+    runtimeOnly("org.apache.httpcomponents:httpclient:4.5.14")
+    runtimeOnly("org.apache.httpcomponents:httpcore:4.4.16")
 
     // MixinConstraints
     include(implementation("com.moulberry:mixinconstraints:1.0.8"))

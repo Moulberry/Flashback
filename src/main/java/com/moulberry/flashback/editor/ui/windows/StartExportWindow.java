@@ -87,9 +87,6 @@ public class StartExportWindow {
             if (config.internalExport.framerate == null || config.internalExport.framerate.length != 1) {
                 config.internalExport.framerate = new float[]{60};
             }
-            if (config.internalExport.selectedVideoEncoder == null || config.internalExport.selectedVideoEncoder.length != 1) {
-                config.internalExport.selectedVideoEncoder = new int[]{0};
-            }
             if (config.internalExport.audioCodec == null) {
                 config.internalExport.audioCodec = AudioCodec.AAC;
             }
@@ -352,13 +349,26 @@ public class StartExportWindow {
             VideoCodec newCodec = ImGuiHelper.enumCombo(I18n.get("flashback.codec"), config.internalExport.videoCodec, codecs);
             if (newCodec != config.internalExport.videoCodec) {
                 config.internalExport.videoCodec = newCodec;
-                config.internalExport.selectedVideoEncoder[0] = 0;
+                config.internalExport.selectedVideoEncoder = null;
             }
         }
 
         String[] encoders = config.internalExport.videoCodec.getEncoders();
         if (encoders.length > 1) {
-            ImGuiHelper.combo(I18n.get("flashback.encoder"), config.internalExport.selectedVideoEncoder, encoders);
+            int encoderIndex = 0;
+            for (int i = 0; i < encoders.length; i++) {
+                String encoder = encoders[i];
+                if (encoder.equals(config.internalExport.selectedVideoEncoder)) {
+                    encoderIndex = i;
+                    break;
+                }
+            }
+            int[] encoderIndexArray = new int[]{encoderIndex};
+            ImGuiHelper.combo(I18n.get("flashback.encoder"), encoderIndexArray, encoders);
+            if (encoderIndexArray[0] != encoderIndex) {
+                config.internalExport.selectedVideoEncoder = encoders[encoderIndexArray[0]];
+            }
+
         }
 
         if (config.internalExport.videoCodec != VideoCodec.GIF) {
@@ -437,7 +447,7 @@ public class StartExportWindow {
                 if (useVideoCodec == null || !Arrays.asList(codecs).contains(useVideoCodec)) {
                     useVideoCodec = codecs[0];
                 }
-                String encoder = useVideoCodec.getEncoders()[config.internalExport.selectedVideoEncoder[0]];
+                String encoder = getSelectedEncoderForCodec(config, useVideoCodec);
 
                 AudioCodec useAudioCodec = config.internalExport.audioCodec;
                 if (!config.internalExport.recordAudio || config.internalExport.container.getSupportedAudioCodecs().length == 0) {
@@ -467,6 +477,29 @@ public class StartExportWindow {
                 config.internalExport.container.extension(), config.internalExport.container.extension()).thenApply(callback);
         }
 
+    }
+
+    private static String getSelectedEncoderForCodec(FlashbackConfigV1 config, VideoCodec useVideoCodec) {
+        String[] validEncoders = useVideoCodec.getEncoders();
+        if (validEncoders == null || validEncoders.length == 0) {
+            return null;
+        }
+
+        String encoder = config.internalExport.selectedVideoEncoder;
+        boolean isValidEncoder = false;
+        for (String validEncoder : validEncoders) {
+            if (validEncoder.equals(encoder)) {
+                isValidEncoder = true;
+                break;
+            }
+        }
+        if (!isValidEncoder) {
+            encoder = null;
+        }
+        if (encoder == null) {
+            encoder = validEncoders[0];
+        }
+        return encoder;
     }
 
     public static @NotNull String getDefaultFilename(@Nullable String name, String extension, FlashbackConfigV1 config) {
