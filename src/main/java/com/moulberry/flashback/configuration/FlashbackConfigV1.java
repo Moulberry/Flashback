@@ -326,7 +326,7 @@ public class FlashbackConfigV1 {
 
         public VideoContainer container = null;
         public VideoCodec videoCodec = null;
-        public int[] selectedVideoEncoder = new int[]{0};
+        public String selectedVideoEncoder = null;
         public boolean useMaximumBitrate = false;
 
         public boolean recordAudio = false;
