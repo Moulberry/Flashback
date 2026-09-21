@@ -53,6 +53,7 @@ public class AsyncFileDialogs {
         String defaultLocation = filter(defaultPath + "/" + defaultName);
 
         var fileFilter = createFilterBuffer(filterDescription, filters);
+        String autoExtension = filters.length == 1 ? filters[0] : null;
 
         long window = Minecraft.getInstance().getWindow().handle();
         SDLDialog.SDL_ShowSaveFileDialog((userdata, filelist, selectedFilter) -> {
@@ -69,7 +70,11 @@ public class AsyncFileDialogs {
             }
 
             long filePtr = MemoryUtil.memGetAddress(filelist);
-            future.complete(MemoryUtil.memUTF8Safe(filePtr));
+            String result = MemoryUtil.memUTF8Safe(filePtr);
+            if (result != null && autoExtension != null && result.indexOf('.') < 0) {
+                result = result + "." + autoExtension;
+            }
+            future.complete(result);
         }, 0, window, fileFilter.buffer(), defaultLocation);
 
         return future;
