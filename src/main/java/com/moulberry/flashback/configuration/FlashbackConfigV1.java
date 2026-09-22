@@ -29,7 +29,6 @@ import com.moulberry.lattice.annotation.widget.LatticeWidgetSlider;
 import com.moulberry.lattice.annotation.widget.LatticeWidgetTextArea;
 import com.moulberry.lattice.annotation.widget.LatticeWidgetTextField;
 import net.fabricmc.loader.api.FabricLoader;
-import net.minecraft.ChatFormatting;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.network.chat.Component;
 
@@ -103,23 +102,13 @@ public class FlashbackConfigV1 {
         @LatticeWidgetButton
         public boolean syncLocalPlayerUpdatesToDisplayRefreshRate = false;
 
-        @LatticeWidgetMessage(maxRows = 1, centered = false)
-        @LatticeShowIf(function = "isDisplayRefreshRateSyncEnabled", frequency = LatticeDynamicFrequency.EVERY_TICK)
-        public transient Component localPlayerUpdatesPerSecondDisplay = updatesPerSecondMessage(20);
-
         public boolean isLocalPlayerUpdatesSliderVisible() {
             return !this.syncLocalPlayerUpdatesToDisplayRefreshRate;
         }
 
-        public boolean isDisplayRefreshRateSyncEnabled() {
-            return this.syncLocalPlayerUpdatesToDisplayRefreshRate;
-        }
-
         public void updateDisplayRefreshRate(int refreshRate) {
             if (this.syncLocalPlayerUpdatesToDisplayRefreshRate) {
-                int clampedRefreshRate = Math.max(20, refreshRate);
-                this.localPlayerUpdatesPerSecond = clampedRefreshRate;
-                this.localPlayerUpdatesPerSecondDisplay = updatesPerSecondMessage(clampedRefreshRate);
+                this.localPlayerUpdatesPerSecond = Math.max(20, refreshRate);
             }
         }
 
@@ -127,11 +116,6 @@ public class FlashbackConfigV1 {
             return this.syncLocalPlayerUpdatesToDisplayRefreshRate
                 ? Flashback.getDisplayRefreshRate()
                 : this.localPlayerUpdatesPerSecond;
-        }
-
-        private static Component updatesPerSecondMessage(int updatesPerSecond) {
-            return Component.translatable("flashback.option.per_second", updatesPerSecond)
-                .withStyle(ChatFormatting.GRAY);
         }
 
         @LatticeOption(title = "flashback.option.recording.record_voice_chat", description = "!!.description")
