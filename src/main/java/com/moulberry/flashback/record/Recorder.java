@@ -248,7 +248,7 @@ public class Recorder {
     private int trackAccuratePositionCounter = 10;
 
     public void trackPartialPosition(Entity entity, float partialTick) {
-        int localPlayerUpdatesPerSecond = Flashback.getConfig().recording.localPlayerUpdatesPerSecond;
+        int localPlayerUpdatesPerSecond = Flashback.getConfig().recording.getEffectiveLocalPlayerUpdatesPerSecond();
         if (localPlayerUpdatesPerSecond <= 20) {
             return;
         }
@@ -328,7 +328,7 @@ public class Recorder {
         boolean isLevelLoaded = !(Minecraft.getInstance().gui.screen() instanceof LevelLoadingScreen);
         boolean changedDimensions = false;
 
-        int localPlayerUpdatesPerSecond = Flashback.getConfig().recording.localPlayerUpdatesPerSecond;
+        int localPlayerUpdatesPerSecond = Flashback.getConfig().recording.getEffectiveLocalPlayerUpdatesPerSecond();
         boolean trackAccurateFirstPersonPosition = localPlayerUpdatesPerSecond > 20;
         boolean wroteNewTick = false;
 

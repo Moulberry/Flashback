@@ -29,6 +29,7 @@ import com.moulberry.lattice.annotation.widget.LatticeWidgetSlider;
 import com.moulberry.lattice.annotation.widget.LatticeWidgetTextArea;
 import com.moulberry.lattice.annotation.widget.LatticeWidgetTextField;
 import net.fabricmc.loader.api.FabricLoader;
+import net.minecraft.ChatFormatting;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.network.chat.Component;
 
@@ -95,7 +96,43 @@ public class FlashbackConfigV1 {
         @LatticeFormatValues(formattingString = "flashback.option.per_second", translate = true)
         @LatticeIntRange(min = 20, max = 120, step = 20, clampMin = 20, clampMax = 360, clampStep = 20)
         @LatticeWidgetSlider
+        @LatticeShowIf(function = "isLocalPlayerUpdatesSliderVisible", frequency = LatticeDynamicFrequency.EVERY_TICK)
         public int localPlayerUpdatesPerSecond = 20;
+
+        @LatticeOption(title = "flashback.option.recording.local_player_updates_lock", description = "!!.description")
+        @LatticeWidgetButton
+        public boolean syncLocalPlayerUpdatesToDisplayRefreshRate = false;
+
+        @LatticeWidgetMessage(maxRows = 1, centered = false)
+        @LatticeShowIf(function = "isDisplayRefreshRateSyncEnabled", frequency = LatticeDynamicFrequency.EVERY_TICK)
+        public transient Component localPlayerUpdatesPerSecondDisplay = updatesPerSecondMessage(20);
+
+        public boolean isLocalPlayerUpdatesSliderVisible() {
+            return !this.syncLocalPlayerUpdatesToDisplayRefreshRate;
+        }
+
+        public boolean isDisplayRefreshRateSyncEnabled() {
+            return this.syncLocalPlayerUpdatesToDisplayRefreshRate;
+        }
+
+        public void updateDisplayRefreshRate(int refreshRate) {
+            if (this.syncLocalPlayerUpdatesToDisplayRefreshRate) {
+                int clampedRefreshRate = Math.max(20, refreshRate);
+                this.localPlayerUpdatesPerSecond = clampedRefreshRate;
+                this.localPlayerUpdatesPerSecondDisplay = updatesPerSecondMessage(clampedRefreshRate);
+            }
+        }
+
+        public int getEffectiveLocalPlayerUpdatesPerSecond() {
+            return this.syncLocalPlayerUpdatesToDisplayRefreshRate
+                ? Flashback.getDisplayRefreshRate()
+                : this.localPlayerUpdatesPerSecond;
+        }
+
+        private static Component updatesPerSecondMessage(int updatesPerSecond) {
+            return Component.translatable("flashback.option.per_second", updatesPerSecond)
+                .withStyle(ChatFormatting.GRAY);
+        }
 
         @LatticeOption(title = "flashback.option.recording.record_voice_chat", description = "!!.description")
         @LatticeWidgetButton
