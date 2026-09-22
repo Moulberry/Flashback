@@ -95,7 +95,28 @@ public class FlashbackConfigV1 {
         @LatticeFormatValues(formattingString = "flashback.option.per_second", translate = true)
         @LatticeIntRange(min = 20, max = 120, step = 20, clampMin = 20, clampMax = 360, clampStep = 20)
         @LatticeWidgetSlider
+        @LatticeShowIf(function = "isLocalPlayerUpdatesSliderVisible", frequency = LatticeDynamicFrequency.EVERY_TICK)
         public int localPlayerUpdatesPerSecond = 20;
+
+        @LatticeOption(title = "flashback.option.recording.vsync", description = "!!.description")
+        @LatticeWidgetButton
+        public boolean syncLocalPlayerUpdatesToDisplayRefreshRate = false;
+
+        public boolean isLocalPlayerUpdatesSliderVisible() {
+            return !this.syncLocalPlayerUpdatesToDisplayRefreshRate;
+        }
+
+        public void updateDisplayRefreshRate(int refreshRate) {
+            if (this.syncLocalPlayerUpdatesToDisplayRefreshRate) {
+                this.localPlayerUpdatesPerSecond = Math.max(20, refreshRate);
+            }
+        }
+
+        public int getEffectiveLocalPlayerUpdatesPerSecond() {
+            return this.syncLocalPlayerUpdatesToDisplayRefreshRate
+                ? Flashback.getDisplayRefreshRate()
+                : this.localPlayerUpdatesPerSecond;
+        }
 
         @LatticeOption(title = "flashback.option.recording.record_voice_chat", description = "!!.description")
         @LatticeWidgetButton

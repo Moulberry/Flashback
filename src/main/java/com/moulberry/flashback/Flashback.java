@@ -150,6 +150,7 @@ public class Flashback implements ModInitializer, ClientModInitializer {
     private static FlashbackConfigV1 config;
     public static LatticeElements configElements = null;
     private static Path configDirectory = null;
+    private static volatile int displayRefreshRate = 60;
 
     private static int delayedStartRecording = 0;
     private static boolean delayedOpenConfig = false;
@@ -189,6 +190,19 @@ public class Flashback implements ModInitializer, ClientModInitializer {
 
     public static Path getReplayFolder() {
         return Flashback.getDataDirectory().resolve("replays");
+    }
+
+    public static int getDisplayRefreshRate() {
+        return displayRefreshRate;
+    }
+
+    private static int readDisplayRefreshRate(Minecraft minecraft) {
+        try {
+            return (int) minecraft.getWindow().getClass().getMethod("getRefreshRate").invoke(minecraft.getWindow());
+        } catch (ReflectiveOperationException e) {
+            LOGGER.debug("Unable to read display refresh rate", e);
+            return 60;
+        }
     }
 
     public static Path getConfigDirectory() {
@@ -531,6 +545,8 @@ public class Flashback implements ModInitializer, ClientModInitializer {
         AtomicBoolean synchronizeTickingCanTickServer = new AtomicBoolean(true);
 
         ClientTickEvents.END_CLIENT_TICK.register(minecraft -> {
+            displayRefreshRate = Math.max(20, readDisplayRefreshRate(minecraft));
+            config.recording.updateDisplayRefreshRate(displayRefreshRate);
             updateIsInReplay();
 
             AccurateEntityPositionHandler.tick();
