@@ -99,7 +99,7 @@ public class FlashbackConfigV1 {
         @LatticeShowIf(function = "isLocalPlayerUpdatesSliderVisible", frequency = LatticeDynamicFrequency.EVERY_TICK)
         public int localPlayerUpdatesPerSecond = 20;
 
-        @LatticeOption(title = "flashback.option.recording.local_player_updates_lock", description = "!!.description")
+        @LatticeOption(title = "flashback.option.recording.vsync", description = "!!.description")
         @LatticeWidgetButton
         public boolean syncLocalPlayerUpdatesToDisplayRefreshRate = false;
 
