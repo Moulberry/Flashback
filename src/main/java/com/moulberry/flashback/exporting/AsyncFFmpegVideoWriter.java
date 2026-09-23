@@ -157,7 +157,7 @@ public class AsyncFFmpegVideoWriter implements AutoCloseable, VideoWriter {
 
             if (settings.recordAudio()) {
                 recorder.setAudioCodec(settings.audioCodec().codecId());
-                recorder.setSampleFormat(avutil.AV_SAMPLE_FMT_FLTP);
+                recorder.setSampleFormat(settings.audioCodec().sampleFormat());
                 recorder.setSampleRate(48000);
                 recorder.setAudioBitrate(256000);
             }
