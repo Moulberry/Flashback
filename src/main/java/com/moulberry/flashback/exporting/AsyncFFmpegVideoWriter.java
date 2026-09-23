@@ -85,7 +85,32 @@ public class AsyncFFmpegVideoWriter implements AutoCloseable, VideoWriter {
 
             boolean wantTransparency = settings.transparent();
 
-            int dstPixelFormat = PixelFormatHelper.getBestPixelFormat(settings.encoder(), wantTransparency);
+            int dstPixelFormat;
+            int[] hdrPixelFormats = {
+                // libx265 / libsvtav1 report yuv420p10le while the NVENC encoders (hevc_nvenc / av1_nvenc)
+                // report p010le, so every 10-bit format has to be accepted or NVENC looks like 8-bit only.
+                avutil.AV_PIX_FMT_YUV420P10LE,
+                avutil.AV_PIX_FMT_P010LE,
+                avutil.AV_PIX_FMT_YUV420P12LE,
+            };
+            int hdrFormat = -1;
+            if (HdrExportBridge.active()) {
+                for (int candidate : hdrPixelFormats) {
+                    if (PixelFormatHelper.supportsPixelFormat(settings.encoder(), candidate)) {
+                        hdrFormat = candidate;
+                        break;
+                    }
+                }
+            }
+            if (hdrFormat >= 0) {
+                dstPixelFormat = hdrFormat;
+                Flashback.LOGGER.info("HDR export: using pixel format {} for encoder {}", PixelFormatHelper.pixelFormatToString(hdrFormat), settings.encoder());
+            } else {
+                if (HdrExportBridge.active()) {
+                    Flashback.LOGGER.warn("HDR export requested but encoder {} offers no 10-bit pixel format (tried yuv420p10le / p010le / yuv420p12le) - exporting 8-bit", settings.encoder());
+                }
+                dstPixelFormat = PixelFormatHelper.getBestPixelFormat(settings.encoder(), wantTransparency);
+            }
             Flashback.LOGGER.info("Encoding video with pixel format {}", PixelFormatHelper.pixelFormatToString(dstPixelFormat));
 
             int width = settings.resolutionX();
@@ -153,6 +178,16 @@ public class AsyncFFmpegVideoWriter implements AutoCloseable, VideoWriter {
             recorder.setFrameRate(fps);
             recorder.setPixelFormat(dstPixelFormat);
             recorder.setGopSize((int) Math.max(20, Math.min(240, Math.ceil(fps * 2))));
+
+            if (hdrFormat >= 0) {
+                // Colour metadata for the HDR stream: BT.2020 primaries, PQ (ST 2084) transfer, non-constant
+                // luminance matrix and full range. Passing them as codec options puts them on the stream
+                // before the muxer writes the header, so the file is tagged as HDR without any post-processing.
+                recorder.setVideoOption("color_primaries", "bt2020");
+                recorder.setVideoOption("color_trc", "smpte2084");
+                recorder.setVideoOption("colorspace", "bt2020nc");
+                recorder.setVideoOption("color_range", "pc");
+            }
 
             if (settings.recordAudio()) {
                 recorder.setAudioCodec(settings.audioCodec().codecId());
@@ -288,8 +323,9 @@ public class AsyncFFmpegVideoWriter implements AutoCloseable, VideoWriter {
                     }
 
                     if (useItu709Colorspace) {
-                        IntPointer coefficients = swscale.sws_getCoefficients(swscale.SWS_CS_ITU709);
-                        swscale.sws_setColorspaceDetails(img_convert_ctx, coefficients, 1, coefficients, 0, 0, 1 << 16, 1 << 16);
+                        boolean hdr = HdrExportBridge.active();
+                        IntPointer coefficients = swscale.sws_getCoefficients(hdr ? swscale.SWS_CS_BT2020 : swscale.SWS_CS_ITU709);
+                        swscale.sws_setColorspaceDetails(img_convert_ctx, coefficients, 1, coefficients, hdr ? 1 : 0, 0, 1 << 16, 1 << 16);
                     }
 
                     BytePointer data = new BytePointer() {{
@@ -370,6 +406,36 @@ public class AsyncFFmpegVideoWriter implements AutoCloseable, VideoWriter {
                 }
             }
             SneakyThrow.sneakyThrow(t);
+        }
+    }
+
+    /**
+     * HDR path: {@code pointer} is a malloc'd buffer of 16-bit normalised RGBA (PQ-encoded) pixels,
+     * width * height * 8 bytes. imageDepth 64 makes Flashback's own stride maths
+     * (bytes = stride * depth / 8) come out as width * 8, which is what swscale needs for RGBA64.
+     * Ownership of the buffer transfers to the encode pipeline (freed by ImageFrame.close()).
+     */
+    public void encodeHdr(long pointer, int width, int height, @Nullable FloatBuffer audioBuffer) {
+        if (pointer == 0L) {
+            return;
+        }
+        if (this.finishRescaleThread.get() || this.finishEncodeThread.get() || this.finishedWriting.get()) {
+            MemoryUtil.nmemFree(pointer);
+            throw new IllegalStateException("Cannot encode after finish()");
+        }
+
+        while (true) {
+            ImageFrame imageFrame = new ImageFrame(pointer, width * height * 8, width, height,
+                4, 64, width, avutil.AV_PIX_FMT_RGBA64LE, audioBuffer);
+            try {
+                if (this.rescaleQueue != null) {
+                    this.rescaleQueue.put(imageFrame);
+                } else {
+                    this.encodeQueue.put(imageFrame);
+                }
+                break;
+            } catch (InterruptedException ignored) {}
+            checkEncodeError(imageFrame);
         }
     }
 

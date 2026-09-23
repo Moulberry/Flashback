@@ -313,6 +313,7 @@ public class FlashbackConfigV1 {
         public boolean transparentBackground = false;
         public AudioCodec audioCodec = AudioCodec.AAC;
         public boolean stereoAudio = false;
+        public boolean hdrExport = false;
 
         public String defaultExportPath = null;
     }

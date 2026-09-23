@@ -42,6 +42,24 @@ public class PixelFormatHelper {
         return bestPixelFormat;
     }
 
+    /** Whether {@code encoderName} advertises {@code pixelFormat} (used to pick a 10-bit format for HDR). */
+    public static boolean supportsPixelFormat(String encoderName, int pixelFormat) {
+        try (AVCodec codec = avcodec.avcodec_find_encoder_by_name(encoderName)) {
+            if (codec == null || codec.pix_fmts() == null) {
+                return false;
+            }
+            for (int i = 0; ; i++) {
+                int format = codec.pix_fmts().get(i);
+                if (format == -1) {
+                    return false;
+                }
+                if (format == pixelFormat) {
+                    return true;
+                }
+            }
+        }
+    }
+
     private static int calculateBestPixelFormat(String codecName, boolean transparent) {
         try (AVCodec codec = avcodec.avcodec_find_encoder_by_name(codecName)) {
             IntList supportedFormats = new IntArrayList();

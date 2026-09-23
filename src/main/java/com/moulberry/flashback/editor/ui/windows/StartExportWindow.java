@@ -4,6 +4,7 @@ import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.Utils;
 import com.moulberry.flashback.combo_options.AspectRatio;
 import com.moulberry.flashback.combo_options.AudioCodec;
+import com.moulberry.flashback.exporting.HdrExportBridge;
 import com.moulberry.flashback.combo_options.Sizing;
 import com.moulberry.flashback.combo_options.VideoCodec;
 import com.moulberry.flashback.combo_options.VideoContainer;
@@ -183,6 +184,15 @@ public class StartExportWindow {
             ImGuiHelper.separatorWithText(I18n.get("flashback.video_options"));
 
             renderVideoOptions(editorState, config);
+
+            HdrExportBridge.requested = config.internalExport.hdrExport;
+            if (HdrExportBridge.available()) {
+                ImGuiHelper.separatorWithText(I18n.get("flashback.hdr_options"));
+                if (ImGui.checkbox(I18n.get("flashback.hdr_export"), config.internalExport.hdrExport)) {
+                    config.internalExport.hdrExport = !config.internalExport.hdrExport;
+                }
+                ImGuiHelper.tooltip(I18n.get("flashback.hdr_export_tooltip"));
+            }
 
             AudioCodec[] supportedAudioCodecs = config.internalExport.container.getSupportedAudioCodecs();
             if (supportedAudioCodecs.length > 0) {
