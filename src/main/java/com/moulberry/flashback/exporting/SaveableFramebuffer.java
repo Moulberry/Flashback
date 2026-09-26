@@ -77,6 +77,70 @@ public class SaveableFramebuffer implements AutoCloseable {
         return nativeImage;
     }
 
+    /** HDR variant of startDownload: 8 bytes per pixel, read back as 16-bit normalised RGBA. */
+    public void startDownloadHdr(GpuTexture gpuTexture, int width, int height) {
+        if (this.isDownloading) {
+            throw new IllegalStateException("Can't start downloading while already downloading");
+        }
+        this.isDownloading = true;
+
+        long bytesPerPixel = 8L;
+        if (this.pboId == -1) {
+            this.pboId = GL30C.glGenBuffers();
+
+            GL30C.glBindBuffer(GL30C.GL_PIXEL_PACK_BUFFER, this.pboId);
+            GL30C.glBufferData(GL30C.GL_PIXEL_PACK_BUFFER, (long) width * height * bytesPerPixel, GL30C.GL_STREAM_READ);
+            GL30C.glBindBuffer(GL30C.GL_PIXEL_PACK_BUFFER, 0);
+        }
+
+        int fbo = ((GlTexture)gpuTexture).getFbo(((GlDevice)RenderSystem.getDevice()).directStateAccess(), null);
+        GlStateManager._glBindFramebuffer(GL30.GL_FRAMEBUFFER, fbo);
+
+        GL30C.glBindBuffer(GL30C.GL_PIXEL_PACK_BUFFER, this.pboId);
+        GlStateManager._pixelStore(GL11.GL_PACK_ALIGNMENT, 1);
+        GlStateManager._pixelStore(GL11.GL_PACK_ROW_LENGTH, 0);
+        GlStateManager._pixelStore(GL11.GL_PACK_SKIP_PIXELS, 0);
+        GlStateManager._pixelStore(GL11.GL_PACK_SKIP_ROWS, 0);
+        GL30C.glReadPixels(0, 0, width, height, GL30C.GL_RGBA, GL11.GL_UNSIGNED_SHORT, 0);
+        GL30C.glBindBuffer(GL30C.GL_PIXEL_PACK_BUFFER, 0);
+
+        GlStateManager._glBindFramebuffer(GL30.GL_FRAMEBUFFER, 0);
+    }
+
+    /**
+     * HDR variant of finishDownload: copies the mapped 16-bit rows into a fresh native buffer in
+     * top-down order (GL reads bottom-up) and hands ownership to the caller, who frees it through
+     * ImageFrame.close().
+     */
+    public long finishDownloadHdr(int width, int height) {
+        if (!this.isDownloading) {
+            throw new IllegalStateException("Can't finish downloading before download has started");
+        }
+        this.isDownloading = false;
+
+        long rowBytes = (long) width * 8;
+        long target = MemoryUtil.nmemAlloc(rowBytes * height);
+        if (target == 0L) {
+            throw new OutOfMemoryError();
+        }
+
+        GL30C.glBindBuffer(GL30C.GL_PIXEL_PACK_BUFFER, this.pboId);
+        ByteBuffer buffer = GL30C.glMapBuffer(GL30C.GL_PIXEL_PACK_BUFFER, GL30C.GL_READ_ONLY);
+        if (buffer == null) {
+            MemoryUtil.nmemFree(target);
+            throw new IllegalStateException("OpenGL error occurred while mapping buffer");
+        }
+
+        long source = MemoryUtil.memAddress(buffer);
+        for (int y = 0; y < height; y++) {
+            MemoryUtil.memCopy(source + (long) (height - 1 - y) * rowBytes, target + (long) y * rowBytes, rowBytes);
+        }
+
+        GL30C.glUnmapBuffer(GL30C.GL_PIXEL_PACK_BUFFER);
+        GL30C.glBindBuffer(GL30C.GL_PIXEL_PACK_BUFFER, 0);
+        return target;
+    }
+
     public void close() {
         if (this.pboId != -1) {
             GL30C.glDeleteBuffers(this.pboId);

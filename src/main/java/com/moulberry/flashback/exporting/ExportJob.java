@@ -566,13 +566,21 @@ public class ExportJob {
                 break;
             }
 
-            if (this.firstFrame == null) {
+            if (this.firstFrame == null && frame.image() != null) {
                 this.firstFrame = frame.image().mappedCopy(x -> 0xFF000000 | x);
             }
             this.writtenFrames += 1;
 
             start = System.nanoTime();
-            videoWriter.encode(frame.image(), frame.audioBuffer());
+            if (frame.hdrPointer() != 0L) {
+                if (videoWriter instanceof AsyncFFmpegVideoWriter hdrWriter) {
+                    hdrWriter.encodeHdr(frame.hdrPointer(), frame.width(), frame.height(), frame.audioBuffer());
+                } else {
+                    throw new IllegalStateException("HDR export needs the ffmpeg video writer, not " + videoWriter.getClass().getName());
+                }
+            } else {
+                videoWriter.encode(frame.image(), frame.audioBuffer());
+            }
             encodeTimeNanos += System.nanoTime() - start;
         }
     }

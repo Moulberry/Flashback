@@ -27,12 +27,16 @@ public class SaveableFramebufferQueue implements AutoCloseable {
     private final List<SaveableFramebuffer> available = new ArrayList<>();
     private final List<SaveableFramebuffer> waiting = new ArrayList<>();
 
+    private final boolean hdr;
+
     private final GpuTexture flipBuffer;
     private final GpuTextureView flipBufferView;
 
     public SaveableFramebufferQueue(int width, int height) {
         this.width = width;
         this.height = height;
+
+        this.hdr = HdrExportBridge.active();
 
         this.flipBuffer = RenderSystem.getDevice().createTexture(() -> "flip buffer", GpuTexture.USAGE_COPY_DST | GpuTexture.USAGE_RENDER_ATTACHMENT, TextureFormat.RGBA8, width, height, 1, 1);
         this.flipBuffer.setAddressMode(AddressMode.CLAMP_TO_EDGE);
@@ -69,6 +73,15 @@ public class SaveableFramebufferQueue implements AutoCloseable {
     }
 
     public void startDownload(RenderTarget target, SaveableFramebuffer texture, boolean supersampling) {
+        if (this.hdr) {
+            HdrExportBridge.ColorTransform colorTransform = HdrExportBridge.get();
+            if (colorTransform != null) {
+                texture.startDownloadHdr(colorTransform.transform(target, this.width, this.height), this.width, this.height);
+                this.waiting.add(texture);
+                return;
+            }
+        }
+
         // Do an inline flip
         this.blitFlip(target, supersampling);
 
@@ -76,7 +89,7 @@ public class SaveableFramebufferQueue implements AutoCloseable {
         this.waiting.add(texture);
     }
 
-    record DownloadedFrame(NativeImage image, @Nullable FloatBuffer audioBuffer) {}
+    record DownloadedFrame(NativeImage image, long hdrPointer, int width, int height, @Nullable FloatBuffer audioBuffer) {}
 
     public @Nullable DownloadedFrame finishDownload(boolean drain) {
         if (this.waiting.isEmpty()) {
@@ -89,12 +102,18 @@ public class SaveableFramebufferQueue implements AutoCloseable {
 
         SaveableFramebuffer texture = this.waiting.removeFirst();
 
-        NativeImage nativeImage = texture.finishDownload(this.width, this.height);
+        NativeImage nativeImage = null;
+        long hdrPointer = 0L;
+        if (this.hdr && HdrExportBridge.get() != null) {
+            hdrPointer = texture.finishDownloadHdr(this.width, this.height);
+        } else {
+            nativeImage = texture.finishDownload(this.width, this.height);
+        }
         FloatBuffer audioBuffer = texture.audioBuffer;
         texture.audioBuffer = null;
 
         this.available.add(texture);
-        return new DownloadedFrame(nativeImage, audioBuffer);
+        return new DownloadedFrame(nativeImage, hdrPointer, this.width, this.height, audioBuffer);
     }
 
     @Override
