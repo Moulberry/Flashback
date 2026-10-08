@@ -9,12 +9,12 @@ import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.PacketHelper;
 import com.moulberry.flashback.action.*;
 import com.moulberry.flashback.compat.DistantHorizonsSupport;
-import com.moulberry.flashback.compat.valkyrienskies.ActionShipDataCreate;
+import com.moulberry.flashback.compat.create.CreateSupport;
+import com.moulberry.flashback.compat.valkyrienskies.ValkyrienSkiesSupport;
 import com.moulberry.flashback.io.AsyncReplaySaver;
 import com.moulberry.flashback.io.ReplayWriter;
 import com.moulberry.flashback.mixin.compat.bobby.FakeChunkManagerAccessor;
 import com.moulberry.flashback.packet.FlashbackAccurateEntityPosition;
-import io.netty.util.collection.LongObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import net.fabricmc.loader.api.FabricLoader;
@@ -66,11 +66,6 @@ import net.minecraft.world.level.saveddata.maps.MapItemSavedData;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.scores.*;
 import org.jetbrains.annotations.Nullable;
-import org.valkyrienskies.core.impl.game.ships.ShipObject;
-import org.valkyrienskies.core.impl.hooks.CoreHooksImplKt;
-import org.valkyrienskies.core.impl.networking.impl.PacketShipDataCreate;
-import org.valkyrienskies.core.impl.networking.simple.SimplePackets;
-import org.valkyrienskies.mod.mixinducks.client.world.ClientChunkCacheDuck;
 
 import java.io.File;
 import java.nio.file.Path;
@@ -145,7 +140,11 @@ public class Recorder {
         }
 
         if (Flashback.supportsDistantHorizons) {
-            this.metadata.distantHorizonPaths.putAll(DistantHorizonsSupport.getDimensionPaths());
+            try {
+                this.metadata.distantHorizonPaths.putAll(DistantHorizonsSupport.getDimensionPaths());
+            } catch (Throwable t) {
+                Flashback.LOGGER.warn("Failed to retrieve Distant Horizons paths for recording", t);
+            }
         }
     }
 
@@ -902,15 +901,7 @@ public class Recorder {
         this.asyncReplaySaver.writeGamePackets(gamePackets);
         gamePackets.clear();
         if (FabricLoader.getInstance().isModLoaded("valkyrienskies")) {
-            var world = CoreHooksImplKt.getCoreHooks().getCurrentShipClientWorld();
-            var shipData = world.getLoadedShips().stream().map(ship -> ((ShipObject) ship).getShipData()).toList();
-            var simplePacket = new PacketShipDataCreate(shipData);
-
-            this.asyncReplaySaver.submit(writer -> {
-                writer.startAction(ActionShipDataCreate.INSTANCE);
-                writer.friendlyByteBuf().writeBytes(SimplePackets.serialize(simplePacket));
-                writer.finishAction(ActionShipDataCreate.INSTANCE);
-            });
+            ValkyrienSkiesSupport.recordShipData(this.asyncReplaySaver);
         }
 
         // Chunk data
@@ -925,10 +916,7 @@ public class Recorder {
                 }
             }
             if (FabricLoader.getInstance().isModLoaded("valkyrienskies")) {
-                var shipChunks = (LongObjectMap<LevelChunk>) (Object) ((ClientChunkCacheDuck) clientChunkCache).vs$getShipChunks();
-                for (LevelChunk chunk : shipChunks.values()) {
-                    levelChunkPackets.add(new ClientboundLevelChunkWithLightPacket(chunk, level.getLightEngine(), null, null));
-                }
+                ValkyrienSkiesSupport.addShipChunks(clientChunkCache, level, levelChunkPackets);
             }
 
             int centerX = localPlayer.getBlockX() >> 4;
@@ -963,11 +951,10 @@ public class Recorder {
                 }
             }
             if (FabricLoader.getInstance().isModLoaded("valkyrienskies")) {
-                var shipChunks = (LongObjectMap<LevelChunk>) (Object) ((ClientChunkCacheDuck) clientChunkCache).vs$getShipChunks();
-                for (LevelChunk chunk : shipChunks.values()) {
+                ValkyrienSkiesSupport.addShipChunkTasks(clientChunkCache, level, pool, chunk -> {
                     var task = pool.submit(() -> new ClientboundLevelChunkWithLightPacket(chunk, level.getLightEngine(), new BitSet(), new BitSet()));
                     levelChunkPacketTasks.add(new PositionedTask(chunk.getPos(), task));
-                }
+                });
             }
 
             int centerX = localPlayer.getBlockX() >> 4;
@@ -1015,6 +1002,9 @@ public class Recorder {
         }
 
         // Entity data
+        if (FabricLoader.getInstance().isModLoaded("create")) {
+            CreateSupport.captureRailwaySnapshot(gamePackets::add);
+        }
         for (Entity entity : level.entitiesForRendering()) {
             if (PacketHelper.shouldIgnoreEntity(entity)) {
                 continue;
@@ -1022,6 +1012,10 @@ public class Recorder {
 
             if (!(entity instanceof LocalPlayer)) {
                 gamePackets.add(PacketHelper.createAddEntity(entity));
+            }
+
+            if (FabricLoader.getInstance().isModLoaded("porting_lib_entity")) {
+                CreateSupport.appendExtraSpawnData(entity, gamePackets);
             }
 
             List<SynchedEntityData.DataValue<?>> nonDefaultEntityData = entity.getEntityData().getNonDefaultValues();
@@ -1057,6 +1051,10 @@ public class Recorder {
             if (entity instanceof Mob leashable && leashable.isLeashed()) {
                 gamePackets.add(new ClientboundSetEntityLinkPacket(entity, leashable.getLeashHolder()));
             }
+        }
+
+        if (FabricLoader.getInstance().isModLoaded("create")) {
+            CreateSupport.captureCarriageDataResend(gamePackets::add);
         }
 
         // Map data
