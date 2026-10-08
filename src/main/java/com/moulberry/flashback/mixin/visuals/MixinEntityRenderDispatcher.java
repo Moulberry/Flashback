@@ -4,6 +4,7 @@ import com.llamalad7.mixinextras.injector.v2.WrapWithCondition;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.moulberry.flashback.Flashback;
+import com.moulberry.flashback.compat.create.CreateSupport;
 import com.moulberry.flashback.state.EditorState;
 import com.moulberry.flashback.state.EditorStateManager;
 import com.moulberry.flashback.editor.ui.ReplayUI;
@@ -25,8 +26,10 @@ public abstract class MixinEntityRenderDispatcher {
     private static void renderHitbox(PoseStack poseStack, VertexConsumer vertexConsumer, Entity entity, float f) {
     }
 
+    // Pre-Render Hook
     @Inject(method = "render", at = @At("HEAD"), cancellable = true)
     public void renderBefore(Entity entity, double d, double e, double f, float g, float h, PoseStack poseStack, MultiBufferSource multiBufferSource, int i, CallbackInfo ci) {
+        CreateSupport.beforeRenderEntity(entity);
         if (Flashback.isExporting()) {
             EditorState editorState = EditorStateManager.getCurrent();
             if (editorState != null && editorState.hideDuringExport.contains(entity.getUUID())) {

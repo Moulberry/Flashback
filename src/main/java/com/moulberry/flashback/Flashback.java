@@ -47,6 +47,7 @@ import com.moulberry.flashback.state.EditorState;
 import com.moulberry.flashback.state.EditorStateManager;
 import com.moulberry.flashback.visuals.AccurateEntityPositionHandler;
 import com.moulberry.flashback.visuals.ShaderManager;
+import com.moulberry.flashback.compat.create.CreateSupport;
 import com.seibel.distanthorizons.api.DhApi;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.api.ModInitializer;
@@ -161,7 +162,7 @@ public class Flashback implements ModInitializer, ClientModInitializer {
     }
 
     @Override
-	public void onInitializeClient() {
+    public void onInitializeClient() {
         Path configFolder = FabricLoader.getInstance().getConfigDir().resolve("flashback");
 
         try {
@@ -197,9 +198,11 @@ public class Flashback implements ModInitializer, ClientModInitializer {
         // Delete partial exports
         try {
             FileUtils.deleteDirectory(Path.of("replay_export_temp").toFile());
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) {
+        }
 
         this.deleteUnusedReplayStates();
+        ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> CreateSupport.backupClientRailways());
 
         ActionRegistry.register(ActionNextTick.INSTANCE);
         ActionRegistry.register(ActionGamePacket.INSTANCE);
@@ -233,21 +236,22 @@ public class Flashback implements ModInitializer, ClientModInitializer {
                 for (Entity entity : Minecraft.getInstance().level.entitiesForRendering()) {
                     if (entity instanceof LivingEntity && !entity.isRemoved() && !(entity instanceof LocalPlayer)) {
                         entity.moveTo(entity.getX(), entity.getY(), entity.getZ(),
-                            entity.getYRot(), entity.getXRot());
+                                entity.getYRot(), entity.getXRot());
                     }
                     entity.setOldPosAndRot();
                 }
             }
         });
 
-        ClientPlayNetworking.registerGlobalReceiver(FlashbackRemoteSelectHotbarSlot.TYPE, (payload, localPlayer, context) -> {
-            if (Flashback.isInReplay()) {
-                Entity entity = Minecraft.getInstance().level.getEntity(payload.entityId());
-                if (entity instanceof Player player) {
-                    player.getInventory().selected = payload.slot();
-                }
-            }
-        });
+        ClientPlayNetworking.registerGlobalReceiver(FlashbackRemoteSelectHotbarSlot.TYPE,
+                (payload, localPlayer, context) -> {
+                    if (Flashback.isInReplay()) {
+                        Entity entity = Minecraft.getInstance().level.getEntity(payload.entityId());
+                        if (entity instanceof Player player) {
+                            player.getInventory().selected = payload.slot();
+                        }
+                    }
+                });
 
         ClientPlayNetworking.registerGlobalReceiver(FlashbackRemoteExperience.TYPE, (payload, localPlayer, context) -> {
             if (Flashback.isInReplay()) {
@@ -280,18 +284,20 @@ public class Flashback implements ModInitializer, ClientModInitializer {
         });
 
         if (FabricLoader.getInstance().isModLoaded("voicechat")) {
-            ClientPlayNetworking.registerGlobalReceiver(FlashbackVoiceChatSound.TYPE, (payload, localPlayer, context) -> {
-                if (Flashback.isInReplay()) {
-                    SimpleVoiceChatPlayback.play(payload);
-                }
-            });
+            ClientPlayNetworking.registerGlobalReceiver(FlashbackVoiceChatSound.TYPE,
+                    (payload, localPlayer, context) -> {
+                        if (Flashback.isInReplay()) {
+                            SimpleVoiceChatPlayback.play(payload);
+                        }
+                    });
         }
 
-        ClientPlayNetworking.registerGlobalReceiver(FlashbackAccurateEntityPosition.TYPE, (payload, localPlayer, context) -> {
-            if (Flashback.isInReplay()) {
-                AccurateEntityPositionHandler.update(payload);
-            }
-        });
+        ClientPlayNetworking.registerGlobalReceiver(FlashbackAccurateEntityPosition.TYPE,
+                (payload, localPlayer, context) -> {
+                    if (Flashback.isInReplay()) {
+                        AccurateEntityPositionHandler.update(payload);
+                    }
+                });
 
         ShaderManager.INSTANCE.register();
 
@@ -302,25 +308,26 @@ public class Flashback implements ModInitializer, ClientModInitializer {
             flashback.then(ClientCommandManager.literal("end").executes(this::finishRecordingReplay));
             flashback.then(ClientCommandManager.literal("config").executes(this::openFlashbackConfig));
             flashback.then(ClientCommandManager.literal("mark")
-                .executes(command -> {
-                    this.addMarker(command, null, null, null);
-                    return 0;
-                }).then(ClientCommandManager.argument("color", BetterColorArgument.color()).executes(command -> {
-                    int colour = command.getArgument("color", Integer.class);
-                    this.addMarker(command, colour, null, null);
-                    return 0;
-                }).then(ClientCommandManager.argument("savePosition", BoolArgumentType.bool()).executes(command -> {
-                    int colour = command.getArgument("color", Integer.class);
-                    boolean savePosition = command.getArgument("savePosition", Boolean.class);
-                    this.addMarker(command, colour, savePosition, null);
-                    return 0;
-                }).then(ClientCommandManager.argument("description", StringArgumentType.greedyString()).executes(command -> {
-                    int colour = command.getArgument("color", Integer.class);
-                    boolean savePosition = command.getArgument("savePosition", Boolean.class);
-                    String description = command.getArgument("description", String.class);
-                    this.addMarker(command, colour, savePosition, description);
-                    return 0;
-                })))));
+                    .executes(command -> {
+                        this.addMarker(command, null, null, null);
+                        return 0;
+                    }).then(ClientCommandManager.argument("color", BetterColorArgument.color()).executes(command -> {
+                        int colour = command.getArgument("color", Integer.class);
+                        this.addMarker(command, colour, null, null);
+                        return 0;
+                    }).then(ClientCommandManager.argument("savePosition", BoolArgumentType.bool()).executes(command -> {
+                        int colour = command.getArgument("color", Integer.class);
+                        boolean savePosition = command.getArgument("savePosition", Boolean.class);
+                        this.addMarker(command, colour, savePosition, null);
+                        return 0;
+                    }).then(ClientCommandManager.argument("description", StringArgumentType.greedyString())
+                            .executes(command -> {
+                                int colour = command.getArgument("color", Integer.class);
+                                boolean savePosition = command.getArgument("savePosition", Boolean.class);
+                                String description = command.getArgument("description", String.class);
+                                this.addMarker(command, colour, savePosition, description);
+                                return 0;
+                            })))));
             dispatcher.register(flashback);
         });
 
@@ -365,41 +372,48 @@ public class Flashback implements ModInitializer, ClientModInitializer {
                     System.currentTimeMillis() > Flashback.getConfig().nextUnsupportedModLoaderWarning &&
                     canReplaceScreen(Minecraft.getInstance().screen)) {
                 String warning = String.format("""
-                    You are using an unsupported modloader: %s
+                        You are using an unsupported modloader: %s
 
-                    Do not report crashes, bugs or other issues to Flashback
+                        Do not report crashes, bugs or other issues to Flashback
 
-                    You will not receive support from Flashback
+                        You will not receive support from Flashback
 
-                    If you need assistance, please contact %s
-                    """, unsupportedLoader, unsupportedLoader);
+                        If you need assistance, please contact %s
+                        """, unsupportedLoader, unsupportedLoader);
 
                 Minecraft.getInstance().setScreen(new UnsupportedLoaderScreen(Minecraft.getInstance().screen,
-                    Component.literal("Flashback: Unsupported"), Component.literal(warning)));
+                        Component.literal("Flashback: Unsupported"), Component.literal(warning)));
             }
 
             if (!pendingReplayRecovery.isEmpty() && canReplaceScreen(Minecraft.getInstance().screen)) {
                 Component title = Component.literal("Flashback: Recovery");
                 Component description = Component.empty()
-                     .append(Component.literal("Flashback has detected ").append(Component.literal("unfinished recordings\n").withStyle(ChatFormatting.YELLOW)))
-                     .append(Component.literal("This is usually because the game closed unexpectedly while recording\n\n"))
-                     .append(Component.literal("Unfortunately, up to 5 minutes of gameplay from the end of the recording may be lost\n\n").withStyle(ChatFormatting.RED)
-                     .append(Component.literal("Would you like to try to recover the recording?").withStyle(ChatFormatting.GREEN)));
-                Minecraft.getInstance().setScreen(new RecoverRecordingsScreen(Minecraft.getInstance().screen, title, description, recover -> {
-                    switch (recover) {
-                        case RECOVER -> {
-                            pendingReplaySave.addAll(pendingReplayRecovery);
-                            pendingReplayRecovery.clear();
-                        }
-                        case SKIP -> {
-                            pendingReplayRecovery.clear();
-                        }
-                        case DELETE -> {
-                            TempFolderProvider.tryDeleteStaleFolders(TempFolderProvider.TempFolderType.RECORDING);
-                            pendingReplayRecovery.clear();
-                        }
-                    }
-                }));
+                        .append(Component.literal("Flashback has detected ")
+                                .append(Component.literal("unfinished recordings\n").withStyle(ChatFormatting.YELLOW)))
+                        .append(Component
+                                .literal("This is usually because the game closed unexpectedly while recording\n\n"))
+                        .append(Component.literal(
+                                "Unfortunately, up to 5 minutes of gameplay from the end of the recording may be lost\n\n")
+                                .withStyle(ChatFormatting.RED)
+                                .append(Component.literal("Would you like to try to recover the recording?")
+                                        .withStyle(ChatFormatting.GREEN)));
+                Minecraft.getInstance().setScreen(
+                        new RecoverRecordingsScreen(Minecraft.getInstance().screen, title, description, recover -> {
+                            switch (recover) {
+                                case RECOVER -> {
+                                    pendingReplaySave.addAll(pendingReplayRecovery);
+                                    pendingReplayRecovery.clear();
+                                }
+                                case SKIP -> {
+                                    pendingReplayRecovery.clear();
+                                }
+                                case DELETE -> {
+                                    TempFolderProvider
+                                            .tryDeleteStaleFolders(TempFolderProvider.TempFolderType.RECORDING);
+                                    pendingReplayRecovery.clear();
+                                }
+                            }
+                        }));
             }
 
             if (!pendingReplaySave.isEmpty()) {
@@ -410,14 +424,15 @@ public class Flashback implements ModInitializer, ClientModInitializer {
                     LocalDateTime dateTime = LocalDateTime.now();
                     dateTime = dateTime.withNano(0);
                     Minecraft.getInstance().setScreen(new SaveReplayScreen(Minecraft.getInstance().screen,
-                        recordFolder, dateTime.toString()));
+                            recordFolder, dateTime.toString()));
                 }
             }
 
             if (Minecraft.getInstance().level != null && delayedStartRecording > 0) {
                 IntegratedServer integratedServer = Minecraft.getInstance().getSingleplayerServer();
                 if (integratedServer != null && integratedServer.getClass() != IntegratedServer.class) {
-                    delayedStartRecording = 0; // Only allow on actual integrated servers, not replay servers or any other custom server a mod might spin up
+                    delayedStartRecording = 0; // Only allow on actual integrated servers, not replay servers or any
+                                               // other custom server a mod might spin up
                 } else if (Flashback.getConfig().automaticallyStart && RECORDER == null) {
                     delayedStartRecording -= 1;
                     if (delayedStartRecording == 0) {
@@ -444,14 +459,16 @@ public class Flashback implements ModInitializer, ClientModInitializer {
                 supportsDistantHorizons = true;
                 DistantHorizonsSupport.register();
             } else {
-                Flashback.LOGGER.error("DistantHorizons is installed, but API version is too low ({}). Disabling integration.", DhApi.getApiMajorVersion());
+                Flashback.LOGGER.error(
+                        "DistantHorizons is installed, but API version is too low ({}). Disabling integration.",
+                        DhApi.getApiMajorVersion());
             }
         }
 
         if (FabricLoader.getInstance().isModLoaded("valkyrienskies")) {
             ValkyrienSkiesSupport.register();
         }
-	}
+    }
 
     public static List<String> getReplayIncompatibleMods() {
         List<String> incompatible = new ArrayList<>();
@@ -474,10 +491,11 @@ public class Flashback implements ModInitializer, ClientModInitializer {
 
     private static boolean canReplaceScreen(Screen screen) {
         return screen == null || screen instanceof PauseScreen || screen instanceof TitleScreen
-            || screen instanceof RealmsMainScreen || screen instanceof JoinMultiplayerScreen;
+                || screen instanceof RealmsMainScreen || screen instanceof JoinMultiplayerScreen;
     }
 
-    private void addMarker(CommandContext<FabricClientCommandSource> command, @Nullable Integer colour, @Nullable Boolean savePosition, @Nullable String description) {
+    private void addMarker(CommandContext<FabricClientCommandSource> command, @Nullable Integer colour,
+            @Nullable Boolean savePosition, @Nullable String description) {
         if (RECORDER == null) {
             command.getSource().sendError(Component.literal("Not recording"));
             return;
@@ -488,7 +506,7 @@ public class Flashback implements ModInitializer, ClientModInitializer {
             Entity camera = Minecraft.getInstance().getCameraEntity();
             if (camera != null) {
                 position = new ReplayMarker.MarkerPosition(camera.getEyePosition().toVector3f(),
-                    camera.level().dimension().toString());
+                        camera.level().dimension().toString());
             }
         }
 
@@ -500,7 +518,8 @@ public class Flashback implements ModInitializer, ClientModInitializer {
         }
 
         if (position != null) {
-            feedback += String.format(" at %.2f, %.2f, %.2f", position.position().x, position.position().y, position.position().z);
+            feedback += String.format(" at %.2f, %.2f, %.2f", position.position().x, position.position().y,
+                    position.position().z);
         }
 
         if (colour == null) {
@@ -557,7 +576,8 @@ public class Flashback implements ModInitializer, ClientModInitializer {
                         replayStates.put(uuid, path);
                     }
                 }
-            } catch (IOException ignored) {}
+            } catch (IOException ignored) {
+            }
 
             // Find which uuids are still valid because they have replays
             Set<UUID> replayUuids = new HashSet<>();
@@ -595,7 +615,8 @@ public class Flashback implements ModInitializer, ClientModInitializer {
                 if (!replayUuids.contains(entry.getKey())) {
                     try {
                         Files.deleteIfExists(entry.getValue());
-                    } catch (IOException ignored) {}
+                    } catch (IOException ignored) {
+                    }
                 }
             }
         }, Util.backgroundExecutor());
@@ -647,10 +668,19 @@ public class Flashback implements ModInitializer, ClientModInitializer {
     public static void startRecordingReplay() {
         if (RECORDER != null) {
             SystemToast.add(Minecraft.getInstance().getToasts(), FlashbackSystemToasts.RECORDING_TOAST,
-                    Component.literal("Already Recording"), Component.literal("Cannot start new recording when already recording"));
+                    Component.literal("Already Recording"),
+                    Component.literal("Cannot start new recording when already recording"));
             return;
         }
-        RECORDER = new Recorder();
+        try {
+            RECORDER = new Recorder();
+        } catch (Throwable t) {
+            Flashback.LOGGER.error("Failed to start recording replay", t);
+            RECORDER = null;
+            SystemToast.add(Minecraft.getInstance().getToasts(), FlashbackSystemToasts.RECORDING_TOAST,
+                    Component.literal("Flashback"), Component.literal("Failed to start recording"));
+            return;
+        }
         if (Flashback.getConfig().showRecordingToasts) {
             SystemToast.add(Minecraft.getInstance().getToasts(), FlashbackSystemToasts.RECORDING_TOAST,
                     Component.literal("Flashback"), Component.literal("Started recording"));
@@ -662,7 +692,8 @@ public class Flashback implements ModInitializer, ClientModInitializer {
 
         if (Flashback.getConfig().showRecordingToasts) {
             SystemToast.add(Minecraft.getInstance().getToasts(), FlashbackSystemToasts.RECORDING_TOAST,
-                    Component.literal("Flashback"), Component.literal(pause ? "Paused recording" : "Unpaused recording"));
+                    Component.literal("Flashback"),
+                    Component.literal(pause ? "Paused recording" : "Unpaused recording"));
         }
     }
 
@@ -686,12 +717,14 @@ public class Flashback implements ModInitializer, ClientModInitializer {
     public static void finishRecordingReplay() {
         if (RECORDER == null) {
             SystemToast.add(Minecraft.getInstance().getToasts(), FlashbackSystemToasts.RECORDING_TOAST,
-                    Component.literal("Not Recording"), Component.literal("Cannot finish recording when not recording"));
+                    Component.literal("Not Recording"),
+                    Component.literal("Cannot finish recording when not recording"));
             return;
         }
 
         Recorder recorder = RECORDER;
         RECORDER = null;
+        CreateSupport.backupClientRailways();
         recorder.endTick(true);
 
         if (Flashback.getConfig().quicksave) {
@@ -769,8 +802,10 @@ public class Flashback implements ModInitializer, ClientModInitializer {
             Path replayTemp = TempFolderProvider.createTemp(TempFolderProvider.TempFolderType.SERVER, replayUuid);
             FileUtils.deleteDirectory(replayTemp.toFile());
 
-            LevelStorageSource source = new LevelStorageSource(replayTemp.resolve("saves"), replayTemp.resolve("backups"),
-                Minecraft.getInstance().getLevelSource().getWorldDirValidator(), Minecraft.getInstance().getFixerUpper());
+            LevelStorageSource source = new LevelStorageSource(replayTemp.resolve("saves"),
+                    replayTemp.resolve("backups"),
+                    Minecraft.getInstance().getLevelSource().getWorldDirValidator(),
+                    Minecraft.getInstance().getFixerUpper());
             LevelStorageSource.LevelStorageAccess access = source.createAccess("replay");
             PackRepository packRepository = ServerPacksSource.createPackRepository(access);
 
@@ -789,29 +824,41 @@ public class Flashback implements ModInitializer, ClientModInitializer {
             gameRules.getRule(GameRules.RULE_WEATHER_CYCLE).set(false, null);
             gameRules.getRule(GameRules.RULE_RANDOMTICKING).set(0, null);
 
-            WorldDataConfiguration worldDataConfiguration = new WorldDataConfiguration(new DataPackConfig(List.of(), List.of()), FeatureFlags.DEFAULT_FLAGS);
-            LevelSettings levelSettings = new LevelSettings("Replay", GameType.SPECTATOR, false, Difficulty.NORMAL, true, gameRules, worldDataConfiguration);
-            WorldLoader.PackConfig packConfig = new WorldLoader.PackConfig(packRepository, worldDataConfiguration, false, true);
-            WorldLoader.InitConfig initConfig = new WorldLoader.InitConfig(packConfig, Commands.CommandSelection.DEDICATED, 4);
+            WorldDataConfiguration worldDataConfiguration = new WorldDataConfiguration(
+                    new DataPackConfig(List.of(), List.of()), FeatureFlags.DEFAULT_FLAGS);
+            LevelSettings levelSettings = new LevelSettings("Replay", GameType.SPECTATOR, false, Difficulty.NORMAL,
+                    true, gameRules, worldDataConfiguration);
+            WorldLoader.PackConfig packConfig = new WorldLoader.PackConfig(packRepository, worldDataConfiguration,
+                    false, true);
+            WorldLoader.InitConfig initConfig = new WorldLoader.InitConfig(packConfig,
+                    Commands.CommandSelection.DEDICATED, 4);
 
             WorldStem worldStem = Util.blockUntilDone(executor -> WorldLoader.load(initConfig, dataLoadContext -> {
-                Holder.Reference<Biome> plains = dataLoadContext.datapackWorldgen().registryOrThrow(Registries.BIOME).getHolder(Biomes.PLAINS).get();
-                Holder.Reference<DimensionType> overworld = dataLoadContext.datapackWorldgen().registryOrThrow(Registries.DIMENSION_TYPE).getHolder(BuiltinDimensionTypes.OVERWORLD).get();
+                Holder.Reference<Biome> plains = dataLoadContext.datapackWorldgen().registryOrThrow(Registries.BIOME)
+                        .getHolder(Biomes.PLAINS).get();
+                Holder.Reference<DimensionType> overworld = dataLoadContext.datapackWorldgen()
+                        .registryOrThrow(Registries.DIMENSION_TYPE).getHolder(BuiltinDimensionTypes.OVERWORLD).get();
 
-                WritableRegistry<LevelStem> registryOverworld = new MappedRegistry<>(Registries.LEVEL_STEM, Lifecycle.stable());
-                registryOverworld.register(LevelStem.OVERWORLD,  new LevelStem(overworld, new EmptyLevelSource(plains)), Lifecycle.stable());
+                WritableRegistry<LevelStem> registryOverworld = new MappedRegistry<>(Registries.LEVEL_STEM,
+                        Lifecycle.stable());
+                registryOverworld.register(LevelStem.OVERWORLD, new LevelStem(overworld, new EmptyLevelSource(plains)),
+                        Lifecycle.stable());
                 registryOverworld.freeze();
 
-                Registry<LevelStem> registryEmpty = new MappedRegistry<>(Registries.LEVEL_STEM, Lifecycle.stable()).freeze();
+                Registry<LevelStem> registryEmpty = new MappedRegistry<>(Registries.LEVEL_STEM, Lifecycle.stable())
+                        .freeze();
 
                 WorldDimensions worldDimensions = new WorldDimensions(registryOverworld);
                 WorldDimensions.Complete complete = worldDimensions.bake(registryEmpty);
 
-                return new WorldLoader.DataLoadOutput<>(new PrimaryLevelData(levelSettings, new WorldOptions(0L, false, false),
-                    complete.specialWorldProperty(), complete.lifecycle()), complete.dimensionsRegistryAccess());
+                return new WorldLoader.DataLoadOutput<>(
+                        new PrimaryLevelData(levelSettings, new WorldOptions(0L, false, false),
+                                complete.specialWorldProperty(), complete.lifecycle()),
+                        complete.dimensionsRegistryAccess());
             }, WorldStem::new, Util.backgroundExecutor(), executor)).get();
 
-            ((MinecraftExt)Minecraft.getInstance()).flashback$startReplayServer(access, packRepository, worldStem, replayUuid, path);
+            ((MinecraftExt) Minecraft.getInstance()).flashback$startReplayServer(access, packRepository, worldStem,
+                    replayUuid, path);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

@@ -9,6 +9,7 @@ import com.mojang.authlib.yggdrasil.YggdrasilAuthenticationService;
 import com.mojang.blaze3d.platform.Window;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.moulberry.flashback.Flashback;
+import com.moulberry.flashback.compat.create.CreateSupport;
 import com.moulberry.flashback.exporting.ExportJob;
 import com.moulberry.flashback.exporting.ExportJobQueue;
 import com.moulberry.flashback.keyframe.handler.MinecraftKeyframeHandler;
@@ -250,6 +251,7 @@ public abstract class MixinMinecraft implements MinecraftExt {
 
     @Inject(method = "clearLevel(Lnet/minecraft/client/gui/screens/Screen;)V", at = @At("HEAD"))
     public void disconnectHead(Screen screen, CallbackInfo ci) {
+        CreateSupport.backupClientRailways();
         try {
             if (Flashback.getConfig().automaticallyFinish && Flashback.RECORDER != null /* && !isTransferring */ ) {
                 Flashback.finishRecordingReplay();
