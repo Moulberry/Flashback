@@ -12,6 +12,7 @@ import com.moulberry.flashback.playback.ReplayServer;
 import io.netty.buffer.Unpooled;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.network.ConnectionProtocol;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.protocol.Packet;
@@ -21,7 +22,6 @@ import net.minecraft.network.protocol.game.ClientboundBundlePacket;
 import net.minecraft.network.protocol.game.ClientboundCustomPayloadPacket;
 import net.minecraft.network.protocol.game.ClientboundLevelChunkWithLightPacket;
 import net.minecraft.resources.ResourceLocation;
-import org.valkyrienskies.mod.common.ValkyrienSkiesMod;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -48,7 +48,8 @@ public class AsyncReplaySaver {
     private final Path recordFolder;
 
     public AsyncReplaySaver() {
-        this.recordFolder = TempFolderProvider.createTemp(TempFolderProvider.TempFolderType.RECORDING, UUID.randomUUID());
+        this.recordFolder = TempFolderProvider.createTemp(TempFolderProvider.TempFolderType.RECORDING,
+                UUID.randomUUID());
 
         ReplayWriter replayWriter = new ReplayWriter();
         new Thread(() -> {
@@ -75,6 +76,7 @@ public class AsyncReplaySaver {
         }).start();
     }
 
+    
     public void submit(Consumer<ReplayWriter> consumer) {
         this.checkForError();
 
@@ -86,7 +88,8 @@ public class AsyncReplaySaver {
             try {
                 this.tasks.put(consumer);
                 break;
-            } catch (InterruptedException ignored) {}
+            } catch (InterruptedException ignored) {
+            }
         }
     }
 
@@ -146,7 +149,8 @@ public class AsyncReplaySaver {
                         chunkCacheOutput.writeInt(-1);
 
                         // Write chunk packet
-                        chunkCacheOutput.writeVarInt(ConnectionProtocol.PLAY.getPacketId(PacketFlow.CLIENTBOUND, packet));
+                        chunkCacheOutput
+                                .writeVarInt(ConnectionProtocol.PLAY.getPacketId(PacketFlow.CLIENTBOUND, packet));
                         packet.write(chunkCacheOutput);
                         int endWriterIndex = chunkCacheOutput.writerIndex();
 
@@ -177,7 +181,8 @@ public class AsyncReplaySaver {
         });
     }
 
-    private static FriendlyByteBuf writeGamePacket(ReplayWriter writer, Packet<? super ClientGamePacketListener> packet, FriendlyByteBuf customPayloadTempBuffer) {
+    private static FriendlyByteBuf writeGamePacket(ReplayWriter writer, Packet<? super ClientGamePacketListener> packet,
+            FriendlyByteBuf customPayloadTempBuffer) {
         if (packet instanceof ClientboundBundlePacket bp) {
             for (Packet<ClientGamePacketListener> child : bp.subPackets()) {
                 customPayloadTempBuffer = writeGamePacket(writer, child, customPayloadTempBuffer);
@@ -192,15 +197,8 @@ public class AsyncReplaySaver {
         }
 
         if (packet instanceof ClientboundCustomPayloadPacket cp) {
-            if (cp.getIdentifier().equals(new ResourceLocation(ValkyrienSkiesMod.MOD_ID, "vs_packet"))) {
-                var data = cp.getData();
-                var action = ValkyrienSkiesSupport.getAction(data);
-                if (action != null) {
-                    writer.startAction(action);
-                    writer.friendlyByteBuf().writeBytes(data);
-                    writer.finishAction(action);
-                    return customPayloadTempBuffer;
-                }
+            if (FabricLoader.getInstance().isModLoaded("valkyrienskies") && ValkyrienSkiesSupport.tryHandleCustomPayload(cp, writer)) {
+                return customPayloadTempBuffer;
             }
         }
 
@@ -221,9 +219,10 @@ public class AsyncReplaySaver {
             byte[] bytes = new byte[chunkCacheOutput.writerIndex()];
             chunkCacheOutput.getBytes(0, bytes);
 
-            Path levelChunkCachePath = this.recordFolder.resolve("level_chunk_caches").resolve(""+index);
+            Path levelChunkCachePath = this.recordFolder.resolve("level_chunk_caches").resolve("" + index);
             Files.createDirectories(levelChunkCachePath.getParent());
-            Files.write(levelChunkCachePath, bytes, StandardOpenOption.CREATE, StandardOpenOption.APPEND, StandardOpenOption.SYNC);
+            Files.write(levelChunkCachePath, bytes, StandardOpenOption.CREATE, StandardOpenOption.APPEND,
+                    StandardOpenOption.SYNC);
         } catch (IOException e) {
             SneakyThrow.sneakyThrow(e);
         }
@@ -243,7 +242,7 @@ public class AsyncReplaySaver {
             height = width;
         }
 
-        try (NativeImage scaledImage = new NativeImage(64, 64, false);){
+        try (NativeImage scaledImage = new NativeImage(64, 64, false);) {
             nativeImage.resizeSubRectTo(x, y, width, height, scaledImage);
             scaledImage.writeToFile(this.recordFolder.resolve("icon.png"));
         } catch (IOException e) {
