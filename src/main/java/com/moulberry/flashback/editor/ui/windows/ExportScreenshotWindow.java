@@ -2,16 +2,14 @@ package com.moulberry.flashback.editor.ui.windows;
 
 import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.Utils;
-import com.moulberry.flashback.combo_options.ExportProjection;
-import com.moulberry.flashback.combo_options.VideoCodec;
 import com.moulberry.flashback.combo_options.VideoContainer;
 import com.moulberry.flashback.configuration.FlashbackConfigV1;
 import com.moulberry.flashback.editor.ui.ImGuiHelper;
+import com.moulberry.flashback.exporting.AsyncFileDialogs;
 import com.moulberry.flashback.exporting.ExportJob;
 import com.moulberry.flashback.exporting.ExportSettings;
 import com.moulberry.flashback.state.EditorState;
 import com.moulberry.flashback.state.EditorStateManager;
-import com.moulberry.flashback.utils.AsyncFileDialogs;
 import imgui.moulberry90.ImGui;
 import imgui.moulberry90.flag.ImGuiWindowFlags;
 import net.minecraft.client.Minecraft;
@@ -53,23 +51,6 @@ public class ExportScreenshotWindow {
 
             EditorState editorState = EditorStateManager.getCurrent();
 
-            config.internalExport.projection = ImGuiHelper.enumCombo(I18n.get("flashback.projection"), config.internalExport.projection);
-            if (config.internalExport.projection == ExportProjection.ORTHOGRAPHIC) {
-                ImGui.sliderFloat("Ortho Zoom", config.internalExport.orthographicZoom, 0.0f, 10.0f);
-            } else if (config.internalExport.projection == ExportProjection.CUBE_MAP) {
-                int resX = config.internalExport.resolution[0];
-                int resY = config.internalExport.resolution[1];
-                if (resX % 4 != 0 || resY % 3 != 0 || resX != resY*4/3) {
-                    ImGui.text("Warning: Resolution should be 4:3 for cube map export");
-                }
-            } else if (config.internalExport.projection == ExportProjection.EQUIRECTANGULAR) {
-                int resX = config.internalExport.resolution[0];
-                int resY = config.internalExport.resolution[1];
-                if (resX != resY*2) {
-                    ImGui.text("Warning: Resolution should be 2:1 for equirectangular export");
-                }
-            }
-
             if (ImGui.checkbox(I18n.get("flashback.ssaa"), config.internalExport.ssaa)) {
                 config.internalExport.ssaa = !config.internalExport.ssaa;
             }
@@ -88,7 +69,7 @@ public class ExportScreenshotWindow {
                 }
             }
 
-            boolean isFullscreen = Minecraft.getInstance().getWindow().isExclusiveFullscreen();
+            boolean isFullscreen = Minecraft.getInstance().getWindow().isFullscreen();
             if (isFullscreen) {
                 ImGui.separator();
                 ImGui.textWrapped(I18n.get("flashback.export_disable_fullscreen"));
@@ -113,15 +94,11 @@ public class ExportScreenshotWindow {
 
                         EditorState copiedEditorState = editorState.copyWithoutKeyframes();
 
-                        VideoCodec codec = VideoContainer.PNG_SEQUENCE.getSupportedVideoCodecs(transparent)[0];
-                        String encoder = codec.getEncoders()[0];
                         ExportSettings settings = new ExportSettings(null, copiedEditorState,
                             player.position(), player.getYRot(), player.getXRot(),
                             config.internalExport.resolution[0], config.internalExport.resolution[1], tick, tick,
-                            config.internalExport.projection, config.internalExport.orthographicZoom[0],
-                            1, false, false,
-                            VideoContainer.PNG_SEQUENCE, codec, encoder, 0, transparent, ssaa, noGui,
-                            false, null,
+                            1, false, VideoContainer.PNG_SEQUENCE, null, null, 0, transparent, ssaa, noGui,
+                            false, false, null,
                             path, null);
 
                         close = true;

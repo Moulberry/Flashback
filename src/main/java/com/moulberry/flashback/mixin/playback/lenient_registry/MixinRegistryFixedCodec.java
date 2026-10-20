@@ -5,7 +5,8 @@ import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.moulberry.flashback.Flashback;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderOwner;
-import net.minecraft.core.registries.codec.RegistryFixedCodec;
+import net.minecraft.resources.RegistryFileCodec;
+import net.minecraft.resources.RegistryFixedCodec;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 

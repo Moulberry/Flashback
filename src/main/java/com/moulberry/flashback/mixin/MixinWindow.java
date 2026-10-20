@@ -1,10 +1,11 @@
 package com.moulberry.flashback.mixin;
 
 import com.mojang.blaze3d.platform.Window;
-import com.mojang.blaze3d.platform.WindowEventHandler;
 import com.moulberry.flashback.Flashback;
+import com.moulberry.flashback.visuals.ReplayVisuals;
+import com.moulberry.flashback.combo_options.Sizing;
 import com.moulberry.flashback.editor.ui.ReplayUI;
-import com.moulberry.flashback.ext.WindowExt;
+import org.lwjgl.glfw.GLFW;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -15,7 +16,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(Window.class)
-public abstract class MixinWindow implements WindowExt {
+public abstract class MixinWindow {
 
     @Shadow private int framebufferWidth;
     @Shadow private int framebufferHeight;
@@ -36,16 +37,6 @@ public abstract class MixinWindow implements WindowExt {
     @Final
     private long handle;
 
-    @Shadow
-    public abstract int getWidth();
-
-    @Shadow
-    public abstract int getHeight();
-
-    @Shadow
-    @Final
-    private WindowEventHandler eventHandler;
-
     @Unique
     private float calculateWidthScaleFactor() {
         return Math.max(1/8f, Math.min(8f, (float) this.framebufferWidth / this.width));
@@ -56,44 +47,21 @@ public abstract class MixinWindow implements WindowExt {
         return Math.max(1/8f, Math.min(8f, (float) this.framebufferHeight / this.height));
     }
 
-    @Unique
-    private int overrideFramebufferWidth = -1;
-    @Unique
-    private int overrideFramebufferHeight = -1;
-
-    @Override
-    public void flashback$updateScaledFramebuffer(boolean callFramebufferSizeChanged) {
-        int lastWidth = this.overrideFramebufferWidth;
-        int lastHeight = this.overrideFramebufferHeight;
-        if (Flashback.EXPORT_JOB != null && Flashback.EXPORT_JOB.shouldChangeFramebufferSize()) {
-            this.overrideFramebufferWidth = Flashback.EXPORT_JOB.getWidth();
-            this.overrideFramebufferHeight = Flashback.EXPORT_JOB.getHeight();
-        } else if (ReplayUI.shouldModifyViewport()) {
-            this.overrideFramebufferWidth = ReplayUI.getNewGameWidth(this.calculateWidthScaleFactor());
-            this.overrideFramebufferHeight = ReplayUI.getNewGameHeight(this.calculateHeightScaleFactor());
-        } else {
-            this.overrideFramebufferWidth = -1;
-            this.overrideFramebufferHeight = -1;
-        }
-
-        if (callFramebufferSizeChanged && lastWidth != this.overrideFramebufferWidth && lastHeight != this.overrideFramebufferHeight) {
-            this.eventHandler.framebufferSizeChanged();
-        }
-    }
-
     @Inject(method = "getWidth", at=@At("HEAD"), cancellable = true)
     public void getWidth(CallbackInfoReturnable<Integer> cir) {
-        int width = this.overrideFramebufferWidth;
-        if (width != -1) {
-            cir.setReturnValue(width);
+        if (Flashback.EXPORT_JOB != null && Flashback.EXPORT_JOB.shouldChangeFramebufferSize()) {
+            cir.setReturnValue(Flashback.EXPORT_JOB.getWidth());
+        } else if (ReplayUI.shouldModifyViewport()) {
+            cir.setReturnValue(ReplayUI.getNewGameWidth(this.calculateWidthScaleFactor()));
         }
     }
 
     @Inject(method = "getHeight", at=@At("HEAD"), cancellable = true)
     public void getHeight(CallbackInfoReturnable<Integer> cir) {
-        int height = this.overrideFramebufferHeight;
-        if (height != -1) {
-            cir.setReturnValue(height);
+        if (Flashback.EXPORT_JOB != null && Flashback.EXPORT_JOB.shouldChangeFramebufferSize()) {
+            cir.setReturnValue(Flashback.EXPORT_JOB.getHeight());
+        } else if (ReplayUI.shouldModifyViewport()) {
+            cir.setReturnValue(ReplayUI.getNewGameHeight(this.calculateHeightScaleFactor()));
         }
     }
 
@@ -108,6 +76,13 @@ public abstract class MixinWindow implements WindowExt {
     public void getScreenHeight(CallbackInfoReturnable<Integer> cir) {
         if (ReplayUI.shouldModifyViewport()) {
             cir.setReturnValue(ReplayUI.getNewGameHeight(1));
+        }
+    }
+
+    @Inject(method = "onResize", at=@At("HEAD"), cancellable = true)
+    public void onResize(long l, int i, int j, CallbackInfo ci) {
+        if (l != this.handle) {
+            ci.cancel();
         }
     }
 

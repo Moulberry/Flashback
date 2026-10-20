@@ -40,12 +40,4 @@ public abstract class MixinLevel {
         }
     }
 
-    @Inject(method = {"getDefaultClockTime", "getOverworldClockTime"}, at = @At("HEAD"), cancellable = true, require = 0)
-    public void getDefaultClockTime(CallbackInfoReturnable<Long> cir) {
-        EditorState editorState = EditorStateManager.getCurrent();
-        if (editorState != null && (Object)this instanceof ClientLevel && editorState.replayVisuals.overrideTimeOfDay >= 0) {
-            cir.setReturnValue(editorState.replayVisuals.overrideTimeOfDay);
-        }
-    }
-
 }

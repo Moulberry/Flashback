@@ -11,7 +11,6 @@ import org.bytedeco.ffmpeg.avformat.AVFormatContext;
 import org.bytedeco.ffmpeg.avformat.AVIOContext;
 import org.bytedeco.ffmpeg.avformat.AVStream;
 import org.bytedeco.ffmpeg.avformat.Read_packet_Pointer_BytePointer_int;
-import org.bytedeco.ffmpeg.avutil.AVChannelLayout;
 import org.bytedeco.ffmpeg.avutil.AVDictionary;
 import org.bytedeco.ffmpeg.avutil.AVFrame;
 import org.bytedeco.ffmpeg.swresample.SwrContext;
@@ -19,6 +18,7 @@ import org.bytedeco.javacpp.BytePointer;
 import org.bytedeco.javacpp.IntPointer;
 import org.bytedeco.javacpp.Pointer;
 import org.bytedeco.javacpp.PointerPointer;
+import org.bytedeco.javacv.FFmpegFrameGrabber;
 import org.lwjgl.BufferUtils;
 
 import javax.sound.sampled.AudioFormat;
@@ -140,14 +140,9 @@ public class FFmpegAudioReader {
 
             int audioStreamIndex = audioStream.index();
 
-            AVChannelLayout originalChannelLayout = codecContext.ch_layout();
+            int originalChannels = codecContext.channels();
             int originalSampleFormat = codecContext.sample_fmt();
-            AVChannelLayout channelLayout;
-            if (originalChannelLayout.nb_channels() == 2) {
-                channelLayout = AV_CHANNEL_LAYOUT_STEREO();
-            } else {
-                channelLayout = AV_CHANNEL_LAYOUT_MONO();
-            }
+            int channels = Math.min(2, originalChannels);
             int sampleFormat = originalSampleFormat;
 
             if (sampleFormat != AV_SAMPLE_FMT_U8 && sampleFormat != AV_SAMPLE_FMT_S16) {
@@ -157,11 +152,10 @@ public class FFmpegAudioReader {
             int sampleRate = codecContext.sample_rate();
 
             // Minecraft only supports non-planar signed 8bit/16bit mono/stereo. Need to convert to that.
-            if (av_channel_layout_compare(originalChannelLayout, channelLayout) != 0 || sampleFormat != originalSampleFormat) {
-                swrContext = new SwrContext();
-                int res = org.bytedeco.ffmpeg.global.swresample.swr_alloc_set_opts2(swrContext, channelLayout, sampleFormat, sampleRate,
-                    originalChannelLayout, originalSampleFormat, sampleRate, 0, null);
-                if (res != 0 || swrContext.isNull()) {
+            if (channels != originalChannels || sampleFormat != originalSampleFormat) {
+                swrContext = swr_alloc_set_opts(null, av_get_default_channel_layout(channels), sampleFormat, sampleRate,
+                        av_get_default_channel_layout(originalChannels), originalSampleFormat, sampleRate, 0, null);
+                if (swrContext == null) {
                     Flashback.LOGGER.error("Unable to allocate swr convert context");
                     return null;
                 } else if (swr_init(swrContext) < 0) {
@@ -214,9 +208,9 @@ public class FFmpegAudioReader {
                     ByteBuffer outBuffer;
 
                     if (swrContext != null) {
-                        int bufferInPlanes = av_sample_fmt_is_planar(originalSampleFormat) != 0 ? avFrame.ch_layout().nb_channels() : 1;
+                        int bufferInPlanes = av_sample_fmt_is_planar(originalSampleFormat) != 0 ? avFrame.channels() : 1;
                         int samplesIn = avFrame.nb_samples();
-                        int bufferInSize = av_samples_get_buffer_size((IntPointer) null, originalChannelLayout.nb_channels(),
+                        int bufferInSize = av_samples_get_buffer_size((IntPointer) null, originalChannels,
                                 samplesIn, originalSampleFormat, 1) / bufferInPlanes;
                         BytePointer[] pointersIn = new BytePointer[bufferInPlanes];
 
@@ -228,7 +222,7 @@ public class FFmpegAudioReader {
 
 
                         int sampleOutBytes = av_get_bytes_per_sample(sampleFormat);
-                        int bufferOutSize = samplesOut * sampleOutBytes * channelLayout.nb_channels();
+                        int bufferOutSize = samplesOut * sampleOutBytes * channels;
                         BytePointer[] pointersOut = new BytePointer[1];
 
                         if (convertOutPtr == null || convertOutPtr.capacity() < bufferOutSize) {
@@ -245,11 +239,11 @@ public class FFmpegAudioReader {
                             return null;
                         }
 
-                        int outSize = ret * sampleOutBytes * channelLayout.nb_channels();
+                        int outSize = ret * sampleOutBytes * channels;
                         pointersOut[0].position(0).limit(outSize);
                         outBuffer = pointersOut[0].asBuffer().position(0).limit(outSize);
                     } else {
-                        int bufferSize = av_samples_get_buffer_size((IntPointer) null, channelLayout.nb_channels(),
+                        int bufferSize = av_samples_get_buffer_size((IntPointer) null, channels,
                                 avFrame.nb_samples(), sampleFormat, 1);
 
                         BytePointer outPointer = avFrame.data(0).position(0).limit(bufferSize);
@@ -294,7 +288,7 @@ public class FFmpegAudioReader {
             }
             finalBuffer.flip();
 
-            return new RawAudioData(finalBuffer, new AudioFormat(sampleRate, sampleFormat == AV_SAMPLE_FMT_U8 ? 8 : 16, channelLayout.nb_channels(),
+            return new RawAudioData(finalBuffer, new AudioFormat(sampleRate, sampleFormat == AV_SAMPLE_FMT_U8 ? 8 : 16, channels,
                     true, ByteOrder.nativeOrder() == ByteOrder.BIG_ENDIAN));
         } catch (Exception e) {
             Flashback.LOGGER.error("Exception thrown while reading audio", e);

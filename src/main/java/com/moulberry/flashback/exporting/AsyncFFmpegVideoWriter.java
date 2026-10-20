@@ -1,11 +1,11 @@
 package com.moulberry.flashback.exporting;
 
+import com.mojang.blaze3d.platform.NativeImage;
 import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.SneakyThrow;
 import com.moulberry.flashback.combo_options.AudioCodec;
 import org.bytedeco.ffmpeg.avutil.AVFrame;
 import org.bytedeco.ffmpeg.avutil.AVPixFmtDescriptor;
-import org.bytedeco.ffmpeg.global.avcodec;
 import org.bytedeco.ffmpeg.global.avutil;
 import org.bytedeco.ffmpeg.global.swscale;
 import org.bytedeco.ffmpeg.swscale.SwsContext;
@@ -35,16 +35,12 @@ import static org.bytedeco.ffmpeg.global.swscale.sws_freeContext;
 
 public class AsyncFFmpegVideoWriter implements AutoCloseable, VideoWriter {
 
-    private ExportSettings settings;
-    private String filename;
-    private boolean started = false;
+    @Nullable
+    private final ArrayBlockingQueue<ImageFrame> rescaleQueue;
+    private final ArrayBlockingQueue<ImageFrame> encodeQueue;
 
     @Nullable
-    private ArrayBlockingQueue<ImageFrame> rescaleQueue;
-    private ArrayBlockingQueue<ImageFrame> encodeQueue;
-
-    @Nullable
-    private ArrayBlockingQueue<Long> reusePictureData;
+    private final ArrayBlockingQueue<Long> reusePictureData;
 
     private final AtomicBoolean finishRescaleThread = new AtomicBoolean(false);
     private final AtomicBoolean finishEncodeThread = new AtomicBoolean(false);
@@ -52,26 +48,45 @@ public class AsyncFFmpegVideoWriter implements AutoCloseable, VideoWriter {
 
     private final AtomicReference<Throwable> threadedError = new AtomicReference<>(null);
 
-    public AsyncFFmpegVideoWriter(ExportSettings settings, String filename) {
-        this.settings = settings;
-        this.filename = filename;
+    private static final class ImageFrame implements AutoCloseable {
+        private long pointer;
+        private final int size;
+        private final int width;
+        private final int height;
+        private final int channels;
+        private final int imageDepth;
+        private final int stride;
+        private final int pixelFormat;
+        private final @Nullable FloatBuffer audioBuffer;
+
+        private ImageFrame(long pointer, int size, int width, int height, int channels, int imageDepth, int stride, int pixelFormat, @Nullable FloatBuffer audioBuffer) {
+            this.pointer = pointer;
+            this.size = size;
+            this.width = width;
+            this.height = height;
+            this.channels = channels;
+            this.imageDepth = imageDepth;
+            this.stride = stride;
+            this.pixelFormat = pixelFormat;
+            this.audioBuffer = audioBuffer;
+        }
+
+        public void close() {
+            if (this.pointer != 0L) {
+                MemoryUtil.nmemFree(this.pointer);
+            }
+            this.pointer = 0L;
+        }
     }
 
-    public void tryStart(int srcPixelFormat) {
-        if (this.started) {
-            return;
-        }
-        this.started = true;
-
+    public AsyncFFmpegVideoWriter(ExportSettings settings, String filename) {
         try {
             FFmpegLogCallback.set();
 
             boolean wantTransparency = settings.transparent();
 
-            int dstPixelFormat = PixelFormatHelper.getBestPixelFormat(settings.encoder(), srcPixelFormat, wantTransparency);
-            Flashback.LOGGER.info("Starting export. Container={}. Codec={}. Encoder={}, Format={}",
-                settings.container().text(), settings.codec().text(),
-                settings.encoder(), PixelFormatHelper.pixelFormatToString(dstPixelFormat));
+            int dstPixelFormat = PixelFormatHelper.getBestPixelFormat(settings.encoder(), wantTransparency);
+            Flashback.LOGGER.info("Encoding video with pixel format {}", PixelFormatHelper.pixelFormatToString(dstPixelFormat));
 
             int width = settings.resolutionX();
             int height = settings.resolutionY();
@@ -101,7 +116,7 @@ public class AsyncFFmpegVideoWriter implements AutoCloseable, VideoWriter {
                 height = (int) Math.floor(scaleDownFactor * height);
             }
 
-            boolean needsRescale = srcPixelFormat != dstPixelFormat || width != settings.resolutionX() || height != settings.resolutionY();
+            boolean needsRescale = ExportJob.SRC_PIXEL_FORMAT != dstPixelFormat || width != settings.resolutionX() || height != settings.resolutionY();
 
             // 288m is the hard cap of libopenh264. Some encoders e.g. h264_amf support up to 1.1b, but the quality is near identical
             int maxBitrate = (int) Math.min(288_000_000, 4096L + av_image_get_buffer_size(dstPixelFormat, width, height, 1) * 8L * settings.framerate());
@@ -129,7 +144,7 @@ public class AsyncFFmpegVideoWriter implements AutoCloseable, VideoWriter {
                 }
             }
 
-            final FlashbackFFmpegFrameRecorder recorder = new FlashbackFFmpegFrameRecorder(this.filename, width, height, audioChannels);
+            final FFmpegFrameRecorder recorder = new FFmpegFrameRecorder(filename, width, height, audioChannels);
 
             recorder.setVideoBitrate(bitrate);
             recorder.setVideoCodec(settings.codec().codecId());
@@ -138,22 +153,6 @@ public class AsyncFFmpegVideoWriter implements AutoCloseable, VideoWriter {
             recorder.setFrameRate(fps);
             recorder.setPixelFormat(dstPixelFormat);
             recorder.setGopSize((int) Math.max(20, Math.min(240, Math.ceil(fps * 2))));
-
-            if (settings.container().isImageSequence() && settings.pngSequenceFormat() == null) {
-                recorder.setMuxerOption("update", "1");
-            }
-            if (settings.encoder().equals("exr")) {
-                recorder.setVideoOption("compression", "zip1");
-            }
-            if (settings.bitrate() == 0) {
-                if (settings.encoder().endsWith("_nvenc")) {
-                    recorder.setVideoOption("preset", "p7");
-                } else if (settings.encoder().endsWith("_amf")) {
-                    recorder.setVideoOption("quality", "quality");
-                } else if (settings.encoder().equals("libx264")) {
-                    recorder.setVideoOption("preset", "slower");
-                }
-            }
 
             if (settings.recordAudio()) {
                 recorder.setAudioCodec(settings.audioCodec().codecId());
@@ -179,7 +178,7 @@ public class AsyncFFmpegVideoWriter implements AutoCloseable, VideoWriter {
         }
     }
 
-    private @NotNull Thread createEncodeThread(FlashbackFFmpegFrameRecorder recorder) {
+    private @NotNull Thread createEncodeThread(FFmpegFrameRecorder recorder) {
         Thread encodeThread = new Thread(() -> {
             while (true) {
                 ImageFrame src;
@@ -187,14 +186,14 @@ public class AsyncFFmpegVideoWriter implements AutoCloseable, VideoWriter {
                 try {
                     src = this.encodeQueue.poll(10, TimeUnit.MILLISECONDS);
                 } catch (InterruptedException e) {
-                    continue;
+                    throw SneakyThrow.sneakyThrow(e);
                 }
 
                 try {
                     if (src == null) {
                         if (this.finishEncodeThread.get()) {
                             recorder.stop();
-                            recorder.release();
+                            recorder.close();
                             this.finishedWriting.set(true);
                             return;
                         } else {
@@ -202,22 +201,24 @@ public class AsyncFFmpegVideoWriter implements AutoCloseable, VideoWriter {
                         }
                     }
 
-                    ByteBuffer buffer = MemoryUtil.memByteBuffer(src.pixels, (int) src.size);
+                    int size = src.height * src.stride * Frame.pixelSize(src.imageDepth);
+                    ByteBuffer buffer = MemoryUtil.memByteBuffer(src.pointer, size);
 
-                    recorder.recordImage(src.width, src.height, src.ffmpegPixelFormat(), buffer);
+                    recorder.recordImage(src.width, src.height, src.imageDepth, src.channels,
+                            src.stride, src.pixelFormat, buffer);
                     if (src.audioBuffer != null) {
                         recorder.recordSamples(src.audioBuffer);
                     }
 
                     if (this.reusePictureData != null) {
-                        if (this.reusePictureData.offer(src.pixels)) { // try adding to the reuse queue, ignore if full
+                        if (this.reusePictureData.offer(src.pointer)) { // try adding to the reuse queue, ignore if full
                             src = null; // don't deallocate
                         }
                     }
                 } catch (Throwable t) {
                     try {
                         recorder.release();
-                    } catch (FlashbackFFmpegFrameRecorder.Exception e) {
+                    } catch (FFmpegFrameRecorder.Exception e) {
                         e.printStackTrace();
                     }
                     this.threadedError.set(t);
@@ -238,6 +239,12 @@ public class AsyncFFmpegVideoWriter implements AutoCloseable, VideoWriter {
 
     private Thread createRescaleThread(int dstWidth, int dstHeight, int dstPixelFormat) {
         int dstSize = av_image_get_buffer_size(dstPixelFormat, dstWidth, dstHeight, 1);
+        int dstDepth = dstSize * 8 / dstWidth / dstHeight;
+        int dstChannels;
+
+        try (AVPixFmtDescriptor descriptor = av_pix_fmt_desc_get(dstPixelFormat)) {
+            dstChannels = descriptor.nb_components();
+        }
 
         AVFrame picture = avutil.av_frame_alloc();
         if (picture == null) {
@@ -252,7 +259,7 @@ public class AsyncFFmpegVideoWriter implements AutoCloseable, VideoWriter {
         PointerPointer<AVFrame> tmp_picture_ptr = new PointerPointer<>(tmp_picture);
         PointerPointer<AVFrame> picture_ptr = new PointerPointer<>(picture);
 
-        Flashback.LOGGER.info("Rescaling to pixel format: {}", PixelFormatHelper.pixelFormatToString(dstPixelFormat));
+        Flashback.LOGGER.info("Rescaling to pixel format: {}", dstPixelFormat);
 
         boolean useItu709Colorspace = PixelFormatHelper.isYuvFormat(dstPixelFormat);
 
@@ -273,7 +280,7 @@ public class AsyncFFmpegVideoWriter implements AutoCloseable, VideoWriter {
                         }
                     }
 
-                    img_convert_ctx = swscale.sws_getCachedContext(img_convert_ctx, src.width, src.height, src.ffmpegPixelFormat(),
+                    img_convert_ctx = swscale.sws_getCachedContext(img_convert_ctx, src.width, src.height, src.pixelFormat,
                             dstWidth, dstHeight, dstPixelFormat, swscale.SWS_LANCZOS | swscale.SWS_ACCURATE_RND | swscale.SWS_FULL_CHR_H_INT,
                             null, null, (DoublePointer) null);
                     if (img_convert_ctx == null) {
@@ -286,7 +293,7 @@ public class AsyncFFmpegVideoWriter implements AutoCloseable, VideoWriter {
                     }
 
                     BytePointer data = new BytePointer() {{
-                        this.address = src.pixels;
+                        this.address = src.pointer;
                         this.position = 0;
                         this.limit = src.size;
                         this.capacity = src.size;
@@ -309,10 +316,12 @@ public class AsyncFFmpegVideoWriter implements AutoCloseable, VideoWriter {
                         this.capacity = dstSize;
                     }};
 
-                    av_image_fill_arrays(tmp_picture_ptr, tmp_picture.linesize(), data, src.ffmpegPixelFormat(), src.width, src.height, 1);
+                    av_image_fill_arrays(tmp_picture_ptr, tmp_picture.linesize(), data, src.pixelFormat, src.width, src.height, 1);
                     av_image_fill_arrays(picture_ptr, picture.linesize(), tempPointer, dstPixelFormat, dstWidth, dstHeight, 1);
 
-                    tmp_picture.format(src.ffmpegPixelFormat());
+                    int step = src.stride * Math.abs(src.imageDepth) / 8;
+                    tmp_picture.linesize(0, step);
+                    tmp_picture.format(src.pixelFormat);
                     tmp_picture.width(src.width);
                     tmp_picture.height(src.height);
 
@@ -323,7 +332,8 @@ public class AsyncFFmpegVideoWriter implements AutoCloseable, VideoWriter {
                     swscale.sws_scale(img_convert_ctx, tmp_picture_ptr, tmp_picture.linesize(),
                             0, src.height, picture_ptr, picture.linesize());
 
-                    this.encodeQueue.put(new ImageFrame(tempPointerAddress, dstWidth, dstHeight, dstSize, dstPixelFormat, src.audioBuffer));
+                    this.encodeQueue.put(new ImageFrame(tempPointerAddress, dstSize, dstWidth, dstHeight, dstChannels, dstDepth,
+                            dstWidth, dstPixelFormat, src.audioBuffer));
                 } catch (Throwable t) {
                     try {
                         av_frame_free(picture);
@@ -363,9 +373,7 @@ public class AsyncFFmpegVideoWriter implements AutoCloseable, VideoWriter {
         }
     }
 
-    public void encode(ImageFrame src) {
-        this.tryStart(src.ffmpegPixelFormat());
-
+    public void encode(NativeImage src, @Nullable FloatBuffer audioBuffer) {
         checkEncodeError(src);
 
         if (this.finishRescaleThread.get() || this.finishEncodeThread.get() || this.finishedWriting.get()) {
@@ -374,23 +382,21 @@ public class AsyncFFmpegVideoWriter implements AutoCloseable, VideoWriter {
         }
 
         while (true) {
+            ImageFrame imageFrame = new ImageFrame(src.pixels, (int) src.size, src.getWidth(), src.getHeight(),
+                4, Frame.DEPTH_INT, src.getWidth(), ExportJob.SRC_PIXEL_FORMAT, audioBuffer);
             try {
                 if (this.rescaleQueue != null) {
-                    this.rescaleQueue.put(src);
+                    this.rescaleQueue.put(imageFrame);
                 } else {
-                    this.encodeQueue.put(src);
+                    this.encodeQueue.put(imageFrame);
                 }
                 break;
             } catch (InterruptedException ignored) {}
-            checkEncodeError(src);
+            checkEncodeError(imageFrame);
         }
     }
 
     public void finish(Consumer<String> wait) {
-        if (!this.started) {
-            return;
-        }
-
         checkEncodeError(null);
 
         if (this.rescaleQueue != null) {
@@ -422,10 +428,6 @@ public class AsyncFFmpegVideoWriter implements AutoCloseable, VideoWriter {
 
     @Override
     public void close() {
-        if (!this.started) {
-            return;
-        }
-
         if (this.rescaleQueue != null) {
             for (ImageFrame src : this.rescaleQueue) {
                 src.close();

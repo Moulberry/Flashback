@@ -161,6 +161,7 @@ public class VisualsWindow {
             // FOV
             if (ImGui.checkbox(I18n.get("flashback.visuals.overrides.override_fov"), visuals.overrideFov)) {
                 visuals.overrideFov = !visuals.overrideFov;
+                Minecraft.getInstance().levelRenderer.needsUpdate();
                 editorState.markDirty();
             }
             if (visuals.overrideFov) {
@@ -186,7 +187,7 @@ public class VisualsWindow {
                 if (visuals.overrideTimeOfDay >= 0) {
                     visuals.overrideTimeOfDay = -1;
                 } else {
-                    visuals.overrideTimeOfDay = (int)(Minecraft.getInstance().level.getDefaultClockTime() % 24000);
+                    visuals.overrideTimeOfDay = (int)(Minecraft.getInstance().level.getDayTime() % 24000);
                 }
                 editorState.markDirty();
             }
@@ -283,12 +284,14 @@ public class VisualsWindow {
             // Camera Roll
             if (ImGui.checkbox(I18n.get("flashback.camera_roll"), visuals.overrideRoll)) {
                 visuals.overrideRoll = !visuals.overrideRoll;
+                Minecraft.getInstance().levelRenderer.needsUpdate();
                 editorState.markDirty();
             }
             if (visuals.overrideRoll) {
                 floatBuffer[0] = visuals.overrideRollAmount;
                 if (ImGui.sliderFloat(I18n.get("flashback.roll"), floatBuffer, -180.0f, 180.0f, "%.1f")) {
                     visuals.overrideRollAmount = floatBuffer[0];
+                    Minecraft.getInstance().levelRenderer.needsUpdate();
                     editorState.markDirty();
                 }
             }
@@ -305,15 +308,6 @@ public class VisualsWindow {
             if (ImGui.checkbox(I18n.get("flashback.center_guide"), visuals.centerGuide)) {
                 visuals.centerGuide = !visuals.centerGuide;
                 editorState.markDirty();
-            }
-
-            if (replayServer.hasRtcData()) {
-                var config = Flashback.getConfig();
-                if (ImGui.checkbox(I18n.get("flashback.overlay.rtc_overlay"), config.overlay.rtcOverlay)) {
-                    config.overlay.rtcOverlay = !config.overlay.rtcOverlay;
-                    config.delayedSaveToDefaultFolder();
-                }
-                ImGui.setItemTooltip(I18n.get("flashback.overlay.rtc_overlay.description"));
             }
 
             if (ImGui.checkbox(I18n.get("flashback.camera_path"), visuals.cameraPath)) {

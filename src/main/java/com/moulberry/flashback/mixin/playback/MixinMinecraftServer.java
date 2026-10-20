@@ -20,7 +20,7 @@ public class MixinMinecraftServer {
      * to load them from the replay server's empty datapack repository.
      */
 
-    @WrapOperation(method = "lambda$reloadResources$1", at = @At(value = "INVOKE", target = "Lnet/minecraft/tags/TagLoader;loadTagsForExistingRegistries(Lnet/minecraft/server/packs/resources/ResourceManager;Lnet/minecraft/core/RegistryAccess;)Ljava/util/List;"))
+    @WrapOperation(method = "method_29437", at = @At(value = "INVOKE", target = "Lnet/minecraft/tags/TagLoader;loadTagsForExistingRegistries(Lnet/minecraft/server/packs/resources/ResourceManager;Lnet/minecraft/core/RegistryAccess;)Ljava/util/List;"))
     public List<Registry.PendingTags<?>> loadTagsForExistingRegistries(ResourceManager resourceManager, RegistryAccess registryAccess, Operation<List<Registry.PendingTags<?>>> original) {
         if ((Object) this instanceof ReplayServer) {
             return List.of();

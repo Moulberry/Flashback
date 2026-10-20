@@ -112,9 +112,7 @@ public class IgnoredPacketSet {
         ClientboundDebugChunkValuePacket.class,
         ClientboundDebugBlockValuePacket.class,
         ClientboundDebugEntityValuePacket.class,
-        ClientboundDebugEventPacket.class,
-        ClientboundGameRuleValuesPacket.class,
-        ClientboundLowDiskSpaceWarningPacket.class
+        ClientboundDebugEventPacket.class
     );
 
 }

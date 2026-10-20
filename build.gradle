@@ -11,7 +11,7 @@ buildscript {
 }
 
 plugins {
-    id 'net.fabricmc.fabric-loom' version '1.15-SNAPSHOT'
+    id 'fabric-loom' version '1.17-SNAPSHOT'
     id 'com.gradleup.shadow' version "9.3.0"
     id 'maven-publish'
 }
@@ -52,13 +52,12 @@ loom {
 dependencies {
     // Minecraft and fabric
     minecraft "com.mojang:minecraft:${project.minecraft_version}"
-    implementation "net.fabricmc:fabric-loader:${project.loader_version}"
-    implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
+    mappings loom.officialMojangMappings()
+    modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+    modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
 
     // Login in dev environment
-    runtimeOnly("me.djtheredstoner:DevAuth-fabric:1.1.2")
-    runtimeOnly("org.apache.httpcomponents:httpclient:4.5.14")
-    runtimeOnly("org.apache.httpcomponents:httpcore:4.4.16")
+    modRuntimeOnly("me.djtheredstoner:DevAuth-fabric:1.1.2")
 
     // MixinConstraints
     include(implementation("com.moulberry:mixinconstraints:1.0.8"))
@@ -67,22 +66,27 @@ dependencies {
     include(implementation(annotationProcessor("com.github.bawnorton.mixinsquared:mixinsquared-fabric:0.3.7-beta.1")))
 
     // Lattice (config)
-    include(implementation("com.moulberry:lattice:2.2.0"))
+    include(modImplementation("com.moulberry:lattice:1.3.1")) {
+        attributes {
+            attribute(Attribute.of("earth.terrarium.cloche.modLoader", String), "fabric")
+        }
+    }
 
     // Apache stuff
     include(implementation("org.apache.commons:commons-math3:3.6.1"))
 
     // Mod compatibility
-    compileOnly("maven.modrinth:distanthorizons:Mt9bDAs6")
-    compileOnly("maven.modrinth:sodium:Amr4VcZo")
-    compileOnly("maven.modrinth:iris:MwcLS51S")
-    compileOnly("maven.modrinth:bobby:8gsFUovP")
-    compileOnly("maven.modrinth:simple-voice-chat:OLnMVWXy")
-    compileOnly("maven.modrinth:modmenu:jvjwXH6l")
-    compileOnly("maven.modrinth:scalablelux:gYbHVCz8")
+    modCompileOnly("maven.modrinth:distanthorizons:Mt9bDAs6")
+    modCompileOnly("maven.modrinth:sodium:RncWhTxD")
+    modCompileOnly("maven.modrinth:iris:2fEZLvCV")
+    modCompileOnly("maven.modrinth:bobby:2cuVyTav")
+    modCompileOnly("maven.modrinth:simple-voice-chat:MLNG868g")
+    modCompileOnly("maven.modrinth:replaymod:NtlpUQgI")
+    modCompileOnly("maven.modrinth:modmenu:xhN1IvHi")
+    modCompileOnly("maven.modrinth:starlight:1.1.3+1.20.2")
 
     // FFmpeg
-    shadow(implementation("org.bytedeco:javacv-platform:1.5.14") {
+    shadow(implementation("org.bytedeco:javacv-platform:1.5.10") {
         exclude group: "org.bytedeco", module: "artoolkitplus"
         exclude group: "org.bytedeco", module: "artoolkitplus-platform"
         exclude group: "org.bytedeco", module: "flycapture"
@@ -107,24 +111,43 @@ dependencies {
         exclude group: "org.bytedeco", module: "tesseract-platform"
         exclude group: "org.bytedeco", module: "videoinput"
         exclude group: "org.bytedeco", module: "videoinput-platform"
-        exclude group: "org.bytedeco", module: "ffmpeg"
-        exclude group: "org.bytedeco", module: "javacpp"
     })
-    // Include bytedeco ffmpeg & natives
-    shadow(implementation(group: "org.bytedeco", name: "ffmpeg", version: "8.1.2-1.5.14", classifier: ""))
-    shadow(api(rootProject.files('ffmpeg/ffmpeg-natives-linux.jar'))) // Custom natives are from https://github.com/BtbN/FFmpeg-Builds/
-    shadow(api(rootProject.files('ffmpeg/ffmpeg-natives-windows.jar')))
-    shadow(implementation(group: "org.bytedeco", name: "ffmpeg", version: "8.1.2-1.5.14", classifier: "macosx-x86_64"))
-    shadow(implementation(group: "org.bytedeco", name: "ffmpeg", version: "8.1.2-1.5.14", classifier: "macosx-arm64"))
-    // Include only platforms we use
-    shadow(implementation(group: "org.bytedeco", name: "javacpp", version: "1.5.14", classifier: "linux-x86_64"))
-    shadow(implementation(group: "org.bytedeco", name: "javacpp", version: "1.5.14", classifier: "windows-x86_64"))
-    shadow(implementation(group: "org.bytedeco", name: "javacpp", version: "1.5.14", classifier: "macosx-x86_64"))
-    shadow(implementation(group: "org.bytedeco", name: "javacpp", version: "1.5.14", classifier: "macosx-arm64"))
 
     // ImGui
     shadow(implementation(rootProject.files('deps/imgui-binding-1.90.0.jar')))
     shadow(api(rootProject.files('deps/imgui-natives.jar')))
+
+    // Native File Dialogs
+    String nfdVersion = "org.lwjgl:lwjgl-nfd:3.3.3";
+
+    shadow(implementation(nfdVersion) {
+        exclude group: 'org.lwjgl'
+        exclude group: 'org.lwjgl.lwjgl'
+    })
+    shadow(api("org.lwjgl:lwjgl-nfd::natives-macos") {
+        exclude group: 'org.lwjgl'
+        exclude group: 'org.lwjgl.lwjgl'
+    })
+    shadow(api("org.lwjgl:lwjgl-nfd::natives-linux") {
+        exclude group: 'org.lwjgl'
+        exclude group: 'org.lwjgl.lwjgl'
+    })
+    shadow(api("org.lwjgl:lwjgl-nfd::natives-windows") {
+        exclude group: 'org.lwjgl'
+        exclude group: 'org.lwjgl.lwjgl'
+    })
+    shadow(api("org.lwjgl:lwjgl-nfd::natives-macos-arm64") {
+        exclude group: 'org.lwjgl'
+        exclude group: 'org.lwjgl.lwjgl'
+    })
+    shadow(api("org.lwjgl:lwjgl-nfd::natives-linux-arm64") {
+        exclude group: 'org.lwjgl'
+        exclude group: 'org.lwjgl.lwjgl'
+    })
+    shadow(api("org.lwjgl:lwjgl-nfd::natives-windows-arm64") {
+        exclude group: 'org.lwjgl'
+        exclude group: 'org.lwjgl.lwjgl'
+    })
 }
 
 processResources {
@@ -136,7 +159,7 @@ processResources {
 }
 
 tasks.withType(JavaCompile).configureEach {
-    it.options.release = 25
+    it.options.release = 21
 }
 
 java {
@@ -145,9 +168,8 @@ java {
     // If you remove this line, sources will not be generated.
     withSourcesJar()
 
-    toolchain.languageVersion.set(JavaLanguageVersion.of(25))
-    sourceCompatibility = JavaVersion.VERSION_25
-    targetCompatibility = JavaVersion.VERSION_25
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
 }
 
 jar {
@@ -166,19 +188,26 @@ shadowJar {
     exclude("LICENSE.txt")
 }
 
-// Super hacky... merge the shadowJar with the main jar.
-// This is needed because the main jar has the includes
-// Couldn't find a better way of doing this
-tasks.register("mergeShadowWithIncludes", Jar) {
-    archiveBaseName.set("merged")
-    from(zipTree(project.tasks.jar.archiveFile))
-    from(zipTree(project.tasks.shadowJar.archiveFile))
-    duplicatesStrategy(DuplicatesStrategy.EXCLUDE)
+remapJar {
+    dependsOn(shadowJar)
+    input = shadowJar.getArchiveFile()
+}
 
-    var archiveFileFrom = it.archiveFile
-    var archiveFileTo = project.tasks.jar.archiveFile
-    doLast {
-        archiveFileFrom.get().asFile.renameTo(archiveFileTo.get().asFile)
+
+// configure the maven publication
+publishing {
+    publications {
+        create("mavenJava", MavenPublication) {
+            artifactId = project.archives_base_name
+            from components.java
+        }
+    }
+
+    // See https://docs.gradle.org/current/userguide/publishing_maven.html for information on how to set up publishing.
+    repositories {
+        // Add repositories to publish to here.
+        // Notice: This block does NOT have the same function as the block in the top level.
+        // The repositories here will be used for publishing your artifact, not for
+        // retrieving dependencies.
     }
 }
-project.assemble.dependsOn(mergeShadowWithIncludes)

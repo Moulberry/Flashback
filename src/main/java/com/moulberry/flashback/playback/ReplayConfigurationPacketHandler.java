@@ -25,11 +25,9 @@ import net.minecraft.server.packs.repository.PackRepository;
 import net.minecraft.server.packs.repository.ServerPacksSource;
 import net.minecraft.server.packs.resources.CloseableResourceManager;
 import net.minecraft.server.packs.resources.MultiPackResourceManager;
-import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.server.packs.resources.ResourceProvider;
 import net.minecraft.tags.TagLoader;
 import net.minecraft.tags.TagNetworkSerialization;
-import net.minecraft.util.Util;
 import net.minecraft.world.flag.FeatureFlagSet;
 import net.minecraft.world.flag.FeatureFlags;
 import net.minecraft.world.level.biome.Biome;
@@ -145,7 +143,7 @@ public class ReplayConfigurationPacketHandler implements ClientConfigurationPack
         RegistryAccess.Frozen synchronizedRegistries;
         try {
             synchronizedRegistries = RegistryDataLoader.load(entries, resourceProvider, updatedLookups,
-                RegistryDataLoader.SYNCHRONIZED_REGISTRIES, Util.backgroundExecutor()).join();
+                RegistryDataLoader.SYNCHRONIZED_REGISTRIES);
         } catch (Exception e) {
             this.replayServer.failedToLoadRegistryDataWarning = true;
             Flashback.LOGGER.error("Error while trying to load registry data. Skipping... this might cause other issues", e);
@@ -328,7 +326,7 @@ public class ReplayConfigurationPacketHandler implements ClientConfigurationPack
         if (this.pendingTags == null) {
             this.pendingTags = new HashMap<>();
         }
-        this.pendingTags.putAll(clientboundUpdateTagsPacket.tags());
+        this.pendingTags.putAll(clientboundUpdateTagsPacket.getTags());
     }
 
     @Override
@@ -357,10 +355,6 @@ public class ReplayConfigurationPacketHandler implements ClientConfigurationPack
 
     @Override
     public void handleShowDialog(ClientboundShowDialogPacket clientboundShowDialogPacket) {
-    }
-
-    @Override
-    public void handlePostEffects(ClientboundPostEffectsPacket packet) {
     }
 
     @Override

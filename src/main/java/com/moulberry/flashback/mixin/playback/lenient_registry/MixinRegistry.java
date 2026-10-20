@@ -13,7 +13,7 @@ import org.spongepowered.asm.mixin.injection.At;
 @Mixin(Registry.class)
 public interface MixinRegistry {
 
-    @ModifyReturnValue(method = "lambda$referenceHolderWithLifecycle$0", at = @At("RETURN"))
+    @ModifyReturnValue(method = "method_57065", at = @At("RETURN"))
     default DataResult<Holder.Reference<?>> referenceHolderWithLifecycle_get(DataResult<Holder.Reference<?>> original) {
         if (original.isSuccess()) {
             return original;

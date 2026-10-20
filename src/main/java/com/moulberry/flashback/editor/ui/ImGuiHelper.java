@@ -1,47 +1,22 @@
 package com.moulberry.flashback.editor.ui;
 
 import com.moulberry.flashback.combo_options.ComboOption;
-import com.moulberry.flashback.editor.keybinds.Keybind;
 import imgui.moulberry90.ImGui;
 import imgui.moulberry90.ImVec2;
 import imgui.moulberry90.flag.ImGuiCol;
 import imgui.moulberry90.flag.ImGuiComboFlags;
 import imgui.moulberry90.flag.ImGuiHoveredFlags;
-import imgui.moulberry90.flag.ImGuiKey;
-import imgui.moulberry90.flag.ImGuiMouseButton;
 import imgui.moulberry90.flag.ImGuiWindowFlags;
 import imgui.moulberry90.type.ImBoolean;
 import imgui.moulberry90.type.ImFloat;
 import imgui.moulberry90.type.ImInt;
 import imgui.moulberry90.type.ImString;
+import org.lwjgl.glfw.GLFW;
 
 import java.util.HashMap;
 import java.util.Map;
 
 public class ImGuiHelper {
-
-    private static Keybind editingKeybindLastFrame = null;
-    private static Keybind editingKeybindThisFrame = null;
-
-    private static boolean closeableModalOnTopLast = false;
-    private static boolean closeableModalOnTop = false;
-
-    private static boolean handledFocusNext = false;
-    private static boolean focusNext = false;
-    private static int focusIndex = 0;
-    private static int focusLastIndex = 0;
-
-    public static void endFrame() {
-        closeableModalOnTopLast = closeableModalOnTop;
-
-        editingKeybindLastFrame = editingKeybindThisFrame;
-        editingKeybindThisFrame = null;
-
-        handledFocusNext = false;
-        focusNext = false;
-        focusIndex = 0;
-    }
-
 
     public static String getString(ImString string) {
         StringBuilder builder = new StringBuilder();
@@ -90,14 +65,6 @@ public class ImGuiHelper {
         } else {
             return values[enumComboSharedArray[0]];
         }
-    }
-
-    public static void setEditingKeybind(Keybind keybind) {
-        editingKeybindThisFrame = keybind;
-    }
-
-    public static Keybind getEditingKeybind() {
-        return editingKeybindLastFrame;
     }
 
     @SuppressWarnings("unchecked")
@@ -154,42 +121,72 @@ public class ImGuiHelper {
         return changed;
     }
 
-    public static boolean isImGuiBindingDown(int key) {
-        if (key == 0) {
-            return false;
-        }
+    private static boolean closeableModalOnTopLast = false;
+    private static boolean closeableModalOnTop = false;
+    private static boolean wantSpecialInputLastFrame = false;
+    private static boolean wantSpecialInputThisFrame = false;
 
-        if (key < 0) {
-            int mouse = -key-1;
-            if (mouse >= ImGuiMouseButton.COUNT) {
-                return false;
-            }
-            return ImGui.isMouseDown(mouse);
-        } else {
-            if (key < ImGuiKey.NamedKey_BEGIN || key >= ImGuiKey.NamedKey_END) {
-                return false;
-            }
-            return ImGui.isKeyDown(key);
-        }
+    private static StringBuilder specialInput = new StringBuilder();
+    private static int backspaceCount = 0;
+
+    private static boolean handledFocusNext = false;
+    private static boolean focusNext = false;
+    private static int focusIndex = 0;
+    private static int focusLastIndex = 0;
+
+    public static void endFrame() {
+        closeableModalOnTopLast = closeableModalOnTop;
+
+        wantSpecialInputLastFrame = wantSpecialInputThisFrame;
+        wantSpecialInputThisFrame = false;
+
+        handledFocusNext = false;
+        focusNext = false;
+        focusIndex = 0;
+
+        if (!wantSpecialInputLastFrame) specialInput.setLength(0);
     }
 
-    public static boolean isImGuiBindingClicked(int key, boolean repeat) {
-        if (key == 0) {
-            return false;
-        }
+    public static String modifyFromInput(String existing) {
+        wantSpecialInputThisFrame = true;
+        String newInput = specialInput.toString();
 
-        if (key < 0) {
-            int mouse = -key-1;
-            if (mouse >= ImGuiMouseButton.COUNT) {
-                return false;
-            }
-            return ImGui.isMouseClicked(mouse, repeat);
-        } else {
-            if (key < ImGuiKey.NamedKey_BEGIN || key >= ImGuiKey.NamedKey_END) {
-                return false;
-            }
-            return ImGui.isKeyPressed(key, repeat);
+        existing = existing.substring(0, Math.max(0, existing.length() - backspaceCount));
+        existing += newInput;
+
+        specialInput.setLength(0);
+        backspaceCount = 0;
+        return existing;
+    }
+
+    public static boolean getWantsSpecialInput() {
+        return wantSpecialInputLastFrame;
+    }
+
+    public static boolean addInputCharacter(char c) {
+        if (wantSpecialInputLastFrame) {
+            specialInput.append(c);
+            return true;
         }
+        return false;
+    }
+
+    public static boolean backspaceInput(int mods) {
+        if (wantSpecialInputLastFrame) {
+            if ((mods & GLFW.GLFW_MOD_CONTROL) != 0) {
+                specialInput.setLength(0);
+                backspaceCount = 10000;
+                return true;
+            }
+
+            if (specialInput.length() > 0) {
+                specialInput.setLength(specialInput.length() - 1);
+            } else {
+                backspaceCount += 1;
+            }
+            return true;
+        }
+        return false;
     }
 
     public static boolean beginPopup(String id) {
@@ -374,9 +371,9 @@ public class ImGuiHelper {
                 }
             }
 
-            if (!handledFocusNext && ImGui.isItemActive() && ImGui.isKeyPressed(ImGuiKey.Tab, false)) {
+            if (!handledFocusNext && ImGui.isItemActive() && ImGui.isKeyPressed(GLFW.GLFW_KEY_TAB, false)) {
                 handledFocusNext = true;
-                if (ImGui.isKeyDown(ImGuiKey.LeftShift) || ImGui.isKeyDown(ImGuiKey.RightShift)) {
+                if (ImGui.isKeyDown(GLFW.GLFW_KEY_LEFT_SHIFT) || ImGui.isKeyDown(GLFW.GLFW_KEY_RIGHT_SHIFT)) {
                     focusLastIndex = focusIndex - 1;
                 } else {
                     focusNext = true;
@@ -447,9 +444,9 @@ public class ImGuiHelper {
                 }
             }
 
-            if (!handledFocusNext && ImGui.isItemActive() && ImGui.isKeyPressed(ImGuiKey.Tab, false)) {
+            if (!handledFocusNext && ImGui.isItemActive() && ImGui.isKeyPressed(GLFW.GLFW_KEY_TAB, false)) {
                 handledFocusNext = true;
-                if (ImGui.isKeyDown(ImGuiKey.LeftShift) || ImGui.isKeyDown(ImGuiKey.RightShift)) {
+                if (ImGui.isKeyDown(GLFW.GLFW_KEY_LEFT_SHIFT) || ImGui.isKeyDown(GLFW.GLFW_KEY_RIGHT_SHIFT)) {
                     focusLastIndex = focusIndex - 1;
                 } else {
                     focusNext = true;

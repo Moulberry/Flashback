@@ -144,9 +144,7 @@ public class EditorState {
 
         Camera dummyCamera = new Camera();
         dummyCamera.eyeHeight = sourceEntity.getEyeHeight();
-        dummyCamera.setLevel(level);
-        dummyCamera.setEntity(sourceEntity);
-        dummyCamera.update(Minecraft.getInstance().deltaTracker);
+        dummyCamera.setup(level, sourceEntity, false, false, 1.0f);
         return dummyCamera;
     }
 

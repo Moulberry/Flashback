@@ -1,10 +1,9 @@
 package com.moulberry.flashback.editor.ui.windows;
 
-import com.mojang.blaze3d.Blaze3D;
+import com.mojang.blaze3d.opengl.GlTexture;
 import com.mojang.blaze3d.platform.NativeImage;
 import com.moulberry.flashback.Utils;
 import com.moulberry.flashback.editor.ui.ImGuiHelper;
-import com.moulberry.flashback.editor.ui.ReplayUI;
 import com.moulberry.flashback.exporting.ExportSettings;
 import imgui.moulberry90.ImGui;
 import imgui.moulberry90.ImGuiViewport;
@@ -16,6 +15,7 @@ import imgui.moulberry90.type.ImBoolean;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.client.resources.language.I18n;
+import net.minecraft.util.Util;
 import org.jetbrains.annotations.Nullable;
 
 import java.net.URI;
@@ -46,14 +46,14 @@ public class ExportDoneWindow {
             this.outputIsFolder = Files.isDirectory(settings.output());
         }
 
-        public long getThumbnailTextureId() {
+        public int getThumbnailTextureId() {
             Objects.requireNonNull(this.thumbnail);
 
             if (this.uploaded == null) {
                 this.uploaded = new DynamicTexture(() -> "flashback export thumbnail", this.thumbnail);;
             }
 
-            return ReplayUI.imguiRenderer.getTextureId(this.uploaded.getTextureView());
+            return ((GlTexture)this.uploaded.getTexture()).glId();
         }
     }
 
@@ -108,7 +108,7 @@ public class ExportDoneWindow {
 
                 NativeImage thumbnail = entry.thumbnail;
                 if (thumbnail != null) {
-                    long id = entry.getThumbnailTextureId();
+                    int id = entry.getThumbnailTextureId();
 
                     int originalW = thumbnail.getWidth();
                     int originalH = thumbnail.getHeight();
@@ -125,10 +125,10 @@ public class ExportDoneWindow {
                     }
 
                     if (ImGui.imageButton("ExportThumbnail", id, new ImVec2(width, height))) {
-                        Blaze3D.openPath(entry.outputLocation);
+                        Util.getPlatform().openPath(entry.outputLocation);
                     }
                 } else if (ImGui.button(I18n.get("flashback.export_done.missing_thumbnail"), DESIRED_W+padding.x*2, DESIRED_H+padding.y*2)) {
-                    Blaze3D.openPath(entry.outputLocation);
+                    Util.getPlatform().openPath(entry.outputLocation);
                 }
 
                 ImGui.sameLine();
@@ -153,14 +153,14 @@ public class ExportDoneWindow {
 
                 if (entry.outputIsFolder) {
                     if (ImGui.button(I18n.get("flashback.open_folder"))) {
-                        Blaze3D.openPath(entry.outputLocation);
+                        Util.getPlatform().openPath(entry.outputLocation);
                     }
                 } else {
                     if (ImGui.button(I18n.get("flashback.open_file"))) {
-                        Blaze3D.openPath(entry.outputLocation);
+                        Util.getPlatform().openPath(entry.outputLocation);
                     }
                     if (ImGui.button(I18n.get("flashback.open_folder"))) {
-                        Blaze3D.openPath(entry.outputLocation.getParent());
+                        Util.getPlatform().openPath(entry.outputLocation.getParent());
                     }
                 }
 

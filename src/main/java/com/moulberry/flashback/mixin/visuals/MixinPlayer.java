@@ -16,13 +16,10 @@ import net.minecraft.world.entity.player.PlayerModelPart;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.scores.PlayerTeam;
 import net.minecraft.world.scores.Team;
-import net.minecraft.world.scores.TeamColor;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
-
-import java.util.Optional;
 
 @Mixin(Player.class)
 public abstract class MixinPlayer extends LivingEntity {
@@ -51,9 +48,9 @@ public abstract class MixinPlayer extends LivingEntity {
                     mutableComponent = mutableComponent.append(playerTeam.getPlayerSuffix());
                 }
 
-                Optional<TeamColor> chatFormatting = playerTeam.getColor();
-                if (chatFormatting.isPresent()) {
-                    mutableComponent.withColor(chatFormatting.get().textColor());
+                ChatFormatting chatFormatting = playerTeam.getColor();
+                if (chatFormatting != ChatFormatting.RESET) {
+                    mutableComponent.withStyle(chatFormatting);
                 }
 
                 return mutableComponent;

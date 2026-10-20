@@ -1,12 +1,14 @@
-#version 330
-#extension GL_ARB_separate_shader_objects : require
+#version 150
 
-layout(location = 0) in vec3 Position;
-layout(location = 1) in vec2 UV0;
+in vec3 Position;
+in vec2 UV;
 
-layout(location = 0) out vec2 texCoord;
+#moj_import <minecraft:dynamictransforms.glsl>
+#moj_import <minecraft:projection.glsl>
+
+out vec2 texCoord;
 
 void main() {
-    gl_Position = vec4(Position, 1.0);
-    texCoord = UV0;
+    gl_Position = ProjMat * ModelViewMat * vec4(Position, 1.0);
+    texCoord = UV;
 }

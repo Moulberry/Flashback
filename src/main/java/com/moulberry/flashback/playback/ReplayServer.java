@@ -46,7 +46,7 @@ import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLevelEvents;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerWorldEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.util.Util;
 import net.minecraft.client.Minecraft;
@@ -81,11 +81,9 @@ import net.minecraft.server.players.PlayerList;
 import net.minecraft.stats.ServerStatsCounter;
 import net.minecraft.util.Mth;
 import net.minecraft.world.BossEvent;
-import net.minecraft.world.clock.WorldClocks;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.ExperienceOrb;
 import net.minecraft.world.entity.PositionMoveRotation;
-import net.minecraft.world.entity.PositionPath;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
@@ -99,11 +97,9 @@ import net.minecraft.world.level.WorldDataConfiguration;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.chunk.PalettedContainer;
-import net.minecraft.world.level.gamerules.GameRules;
 import net.minecraft.world.level.storage.LevelResource;
 import net.minecraft.world.level.storage.LevelStorageSource;
 import net.minecraft.world.level.storage.PrimaryLevelData;
-import net.minecraft.world.level.storage.ServerLevelData;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
@@ -116,7 +112,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
-import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -129,7 +124,7 @@ public class ReplayServer extends IntegratedServer {
     public static int REPLAY_VIEWER_IDS_START = -981723987;
     public static String REPLAY_VIEWER_NAME = "Replay Viewer";
 
-    public volatile int jumpToTick = -1;
+    private volatile int jumpToTick = -1;
     public volatile boolean replayPaused = true;
     public AtomicBoolean forceApplyKeyframes = new AtomicBoolean(false);
     public AtomicBoolean sendFinishedServerTick = new AtomicBoolean(false);
@@ -142,10 +137,6 @@ public class ReplayServer extends IntegratedServer {
 
     public volatile boolean failedToLoadRegistryDataWarning = false;
     public volatile boolean failedToSpawnPlayerWarning = false;
-
-    private volatile long lastTimeRtc = 0L;
-    private volatile long timeRtc = 0L;
-    private long pendingTimeRtc = 0L;
 
     private boolean hasNonSpectatorReplayViewer = false;
 
@@ -191,9 +182,9 @@ public class ReplayServer extends IntegratedServer {
 
     private final IgnoredCustomPayloads ignoredCustomPayloads = new IgnoredCustomPayloads();
 
-    public ReplayServer(Thread thread, Minecraft minecraft, LevelStorageSource.LevelStorageAccess levelStorageAccess, PackRepository packRepository, WorldStem worldStem,
-                        Optional<GameRules> gameRules, Services services, LevelLoadListener levelLoadListener, MinecraftExt.StartReplayServerInfo info) {
-        super(thread, minecraft, levelStorageAccess, packRepository, worldStem, gameRules, services, levelLoadListener);
+    public ReplayServer(Thread thread, Minecraft minecraft, LevelStorageSource.LevelStorageAccess levelStorageAccess, PackRepository packRepository, WorldStem worldStem, Services services,
+                        LevelLoadListener levelLoadListener, MinecraftExt.StartReplayServerInfo info) {
+        super(thread, minecraft, levelStorageAccess, packRepository, worldStem, services, levelLoadListener);
         this.playbackUUID = info.playbackUUID();
         this.playbackFileSystem = info.playbackFileSystem();
         this.metadata = info.metadata();
@@ -228,8 +219,10 @@ public class ReplayServer extends IntegratedServer {
             primaryLevelData.settings = new LevelSettings(
                 primaryLevelData.settings.levelName(),
                 primaryLevelData.settings.gameType(),
-                primaryLevelData.settings.difficultySettings(),
+                primaryLevelData.settings.hardcore(),
+                primaryLevelData.settings.difficulty(),
                 primaryLevelData.settings.allowCommands(),
+                Flashback.createReplayGameRules(featureFlagSet),
                 new WorldDataConfiguration(
                     this.worldData.getDataConfiguration().dataPacks(),
                     featureFlagSet
@@ -242,10 +235,7 @@ public class ReplayServer extends IntegratedServer {
             ));
         }
 
-        this.gameRules = this.gameRules.copy(featureFlagSet);
-
         this.reloadResources(knownPackIds != null ? knownPackIds : this.getPackRepository().getSelectedIds());
-        this.clockManager().init(this);
 
         this.gamePacketCodec = GameProtocols.CLIENTBOUND_TEMPLATE.bind(RegistryFriendlyByteBuf.decorator(this.registryAccess())).codec();
 
@@ -279,6 +269,8 @@ public class ReplayServer extends IntegratedServer {
 
     @Override
     public boolean initServer() {
+        Entity.ENTITY_COUNTER.set(1000000);
+
         this.setPlayerList(new PlayerList(this, this.registries(), this.playerDataStorage, this.notificationManager()) {
             @Override
             public void placeNewPlayer(Connection connection, ServerPlayer serverPlayer, CommonListenerCookie commonListenerCookie) {
@@ -447,6 +439,11 @@ public class ReplayServer extends IntegratedServer {
 
     public void goToReplayTick(int tick) {
         this.jumpToTick = tick;
+        LockSupport.unpark(this.getRunningThread());
+    }
+
+    public int jumpToTick() {
+        return jumpToTick;
     }
 
     public float getDesiredTickRate(boolean manual) {
@@ -584,60 +581,13 @@ public class ReplayServer extends IntegratedServer {
         return this.gamePacketHandler.localPlayerId;
     }
 
-    public void setTimeRtc(long rtc) {
-        this.pendingTimeRtc = rtc;
-    }
-
-    public void updateTimeRtc(byte delta) {
-        if (this.pendingTimeRtc == 0) {
-            this.pendingTimeRtc = this.timeRtc;
-        }
-        this.pendingTimeRtc += 50L + delta;
-    }
-
-    public boolean hasRtcData() {
-        return this.lastTimeRtc != 0 || this.timeRtc != 0 || this.pendingTimeRtc != 0;
-    }
-
-    public long getInterpolatedRtc() {
-        if (this.replayPaused || this.isPaused() || this.timeRtc < this.lastTimeRtc) {
-            return this.timeRtc;
-        } else {
-            long currentNanos = Util.getNanos();
-            long nanosPerTick = this.tickRateManager().nanosecondsPerTick();
-
-            double partial = (currentNanos - this.lastTickTimeNanos) / (double) nanosPerTick;
-            partial = Math.max(0, Math.min(1, partial));
-
-            return this.lastTimeRtc + (long)((this.timeRtc - this.lastTimeRtc) * partial);
-        }
-    }
-
     public void handleNextTick() {
         if (this.isProcessingSnapshot) {
             throw new IllegalStateException("Can't go to next tick while processing snapshot");
         }
 
         this.gamePacketHandler.flushPendingEntities();
-        this.currentTick += 1;
-        this.updateRtc();
-    }
-
-    private void updateRtc() {
-        if (!this.hasRtcData()) {
-            return;
-        }
-
-        if (this.pendingTimeRtc == 0 && this.timeRtc != 0) {
-            this.pendingTimeRtc = this.timeRtc + 50L;
-        }
-        if (this.lastTimeRtc == 0 || this.lastTimeRtc > this.pendingTimeRtc) {
-            this.lastTimeRtc = this.pendingTimeRtc;
-        } else {
-            this.lastTimeRtc = this.timeRtc;
-        }
-        this.timeRtc = this.pendingTimeRtc;
-        this.pendingTimeRtc = 0L;
+        currentTick += 1;
     }
 
     public void handleConfigurationPacket(RegistryFriendlyByteBuf friendlyByteBuf) {
@@ -795,11 +745,11 @@ public class ReplayServer extends IntegratedServer {
             this.gamePacketHandler.flushPendingEntities();
 
             try {
-                int x = packet.x();
-                int z = packet.z();
+                int x = packet.getX();
+                int z = packet.getZ();
                 LevelChunk chunk = this.gamePacketHandler.level().getChunk(x, z);
 
-                if (Flashback.EXPORT_JOB != null || !doesCachedChunkIdMatch(chunk, index) || this.gamePacketHandler.forceSendChunksDueToMovingPistonShenanigans.contains(ChunkPos.pack(x, z))) {
+                if (Flashback.EXPORT_JOB != null || !doesCachedChunkIdMatch(chunk, index) || this.gamePacketHandler.forceSendChunksDueToMovingPistonShenanigans.contains(ChunkPos.asLong(x, z))) {
                     packet.handle(this.gamePacketHandler);
 
                     if (chunk instanceof LevelChunkExt ext) {
@@ -838,7 +788,7 @@ public class ReplayServer extends IntegratedServer {
             return;
         }
         this.clearLevel(serverLevel);
-        ServerLevelEvents.UNLOAD.invoker().onLevelUnload(this, serverLevel);
+        ServerWorldEvents.UNLOAD.invoker().onWorldUnload(this, serverLevel);
         try {
             serverLevel.close();
         } catch (IOException e) {
@@ -869,6 +819,7 @@ public class ReplayServer extends IntegratedServer {
                 entity.discard();
             }
         }
+        serverLevel.setDayTime(0);
 
         for (ServerPlayer player : serverLevel.players()) {
             if (player instanceof ReplayPlayer replayPlayer) {
@@ -898,7 +849,6 @@ public class ReplayServer extends IntegratedServer {
             ReplayReader replayReader = this.playableChunksByStart.get(0).getOrLoadReplayReader(this.registryAccess());
             replayReader.handleSnapshot(this);
             this.gamePacketHandler.flushPendingEntities();
-            this.updateRtc();
         }
 
         EditorState editorState = this.getEditorState();
@@ -1172,7 +1122,7 @@ public class ReplayServer extends IntegratedServer {
         // Add tickets for keeping entities loaded
         for (ServerLevel level : this.getAllLevels()) {
             for (Entity entity : level.getAllEntities()) {
-                ChunkPos chunkPos = ChunkPos.containing(entity.blockPosition());
+                ChunkPos chunkPos = new ChunkPos(entity.blockPosition());
                 level.getChunkSource().addTicketWithRadius(ENTITY_LOAD_TICKET, chunkPos, 3);
             }
         }
@@ -1209,12 +1159,9 @@ public class ReplayServer extends IntegratedServer {
                         byte quantizedYRot = (byte) Mth.floor(serverEntity.entity.getYRot() * 256.0F / 360.0F);
                         byte quantizedXRot = (byte) Mth.floor(serverEntity.entity.getXRot() * 256.0F / 360.0F);
 
-                        PositionPath position = serverEntity.interpolationTracker.getPositionPath(trackingPosition);
-                        serverEntity.interpolationTracker.clear();
-
                         if (!serverEntity.entity.isPassenger() && !serverEntity.positionCodec.getBase().equals(trackingPosition)) {
                             trackedEntity.sendToTrackingPlayers(new ClientboundEntityPositionSyncPacket(serverEntity.entity.getId(),
-                                position, serverEntity.entity.getYRot(), serverEntity.entity.getXRot(), serverEntity.wasOnGround));
+                                    PositionMoveRotation.of(serverEntity.entity), serverEntity.wasOnGround));
                             serverEntity.positionCodec.setBase(trackingPosition);
                             serverEntity.lastSentYRot = quantizedYRot;
                             serverEntity.lastSentXRot = quantizedXRot;
@@ -1327,6 +1274,10 @@ public class ReplayServer extends IntegratedServer {
         }
     }
 
+    @Override
+    public void synchronizeTime(ServerLevel level) {
+    }
+
     private void handleActions() {
         this.targetTick = Math.max(0, Math.min(this.totalTicks, this.targetTick));
 
@@ -1398,19 +1349,11 @@ public class ReplayServer extends IntegratedServer {
                 stamp = 0L;
             }
 
-            int lastActualTick = this.currentTick;
+            int lastBlockOverrideTick = this.currentTick;
             while (this.currentTick < this.targetTick) {
-                if (lastActualTick != this.currentTick) {
-                    if (blockOverrideKeyframes != null) {
-                        applyBlockOverrideKeyframes(blockOverrideKeyframes, lastActualTick);
-                    }
-                    // Advance game time on the server
-                    for (ServerLevel level : this.getAllLevels()) {
-                        if (level.getLevelData() instanceof ServerLevelData serverLevelData) {
-                            serverLevelData.setGameTime(serverLevelData.getGameTime() + this.currentTick - lastActualTick);
-                        }
-                    }
-                    lastActualTick = this.currentTick;
+                if (lastBlockOverrideTick != this.currentTick && blockOverrideKeyframes != null) {
+                    applyBlockOverrideKeyframes(blockOverrideKeyframes, lastBlockOverrideTick);
+                    lastBlockOverrideTick = this.currentTick;
                 }
 
                 if (!this.currentReplayReader.handleNextAction(this)) {
@@ -1448,20 +1391,10 @@ public class ReplayServer extends IntegratedServer {
                 }
             }
 
-            if (lastActualTick != this.currentTick) {
-                if (blockOverrideKeyframes != null) {
-                    applyBlockOverrideKeyframes(blockOverrideKeyframes, lastActualTick);
-                }
-                // Advance game time on the server
-                for (ServerLevel level : this.getAllLevels()) {
-                    if (level.getLevelData() instanceof ServerLevelData serverLevelData) {
-                        serverLevelData.setGameTime(serverLevelData.getGameTime() + this.currentTick - lastActualTick);
-                    }
-                }
-                lastActualTick = this.currentTick;
-            }
-
             if (blockOverrideKeyframes != null) {
+                if (lastBlockOverrideTick != this.currentTick) {
+                    applyBlockOverrideKeyframes(blockOverrideKeyframes, lastBlockOverrideTick);
+                }
                 applyBlockOverrideKeyframes(blockOverrideKeyframes, this.currentTick);
             }
         } finally {
@@ -1477,7 +1410,6 @@ public class ReplayServer extends IntegratedServer {
         this.clearDataForPlayingSnapshot();
         replayReader.handleSnapshot(this);
         this.gamePacketHandler.flushPendingEntities();
-        this.updateRtc();
 
         replayReader.resetToStart();
     }
@@ -1574,9 +1506,9 @@ public class ReplayServer extends IntegratedServer {
     }
 
     @Override
-    protected void waitForTasks() {
-        if (this.jumpToTick != -1 || Flashback.EXPORT_JOB != null) {
-            // When jumping to a tick in an export, don't wait for the full tick
+    public void waitForTasks() {
+        if (this.jumpToTick != -1) {
+            // When jumping to a tick, don't wait for the full tick
             LockSupport.parkNanos("waiting for tasks", 100000L);
         } else {
             super.waitForTasks();

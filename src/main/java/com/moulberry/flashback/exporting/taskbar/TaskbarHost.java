@@ -1,17 +1,18 @@
 package com.moulberry.flashback.exporting.taskbar;
 
 import com.moulberry.flashback.Flashback;
+import com.replaymod.lib.com.googlecode.mp4parser.util.Logger;
 import com.sun.jna.Pointer;
 import com.sun.jna.platform.win32.*;
 import com.sun.jna.ptr.PointerByReference;
 import net.minecraft.client.Minecraft;
-import net.minecraft.util.Util;
-import org.lwjgl.sdl.SDLProperties;
-import org.lwjgl.sdl.SDLVideo;
+import org.lwjgl.glfw.GLFWNativeWin32;
+
+import static com.moulberry.flashback.editor.ui.CustomImGuiImplGlfw.IS_WINDOWS;
 
 public class TaskbarHost {
     public static ITaskbar createTaskbar() {
-        if (Util.getPlatform() == Util.OS.WINDOWS) {
+        if (IS_WINDOWS) {
             try {
                 return createWindowsInterface();
             } catch (Exception e) {
@@ -34,12 +35,8 @@ public class TaskbarHost {
             throw new IllegalStateException("Failed to create ITaskbar3");
         }
 
-        int windowProperties = SDLVideo.SDL_GetWindowProperties(Minecraft.getInstance().getWindow().handle());
-        long win32Hwnd = SDLProperties.SDL_GetPointerProperty(windowProperties, SDLVideo.SDL_PROP_WINDOW_WIN32_HWND_POINTER, 0);
-        if (win32Hwnd == 0) {
-            throw new RuntimeException("Failed to get Win32 Window");
-        }
-        var hwnd = new WinDef.HWND(new Pointer(win32Hwnd));
+
+        var hwnd = new WinDef.HWND(new Pointer(GLFWNativeWin32.glfwGetWin32Window(Minecraft.getInstance().getWindow().handle())));
         return new WindowsTaskbar(itaskbar3res.getValue(), hwnd);
     }
 }

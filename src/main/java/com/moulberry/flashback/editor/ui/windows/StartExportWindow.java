@@ -4,7 +4,6 @@ import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.Utils;
 import com.moulberry.flashback.combo_options.AspectRatio;
 import com.moulberry.flashback.combo_options.AudioCodec;
-import com.moulberry.flashback.combo_options.ExportProjection;
 import com.moulberry.flashback.combo_options.Sizing;
 import com.moulberry.flashback.combo_options.VideoCodec;
 import com.moulberry.flashback.combo_options.VideoContainer;
@@ -14,10 +13,10 @@ import com.moulberry.flashback.exporting.ExportJobQueue;
 import com.moulberry.flashback.state.EditorState;
 import com.moulberry.flashback.state.EditorStateManager;
 import com.moulberry.flashback.editor.ui.ImGuiHelper;
+import com.moulberry.flashback.exporting.AsyncFileDialogs;
 import com.moulberry.flashback.exporting.ExportJob;
 import com.moulberry.flashback.exporting.ExportSettings;
 import com.moulberry.flashback.playback.ReplayServer;
-import com.moulberry.flashback.utils.AsyncFileDialogs;
 import imgui.moulberry90.ImGui;
 import imgui.moulberry90.flag.ImGuiWindowFlags;
 import imgui.moulberry90.type.ImString;
@@ -159,23 +158,6 @@ public class StartExportWindow {
             }
             ImGuiHelper.inputFloat(I18n.get("flashback.framerate"), config.internalExport.framerate);
 
-            config.internalExport.projection = ImGuiHelper.enumCombo(I18n.get("flashback.projection"), config.internalExport.projection);
-            if (config.internalExport.projection == ExportProjection.ORTHOGRAPHIC) {
-                ImGui.sliderFloat("Ortho Zoom", config.internalExport.orthographicZoom, 0.0f, 10.0f);
-            } else if (config.internalExport.projection == ExportProjection.CUBE_MAP) {
-                int resX = config.internalExport.resolution[0];
-                int resY = config.internalExport.resolution[1];
-                if (resX % 4 != 0 || resY % 3 != 0 || resX != resY*4/3) {
-                    ImGui.text("Warning: Resolution should be 4:3 for cube map export");
-                }
-            } else if (config.internalExport.projection == ExportProjection.EQUIRECTANGULAR) {
-                int resX = config.internalExport.resolution[0];
-                int resY = config.internalExport.resolution[1];
-                if (resX != resY*2) {
-                    ImGui.text("Warning: Resolution should be 2:1 for equirectangular export");
-                }
-            }
-
             if (ImGui.checkbox(I18n.get("flashback.reset_rng"), config.internalExport.resetRng)) {
                 config.internalExport.resetRng = !config.internalExport.resetRng;
             }
@@ -194,15 +176,6 @@ public class StartExportWindow {
                 config.internalExport.noGui = !config.internalExport.noGui;
             }
             ImGuiHelper.tooltip(I18n.get("flashback.no_gui_tooltip"));
-
-            if (ImGui.checkbox(I18n.get("flashback.depth_map"), config.internalExport.depthMap)) {
-                config.internalExport.depthMap = !config.internalExport.depthMap;
-            }
-            ImGuiHelper.tooltip(I18n.get("flashback.depth_map_tooltip"));
-
-            if (config.internalExport.depthMap && config.internalExport.container != VideoContainer.EXR_SEQUENCE) {
-                ImGui.textWrapped("EXR Sequence is recommended for exporting depth maps. Using " + config.internalExport.container.text() + " may result in reduced precision!");
-            }
 
             ImGuiHelper.separatorWithText(I18n.get("flashback.video_options"));
 
@@ -246,7 +219,7 @@ public class StartExportWindow {
 
             ImGui.dummy(0, 10 * ReplayUI.getUiScale());
 
-            boolean isFullscreen = Minecraft.getInstance().getWindow().isExclusiveFullscreen();
+            boolean isFullscreen = Minecraft.getInstance().getWindow().isFullscreen();
             if (isFullscreen) {
                 ImGui.separator();
                 ImGui.textWrapped(I18n.get("flashback.export_disable_fullscreen"));
@@ -302,9 +275,6 @@ public class StartExportWindow {
             if (ImGui.checkbox(I18n.get("flashback.transparent_sky"), config.internalExport.transparentBackground)) {
                 config.internalExport.transparentBackground = !config.internalExport.transparentBackground;
             }
-            if (config.internalExport.transparentBackground && !Minecraft.getInstance().options.improvedTransparency().get()) {
-                ImGui.textWrapped("It is recommended to enable 'Improved Transparency' in the Minecraft video options");
-            }
         } else {
             config.internalExport.transparentBackground = false;
         }
@@ -333,12 +303,13 @@ public class StartExportWindow {
 
         config.internalExport.container = ImGuiHelper.enumCombo(I18n.get("flashback.container"), config.internalExport.container, containers);
 
-        if (config.internalExport.container.isImageSequence()) {
+        if (config.internalExport.container == VideoContainer.PNG_SEQUENCE) {
             ImGui.inputText(I18n.get("flashback.filenames"), pngSequenceFormat);
             return;
         }
 
         VideoCodec[] codecs = config.internalExport.container.getSupportedVideoCodecs(config.internalExport.transparentBackground);
+
         if (codecs.length == 0) {
             ImGui.textUnformatted(I18n.get("flashback.no_supported_codecs_found"));
             return;
@@ -453,7 +424,15 @@ public class StartExportWindow {
                 String encoder = getSelectedEncoderForCodec(config, useVideoCodec);
 
                 AudioCodec useAudioCodec = config.internalExport.audioCodec;
-                if (!config.internalExport.recordAudio || config.internalExport.container.getSupportedAudioCodecs().length == 0) {
+                boolean shouldRecordAudio = config.internalExport.recordAudio;
+
+                if (config.internalExport.container == VideoContainer.PNG_SEQUENCE) {
+                    useVideoCodec = null;
+                    encoder = null;
+                    shouldRecordAudio = false;
+                }
+
+                if (!shouldRecordAudio) {
                     useAudioCodec = null;
                 }
 
@@ -462,10 +441,8 @@ public class StartExportWindow {
                 return new ExportSettings(name, editorState.copy(),
                     player.position(), player.getYRot(), player.getXRot(),
                     config.internalExport.resolution[0], config.internalExport.resolution[1], start, end,
-                    config.internalExport.projection, config.internalExport.orthographicZoom[0],
-                    Math.max(1, config.internalExport.framerate[0]), config.internalExport.resetRng, config.internalExport.depthMap,
-                    config.internalExport.container, useVideoCodec, encoder, numBitrate, transparent, config.internalExport.ssaa, config.internalExport.noGui,
-                    config.internalExport.stereoAudio, useAudioCodec,
+                    Math.max(1, config.internalExport.framerate[0]), config.internalExport.resetRng, config.internalExport.container, useVideoCodec, encoder, numBitrate, transparent, config.internalExport.ssaa, config.internalExport.noGui,
+                    shouldRecordAudio, config.internalExport.stereoAudio, useAudioCodec,
                     path, ImGuiHelper.getString(pngSequenceFormat));
             }
 
@@ -473,7 +450,7 @@ public class StartExportWindow {
         };
 
         String defaultExportPathString = config.internalExport.defaultExportPath;
-        if (config.internalExport.container.isImageSequence()) {
+        if (config.internalExport.container == VideoContainer.PNG_SEQUENCE) {
             return AsyncFileDialogs.openFolderDialog(defaultExportPathString).thenApply(callback);
         } else {
             return AsyncFileDialogs.saveFileDialog(defaultExportPathString, defaultName,

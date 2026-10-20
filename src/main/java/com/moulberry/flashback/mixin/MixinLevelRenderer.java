@@ -3,22 +3,18 @@ package com.moulberry.flashback.mixin;
 import com.llamalad7.mixinextras.injector.v2.WrapWithCondition;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
-import com.llamalad7.mixinextras.sugar.Local;
-import com.llamalad7.mixinextras.sugar.ref.LocalRef;
+import com.mojang.blaze3d.buffers.GpuBufferSlice;
 import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.resource.GraphicsResourceAllocator;
+import com.mojang.blaze3d.systems.RenderPass;
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.textures.FilterMode;
+import com.mojang.blaze3d.textures.GpuSampler;
+import com.mojang.blaze3d.textures.GpuTexture;
+import com.mojang.blaze3d.textures.GpuTextureView;
+import com.mojang.blaze3d.textures.TextureFormat;
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.renderpearl.api.GpuFormat;
-import com.mojang.renderpearl.api.buffers.GpuBufferSlice;
-import com.mojang.renderpearl.api.commands.RenderPass;
-import com.mojang.renderpearl.api.textures.FilterMode;
-import com.mojang.renderpearl.api.textures.GpuSampler;
-import com.mojang.renderpearl.api.textures.GpuTexture;
-import com.mojang.renderpearl.api.textures.GpuTextureView;
 import com.moulberry.flashback.Flashback;
-import com.moulberry.flashback.combo_options.ExportProjection;
-import com.moulberry.flashback.exporting.ExportJob;
 import com.moulberry.flashback.playback.ReplayServer;
 import com.moulberry.flashback.state.EditorState;
 import com.moulberry.flashback.state.EditorStateManager;
@@ -30,27 +26,20 @@ import net.minecraft.client.Camera;
 import net.minecraft.client.CloudStatus;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.particle.ParticleEngine;
+import net.minecraft.client.Options;
 import net.minecraft.client.renderer.*;
 import net.minecraft.client.renderer.chunk.ChunkSectionLayerGroup;
 import net.minecraft.client.renderer.chunk.ChunkSectionsToRender;
 import net.minecraft.client.renderer.chunk.SectionRenderDispatcher;
-import net.minecraft.client.renderer.culling.Frustum;
 import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
 import net.minecraft.client.renderer.entity.state.AvatarRenderState;
 import net.minecraft.client.renderer.entity.state.EntityRenderState;
-import net.minecraft.client.renderer.feature.FeatureRenderDispatcher;
-import net.minecraft.client.renderer.state.OptionsRenderState;
-import net.minecraft.client.renderer.state.level.CameraRenderState;
-import net.minecraft.client.renderer.state.level.LevelRenderState;
-import net.minecraft.client.renderer.state.level.ParticlesRenderState;
+import net.minecraft.client.renderer.state.CameraRenderState;
+import net.minecraft.client.renderer.state.ParticlesRenderState;
 import net.minecraft.world.TickRateManager;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Matrix4f;
-import org.joml.Matrix4fc;
-import org.joml.Quaternionf;
 import org.joml.Vector4f;
-import org.objectweb.asm.Opcodes;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -59,7 +48,6 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-import java.util.Optional;
 import java.util.OptionalInt;
 
 @Mixin(value = LevelRenderer.class, priority = 1100)
@@ -71,16 +59,36 @@ public abstract class MixinLevelRenderer {
 
     @Shadow @Final public SectionOcclusionGraph sectionOcclusionGraph;
 
+    @Shadow
+    private int ticks;
+
     @Shadow @Final private LevelTargetBundle targets;
 
     @Shadow
     @Final
-    private LevelRenderState levelRenderState;
+    private ParticlesRenderState particlesRenderState;
 
-    @Inject(method = "render", at = @At("HEAD"))
-    public void renderLevel(CallbackInfo ci, @Local(argsOnly = true) Vector4f fogColor, @Local(argsOnly = true) CameraRenderState cameraState) {
-        ReplayUI.lastProjectionMatrix = new Matrix4f(cameraState.projectionMatrix);
-        ReplayUI.lastViewQuaternion = new Quaternionf(cameraState.orientation);
+    @Inject(method = "tick", at = @At("HEAD"))
+    public void tick(CallbackInfo ci) {
+        ReplayServer replayServer = Flashback.getReplayServer();
+        if (replayServer != null) {
+            this.ticks = replayServer.getReplayTick();
+        }
+    }
+
+    @WrapOperation(method = "tick", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/TickRateManager;runsNormally()Z"))
+    public boolean tick_runsNormally(TickRateManager instance, Operation<Boolean> original) {
+        if (Flashback.isInReplay()) {
+            return false;
+        }
+        return original.call(instance);
+    }
+
+    @Inject(method = "renderLevel", at = @At("HEAD"))
+    public void renderLevel(GraphicsResourceAllocator graphicsResourceAllocator, DeltaTracker deltaTracker, boolean bl, Camera camera,
+            Matrix4f matrix4f, Matrix4f matrix4f2, Matrix4f projection, GpuBufferSlice gpuBufferSlice, Vector4f clearColour, boolean bl2, CallbackInfo ci) {
+        ReplayUI.lastProjectionMatrix = projection;
+        ReplayUI.lastViewQuaternion = camera.rotation();
 
         EditorState editorState = EditorStateManager.getCurrent();
         if (editorState != null) {
@@ -88,20 +96,12 @@ public abstract class MixinLevelRenderer {
 
             if (!visuals.renderSky) {
                 if (Flashback.isExporting() && Flashback.EXPORT_JOB.getSettings().transparent()) {
-                    fogColor.set(0f, 0f, 0f, 0f);
+                    clearColour.set(0f, 0f, 0f, 0f);
                 } else {
                     float[] skyColour = visuals.skyColour;
-                    fogColor.set(skyColour[0], skyColour[1], skyColour[2], 1f);
+                    clearColour.set(skyColour[0], skyColour[1], skyColour[2], 1f);
                 }
             }
-        }
-    }
-
-    @Inject(method = "render", at = @At("RETURN"))
-    public void renderLevelRet(CallbackInfo ci) {
-        ExportJob exportJob = Flashback.EXPORT_JOB;
-        if (exportJob != null && exportJob.isRunning()) {
-            exportJob.tryDepthDownload();
         }
     }
 
@@ -122,8 +122,18 @@ public abstract class MixinLevelRenderer {
         }
     }
 
-    @WrapOperation(method = {"executeSolid", "executeClassicTransparency", "executeOit"}, at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/chunk/ChunkSectionsToRender;renderGroup(Lnet/minecraft/client/renderer/chunk/ChunkSectionLayerGroup;Lcom/mojang/renderpearl/api/commands/RenderPass;Lcom/mojang/renderpearl/api/textures/GpuSampler;Lcom/mojang/renderpearl/api/textures/GpuTextureView;Z)V"))
-    public void renderChunkSections(ChunkSectionsToRender instance, ChunkSectionLayerGroup group, RenderPass renderPass, GpuSampler sampler, GpuTextureView atlas, boolean renderWireframeTerrain, Operation<Void> original) {
+    @Inject(method = "renderBlockDestroyAnimation", at = @At("HEAD"), cancellable = true, require = 0)
+    public void renderBlockDestroyAnimation(CallbackInfo ci) {
+        EditorState editorState = EditorStateManager.getCurrent();
+        if (editorState != null) {
+            if (!editorState.replayVisuals.renderBlocks) {
+                ci.cancel();
+            }
+        }
+    }
+
+    @WrapOperation(method = "method_62214", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/chunk/ChunkSectionsToRender;renderGroup(Lnet/minecraft/client/renderer/chunk/ChunkSectionLayerGroup;Lcom/mojang/blaze3d/textures/GpuSampler;)V"))
+    public void method_62214_renderChunkGroup(ChunkSectionsToRender instance, ChunkSectionLayerGroup chunkSectionLayerGroup, GpuSampler gpuSampler, Operation<Void> original) {
         EditorState editorState = EditorStateManager.getCurrent();
         if (editorState != null) {
             if (!editorState.replayVisuals.renderBlocks) {
@@ -131,36 +141,33 @@ public abstract class MixinLevelRenderer {
             }
         }
 
-        original.call(instance, group, renderPass, sampler, atlas, renderWireframeTerrain);
-    }
+        original.call(instance, chunkSectionLayerGroup, gpuSampler);
 
-    @Inject(method = "lambda$addMainPass$0", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/LevelRenderer;executeOit(Lnet/minecraft/client/renderer/chunk/ChunkSectionsToRender;Lnet/minecraft/client/renderer/feature/FeatureRenderDispatcher$PreparedFrame;)V", shift = At.Shift.BEFORE))
-    public void mainPass_executeOit(CallbackInfo ci) {
-        if (Flashback.isExporting() && Flashback.EXPORT_JOB.getSettings().transparent()) {
-            RenderTarget main = Minecraft.getInstance().gameRenderer.mainRenderTarget();
+        if (chunkSectionLayerGroup == ChunkSectionLayerGroup.OPAQUE && Flashback.isExporting() && Flashback.EXPORT_JOB.getSettings().transparent()) {
+            RenderTarget main = Minecraft.getInstance().mainRenderTarget;
 
             if (this.roundAlphaBuffer == null) {
-                this.roundAlphaBuffer = RenderSystem.getDevice().createTexture(() -> "flashback round alpha buffer", GpuTexture.USAGE_RENDER_ATTACHMENT, GpuFormat.RGBA8_UNORM, main.width, main.height, 1, 1);
+                this.roundAlphaBuffer = RenderSystem.getDevice().createTexture(() -> "flashback round alpha buffer", GpuTexture.USAGE_RENDER_ATTACHMENT, TextureFormat.RGBA8, main.width, main.height, 1, 1);
                 this.roundAlphaBufferView = RenderSystem.getDevice().createTextureView(this.roundAlphaBuffer);
             } else if (this.roundAlphaBuffer.getWidth(0) != main.width || this.roundAlphaBuffer.getHeight(0) != main.height) {
                 this.roundAlphaBuffer.close();
                 this.roundAlphaBufferView.close();
-                this.roundAlphaBuffer = RenderSystem.getDevice().createTexture(() -> "flashback round alpha buffer", GpuTexture.USAGE_RENDER_ATTACHMENT, GpuFormat.RGBA8_UNORM, main.width, main.height, 1, 1);
+                this.roundAlphaBuffer = RenderSystem.getDevice().createTexture(() -> "flashback round alpha buffer", GpuTexture.USAGE_RENDER_ATTACHMENT, TextureFormat.RGBA8, main.width, main.height, 1, 1);
                 this.roundAlphaBufferView = RenderSystem.getDevice().createTextureView(this.roundAlphaBuffer);
             }
 
-            try (RenderPass renderPass = RenderSystem.getDevice().createCommandEncoder().createRenderPass(() -> "flashback round alpha render pass 1", this.roundAlphaBufferView, Optional.empty())) {
-                renderPass.setPipeline(RenderSystem.getCompiledPipeline(ShaderManager.BLIT_SCREEN));
+            try (RenderPass renderPass = RenderSystem.getDevice().createCommandEncoder().createRenderPass(() -> "flashback round alpha render pass 1", this.roundAlphaBufferView, OptionalInt.empty())) {
+                renderPass.setPipeline(ShaderManager.BLIT_SCREEN);
                 RenderSystem.bindDefaultUniforms(renderPass);
-                renderPass.setUniform("InSampler", main.getColorTextureView(), RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST));
-                renderPass.draw(3, 1, 0, 0);
+                renderPass.bindTexture("InSampler", main.getColorTextureView(), RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST));
+                renderPass.draw(0, 3);
             }
 
-            try (RenderPass renderPass = RenderSystem.getDevice().createCommandEncoder().createRenderPass(() -> "flashback round alpha render pass 2", main.getColorTextureView(), Optional.empty())) {
-                renderPass.setPipeline(RenderSystem.getCompiledPipeline(ShaderManager.BLIT_SCREEN_ROUND_ALPHA));
+            try (RenderPass renderPass = RenderSystem.getDevice().createCommandEncoder().createRenderPass(() -> "flashback round alpha render pass 2", main.getColorTextureView(), OptionalInt.empty())) {
+                renderPass.setPipeline(ShaderManager.BLIT_SCREEN_ROUND_ALPHA);
                 RenderSystem.bindDefaultUniforms(renderPass);
-                renderPass.setUniform("InSampler", this.roundAlphaBufferView, RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST));
-                renderPass.draw(3, 1, 0, 0);
+                renderPass.bindTexture("InSampler", this.roundAlphaBufferView, RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST));
+                renderPass.draw(0, 3);
             }
         }
     }
@@ -173,7 +180,7 @@ public abstract class MixinLevelRenderer {
         }
     }
 
-    @WrapWithCondition(method = "submitEntities", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/entity/EntityRenderDispatcher;submit(Lnet/minecraft/client/renderer/entity/state/EntityRenderState;Lnet/minecraft/client/renderer/state/level/CameraRenderState;DDDLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;)V"))
+    @WrapWithCondition(method = "submitEntities", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/entity/EntityRenderDispatcher;submit(Lnet/minecraft/client/renderer/entity/state/EntityRenderState;Lnet/minecraft/client/renderer/state/CameraRenderState;DDDLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;)V"))
     public boolean renderEntity(EntityRenderDispatcher instance, EntityRenderState entityRenderState, CameraRenderState cameraRenderState,
                                 double d, double e, double f, PoseStack poseStack, SubmitNodeCollector submitNodeCollector) {
         EditorState editorState = EditorStateManager.getCurrent();
@@ -184,14 +191,29 @@ public abstract class MixinLevelRenderer {
         }
     }
 
+    @WrapOperation(method = "renderLevel", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/Options;getCloudsType()Lnet/minecraft/client/CloudStatus;"), require = 0)
+    public CloudStatus renderLevel_getCloudsType(Options instance, Operation<CloudStatus> original) {
+        EditorState editorState = EditorStateManager.getCurrent();
+        if (editorState != null && !editorState.replayVisuals.renderSky) {
+            return CloudStatus.OFF;
+        } else {
+            return original.call(instance);
+        }
+    }
+
+    @Inject(method = "addParticlesPass", at = @At("HEAD"), cancellable = true)
+    public void addParticlesPass(CallbackInfo ci) {
+        EditorState editorState = EditorStateManager.getCurrent();
+        if (editorState != null && !editorState.replayVisuals.renderParticles) {
+            ci.cancel();
+            this.particlesRenderState.reset();
+        }
+    }
+
     @Inject(method = "addSkyPass", at = @At("HEAD"), cancellable = true)
     public void addSkyPass(CallbackInfo ci) {
         EditorState editorState = EditorStateManager.getCurrent();
         if (editorState != null && !editorState.replayVisuals.renderSky) {
-            ci.cancel();
-        }
-        ExportJob exportJob = Flashback.EXPORT_JOB;
-        if (exportJob != null && exportJob.getSettings().projection() == ExportProjection.ORTHOGRAPHIC) {
             ci.cancel();
         }
     }

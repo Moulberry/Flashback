@@ -17,8 +17,6 @@ import io.netty.buffer.Unpooled;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
-import net.fabricmc.fabric.api.networking.v1.context.PacketContext;
-import net.fabricmc.fabric.api.networking.v1.context.PacketContextProvider;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.RegistryAccess;
@@ -79,12 +77,7 @@ public class AsyncReplaySaver {
                         }
                     }
 
-                    var context = PacketContext.get();
-                    if (context == null && Minecraft.getInstance().player instanceof PacketContextProvider provider) {
-                        PacketContext.runWithContext(provider, () -> task.accept(replayWriter));
-                    } else {
-                        task.accept(replayWriter);
-                    }
+                    task.accept(replayWriter);
                 } catch (Throwable t) {
                     this.error.set(t);
                     this.hasStopped.set(true);

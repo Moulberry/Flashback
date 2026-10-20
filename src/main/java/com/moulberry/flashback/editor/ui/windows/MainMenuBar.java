@@ -74,7 +74,7 @@ public class MainMenuBar {
                     minecraft.level.disconnect(Component.empty());
                 }
                 minecraft.disconnectWithProgressScreen();
-                minecraft.gui.setScreen(new SelectReplayScreen(new TitleScreen()));
+                minecraft.setScreen(new SelectReplayScreen(new TitleScreen()));
             }
             ImGui.endMenu();
         }
@@ -85,23 +85,31 @@ public class MainMenuBar {
         ImGui.separator();
 
         if (ImGui.menuItem(I18n.get("flashback.player_list") + "##PlayerList")) {
-            WindowType.PLAYER_LIST.toggle();
+            toggleWindow("player_list");
         }
         if (ImGui.menuItem(I18n.get("flashback.movement") + "##Movement")) {
-            WindowType.MOVEMENT.toggle();
+            toggleWindow("movement");
         }
         if (ImGui.menuItem(I18n.get("flashback.render_filter") + "##RenderFilter")) {
-            WindowType.RENDER_FILTER.toggle();
-        }
-        if (ImGui.menuItem(I18n.get("flashback.keybinds") + "##Keybinds")) {
-            WindowType.KEYBINDS.toggle();
+            toggleWindow("render_filter");
         }
 
         ImGui.separator();
 
         if (ImGui.menuItem(I18n.get("flashback.hide_replay_ui") + "##HideReplayUI")) {
-            Minecraft.getInstance().gui.hud.toggle();
+            Minecraft.getInstance().options.hideGui = true;
         }
+    }
+
+    private static void toggleWindow(String windowName) {
+        var openedWindows = Flashback.getConfig().internal.openedWindows;
+        boolean playerListIsOpen = openedWindows.contains(windowName);
+        if (playerListIsOpen) {
+            openedWindows.remove(windowName);
+        } else {
+            openedWindows.add(windowName);
+        }
+        Flashback.getConfig().delayedSaveToDefaultFolder();
     }
 
 }

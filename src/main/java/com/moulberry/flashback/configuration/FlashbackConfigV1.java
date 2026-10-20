@@ -4,13 +4,11 @@ import com.google.gson.JsonObject;
 import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.FlashbackGson;
 import com.moulberry.flashback.combo_options.AudioCodec;
-import com.moulberry.flashback.combo_options.ExportProjection;
 import com.moulberry.flashback.combo_options.MarkerColour;
 import com.moulberry.flashback.combo_options.MovementDirection;
 import com.moulberry.flashback.combo_options.RecordingControlsLocation;
 import com.moulberry.flashback.combo_options.VideoCodec;
 import com.moulberry.flashback.combo_options.VideoContainer;
-import com.moulberry.flashback.editor.keybinds.Keybinds;
 import com.moulberry.flashback.keyframe.interpolation.InterpolationType;
 import com.moulberry.flashback.screen.select_replay.ReplaySorting;
 import com.moulberry.lattice.LatticeDynamicFrequency;
@@ -29,6 +27,7 @@ import com.moulberry.lattice.annotation.widget.LatticeWidgetSlider;
 import com.moulberry.lattice.annotation.widget.LatticeWidgetTextArea;
 import com.moulberry.lattice.annotation.widget.LatticeWidgetTextField;
 import net.fabricmc.loader.api.FabricLoader;
+import net.minecraft.ChatFormatting;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.network.chat.Component;
 
@@ -39,9 +38,7 @@ import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 public class FlashbackConfigV1 {
@@ -52,7 +49,6 @@ public class FlashbackConfigV1 {
     }
 
     private int configVersion = -1;
-    public Map<String, String> keybinds = new LinkedHashMap<>();
 
     @LatticeCategory(name = "flashback.option.recording_controls")
     public SubcategoryRecordingControls recordingControls = new SubcategoryRecordingControls();
@@ -128,10 +124,6 @@ public class FlashbackConfigV1 {
         @LatticeIntRange(min = 0, max = 60, clampMin = 0)
         @LatticeWidgetSlider
         public int exportRenderDummyFrames = 0;
-
-        @LatticeOption(title = "flashback.use_system_ffmpeg", description = "!!.description")
-        @LatticeWidgetButton
-        public boolean useSystemFFmpeg = false;
     }
 
     @LatticeCategory(name = "flashback.option.keyframes")
@@ -257,15 +249,6 @@ public class FlashbackConfigV1 {
         }
     }
 
-    @LatticeCategory(name = "flashback.overlay")
-    public SubcategoryOverlay overlay = new SubcategoryOverlay();
-
-    public static class SubcategoryOverlay {
-        @LatticeOption(title = "flashback.overlay.rtc_overlay", description = "!!.description")
-        @LatticeWidgetButton
-        public boolean rtcOverlay = false;
-    }
-
     @LatticeCategory(name = "flashback.advanced")
     public SubcategoryAdvanced advanced = new SubcategoryAdvanced();
 
@@ -317,12 +300,9 @@ public class FlashbackConfigV1 {
     public static class SubcategoryInternalExport {
         public int[] resolution = new int[]{1920, 1080};
         public float[] framerate = new float[]{60};
-        public ExportProjection projection = ExportProjection.PERSPECTIVE;
-        public float[] orthographicZoom = new float[]{1.0f};
         public boolean resetRng = false;
         public boolean ssaa = false;
         public boolean noGui = false;
-        public boolean depthMap = false;
 
         public VideoContainer container = null;
         public VideoCodec videoCodec = null;
@@ -380,14 +360,12 @@ public class FlashbackConfigV1 {
     }
 
     public void saveToDefaultFolder() {
-        Keybinds.save(this);
-
         Path configFolder = FabricLoader.getInstance().getConfigDir().resolve("flashback");
         this.saveToFolder(configFolder);
         this.saveDelay = 0;
     }
 
-    private synchronized void saveToFolder(Path configFolder) {
+    public synchronized void saveToFolder(Path configFolder) {
         Path primary = configFolder.resolve("flashback.json");
         Path backup = configFolder.resolve(".flashback.json.backup");
 

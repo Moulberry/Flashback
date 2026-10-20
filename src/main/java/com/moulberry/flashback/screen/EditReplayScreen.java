@@ -1,8 +1,10 @@
 package com.moulberry.flashback.screen;
 
+import com.google.gson.JsonObject;
 import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.FlashbackGson;
 import com.moulberry.flashback.FlashbackTextComponents;
+import com.moulberry.flashback.exporting.AsyncFileDialogs;
 import com.moulberry.flashback.record.FlashbackMeta;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.Button;
@@ -11,6 +13,7 @@ import net.minecraft.client.gui.components.StringWidget;
 import net.minecraft.client.gui.layouts.FrameLayout;
 import net.minecraft.client.gui.layouts.GridLayout;
 import net.minecraft.client.gui.screens.AlertScreen;
+import net.minecraft.client.gui.screens.ConfirmScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
@@ -22,6 +25,7 @@ import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
 
 public class EditReplayScreen extends Screen {
 
@@ -67,7 +71,7 @@ public class EditReplayScreen extends Screen {
         rowHelper.addChild(new BottomTextWidget(204, 10, CommonComponents.EMPTY, this.font), 2);
 
         rowHelper.addChild(Button.builder(FlashbackTextComponents.COMBINE_WITH_OTHER_REPLAY, button -> {
-            this.minecraft.gui.setScreen(new CombineReplayScreen(this, this.replayPath, null, null));
+            this.minecraft.setScreen(new CombineReplayScreen(this, this.replayPath, null, null));
         }).width(204).build(), 2);
 
         this.saveChangesButton = rowHelper.addChild(Button.builder(FlashbackTextComponents.SAVE_CHANGES, button -> {
@@ -75,7 +79,7 @@ public class EditReplayScreen extends Screen {
         }).width(98).build());
         this.saveChangesButton.active = false;
         rowHelper.addChild(Button.builder(CommonComponents.GUI_BACK, button -> {
-            this.minecraft.gui.setScreen(this.lastScreen);
+            this.minecraft.setScreen(this.lastScreen);
         }).width(98).build());
         gridLayout.arrangeElements();
         FrameLayout.alignInRectangle(gridLayout, 0, 0, this.width, this.height, 0.5f, 0.5f);
@@ -96,7 +100,7 @@ public class EditReplayScreen extends Screen {
             Files.writeString(metadataPath, metadataJson);
         } catch (IOException e) {
             Flashback.LOGGER.error("Unable to edit replay", e);
-            Minecraft.getInstance().gui.setScreen(new AlertScreen(() -> Minecraft.getInstance().gui.setScreen(this.lastScreen),
+            Minecraft.getInstance().setScreen(new AlertScreen(() -> Minecraft.getInstance().setScreen(this.lastScreen),
                 FlashbackTextComponents.UNABLE_TO_EDIT_REPLAY, Component.literal(e.toString())));
         }
 
@@ -115,6 +119,6 @@ public class EditReplayScreen extends Screen {
 
     @Override
     public void onClose() {
-        this.minecraft.gui.setScreen(this.lastScreen);
+        this.minecraft.setScreen(this.lastScreen);
     }
 }

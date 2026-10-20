@@ -4,7 +4,7 @@ import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.RegistryMetaHelper;
 import com.moulberry.flashback.configuration.FlashbackConfigV1;
 import com.moulberry.flashback.screen.ReplaySummary;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.CycleButton;
 import net.minecraft.client.gui.components.EditBox;
@@ -81,7 +81,7 @@ public class SelectReplayScreen extends Screen {
                 .bounds(this.width / 2 - 151, this.height - 28, 98, 20).build());
         this.deleteButton = this.addRenderableWidget(Button.builder(Component.translatable("selectWorld.delete"), this::tryDeleteReplay)
                                                            .bounds(this.width / 2 - 49, this.height - 28, 98, 20).build());
-        this.addRenderableWidget(Button.builder(CommonComponents.GUI_BACK, button -> this.minecraft.gui.setScreen(this.lastScreen))
+        this.addRenderableWidget(Button.builder(CommonComponents.GUI_BACK, button -> this.minecraft.setScreen(this.lastScreen))
                                                            .bounds(this.width / 2 + 53, this.height - 28, 98, 20).build());
 
         this.updateButtonStatus(null);
@@ -94,14 +94,14 @@ public class SelectReplayScreen extends Screen {
 
     @Override
     public void onClose() {
-        this.minecraft.gui.setScreen(this.lastScreen);
+        this.minecraft.setScreen(this.lastScreen);
     }
 
     @Override
-    public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float a) {
-        super.extractRenderState(graphics, mouseX, mouseY, a);
-        this.searchBox.extractRenderState(graphics, mouseX, mouseY, a);
-        graphics.centeredText(this.font, this.title, this.width / 2, 8, 0xFFFFFFFF);
+    public void render(GuiGraphics guiGraphics, int i, int j, float f) {
+        super.render(guiGraphics, i, j, f);
+        this.searchBox.render(guiGraphics, i, j, f);
+        guiGraphics.drawCenteredString(this.font, this.title, this.width / 2, 8, 0xFFFFFFFF);
     }
 
     public void updateButtonStatus(@Nullable ReplaySummary replaySummary) {
