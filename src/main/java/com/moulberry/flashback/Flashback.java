@@ -168,6 +168,8 @@ public class Flashback implements ModInitializer, ClientModInitializer {
     public static long worldBorderLerpStartTime = -1L;
 
     private static final KeyMapping.Category category = KeyMapping.Category.register(createIdentifier("keybind"));
+    public static final KeyMapping togglePauseRecordingKeyBind = KeyMappingHelper.registerKeyMapping(new KeyMapping("flashback.keybind.toggle_pause_recording",
+        InputConstants.Type.KEYBOARD, InputConstants.UNKNOWN.getValue(), category));
     public static final KeyMapping createMarker1KeyBind = KeyMappingHelper.registerKeyMapping(new KeyMapping("flashback.keybind.create_marker_1",
         InputConstants.Type.KEYBOARD, InputConstants.UNKNOWN.getValue(), category));
     public static final KeyMapping createMarker2KeyBind = KeyMappingHelper.registerKeyMapping(new KeyMapping("flashback.keybind.create_marker_2",
@@ -442,6 +444,10 @@ public class Flashback implements ModInitializer, ClientModInitializer {
                 pauseRecordingReplay(false);
                 return 0;
             }));
+            flashback.then(ClientCommands.literal("togglepause").executes(ctx -> {
+                togglePauseRecordingReplay();
+                return 0;
+            }));
             flashback.then(ClientCommands.literal("config").executes(this::openFlashbackConfig));
             flashback.then(ClientCommands.literal("mark")
                 .executes(command -> {
@@ -612,6 +618,12 @@ public class Flashback implements ModInitializer, ClientModInitializer {
 
             if (RECORDER != null) {
                 RECORDER.startTick();
+            }
+
+            if (togglePauseRecordingKeyBind.consumeClick()) {
+                if (!Flashback.isInReplay() && RECORDER != null) {
+                    togglePauseRecordingReplay();
+                }
             }
 
             if (createMarker1KeyBind.consumeClick()) {
@@ -1052,7 +1064,16 @@ public class Flashback implements ModInitializer, ClientModInitializer {
         }
     }
 
+    public static void togglePauseRecordingReplay() {
+        if (RECORDER != null) {
+            pauseRecordingReplay(!RECORDER.isPaused());
+        }
+    }
+
     public static void pauseRecordingReplay(boolean pause) {
+        if (RECORDER == null) {
+            return;
+        }
         RECORDER.setPaused(pause);
 
         if (Flashback.getConfig().recordingControls.showRecordingToasts) {

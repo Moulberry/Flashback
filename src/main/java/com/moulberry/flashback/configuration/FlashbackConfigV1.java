@@ -58,6 +58,10 @@ public class FlashbackConfigV1 {
     public SubcategoryRecordingControls recordingControls = new SubcategoryRecordingControls();
 
     public static class SubcategoryRecordingControls {
+        @LatticeOption(title = "flashback.keybind.toggle_pause_recording")
+        @LatticeWidgetKeybind
+        private transient final KeyMapping togglePauseRecordingKeyBind = Flashback.togglePauseRecordingKeyBind;
+
         @LatticeOption(title = "flashback.option.recording_controls.location", description = "!!.description")
         @LatticeWidgetDropdown
         public RecordingControlsLocation controlsLocation = RecordingControlsLocation.RIGHT;

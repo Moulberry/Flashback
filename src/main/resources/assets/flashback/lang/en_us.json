@@ -14,6 +14,7 @@
   "flashback.option.per_second": "%s/s",
 
   "key.category.flashback.keybind": "Flashback Keybinds",
+  "flashback.keybind.toggle_pause_recording": "Pause / Unpause Recording",
   "flashback.keybind.create_marker_1": "Create Marker #1",
   "flashback.keybind.create_marker_2": "Create Marker #2",
   "flashback.keybind.create_marker_3": "Create Marker #3",
