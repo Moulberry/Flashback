@@ -37,6 +37,12 @@ repositories {
         }
     }
     maven {
+        url = "https://maven.enjarai.dev/mirrors"
+        content {
+            includeGroup("com.github.bawnorton.mixinsquared")
+        }
+    }
+    maven {
         url = "https://maven.bawnorton.com/releases"
         content {
             includeGroup("com.github.bawnorton.mixinsquared")
@@ -178,7 +184,7 @@ tasks.register("mergeShadowWithIncludes", Jar) {
     var archiveFileFrom = it.archiveFile
     var archiveFileTo = project.tasks.jar.archiveFile
     doLast {
-        archiveFileFrom.get().asFile.renameTo(archiveFileTo.get().asFile)
+        java.nio.file.Files.move(archiveFileFrom.get().asFile.toPath(), archiveFileTo.get().asFile.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING)
     }
 }
 project.assemble.dependsOn(mergeShadowWithIncludes)
