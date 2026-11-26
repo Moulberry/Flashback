@@ -16,6 +16,7 @@ import imgui.moulberry90.type.ImString;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -165,7 +166,7 @@ public class KeyframeTrack {
                 subMap = this.keyframesByTick;
             }
 
-            Map<Float, Keyframe> transformedMap = new HashMap<>();
+            Map<Float, Keyframe> transformedMap = new LinkedHashMap<>();
             for (Map.Entry<Integer, Keyframe> entry : subMap.entrySet()) {
                 float realtime = realTimeMapping == null ? entry.getKey() : realTimeMapping.getRealTime(entry.getKey());
                 transformedMap.put(realtime, entry.getValue());
