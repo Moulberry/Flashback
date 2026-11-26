@@ -5,9 +5,14 @@ import java.util.TreeMap;
 
 public class RealTimeMapping {
 
+    public final int editorStateModCount;
     private final NavigableMap<Integer, SpeedChange> map = new TreeMap<>();
 
     private record SpeedChange(float speedFactor, float realTimeUntilThisPoint) {}
+
+    public RealTimeMapping(int editorStateModCount) {
+        this.editorStateModCount = editorStateModCount;
+    }
 
     public void addMapping(int tick, float speed) {
         if (this.map.ceilingKey(tick) != null) {

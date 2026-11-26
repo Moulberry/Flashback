@@ -28,13 +28,13 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.StampedLock;
 
 public class EditorState {
 
     volatile transient boolean dirty = false;
-    public volatile transient int modCount = ThreadLocalRandom.current().nextInt();
-    private volatile transient int lastRealTimeMappingModCount = this.modCount;
+    public final transient AtomicInteger modCount = new AtomicInteger(ThreadLocalRandom.current().nextInt());
     private volatile transient RealTimeMapping realTimeMapping = null;
 
     public final ReplayVisuals replayVisuals = new ReplayVisuals();
@@ -122,10 +122,6 @@ public class EditorState {
         return this.scenes.get(this.sceneIndex);
     }
 
-    private EditorScene currentScene() {
-        return this.scenes.get(this.sceneIndex);
-    }
-
     @Nullable
     public Camera getAudioCamera() {
         if (this.audioSourceEntity == null) {
@@ -152,18 +148,27 @@ public class EditorState {
 
     public void markDirty() {
         this.dirty = true;
-        this.modCount += 1;
+        this.modCount.incrementAndGet();
+    }
+
+    private String lockAndSerialize() {
+        long stamp = this.sceneLock.readLock();
+        try {
+            return FlashbackGson.COMPRESSED.toJson(this, EditorState.class);
+        } finally {
+            this.sceneLock.unlock(stamp);
+        }
     }
 
     public void save(Path path) {
         this.dirty = false;
 
-        String serialized = FlashbackGson.COMPRESSED.toJson(this, EditorState.class);
+        String serialized = this.lockAndSerialize();
 
         try {
             Files.createDirectories(path.getParent());
             Files.writeString(path, serialized, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.CREATE,
-                    StandardOpenOption.SYNC);
+                StandardOpenOption.SYNC);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -187,12 +192,12 @@ public class EditorState {
     }
 
     public EditorState copy() {
-        String serialized = FlashbackGson.COMPRESSED.toJson(this, EditorState.class);
+        String serialized = this.lockAndSerialize();
         return FlashbackGson.COMPRESSED.fromJson(serialized, EditorState.class);
     }
 
     public EditorState copyWithoutKeyframes() {
-        String serialized = FlashbackGson.COMPRESSED.toJson(this, EditorState.class);
+        String serialized = this.lockAndSerialize();
         EditorState editorState = FlashbackGson.COMPRESSED.fromJson(serialized, EditorState.class);
         for (EditorScene scene : editorState.scenes) {
             scene.keyframeTracks.clear();
@@ -221,15 +226,16 @@ public class EditorState {
         Set<Class<? extends KeyframeChange>> applied = new HashSet<>();
         Map<Class<? extends KeyframeChange>, KeyframeTrack> maybeApplyLastTick = new HashMap<>();
 
-        updateRealtimeMappingsIfNeeded();
-
         boolean unlock = false;
         if (!this.sceneLock.validate(stamp)) {
             stamp = this.sceneLock.readLock();
             unlock = true;
         }
+
         try {
-            for (KeyframeTrack keyframeTrack : this.currentScene().keyframeTracks) {
+            RealTimeMapping realTimeMapping = getRealtimeMapping(stamp);
+
+            for (KeyframeTrack keyframeTrack : this.getCurrentScene(stamp).keyframeTracks) {
                 // Ignore lines that are disabled
                 if (!keyframeTrack.enabled) {
                     continue;
@@ -248,7 +254,7 @@ public class EditorState {
 
                 // Try to apply keyframes, mark applied if successful
 
-                KeyframeChange change = keyframeTrack.createKeyframeChange(tick, this.realTimeMapping);
+                KeyframeChange change = keyframeTrack.createKeyframeChange(tick, realTimeMapping);
                 if (change == null) {
                     if (keyframeHandler.alwaysApplyLastKeyframe() && !keyframeTrack.keyframeType.neverApplyLastKeyframe() && !keyframeTrack.keyframesByTick.isEmpty()) {
                         if (keyframeTrack.keyframesByTick.lastKey() <= tick) {
@@ -273,7 +279,7 @@ public class EditorState {
             if (keyframeHandler.alwaysApplyLastKeyframe() && !maybeApplyLastTick.isEmpty()) {
                 for (Map.Entry<Class<? extends KeyframeChange>, KeyframeTrack> entry : maybeApplyLastTick.entrySet()) {
                     KeyframeTrack keyframeTrack = entry.getValue();
-                    KeyframeChange change = keyframeTrack.createKeyframeChange(keyframeTrack.keyframesByTick.lastKey(), this.realTimeMapping);
+                    KeyframeChange change = keyframeTrack.createKeyframeChange(keyframeTrack.keyframesByTick.lastKey(), realTimeMapping);
 
                     if (change == null) {
                         continue;
@@ -293,39 +299,25 @@ public class EditorState {
         }
     }
 
-    private void updateRealtimeMappingsIfNeeded() {
-        long stamp = this.sceneLock.readLock();
-        try {
-            FlashbackConfigV1 config = Flashback.getConfig();
-            if (!config.keyframes.useRealtimeInterpolation) {
-                this.sceneLock.unlock(stamp);
-                stamp = this.sceneLock.writeLock();
-
-                this.lastRealTimeMappingModCount = this.modCount;
-                this.realTimeMapping = null;
-            } else if (this.realTimeMapping == null || this.lastRealTimeMappingModCount != this.modCount) {
-                this.sceneLock.unlock(stamp);
-                stamp = this.sceneLock.writeLock();
-
-                if (this.realTimeMapping == null || this.lastRealTimeMappingModCount != this.modCount) {
-                    this.calculateRealtimeMappings();
-                }
-            }
-        } finally {
-            this.sceneLock.unlock(stamp);
+    private synchronized RealTimeMapping getRealtimeMapping(long stamp) {
+        FlashbackConfigV1 config = Flashback.getConfig();
+        if (!config.keyframes.useRealtimeInterpolation) {
+            this.realTimeMapping = null;
+        } else if (this.realTimeMapping == null || this.realTimeMapping.editorStateModCount != this.modCount.get()) {
+            this.realTimeMapping = this.calculateRealtimeMappings(stamp);
         }
+        return this.realTimeMapping;
     }
 
-    private void calculateRealtimeMappings() {
-        this.lastRealTimeMappingModCount = this.modCount;
-        this.realTimeMapping = new RealTimeMapping();
+    private RealTimeMapping calculateRealtimeMappings(long stamp) {
+        RealTimeMapping realTimeMapping = new RealTimeMapping(this.modCount.get());
 
         List<KeyframeTrack> applicableTracks = new ArrayList<>();
         int start = -1;
         int end = -1;
         int lastApplicableKeyframe = -1;
 
-        for (KeyframeTrack keyframeTrack : this.currentScene().keyframeTracks) {
+        for (KeyframeTrack keyframeTrack : this.getCurrentScene(stamp).keyframeTracks) {
             // Ignore tracks that are disabled
             if (!keyframeTrack.enabled || keyframeTrack.keyframesByTick.isEmpty()) {
                 continue;
@@ -357,14 +349,14 @@ public class EditorState {
         }
 
         if (applicableTracks.isEmpty() || start < 0 || end < 0) {
-            return;
+            return realTimeMapping;
         }
 
         float lastSpeed = Float.NaN;
 
         for (int tick = start; tick <= end; tick++) {
             for (KeyframeTrack keyframeTrack : applicableTracks) {
-                KeyframeChange change = keyframeTrack.createKeyframeChange(tick, this.realTimeMapping);
+                KeyframeChange change = keyframeTrack.createKeyframeChange(tick, realTimeMapping);
                 if (!(change instanceof KeyframeChangeTickrate changeTickrate)) {
                     continue;
                 }
@@ -372,7 +364,7 @@ public class EditorState {
                 float newSpeed = changeTickrate.tickrate() / 20.0f;
                 if (newSpeed != lastSpeed) {
                     lastSpeed = newSpeed;
-                    this.realTimeMapping.addMapping(tick, newSpeed);
+                    realTimeMapping.addMapping(tick, newSpeed);
                 }
                 break;
             }
@@ -381,42 +373,43 @@ public class EditorState {
         // Check if the tick afterwards has a change, if it does then the last keyframe is probably a hold keyframe
         // So we can just apply that speed for the remainder
         for (KeyframeTrack keyframeTrack : applicableTracks) {
-            KeyframeChange change = keyframeTrack.createKeyframeChange(end+1, this.realTimeMapping);
+            KeyframeChange change = keyframeTrack.createKeyframeChange(end+1, realTimeMapping);
             if (!(change instanceof KeyframeChangeTickrate changeTickrate)) {
                 continue;
             }
 
             float newSpeed = changeTickrate.tickrate() / 20.0f;
             if (newSpeed != lastSpeed) {
-                this.realTimeMapping.addMapping(end+1, newSpeed);
+                realTimeMapping.addMapping(end+1, newSpeed);
             }
-            return;
+            return realTimeMapping;
         }
 
         // We need to try applying the last keyframe for the remainder
         for (KeyframeTrack keyframeTrack : applicableTracks) {
             if (!keyframeTrack.keyframeType.neverApplyLastKeyframe() && keyframeTrack.keyframesByTick.lastKey() == lastApplicableKeyframe) {
-                KeyframeChange change = keyframeTrack.createKeyframeChange(lastApplicableKeyframe, this.realTimeMapping);
+                KeyframeChange change = keyframeTrack.createKeyframeChange(lastApplicableKeyframe, realTimeMapping);
                 if (!(change instanceof KeyframeChangeTickrate changeTickrate)) {
                     break;
                 }
 
                 float newSpeed = changeTickrate.tickrate() / 20.0f;
                 if (newSpeed != lastSpeed) {
-                    this.realTimeMapping.addMapping(end+1, newSpeed);
+                    realTimeMapping.addMapping(end+1, newSpeed);
                 }
-                return;
+                return realTimeMapping;
             }
         }
 
         // Failing to apply the last keyframe, we reset the speed to normal
-        this.realTimeMapping.addMapping(end+1, 1.0f);
+        realTimeMapping.addMapping(end+1, 1.0f);
+        return realTimeMapping;
     }
 
     public void setExportTicks(int start, int end, int totalTicks) {
         long stamp = this.sceneLock.writeLock();
         try {
-            this.currentScene().setExportTicks(start, end, totalTicks);
+            this.getCurrentScene(stamp).setExportTicks(start, end, totalTicks);
             this.markDirty();
         } finally {
             this.sceneLock.unlock(stamp);
@@ -431,7 +424,7 @@ public class EditorState {
 
         long stamp = this.sceneLock.readLock();
         try {
-            EditorScene scene = this.currentScene();
+            EditorScene scene = this.getCurrentScene(stamp);
             if (scene != null && (scene.exportStartTicks >= 0 || scene.exportEndTicks >= 0)) {
                 if (scene.exportStartTicks >= 0) {
                     start = scene.exportStartTicks;
@@ -462,7 +455,7 @@ public class EditorState {
 
         long stamp = this.sceneLock.readLock();
         try {
-            for (KeyframeTrack keyframeTrack : this.currentScene().keyframeTracks) {
+            for (KeyframeTrack keyframeTrack : this.getCurrentScene(stamp).keyframeTracks) {
                 if (!keyframeTrack.enabled || keyframeTrack.keyframesByTick.isEmpty()) {
                     continue;
                 }

@@ -66,6 +66,8 @@ public class TimelineWindow {
     private static long editorSceneStamp;
     private static boolean editorSceneStampIsWrite;
     private static EditorScene editorScene;
+    private static int pendingEditorSceneSwitch = -1;
+    private static int pendingEditorSceneDelete = -1;
     private static double zoomMinBeforeDrag = 0.0f;
     private static double zoomMaxBeforeDrag = 1.0f;
     private static boolean grabbedZoomBar = false;
@@ -172,11 +174,28 @@ public class TimelineWindow {
             FlashbackMeta metadata = replayServer.getMetadata();
             editorState = EditorStateManager.get(metadata.replayIdentifier);
 
+            pendingEditorSceneSwitch = -1;
+            pendingEditorSceneDelete = -1;
+
             editorSceneStamp = editorState.acquireRead();
             editorSceneStampIsWrite = false;
             try {
                 editorScene = editorState.getCurrentScene(editorSceneStamp);
                 renderInner(replayServer, metadata);
+
+                if (pendingEditorSceneSwitch >= 0 || pendingEditorSceneDelete >= 0) {
+                    upgradeToSceneWrite();
+                    var scenes = editorState.getScenes(editorSceneStamp);
+                    if (pendingEditorSceneDelete >= 0 && pendingEditorSceneDelete < scenes.size()) {
+                        scenes.remove(pendingEditorSceneDelete);
+                        if (pendingEditorSceneDelete == scenes.size()) {
+                            editorState.setSceneIndex(scenes.size() - 1, editorSceneStamp);
+                        }
+                    } else if (pendingEditorSceneSwitch >= 0 && pendingEditorSceneSwitch < scenes.size()) {
+                        editorState.setSceneIndex(pendingEditorSceneSwitch, editorSceneStamp);
+                    }
+                    editorState.markDirty();
+                }
             } finally {
                 editorState.release(editorSceneStamp);
                 editorSceneStamp = 0L;
@@ -722,6 +741,7 @@ public class TimelineWindow {
             editorState.release(editorSceneStamp);
             editorSceneStamp = editorState.acquireWrite();
             editorSceneStampIsWrite = true;
+            editorScene = editorState.getCurrentScene(editorSceneStamp);
         }
     }
 
@@ -2180,7 +2200,7 @@ public class TimelineWindow {
                 boolean selected = i == editorState.getSceneIndex();
                 if (ImGui.selectable(otherScene.name, selected) && !selected) {
                     upgradeToSceneWrite();
-                    editorState.setSceneIndex(i, editorSceneStamp);
+                    pendingEditorSceneSwitch = i;
                 }
                 if (selected) ImGui.setItemDefaultFocus();
                 ImGui.popID();
@@ -2206,8 +2226,7 @@ public class TimelineWindow {
                 if (!sceneName.isEmpty()) {
                     upgradeToSceneWrite();
                     scenes.add(new EditorScene(sceneName));
-                    editorState.setSceneIndex(scenes.size() - 1, editorSceneStamp);
-                    editorState.markDirty();
+                    pendingEditorSceneSwitch = scenes.size() - 1;
                     ImGui.closeCurrentPopup();
                 }
             }
@@ -2255,12 +2274,7 @@ public class TimelineWindow {
 
                 if (ImGui.button(I18n.get("flashback.delete_forever"))) {
                     upgradeToSceneWrite();
-                    int sceneIndex = editorState.getSceneIndex();
-                    scenes.remove(sceneIndex);
-                    if (sceneIndex >= scenes.size()) {
-                        editorState.setSceneIndex(scenes.size() - 1, editorSceneStamp);
-                    }
-                    editorState.markDirty();
+                    pendingEditorSceneDelete = editorState.getSceneIndex();
                     ImGui.closeCurrentPopup();
                 }
                 ImGui.sameLine();

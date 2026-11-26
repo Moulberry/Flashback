@@ -1322,6 +1322,7 @@ public class ReplayServer extends IntegratedServer {
 
                 scene.keyframeTracks.add(keyframeTrack);
             }
+            editorState.markDirty();
         } finally {
             editorState.release(stamp);
         }

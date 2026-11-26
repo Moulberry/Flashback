@@ -51,7 +51,7 @@ public class CameraPath {
         EditorState state = replayServer.getEditorState();
         int replayTick = TimelineWindow.getCursorTick();
 
-        if (lastEditorStateModCount != state.modCount || lastCursorTick != replayTick) {
+        if (lastEditorStateModCount != state.modCount.get() || lastCursorTick != replayTick) {
             CameraPathArgs cameraPathArgs;
 
             long stamp = state.acquireRead();
@@ -61,7 +61,7 @@ public class CameraPath {
                 state.release(stamp);
             }
 
-            if (lastEditorStateModCount != state.modCount || !cameraPathArgs.equals(lastCameraPathArgs)) {
+            if (lastEditorStateModCount != state.modCount.get() || !cameraPathArgs.equals(lastCameraPathArgs)) {
                 lastCameraPathArgs = cameraPathArgs;
 
                 try (ByteBufferBuilder byteBufferBuilder = new ByteBufferBuilder(1024)) {
@@ -83,7 +83,7 @@ public class CameraPath {
                 }
             }
 
-            lastEditorStateModCount = state.modCount;
+            lastEditorStateModCount = state.modCount.get();
             lastCursorTick = replayTick;
         }
 
