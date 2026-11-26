@@ -320,7 +320,7 @@ public class CustomImGuiImplB3D implements CustomImGuiRenderer {
                     clipMinY = Math.max(clipMinY, 0);
                     clipMaxY = Math.min(clipMaxY, fbHeight);
 
-                    if (clipMaxX < clipMinX || clipMaxY < clipMinY) {
+                    if (clipMaxX <= clipMinX || clipMaxY <= clipMinY) {
                         continue;
                     }
 
