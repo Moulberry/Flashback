@@ -104,6 +104,7 @@ public class ReplayChunkCache {
                         throw new IllegalStateException("Level chunk cache contains wrong packet: " + packet);
                     }
                 } catch (Exception e) {
+                    packets.add(null);
                     Flashback.LOGGER.error("Encountered error while reading level_chunk_cache", e);
                 }
             }
