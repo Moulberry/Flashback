@@ -985,7 +985,7 @@ public class ExportJob {
         }
         FramebufferUtils.blitTo(framebuffer.getColorTextureView(), displayTarget, framebufferX1, framebufferY1, framebufferX2, framebufferY2);
 
-        float guiScale = Math.min(windowFramebufferWidth / 420, windowFramebufferHeight / 240);
+        float guiScale = Math.max(1, Math.min(windowFramebufferWidth / 420, windowFramebufferHeight / 240));
         int scaledWidth = (int) Math.ceil(windowFramebufferWidth / guiScale);
         int scaledHeight = (int) Math.ceil(windowFramebufferHeight / guiScale);
 
