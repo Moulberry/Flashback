@@ -53,6 +53,7 @@ public class KeybindsWindow {
 
                 if (ImGui.selectable(description + "##" + descriptionRaw, false, ImGuiSelectableFlags.DontClosePopups)) {
                     ImGui.openPopup(descriptionRaw + "##EditKeybind");
+                    Flashback.getConfig().delayedSaveToDefaultFolder();
                 }
                 ImGui.sameLine();
 
@@ -129,18 +130,21 @@ public class KeybindsWindow {
 
                     if (ImGui.button(I18n.get("gui.ok"))) {
                         backedUpKeybind = null;
+                        Flashback.getConfig().delayedSaveToDefaultFolder();
                         ImGui.closeCurrentPopup();
                     }
                     ImGui.sameLine();
                     if (ImGui.button(I18n.get("gui.cancel"))) {
                         keybind.set(backupKey, backupShiftMod, backupCtrlMod, backupAltMod, backupSuperMod);
                         backedUpKeybind = null;
+                        Flashback.getConfig().delayedSaveToDefaultFolder();
                         ImGui.closeCurrentPopup();
                     }
                     ImGui.sameLine();
                     if (ImGui.button(I18n.get("flashback.keybinds.unbind"))) {
                         keybind.clear();
                         backedUpKeybind = null;
+                        Flashback.getConfig().delayedSaveToDefaultFolder();
                         ImGui.closeCurrentPopup();
                     }
                     ImGui.endPopup();
