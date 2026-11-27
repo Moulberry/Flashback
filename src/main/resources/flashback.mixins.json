@@ -84,6 +84,7 @@
     "compat.iris.MixinIrisSystemTimeUniforms",
     "norandom.MixinEntityNoRandom",
     "packet_fix.MixinStringUtils",
+    "packet_raw.MixinPacketDecoder",
     "playback.MixinAttributeInstance",
     "playback.MixinChunkHolder",
     "playback.MixinEntity",

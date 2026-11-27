@@ -1,6 +1,7 @@
 package com.moulberry.flashback.record;
 
 import com.google.common.collect.ImmutableMultimap;
+import com.google.common.collect.MapMaker;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.mojang.authlib.GameProfile;
@@ -121,6 +122,7 @@ public class Recorder {
 
     private record PacketWithPhase(Packet<?> packet, ConnectionProtocol phase){}
     private final Queue<PacketWithPhase> pendingPackets = new ConcurrentLinkedQueue<>();
+    private final Map<Packet<?>, byte[]> rawPacketBytes = new MapMaker().weakKeys().makeMap();
 
     private record Position(double x, double y, double z, float yaw, float pitch, float headYRot, boolean onGround) {
         public Position {
@@ -201,6 +203,10 @@ public class Recorder {
             }
         }
         this.metadata.worldName = worldName;
+    }
+
+    public void trackRawPacketBytes(Packet<?> packet, byte[] bytes) {
+        this.rawPacketBytes.put(packet, bytes);
     }
 
     public boolean readyToWrite() {
@@ -644,7 +650,7 @@ public class Recorder {
 
         gamePackets.add(new ClientboundSetEntityMotionPacket(player.getId(), player.getDeltaMovement()));
 
-        this.asyncReplaySaver.writeGamePackets(this.gamePacketCodec, gamePackets);
+        this.asyncReplaySaver.writeGamePackets(this.gamePacketCodec, gamePackets, this.rawPacketBytes);
     }
 
     private void resetLastLocalData() {
@@ -734,14 +740,14 @@ public class Recorder {
         while ((packet = this.pendingPackets.poll()) != null) {
             if (packet.phase == ConnectionProtocol.PLAY) {
                 if (!configurationPackets.isEmpty()) {
-                    this.asyncReplaySaver.writeConfigurationPackets(this.configurationPacketCodec, configurationPackets);
+                    this.asyncReplaySaver.writeConfigurationPackets(this.configurationPacketCodec, configurationPackets, this.rawPacketBytes);
                     configurationPackets.clear();
                 }
 
                 gamePackets.add(((Packet<? super ClientGamePacketListener>) packet.packet));
 
                 if (packet.packet instanceof ClientboundLoginPacket) {
-                    this.asyncReplaySaver.writeGamePackets(this.gamePacketCodec, gamePackets);
+                    this.asyncReplaySaver.writeGamePackets(this.gamePacketCodec, gamePackets, this.rawPacketBytes);
                     gamePackets.clear();
 
                     this.writeCreateLocalPlayer();
@@ -753,7 +759,7 @@ public class Recorder {
                 }
             } else if (packet.phase == ConnectionProtocol.CONFIGURATION) {
                 if (!gamePackets.isEmpty()) {
-                    this.asyncReplaySaver.writeGamePackets(this.gamePacketCodec, gamePackets);
+                    this.asyncReplaySaver.writeGamePackets(this.gamePacketCodec, gamePackets, this.rawPacketBytes);
                     gamePackets.clear();
                 }
 
@@ -766,10 +772,10 @@ public class Recorder {
         }
 
         if (!configurationPackets.isEmpty()) {
-            this.asyncReplaySaver.writeConfigurationPackets(this.configurationPacketCodec, configurationPackets);
+            this.asyncReplaySaver.writeConfigurationPackets(this.configurationPacketCodec, configurationPackets, this.rawPacketBytes);
         }
         if (!gamePackets.isEmpty()) {
-            this.asyncReplaySaver.writeGamePackets(this.gamePacketCodec, gamePackets);
+            this.asyncReplaySaver.writeGamePackets(this.gamePacketCodec, gamePackets, this.rawPacketBytes);
 
             if (this.isConfiguring) {
                 endedConfiguration = true;
@@ -965,7 +971,7 @@ public class Recorder {
                 true, Optional.empty()));
         }
 
-        this.asyncReplaySaver.writeConfigurationPackets(this.configurationPacketCodec, configurationPackets);
+        this.asyncReplaySaver.writeConfigurationPackets(this.configurationPacketCodec, configurationPackets, this.rawPacketBytes);
         List<Packet<? super ClientGamePacketListener>> gamePackets = new ArrayList<>();
 
         // Login packet
@@ -979,7 +985,7 @@ public class Recorder {
         gamePackets.add(loginPacket);
 
         // Write local player
-        this.asyncReplaySaver.writeGamePackets(this.gamePacketCodec, gamePackets);
+        this.asyncReplaySaver.writeGamePackets(this.gamePacketCodec, gamePackets, this.rawPacketBytes);
         gamePackets.clear();
         this.writeCreateLocalPlayer();
 
@@ -1212,7 +1218,7 @@ public class Recorder {
 
         writeCustomSnapshot(gamePackets::add);
 
-        this.asyncReplaySaver.writeGamePackets(this.gamePacketCodec, gamePackets);
+        this.asyncReplaySaver.writeGamePackets(this.gamePacketCodec, gamePackets, this.rawPacketBytes);
 
         if (asActualSnapshot) {
             this.asyncReplaySaver.submit(ReplayWriter::endSnapshot);

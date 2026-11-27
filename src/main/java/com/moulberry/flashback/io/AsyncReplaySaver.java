@@ -42,6 +42,7 @@ import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -112,8 +113,19 @@ public class AsyncReplaySaver {
     private final Long2ObjectOpenHashMap<List<CachedChunkPacket>> cachedChunkPackets = new Long2ObjectOpenHashMap<>();
     private int totalWrittenChunkPackets = 0;
 
-    public void writeGamePackets(StreamCodec<ByteBuf, Packet<? super ClientGamePacketListener>> gamePacketCodec,
-                                 List<Packet<? super ClientGamePacketListener>> packets) {
+
+    public void writeGamePackets(
+        StreamCodec<ByteBuf, Packet<? super ClientGamePacketListener>> gamePacketCodec,
+        List<Packet<? super ClientGamePacketListener>> packets
+    ) {
+        this.writeGamePackets(gamePacketCodec, packets, Map.of());
+    }
+
+    public void writeGamePackets(
+        StreamCodec<ByteBuf, Packet<? super ClientGamePacketListener>> gamePacketCodec,
+        List<Packet<? super ClientGamePacketListener>> packets,
+        Map<Packet<?>, byte[]> rawBytesMap
+    ) {
         List<Packet<? super ClientGamePacketListener>> packetCopy = new ArrayList<>(packets);
         this.submit(writer -> {
             RegistryFriendlyByteBuf chunkCacheOutput = null;
@@ -180,6 +192,14 @@ public class AsyncReplaySaver {
                     continue;
                 }
 
+                byte[] rawBytes = rawBytesMap.get(packet);
+                if (rawBytes != null) {
+                    writer.startAction(ActionGamePacket.INSTANCE);
+                    writer.friendlyByteBuf().writeBytes(rawBytes);
+                    writer.finishAction(ActionGamePacket.INSTANCE);
+                    continue;
+                }
+
                 try {
                     WRITING_PACKET.set(true);
 
@@ -239,13 +259,30 @@ public class AsyncReplaySaver {
         }
     }
 
-    public void writeConfigurationPackets(StreamCodec<ByteBuf, Packet<? super ClientConfigurationPacketListener>> configurationPacketCodec,
-                                 List<Packet<? super ClientConfigurationPacketListener>> packets) {
+    public void writeConfigurationPackets(
+        StreamCodec<ByteBuf, Packet<? super ClientConfigurationPacketListener>> configurationPacketCodec,
+        List<Packet<? super ClientConfigurationPacketListener>> packets
+    ) {
+        this.writeConfigurationPackets(configurationPacketCodec, packets, Map.of());
+    }
+
+    public void writeConfigurationPackets(
+        StreamCodec<ByteBuf, Packet<? super ClientConfigurationPacketListener>> configurationPacketCodec,
+        List<Packet<? super ClientConfigurationPacketListener>> packets,
+        Map<Packet<?>, byte[]> rawBytesMap
+    ) {
         List<Packet<? super ClientConfigurationPacketListener>> packetCopy = new ArrayList<>(packets);
         this.submit(writer -> {
             for (Packet<? super ClientConfigurationPacketListener> packet : packetCopy) {
                 writer.startAction(ActionConfigurationPacket.INSTANCE);
-                configurationPacketCodec.encode(writer.friendlyByteBuf(), packet);
+
+                byte[] rawBytes = rawBytesMap.get(packet);
+                if (rawBytes != null) {
+                    writer.friendlyByteBuf().writeBytes(rawBytes);
+                } else {
+                    configurationPacketCodec.encode(writer.friendlyByteBuf(), packet);
+                }
+
                 writer.finishAction(ActionConfigurationPacket.INSTANCE);
             }
         });
