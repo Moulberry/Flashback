@@ -80,6 +80,7 @@ dependencies {
     compileOnly("maven.modrinth:simple-voice-chat:OLnMVWXy")
     compileOnly("maven.modrinth:modmenu:jvjwXH6l")
     compileOnly("maven.modrinth:scalablelux:gYbHVCz8")
+    compileOnly("maven.modrinth:moonrise-opt:RBT6pK8I")
 
     // FFmpeg
     shadow(implementation("org.bytedeco:javacv-platform:1.5.14") {

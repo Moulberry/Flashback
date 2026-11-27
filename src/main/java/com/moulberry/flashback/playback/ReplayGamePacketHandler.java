@@ -5,6 +5,7 @@ import ca.spottedleaf.starlight.common.light.SWMRNibbleArray;
 import ca.spottedleaf.starlight.common.light.StarLightEngine;
 import com.mojang.authlib.GameProfile;
 import com.moulberry.flashback.Flashback;
+import com.moulberry.flashback.compat.MoonriseLightCompat;
 import com.moulberry.flashback.PacketHelper;
 import com.moulberry.flashback.exception.UnsupportedPacketException;
 import com.moulberry.flashback.ext.LevelChunkExt;
@@ -93,6 +94,9 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
     private ResourceKey<Level> currentDimension = null;
     public int localPlayerId = -1;
     public LongSet forceSendChunksDueToMovingPistonShenanigans = new LongOpenHashSet();
+
+    private final boolean isMoonriseInstalled = FabricLoader.getInstance().isModLoaded("moonrise");
+    private final boolean isStarlightInstalled = FabricLoader.getInstance().isModLoaded("starlight");
 
     public ReplayGamePacketHandler(ReplayServer replayServer) {
         this.replayServer = replayServer;
@@ -603,7 +607,9 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
         chunk.replaceWithPacketData(x, z, chunkData);
 
         var lightData = levelChunkWithLightPacket.lightData();
-        if (FabricLoader.getInstance().isModLoaded("starlight")) {
+        if (this.isMoonriseInstalled) {
+            MoonriseLightCompat.apply(chunk, lightData, true);
+        } else if (this.isStarlightInstalled) {
             chunk.setLightCorrect(false);
             try {
                 var blockNibbles = StarLightEngine.getFilledEmptyLight(this.level());
@@ -623,7 +629,7 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
         ChunkPos chunkPos = chunk.getPos();
         ((ServerLevelExt)this.level()).flashback$markChunkAsSendable(chunkPos.pack());
         for (ServerPlayer serverPlayer : this.replayServer.getReplayViewers()) {
-            if (serverPlayer.getChunkTrackingView().contains(chunkPos)) {
+            if (this.level().getChunkSource().chunkMap.isChunkTracked(serverPlayer, x, z)) {
                 serverPlayer.connection.chunkSender.markChunkPendingToSend(chunk);
             }
         }
@@ -643,6 +649,19 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
     }
 
     private void applyLightData(LevelLightEngine levelLightEngine, int x, int z, ClientboundLightUpdatePacketData clientboundLightUpdatePacketData) {
+        if (this.isMoonriseInstalled) {
+            LevelChunk chunk = this.level().getChunk(x, z);
+            MoonriseLightCompat.apply(chunk, clientboundLightUpdatePacketData, false);
+            ChunkPos chunkPos = new ChunkPos(x, z);
+            var lightPacket = new ClientboundLightUpdatePacket(chunkPos, levelLightEngine, null, null);
+            for (ServerPlayer serverPlayer : this.replayServer.getReplayViewers()) {
+                if (this.level().getChunkSource().chunkMap.isChunkTracked(serverPlayer, x, z)) {
+                    serverPlayer.connection.send(lightPacket);
+                }
+            }
+            return;
+        }
+
         levelLightEngine.retainData(new ChunkPos(x, z), true);
 
         BitSet skyYMask = clientboundLightUpdatePacketData.skyYMask();
@@ -668,7 +687,7 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
                 ChunkPos chunkPos = new ChunkPos(x, z);
                 var lightPacket = new ClientboundLightUpdatePacket(chunkPos, levelLightEngine, null, null);
                 for (ServerPlayer serverPlayer : this.replayServer.getReplayViewers()) {
-                    if (serverPlayer.getChunkTrackingView().contains(chunkPos)) {
+                    if (this.level().getChunkSource().chunkMap.isChunkTracked(serverPlayer, x, z)) {
                         serverPlayer.connection.send(lightPacket);
                     }
                 }
