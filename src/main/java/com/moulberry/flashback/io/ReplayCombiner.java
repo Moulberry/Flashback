@@ -77,6 +77,13 @@ public class ReplayCombiner {
             }
 
             firstMetadata.replayIdentifier = UUID.randomUUID();
+            for (var pin : secondMetadata.resourcePackHashOverrides.cellSet()) {
+                String existing = firstMetadata.resourcePackHashOverrides.get(pin.getRowKey(), pin.getColumnKey());
+                if (existing != null && !existing.equals(pin.getValue())) {
+                    throw new IOException("Replays have conflicting resource pack hash overrides for " + pin.getColumnKey());
+                }
+                firstMetadata.resourcePackHashOverrides.put(pin.getRowKey(), pin.getColumnKey(), pin.getValue());
+            }
             firstMetadata.name = replayName;
             for (Map.Entry<Integer, ReplayMarker> entry : secondMetadata.replayMarkers.entrySet()) {
                 firstMetadata.replayMarkers.put(entry.getKey() + firstMetadata.totalTicks, entry.getValue());

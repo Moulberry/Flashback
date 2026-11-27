@@ -1,6 +1,9 @@
 package com.moulberry.flashback.screen;
 
+import com.google.common.collect.HashBasedTable;
+import com.google.common.collect.Table;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonParseException;
 import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.FlashbackGson;
 import com.moulberry.flashback.FlashbackTextComponents;
@@ -33,6 +36,7 @@ public class EditReplayScreen extends Screen {
     private final Screen lastScreen;
 
     private final FlashbackMeta metadata;
+    private final Table<String, String, String> packOverrides;
     private String changedReplayName;
     private Button saveChangesButton;
 
@@ -42,6 +46,7 @@ public class EditReplayScreen extends Screen {
         super(FlashbackTextComponents.EDIT_REPLAY);
         this.lastScreen = lastScreen;
         this.metadata = summary.getReplayMetadata();
+        this.packOverrides = HashBasedTable.create(this.metadata.resourcePackHashOverrides);
         this.changedReplayName = summary.getReplayName();
         this.replayPath = summary.getPath();
     }
@@ -70,6 +75,10 @@ public class EditReplayScreen extends Screen {
 
         rowHelper.addChild(new BottomTextWidget(204, 10, CommonComponents.EMPTY, this.font), 2);
 
+        rowHelper.addChild(Button.builder(Component.translatable("flashback.resource_pack_versions"), button ->
+            this.minecraft.gui.setScreen(new ResourcePackVersionScreen(this, this.packOverrides))
+        ).width(204).build(), 2);
+
         rowHelper.addChild(Button.builder(FlashbackTextComponents.COMBINE_WITH_OTHER_REPLAY, button -> {
             this.minecraft.gui.setScreen(new CombineReplayScreen(this, this.replayPath, null, null));
         }).width(204).build(), 2);
@@ -90,20 +99,22 @@ public class EditReplayScreen extends Screen {
     }
 
     private void applyChanges() {
-        this.metadata.name = this.changedReplayName;
-
         try (FileSystem fileSystem = FileSystems.newFileSystem(this.replayPath)) {
             Path metadataPath = fileSystem.getPath("/metadata.json");
-
-            // Update
-            String metadataJson = FlashbackGson.PRETTY.toJson(this.metadata.toJson());
-            Files.writeString(metadataPath, metadataJson);
-        } catch (IOException e) {
+            JsonObject json = FlashbackGson.COMPRESSED.fromJson(Files.readString(metadataPath), JsonObject.class);
+            json.addProperty("name", this.changedReplayName);
+            FlashbackMeta.writeResourcePackHashOverrides(json, this.packOverrides);
+            Files.writeString(metadataPath, FlashbackGson.PRETTY.toJson(json));
+        } catch (IOException | JsonParseException e) {
             Flashback.LOGGER.error("Unable to edit replay", e);
             Minecraft.getInstance().gui.setScreen(new AlertScreen(() -> Minecraft.getInstance().gui.setScreen(this.lastScreen),
                 FlashbackTextComponents.UNABLE_TO_EDIT_REPLAY, Component.literal(e.toString())));
+            return;
         }
 
+        this.metadata.name = this.changedReplayName;
+        this.metadata.resourcePackHashOverrides.clear();
+        this.metadata.resourcePackHashOverrides.putAll(this.packOverrides);
         this.updateSaveChangesActive();
         this.clearFocus();
     }
@@ -114,7 +125,8 @@ public class EditReplayScreen extends Screen {
     }
 
     private void updateSaveChangesActive() {
-        this.saveChangesButton.active = !Objects.equals(this.metadata.name, this.changedReplayName);
+        this.saveChangesButton.active = !Objects.equals(this.metadata.name, this.changedReplayName)
+            || !this.packOverrides.equals(this.metadata.resourcePackHashOverrides);
     }
 
     @Override
