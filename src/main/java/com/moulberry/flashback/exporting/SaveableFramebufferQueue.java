@@ -162,6 +162,9 @@ public class SaveableFramebufferQueue implements AutoCloseable {
         this.waiting.clear();
         this.available.clear();
         this.flipBuffer.close();
+        this.flipBufferView.close();
+        this.flipDepthBuffer.close();
+        this.flipDepthBufferView.close();
         this.transformDepthUniform.close();
     }
 
