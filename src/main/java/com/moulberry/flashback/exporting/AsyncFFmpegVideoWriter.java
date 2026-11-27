@@ -23,6 +23,8 @@ import org.lwjgl.system.MemoryUtil;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.FloatBuffer;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -48,7 +50,8 @@ public class AsyncFFmpegVideoWriter implements AutoCloseable, VideoWriter {
 
     private final AtomicBoolean finishRescaleThread = new AtomicBoolean(false);
     private final AtomicBoolean finishEncodeThread = new AtomicBoolean(false);
-    private final AtomicBoolean finishedWriting = new AtomicBoolean(false);
+    private Thread rescaleThread = null;
+    private Thread encodeThread = null;
 
     private final AtomicReference<Throwable> threadedError = new AtomicReference<>(null);
 
@@ -168,12 +171,12 @@ public class AsyncFFmpegVideoWriter implements AutoCloseable, VideoWriter {
             this.rescaleQueue = needsRescale ? new ArrayBlockingQueue<>(8) : null;
             this.reusePictureData = needsRescale ? new ArrayBlockingQueue<>(32) : null;
 
-            Thread encodeThread = createEncodeThread(recorder);
             if (needsRescale) {
-                Thread rescaleThread = createRescaleThread(width, height, dstPixelFormat);
-                rescaleThread.start();
+                this.rescaleThread = createRescaleThread(width, height, dstPixelFormat);
+                this.rescaleThread.start();
             }
-            encodeThread.start();
+            this.encodeThread = createEncodeThread(recorder);
+            this.encodeThread.start();
         } catch (IOException e) {
             throw SneakyThrow.sneakyThrow(e);
         }
@@ -195,7 +198,6 @@ public class AsyncFFmpegVideoWriter implements AutoCloseable, VideoWriter {
                         if (this.finishEncodeThread.get()) {
                             recorder.stop();
                             recorder.release();
-                            this.finishedWriting.set(true);
                             return;
                         } else {
                             continue;
@@ -223,7 +225,6 @@ public class AsyncFFmpegVideoWriter implements AutoCloseable, VideoWriter {
                     this.threadedError.set(t);
                     this.finishRescaleThread.set(true);
                     this.finishEncodeThread.set(true);
-                    this.finishedWriting.set(true);
                     return;
                 } finally {
                     if (src != null) {
@@ -259,85 +260,94 @@ public class AsyncFFmpegVideoWriter implements AutoCloseable, VideoWriter {
         Thread scaleThread = new Thread(() -> {
             SwsContext img_convert_ctx = null;
 
-            while (true) {
-                try (ImageFrame src = this.rescaleQueue.poll(10, TimeUnit.MILLISECONDS)) {
-                    if (src == null) {
-                        if (this.finishRescaleThread.get()) {
-                            av_frame_free(picture);
-                            av_frame_free(tmp_picture);
-                            sws_freeContext(img_convert_ctx);
-                            this.finishEncodeThread.set(true);
+            try {
+                while (true) {
+                    try (ImageFrame src = this.rescaleQueue.poll(10, TimeUnit.MILLISECONDS)) {
+                        if (this.threadedError.get() != null) {
                             return;
-                        } else {
-                            continue;
                         }
-                    }
 
-                    img_convert_ctx = swscale.sws_getCachedContext(img_convert_ctx, src.width, src.height, src.ffmpegPixelFormat(),
+                        if (src == null) {
+                            if (this.finishRescaleThread.get()) {
+                                return;
+                            } else {
+                                continue;
+                            }
+                        }
+
+                        img_convert_ctx = swscale.sws_getCachedContext(img_convert_ctx, src.width, src.height, src.ffmpegPixelFormat(),
                             dstWidth, dstHeight, dstPixelFormat, swscale.SWS_LANCZOS | swscale.SWS_ACCURATE_RND | swscale.SWS_FULL_CHR_H_INT,
                             null, null, (DoublePointer) null);
-                    if (img_convert_ctx == null) {
-                        throw new RuntimeException("sws_getCachedContext() error: Cannot initialize the conversion context.");
-                    }
-
-                    if (useItu709Colorspace) {
-                        IntPointer coefficients = swscale.sws_getCoefficients(swscale.SWS_CS_ITU709);
-                        swscale.sws_setColorspaceDetails(img_convert_ctx, coefficients, 1, coefficients, 0, 0, 1 << 16, 1 << 16);
-                    }
-
-                    BytePointer data = new BytePointer() {{
-                        this.address = src.pixels;
-                        this.position = 0;
-                        this.limit = src.size;
-                        this.capacity = src.size;
-                    }};
-
-                    Long tempPointerAddressLong = this.reusePictureData.poll();
-                    if (tempPointerAddressLong == null) {
-                        tempPointerAddressLong = MemoryUtil.nmemAlloc(dstSize);
-                        if (tempPointerAddressLong == 0) {
-                            throw new OutOfMemoryError();
+                        if (img_convert_ctx == null) {
+                            throw new RuntimeException("sws_getCachedContext() error: Cannot initialize the conversion context.");
                         }
-                    }
 
-                    // Bit of a hack to create a BytePointer for this library
-                    long tempPointerAddress = tempPointerAddressLong;
-                    BytePointer tempPointer = new BytePointer() {{
-                        this.address = tempPointerAddress;
-                        this.position = 0;
-                        this.limit = dstSize;
-                        this.capacity = dstSize;
-                    }};
+                        if (useItu709Colorspace) {
+                            IntPointer coefficients = swscale.sws_getCoefficients(swscale.SWS_CS_ITU709);
+                            swscale.sws_setColorspaceDetails(img_convert_ctx, coefficients, 1, coefficients, 0, 0, 1 << 16, 1 << 16);
+                        }
 
-                    av_image_fill_arrays(tmp_picture_ptr, tmp_picture.linesize(), data, src.ffmpegPixelFormat(), src.width, src.height, 1);
-                    av_image_fill_arrays(picture_ptr, picture.linesize(), tempPointer, dstPixelFormat, dstWidth, dstHeight, 1);
+                        BytePointer data = new BytePointer() {{
+                            this.address = src.pixels;
+                            this.position = 0;
+                            this.limit = src.size;
+                            this.capacity = src.size;
+                        }};
 
-                    tmp_picture.format(src.ffmpegPixelFormat());
-                    tmp_picture.width(src.width);
-                    tmp_picture.height(src.height);
+                        Long tempPointerAddressLong = this.reusePictureData.poll();
+                        if (tempPointerAddressLong == null) {
+                            tempPointerAddressLong = MemoryUtil.nmemAlloc(dstSize);
+                            if (tempPointerAddressLong == 0) {
+                                throw new OutOfMemoryError();
+                            }
+                        }
 
-                    picture.format(dstPixelFormat);
-                    picture.width(dstWidth);
-                    picture.height(dstHeight);
+                        // Bit of a hack to create a BytePointer for this library
+                        long tempPointerAddress = tempPointerAddressLong;
+                        BytePointer tempPointer = new BytePointer() {{
+                            this.address = tempPointerAddress;
+                            this.position = 0;
+                            this.limit = dstSize;
+                            this.capacity = dstSize;
+                        }};
 
-                    swscale.sws_scale(img_convert_ctx, tmp_picture_ptr, tmp_picture.linesize(),
+                        av_image_fill_arrays(tmp_picture_ptr, tmp_picture.linesize(), data, src.ffmpegPixelFormat(), src.width, src.height, 1);
+                        av_image_fill_arrays(picture_ptr, picture.linesize(), tempPointer, dstPixelFormat, dstWidth, dstHeight, 1);
+
+                        tmp_picture.format(src.ffmpegPixelFormat());
+                        tmp_picture.width(src.width);
+                        tmp_picture.height(src.height);
+
+                        picture.format(dstPixelFormat);
+                        picture.width(dstWidth);
+                        picture.height(dstHeight);
+
+                        swscale.sws_scale(img_convert_ctx, tmp_picture_ptr, tmp_picture.linesize(),
                             0, src.height, picture_ptr, picture.linesize());
 
-                    this.encodeQueue.put(new ImageFrame(tempPointerAddress, dstWidth, dstHeight, dstSize, dstPixelFormat, src.audioBuffer));
-                } catch (Throwable t) {
-                    try {
-                        av_frame_free(picture);
-                        av_frame_free(tmp_picture);
-                        sws_freeContext(img_convert_ctx);
-                    } catch (Exception e) {
-                        e.printStackTrace();
+                        ImageFrame frame = new ImageFrame(tempPointerAddress, dstWidth, dstHeight, dstSize, dstPixelFormat, src.audioBuffer);
+                        while (!this.encodeQueue.offer(frame, 10, TimeUnit.MILLISECONDS)) {
+                            if (this.threadedError.get() != null) {
+                                frame.close();
+                                return;
+                            }
+                        }
+                    } catch (Throwable t) {
+                        this.threadedError.set(t);
+                        this.finishRescaleThread.set(true);
+                        this.finishEncodeThread.set(true);
+                        return;
                     }
-
-                    this.threadedError.set(t);
-                    this.finishRescaleThread.set(true);
-                    this.finishEncodeThread.set(true);
-                    this.finishedWriting.set(true);
-                    return;
+                }
+            } finally {
+                try {
+                    av_frame_free(picture);
+                    av_frame_free(tmp_picture);
+                    if (img_convert_ctx != null) {
+                        sws_freeContext(img_convert_ctx);
+                    }
+                } catch (Exception e) {
+                    Flashback.LOGGER.error("Error while freeing rescale context", e);
                 }
             }
         });
@@ -350,7 +360,6 @@ public class AsyncFFmpegVideoWriter implements AutoCloseable, VideoWriter {
         if (t != null) {
             this.finishRescaleThread.set(true);
             this.finishEncodeThread.set(true);
-            this.finishedWriting.set(true);
 
             if (closeable != null) {
                 try {
@@ -368,19 +377,20 @@ public class AsyncFFmpegVideoWriter implements AutoCloseable, VideoWriter {
 
         checkEncodeError(src);
 
-        if (this.finishRescaleThread.get() || this.finishEncodeThread.get() || this.finishedWriting.get()) {
+        if (this.finishRescaleThread.get() || this.finishEncodeThread.get()) {
             src.close();
             throw new IllegalStateException("Cannot encode after finish()");
         }
 
         while (true) {
             try {
-                if (this.rescaleQueue != null) {
-                    this.rescaleQueue.put(src);
-                } else {
-                    this.encodeQueue.put(src);
+                ArrayBlockingQueue<ImageFrame> queue = this.rescaleQueue;
+                if (queue == null) {
+                    queue = this.encodeQueue;
                 }
-                break;
+                if (queue.offer(src, 10, TimeUnit.MILLISECONDS)) {
+                    return;
+                }
             } catch (InterruptedException ignored) {}
             checkEncodeError(src);
         }
@@ -408,13 +418,13 @@ public class AsyncFFmpegVideoWriter implements AutoCloseable, VideoWriter {
         }
 
         this.finishRescaleThread.set(true);
-        if (this.rescaleQueue == null) {
-            this.finishEncodeThread.set(true);
-        }
+        boolean interrupted = waitForThread(this.rescaleThread, () -> wait.accept("rescale thread finish"));
 
-        while (!this.finishedWriting.get()) {
-            LockSupport.parkNanos("waiting for encoder thread to finish", 100000L);
-            wait.accept("thread finish");
+        this.finishEncodeThread.set(true);
+        interrupted |= waitForThread(this.encodeThread, () -> wait.accept("encode thread finish"));
+
+        if (interrupted) {
+            Thread.currentThread().interrupt();
         }
 
         checkEncodeError(null);
@@ -426,28 +436,71 @@ public class AsyncFFmpegVideoWriter implements AutoCloseable, VideoWriter {
             return;
         }
 
-        if (this.rescaleQueue != null) {
-            for (ImageFrame src : this.rescaleQueue) {
-                src.close();
-            }
-        }
-        for (ImageFrame src : this.encodeQueue) {
-            src.close();
-        }
+        drainAndCloseImageFrames(this.rescaleQueue);
+        drainAndCloseImageFrames(this.encodeQueue);
 
         this.finishRescaleThread.set(true);
-        this.finishEncodeThread.set(true);
+        boolean interrupted = waitForThread(this.rescaleThread, null);
 
-        while (!this.finishedWriting.get()) {
-            LockSupport.parkNanos("waiting for encoder thread to finish", 100000L);
-        }
+        drainAndCloseImageFrames(this.rescaleQueue);
+        drainAndCloseImageFrames(this.encodeQueue);
+
+        this.finishEncodeThread.set(true);
+        interrupted |= waitForThread(this.encodeThread, null);
+
+        drainAndCloseImageFrames(this.rescaleQueue);
+        drainAndCloseImageFrames(this.encodeQueue);
 
         if (this.reusePictureData != null) {
-            for (Long address : this.reusePictureData) {
+            List<Long> drained = new ArrayList<>();
+            this.reusePictureData.drainTo(drained);
+            for (Long address : drained) {
                 if (address != null && address != 0) {
                     MemoryUtil.nmemFree(address);
                 }
             }
+        }
+
+        if (interrupted) {
+            Thread.currentThread().interrupt();
+        }
+    }
+
+    private boolean waitForThread(Thread thread, Runnable wait) {
+        if (thread == null) {
+            return false;
+        }
+
+        boolean interrupted = false;
+
+        while (true) {
+            try {
+                if (wait == null) {
+                    thread.join();
+                } else {
+                    thread.join(50);
+                    if (thread.isAlive()) {
+                        wait.run();
+                        continue;
+                    }
+                }
+                break;
+            } catch (InterruptedException e) {
+                interrupted = true;
+            }
+        }
+
+        return interrupted;
+    }
+
+    private void drainAndCloseImageFrames(ArrayBlockingQueue<ImageFrame> frames) {
+        if (frames == null) {
+            return;
+        }
+        List<ImageFrame> drained = new ArrayList<>();
+        frames.drainTo(drained);
+        for (ImageFrame src : drained) {
+            src.close();
         }
     }
 }
