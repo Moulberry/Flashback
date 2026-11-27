@@ -161,10 +161,15 @@ public class ReplayCombiner {
             }
 
             // Write icon
-            zipEntry = new ZipEntry("icon.png");
-            zipOut.putNextEntry(zipEntry);
-            Files.copy(firstFileSystem.getPath("/icon.png"), zipOut);
-            zipOut.closeEntry();
+            for (Path path : new Path[] { firstFileSystem.getPath("/icon.png"), secondFileSystem.getPath("/icon.png") }) {
+                if (Files.exists(path)) {
+                    zipEntry = new ZipEntry("icon.png");
+                    zipOut.putNextEntry(zipEntry);
+                    Files.copy(path, zipOut);
+                    zipOut.closeEntry();
+                    break;
+                }
+            }
 
             // Write chunks
             for (Map.Entry<String, ReplayChunk> entry : newReplayChunks.entrySet()) {
