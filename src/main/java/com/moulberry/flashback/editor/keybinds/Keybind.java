@@ -184,16 +184,13 @@ public class Keybind implements KeybindInterface {
         return this.shiftMod == other.shiftMod && this.ctrlMod == other.ctrlMod && this.altMod == other.altMod && this.superMod == other.superMod;
     }
 
-    private static String getKeyNameFor(int key) {
-        if (key == FAKE_SCROLL_KEY) {
+    private static String getKeyNameFor(int imguiKey) {
+        if (imguiKey == FAKE_SCROLL_KEY) {
             return I18n.get("flashback.keymod.scroll");
         }
 
-        //#if MC>=12109
+        int key = InputHelper.imguiKeyToSdlScancode(imguiKey);
         return InputConstants.getKey(new KeyEvent(key, -1, 0)).getDisplayName().getString();
-        //#else
-        //$$ return InputConstants.getKey(key, -1).getDisplayName().getString();
-        //#endif
     }
 
     public String longKeyIdentifier() {
