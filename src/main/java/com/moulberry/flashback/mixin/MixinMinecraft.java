@@ -409,6 +409,20 @@ public abstract class MixinMinecraft extends ReentrantBlockableEventLoop<Runnabl
         }
     }
 
+    @Inject(method = {"continueAttack", "startUseItem"}, at = @At("HEAD"), cancellable = true)
+    public void continueAttack(CallbackInfo ci) {
+        if (ReplayUI.isActive()) {
+            ci.cancel();
+        }
+    }
+
+    @Inject(method = "startAttack", at = @At("HEAD"), cancellable = true)
+    public void startAttack(CallbackInfoReturnable<Boolean> cir) {
+        if (ReplayUI.isActive()) {
+            cir.setReturnValue(false);
+        }
+    }
+
     @Unique
     private final ThreadLocal<StartReplayServerInfo> info = new ThreadLocal<>();
 
