@@ -1,8 +1,11 @@
 package com.moulberry.flashback.record;
 
+import com.google.common.collect.HashBasedTable;
+import com.google.common.collect.Table;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonPrimitive;
 import com.moulberry.flashback.FlashbackGson;
 import org.jetbrains.annotations.Nullable;
 
@@ -10,9 +13,11 @@ import java.io.File;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
+import java.util.Locale;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.UUID;
+import java.util.regex.Pattern;
 
 public class FlashbackMeta {
 
@@ -34,10 +39,32 @@ public class FlashbackMeta {
 
     public Map<String, File> distantHorizonPaths = new HashMap<>();
 
+    private static final Pattern SHA1 = Pattern.compile("[0-9a-fA-F]{40}");
+    // URL and recorded SHA-1 identify a version even when the server reuses a pack UUID or URL.
+    public final Table<String, String, String> resourcePackHashOverrides = HashBasedTable.create();
+
+    public static boolean isSha1(String hash) {
+        return SHA1.matcher(hash).matches();
+    }
+
+    public String resolveResourcePackHash(String url, String recordedHash) {
+        String replacement = this.resourcePackHashOverrides.get(url, recordedHash.toLowerCase(Locale.ROOT));
+        return replacement != null ? replacement : recordedHash;
+    }
+
+    public static void writeResourcePackHashOverrides(JsonObject meta, Table<String, String, String> overrides) {
+        if (overrides.isEmpty()) {
+            meta.remove("resourcePackHashOverrides");
+        } else {
+            meta.add("resourcePackHashOverrides", FlashbackGson.COMPRESSED.toJsonTree(overrides.rowMap()));
+        }
+    }
+
     public JsonObject toJson() {
         JsonObject meta = new JsonObject();
         meta.addProperty("uuid", this.replayIdentifier.toString());
         meta.addProperty("name", this.name);
+        writeResourcePackHashOverrides(meta, this.resourcePackHashOverrides);
 
         if (this.versionString != null) {
             meta.addProperty("version_string", this.versionString);
@@ -128,6 +155,20 @@ public class FlashbackMeta {
             return null;
         }
         flashbackMeta.name = meta.get("name").getAsString();
+
+        if (meta.get("resourcePackHashOverrides") instanceof JsonObject urls) {
+            for (var url : urls.entrySet()) {
+                if (url.getValue() instanceof JsonObject hashes) {
+                    for (var entry : hashes.entrySet()) {
+                        if (isSha1(entry.getKey()) && entry.getValue() instanceof JsonPrimitive value
+                                && value.isString() && isSha1(value.getAsString())) {
+                            flashbackMeta.resourcePackHashOverrides.put(url.getKey(), entry.getKey().toLowerCase(Locale.ROOT),
+                                value.getAsString().toLowerCase(Locale.ROOT));
+                        }
+                    }
+                }
+            }
+        }
 
         if (meta.has("version_string")) {
             flashbackMeta.versionString = meta.get("version_string").getAsString();

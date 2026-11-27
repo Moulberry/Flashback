@@ -427,7 +427,7 @@ public class ReplayServer extends IntegratedServer {
     }
 
     public void pushRemotePack(UUID uuid, String url, String hash) {
-        this.remotePacks.put(uuid, new RemotePack(uuid, url, hash));
+        this.remotePacks.put(uuid, new RemotePack(uuid, url, this.metadata.resolveResourcePackHash(url, hash)));
     }
 
     public void popRemotePack(UUID uuid) {
