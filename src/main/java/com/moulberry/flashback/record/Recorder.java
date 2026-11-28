@@ -17,11 +17,18 @@ import com.moulberry.flashback.action.*;
 import com.moulberry.flashback.compat.BobbyUtil;
 import com.moulberry.flashback.compat.DistantHorizonsSupport;
 import com.moulberry.flashback.ext.ClientClockManagerExt;
+import com.moulberry.flashback.ext.PlayerPovAuxExt;
+import com.moulberry.flashback.povstate.PlayerPovAuxiliaryData;
+import com.moulberry.flashback.povstate.PovChatFilter;
+import com.moulberry.flashback.povstate.PovPlayerState;
 import com.moulberry.flashback.io.AsyncReplaySaver;
 import com.moulberry.flashback.io.ReplayWriter;
 import com.moulberry.flashback.mixin.compat.bobby.FakeChunkManagerAccessor;
 import com.moulberry.flashback.packet.FlashbackAccurateEntityPosition;
+import com.moulberry.flashback.povstate.PovScreenType;
 import io.netty.buffer.ByteBuf;
+import it.unimi.dsi.fastutil.ints.IntArraySet;
+import it.unimi.dsi.fastutil.ints.IntSet;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import net.fabricmc.fabric.api.networking.v1.context.PacketContext;
 import net.fabricmc.fabric.api.networking.v1.context.PacketContextProvider;
@@ -32,7 +39,11 @@ import net.minecraft.client.Screenshot;
 import net.minecraft.client.gui.components.BossHealthOverlay;
 import net.minecraft.client.gui.components.LerpingBossEvent;
 import net.minecraft.client.gui.components.PlayerTabOverlay;
+import net.minecraft.client.gui.screens.ChatScreen;
+import net.minecraft.client.gui.screens.DeathScreen;
 import net.minecraft.client.gui.screens.LevelLoadingScreen;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.multiplayer.ClientChunkCache;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.multiplayer.ClientPacketListener;
@@ -49,6 +60,7 @@ import net.minecraft.nbt.NbtOps;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.ConnectionProtocol;
 import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
@@ -65,24 +77,19 @@ import net.minecraft.network.protocol.game.*;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.resources.RegistryOps;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.server.RegistryLayer;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.TagNetworkSerialization;
 import net.minecraft.util.Mth;
-import net.minecraft.world.InteractionHand;
-import net.minecraft.world.entity.Display;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.Leashable;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.flag.FeatureFlags;
-import net.minecraft.world.food.FoodData;
+import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.ChunkPos;
-import net.minecraft.world.level.chunk.DataLayer;
-import net.minecraft.world.level.gamerules.GameRules;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.border.WorldBorder;
@@ -137,17 +144,11 @@ public class Recorder {
     private WeakReference<LocalPlayer> lastLocalPlayer = null;
     private final List<Object> lastPlayerEntityMeta = new ArrayList<>();
     private final Map<EquipmentSlot, ItemStack> lastPlayerEquipment = new EnumMap<>(EquipmentSlot.class);
-    private final ItemStack[] lastHotbarItems = new ItemStack[9];
     private BlockPos lastDestroyPos = null;
     private int lastDestroyProgress = -1;
-    private int lastSelectedSlot = -1;
-    private float lastExperienceProgress = -1;
-    private int lastTotalExperience = -1;
-    private int lastExperienceLevel = -1;
-    private int lastFoodLevel = -1;
-    private float lastSaturationLevel = -1;
     private boolean wasSwinging = false;
     private int lastSwingTime = -1;
+    private PovPlayerState localPovState = null;
 
     private long lastRtcEpochMilli = 0;
     private boolean forceRtcSync = true;
@@ -543,30 +544,11 @@ public class Recorder {
             this.lastLocalPlayer = new WeakReference<>(player);
         }
 
-        List<Packet<? super ClientGamePacketListener>> gamePackets = new ArrayList<>();
-
-        if (Flashback.getConfig().recording.recordHotbar) {
-            if (player.experienceProgress != this.lastExperienceProgress || player.totalExperience != this.lastTotalExperience ||
-                    player.experienceLevel != this.lastExperienceLevel) {
-                this.lastExperienceProgress = player.experienceProgress;
-                this.lastTotalExperience = player.totalExperience;
-                this.lastExperienceLevel = player.experienceLevel;
-                gamePackets.add(new ClientboundSetExperiencePacket(player.experienceProgress, player.totalExperience, player.experienceLevel));
-            }
-
-            FoodData foodData = player.getFoodData();
-            if (foodData.getFoodLevel() != this.lastFoodLevel || foodData.getSaturationLevel() != this.lastSaturationLevel) {
-                this.lastFoodLevel = foodData.getFoodLevel();
-                this.lastSaturationLevel = foodData.getSaturationLevel();
-                gamePackets.add(new ClientboundSetHealthPacket(player.getHealth(), foodData.getFoodLevel(), foodData.getSaturationLevel()));
-            }
-
-            int selectedSlot = player.getInventory().getSelectedSlot();
-            if (selectedSlot != this.lastSelectedSlot) {
-                gamePackets.add(new ClientboundSetHeldSlotPacket(selectedSlot));
-                this.lastSelectedSlot = selectedSlot;
-            }
+        if (Flashback.getConfig().recording.recordFirstPerson) {
+            this.writePovChanges(player);
         }
+
+        List<Packet<? super ClientGamePacketListener>> gamePackets = new ArrayList<>();
 
         // Update entity data
         SynchedEntityData.DataItem<?>[] items = Minecraft.getInstance().player.getEntityData().itemsById;
@@ -605,18 +587,6 @@ public class Recorder {
             gamePackets.add(new ClientboundSetEquipmentPacket(player.getId(), changedSlots));
         }
 
-        if (Flashback.getConfig().recording.recordHotbar) {
-            for (int i = 0; i < this.lastHotbarItems.length; i++) {
-                ItemStack hotbarItem = player.getInventory().getItem(i);
-
-                if (this.lastHotbarItems[i] == null || !ItemStack.matches(this.lastHotbarItems[i], hotbarItem)) {
-                    ItemStack copied = hotbarItem.copy();
-                    this.lastHotbarItems[i] = copied;
-                    gamePackets.add(new ClientboundContainerSetSlotPacket(0, 0, i, copied));
-                }
-            }
-        }
-
         // Update breaking
         MultiPlayerGameMode multiPlayerGameMode = Minecraft.getInstance().gameMode;
         if (multiPlayerGameMode == null) {
@@ -653,18 +623,58 @@ public class Recorder {
         this.asyncReplaySaver.writeGamePackets(this.gamePacketCodec, gamePackets, this.rawPacketBytes);
     }
 
+    private void writePovChanges(LocalPlayer player) {
+        List<Packet<? super ClientGamePacketListener>> povPackets = new ArrayList<>();
+
+        PlayerPovAuxiliaryData aux = ((PlayerPovAuxExt) player).flashback$getPlayerPovAuxiliaryData();
+
+        Minecraft mc = Minecraft.getInstance();
+        Screen screen = mc.gui.screen();
+        if (screen instanceof AbstractContainerScreen<?> containerScreen) {
+            Component title = containerScreen.getTitle();
+            IntSet quickCraftSlots = new IntArraySet(containerScreen.quickCraftSlots.size());
+            for (Slot slot : containerScreen.quickCraftSlots) {
+                quickCraftSlots.add(slot.index);
+            }
+            aux.screen = new PovScreenType.Container(title, quickCraftSlots, containerScreen.isQuickCrafting, containerScreen.quickCraftingType);
+        } else if (screen instanceof ChatScreen chatScreen) {
+            String text = chatScreen.input.getValue();
+            text = PovChatFilter.filterSensitiveChat(text);
+            aux.screen = new PovScreenType.Chat(text);
+        } else if (screen instanceof DeathScreen deathScreen) {
+            aux.screen = new PovScreenType.Death(deathScreen.causeOfDeath, deathScreen.hardcore);
+        } else {
+            aux.screen = null;
+        }
+        if (aux.screen != null) {
+            float originX = aux.screen.mouseOriginX(screen);
+            float originY = aux.screen.mouseOriginY(screen);
+            aux.mouseX = (float) mc.mouseHandler.getScaledXPos(mc.getWindow()) - originX;
+            aux.mouseY = (float) mc.mouseHandler.getScaledYPos(mc.getWindow()) - originY;
+        } else {
+            aux.mouseX = 0;
+            aux.mouseY = 0;
+        }
+
+        PovPlayerState nextPovState = PovPlayerState.fromPlayer(player);
+        PovPlayerState.addChangesBetween(povPackets, this.localPovState, nextPovState);
+        this.localPovState = nextPovState;
+
+        if (!povPackets.isEmpty()) {
+            var gamePacketCodec = this.gamePacketCodec;
+            var playerUuid = player.getUUID();
+            this.asyncReplaySaver.submit(writer -> {
+                ActionPovChanges.INSTANCE.write(gamePacketCodec, writer, playerUuid, povPackets);
+            });
+        }
+    }
+
     private void resetLastLocalData() {
         this.lastPlayerEntityMeta.clear();
         this.lastPlayerEquipment.clear();
         this.lastDestroyPos = null;
         this.lastDestroyProgress = -1;
-        this.lastSelectedSlot = -1;
-        this.lastExperienceProgress = -1;
-        this.lastTotalExperience = -1;
-        this.lastExperienceLevel = -1;
-        this.lastFoodLevel = -1;
-        this.lastSaturationLevel = -1;
-        Arrays.fill(this.lastHotbarItems, null);
+        this.localPovState = null;
     }
 
     private void writeEntityPositions() {
@@ -1122,26 +1132,9 @@ public class Recorder {
 
         writeChunkDataSnapshot(chunksList, clientChunkCache, level, localPlayer, gamePackets);
 
-        if (Flashback.getConfig().recording.recordHotbar) {
-            this.lastExperienceProgress = localPlayer.experienceProgress;
-            this.lastTotalExperience = localPlayer.totalExperience;
-            this.lastExperienceLevel = localPlayer.experienceLevel;
-            gamePackets.add(new ClientboundSetExperiencePacket(localPlayer.experienceProgress, localPlayer.totalExperience, localPlayer.experienceLevel));
-
-            FoodData foodData = localPlayer.getFoodData();
-            this.lastFoodLevel = foodData.getFoodLevel();
-            this.lastSaturationLevel = foodData.getSaturationLevel();
-            gamePackets.add(new ClientboundSetHealthPacket(localPlayer.getHealth(), foodData.getFoodLevel(), foodData.getSaturationLevel()));
-
-            int selectedSlot = localPlayer.getInventory().getSelectedSlot();
-            this.lastSelectedSlot = selectedSlot;
-            gamePackets.add(new ClientboundSetHeldSlotPacket(selectedSlot));
-
-            for (int i = 0; i < 9; i++) {
-                ItemStack hotbarItem = localPlayer.getInventory().getItem(i);
-                this.lastHotbarItems[i] = hotbarItem.copy();
-                gamePackets.add(new ClientboundContainerSetSlotPacket(0, 0, i, hotbarItem.copy()));
-            }
+        if (Flashback.getConfig().recording.recordFirstPerson) {
+            this.localPovState = null;
+            this.writePovChanges(localPlayer);
         }
 
         // Entity data

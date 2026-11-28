@@ -11,10 +11,6 @@ import com.moulberry.flashback.exception.UnsupportedPacketException;
 import com.moulberry.flashback.ext.LevelChunkExt;
 import com.moulberry.flashback.ext.ServerLevelExt;
 import com.moulberry.flashback.ext.ThreadedLevelLightEngineExt;
-import com.moulberry.flashback.packet.FlashbackRemoteExperience;
-import com.moulberry.flashback.packet.FlashbackRemoteFoodData;
-import com.moulberry.flashback.packet.FlashbackRemoteSelectHotbarSlot;
-import com.moulberry.flashback.packet.FlashbackRemoteSetSlot;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.embedded.EmbeddedChannel;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
@@ -238,8 +234,8 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
         }
 
         for (ReplayPlayer replayViewer : this.replayServer.getReplayViewers()) {
-            if (Objects.equals(replayViewer.lastFirstPersonDataUUID, addEntityPacket.getUUID())) {
-                replayViewer.lastFirstPersonDataUUID = null;
+            if (Objects.equals(replayViewer.povUUID, addEntityPacket.getUUID())) {
+                replayViewer.povUUID = null;
             }
         }
 
@@ -468,23 +464,6 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
 
     @Override
     public void handleContainerSetSlot(ClientboundContainerSetSlotPacket clientboundContainerSetSlotPacket) {
-        Entity entity = this.level().getEntity(this.localPlayerId);
-        if (!(entity instanceof Player player)) {
-            return;
-        }
-
-        if (clientboundContainerSetSlotPacket.getContainerId() == 0) {
-            int slot = clientboundContainerSetSlotPacket.getSlot();
-            ItemStack itemStack = clientboundContainerSetSlotPacket.getItem();
-            player.getInventory().setItem(slot, itemStack);
-
-            for (ReplayPlayer replayViewer : this.replayServer.getReplayViewers()) {
-                if (Objects.equals(replayViewer.lastFirstPersonDataUUID, player.getUUID())) {
-                    replayViewer.lastFirstPersonHotbarItems[slot] = itemStack.copy();
-                    ServerPlayNetworking.send(replayViewer, new FlashbackRemoteSetSlot(player.getId(), slot, itemStack.copy()));
-                }
-            }
-        }
     }
 
     @Override
@@ -1102,29 +1081,6 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
 
     @Override
     public void handleSetHeldSlot(ClientboundSetHeldSlotPacket clientboundSetHeldSlotPacket) {
-        if (!Inventory.isHotbarSlot(clientboundSetHeldSlotPacket.slot())) {
-            return;
-        }
-
-        Entity entity = this.level().getEntity(this.localPlayerId);
-        if (!(entity instanceof Player player)) {
-            return;
-        }
-
-        Inventory inventory = player.getInventory();
-
-        if (inventory.getSelectedSlot() == clientboundSetHeldSlotPacket.slot()) {
-            return;
-        }
-
-        inventory.setSelectedSlot(clientboundSetHeldSlotPacket.slot());
-
-        for (ReplayPlayer replayViewer : this.replayServer.getReplayViewers()) {
-            if (Objects.equals(replayViewer.lastFirstPersonDataUUID, player.getUUID())) {
-                replayViewer.lastFirstPersonSelectedSlot = inventory.getSelectedSlot();
-                ServerPlayNetworking.send(replayViewer, new FlashbackRemoteSelectHotbarSlot(player.getId(), inventory.getSelectedSlot()));
-            }
-        }
     }
 
     @Override
@@ -1166,44 +1122,10 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
 
     @Override
     public void handleSetExperience(ClientboundSetExperiencePacket clientboundSetExperiencePacket) {
-        Entity entity = this.level().getEntity(this.localPlayerId);
-        if (entity instanceof Player player) {
-            player.experienceProgress = clientboundSetExperiencePacket.getExperienceProgress();
-            player.totalExperience = clientboundSetExperiencePacket.getTotalExperience();
-            player.experienceLevel = clientboundSetExperiencePacket.getExperienceLevel();
-
-            for (ReplayPlayer replayViewer : this.replayServer.getReplayViewers()) {
-                if (Objects.equals(replayViewer.lastFirstPersonDataUUID, player.getUUID())) {
-                    replayViewer.lastFirstPersonExperienceProgress = player.experienceProgress;
-                    replayViewer.lastFirstPersonTotalExperience = player.totalExperience;
-                    replayViewer.lastFirstPersonExperienceLevel = player.experienceLevel;
-                    ServerPlayNetworking.send(replayViewer, new FlashbackRemoteExperience(player.getId(), player.experienceProgress,
-                        player.totalExperience, player.experienceLevel));
-                }
-            }
-        }
     }
 
     @Override
     public void handleSetHealth(ClientboundSetHealthPacket clientboundSetHealthPacket) {
-        Entity entity = this.level().getEntity(this.localPlayerId);
-        if (entity instanceof Player player) {
-            player.setHealth(clientboundSetHealthPacket.getHealth());
-
-            int food = clientboundSetHealthPacket.getFood();
-            float saturation = clientboundSetHealthPacket.getSaturation();
-
-            player.getFoodData().setFoodLevel(food);
-            player.getFoodData().setSaturation(saturation);
-
-            for (ReplayPlayer replayViewer : this.replayServer.getReplayViewers()) {
-                if (Objects.equals(replayViewer.lastFirstPersonDataUUID, player.getUUID())) {
-                    replayViewer.lastFirstPersonFoodLevel = food;
-                    replayViewer.lastFirstPersonSaturationLevel = saturation;
-                    ServerPlayNetworking.send(replayViewer, new FlashbackRemoteFoodData(player.getId(), food, saturation));
-                }
-            }
-        }
     }
 
     @Override
@@ -1213,23 +1135,6 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
 
     @Override
     public void handleSetPlayerInventory(ClientboundSetPlayerInventoryPacket clientboundSetPlayerInventoryPacket) {
-        Entity entity = this.level().getEntity(this.localPlayerId);
-        if (entity instanceof Player player) {
-            int slot = clientboundSetPlayerInventoryPacket.slot();
-            ItemStack itemStack = clientboundSetPlayerInventoryPacket.contents();
-            player.getInventory().setItem(slot, itemStack);
-
-            if (slot < 0 || slot > 9) {
-                return;
-            }
-
-            for (ReplayPlayer replayViewer : this.replayServer.getReplayViewers()) {
-                if (Objects.equals(replayViewer.lastFirstPersonDataUUID, player.getUUID())) {
-                    replayViewer.lastFirstPersonHotbarItems[slot] = itemStack.copy();
-                    ServerPlayNetworking.send(replayViewer, new FlashbackRemoteSetSlot(player.getId(), slot, itemStack.copy()));
-                }
-            }
-        }
     }
 
     @Override

@@ -1,7 +1,6 @@
 package com.moulberry.flashback.playback;
 
-import com.google.gson.Gson;
-import com.google.gson.JsonObject;
+import com.google.common.collect.MapMaker;
 import com.mojang.authlib.GameProfile;
 import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.IgnoredCustomPayloads;
@@ -18,14 +17,12 @@ import com.moulberry.flashback.keyframe.types.BlockOverrideKeyframeType;
 import com.moulberry.flashback.packet.FlashbackAccurateEntityPosition;
 import com.moulberry.flashback.packet.FlashbackClearEntities;
 import com.moulberry.flashback.packet.FlashbackClearParticles;
+import com.moulberry.flashback.packet.FlashbackClientPovChanges;
 import com.moulberry.flashback.packet.FlashbackForceClientTick;
 import com.moulberry.flashback.packet.FlashbackInstantlyLerp;
 import com.moulberry.flashback.packet.FlashbackRawCustomPayload;
-import com.moulberry.flashback.packet.FlashbackRemoteExperience;
-import com.moulberry.flashback.packet.FlashbackRemoteFoodData;
-import com.moulberry.flashback.packet.FlashbackRemoteSelectHotbarSlot;
-import com.moulberry.flashback.packet.FlashbackRemoteSetSlot;
 import com.moulberry.flashback.packet.FlashbackSetBorderLerpStartTime;
+import com.moulberry.flashback.povstate.PovPlayerState;
 import com.moulberry.flashback.state.EditorScene;
 import com.moulberry.flashback.state.EditorState;
 import com.moulberry.flashback.state.EditorStateManager;
@@ -45,7 +42,6 @@ import it.unimi.dsi.fastutil.ints.IntIterator;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
-import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLevelEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.util.Util;
@@ -81,10 +77,8 @@ import net.minecraft.server.players.PlayerList;
 import net.minecraft.stats.ServerStatsCounter;
 import net.minecraft.util.Mth;
 import net.minecraft.world.BossEvent;
-import net.minecraft.world.clock.WorldClocks;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.ExperienceOrb;
-import net.minecraft.world.entity.PositionMoveRotation;
 import net.minecraft.world.entity.PositionPath;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Inventory;
@@ -110,13 +104,11 @@ import org.jetbrains.annotations.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.FileSystem;
-import java.nio.file.FileSystems;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
-import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -176,6 +168,8 @@ public class ReplayServer extends IntegratedServer {
     private ReplayChunkCache replayChunkCache = null;
     private final IntSet loadedChunkCacheFiles = new IntOpenHashSet();
     private ReplayReader currentReplayReader = null;
+
+    private final Map<UUID, PovPlayerState> lastPovStates = new HashMap<>();
 
     private record RemotePack(UUID id, String url, String hash){}
     private final Map<UUID, RemotePack> oldRemotePacks = new HashMap<>();
@@ -646,6 +640,10 @@ public class ReplayServer extends IntegratedServer {
         packet.handle(this.configurationPacketHandler);
     }
 
+    public StreamCodec<ByteBuf, Packet<? super ClientGamePacketListener>> getGamePacketCodec() {
+        return gamePacketCodec;
+    }
+
     public void handleGamePacket(RegistryFriendlyByteBuf friendlyByteBuf) {
         this.configurationPacketHandler.flushPendingConfiguration();
 
@@ -702,6 +700,31 @@ public class ReplayServer extends IntegratedServer {
         }
 
         packet.handle(this.gamePacketHandler);
+    }
+
+    public void handlePovChanges(UUID playerUuid, List<Packet<? super ClientGamePacketListener>> packets) {
+        if (packets.isEmpty()) {
+            return;
+        }
+
+        this.configurationPacketHandler.flushPendingConfiguration();
+        this.gamePacketHandler.flushPendingEntities();
+
+        Player player = this.getPlayerList().getPlayer(playerUuid);
+        if (player != null && !(player instanceof ReplayPlayer)) {
+            PovPlayerState state = lastPovStates.computeIfAbsent(playerUuid, k -> PovPlayerState.fromPlayer(player));
+            state.applyChanges(packets);
+            state.applyToPlayer(player);
+
+            // Send changes to viewers
+            // Sent immediately so that future packets (e.g. equipment change) can use
+            // the modified state on the client (e.g. selected slot)
+            for (ReplayPlayer replayViewer : this.replayViewers) {
+                if (replayViewer.getCamera() == player && Objects.equals(replayViewer.povUUID, player.getUUID())) {
+                    replayViewer.updatePovStateAndSync(playerUuid, state);
+                }
+            }
+        }
     }
 
     public void handleCreateLocalPlayer(RegistryFriendlyByteBuf friendlyByteBuf) {
@@ -850,9 +873,11 @@ public class ReplayServer extends IntegratedServer {
         if (serverLevel == null) {
             return;
         }
+        this.lastPovStates.clear();
         for (ServerPlayer player : new ArrayList<>(serverLevel.players())) {
             if (player instanceof ReplayPlayer replayPlayer) {
-                replayPlayer.lastFirstPersonDataUUID = null;
+                replayPlayer.povUUID = null;
+                replayPlayer.povPlayerState = null;
                 continue;
             }
             player.discard();
@@ -1017,62 +1042,13 @@ public class ReplayServer extends IntegratedServer {
 
             Entity camera = replayViewer.getCamera();
             if (camera != replayViewer && camera instanceof Player playerCamera) {
-                Inventory inventory = playerCamera.getInventory();
-                if (!Objects.equals(replayViewer.lastFirstPersonDataUUID, playerCamera.getUUID())) {
-                    replayViewer.lastFirstPersonDataUUID = playerCamera.getUUID();
-
-                    replayViewer.lastFirstPersonExperienceProgress = playerCamera.experienceProgress;
-                    replayViewer.lastFirstPersonTotalExperience = playerCamera.totalExperience;
-                    replayViewer.lastFirstPersonExperienceLevel = playerCamera.experienceLevel;
-                    ServerPlayNetworking.send(replayViewer, new FlashbackRemoteExperience(playerCamera.getId(), playerCamera.experienceProgress,
-                        playerCamera.totalExperience, playerCamera.experienceLevel));
-
-                    FoodData foodData = playerCamera.getFoodData();
-                    replayViewer.lastFirstPersonFoodLevel = foodData.getFoodLevel();
-                    replayViewer.lastFirstPersonSaturationLevel = foodData.getSaturationLevel();
-                    ServerPlayNetworking.send(replayViewer, new FlashbackRemoteFoodData(playerCamera.getId(), foodData.getFoodLevel(), foodData.getSaturationLevel()));
-
-                    replayViewer.lastFirstPersonSelectedSlot = inventory.getSelectedSlot();
-                    ServerPlayNetworking.send(replayViewer, new FlashbackRemoteSelectHotbarSlot(playerCamera.getId(), inventory.getSelectedSlot()));
-
-                    for (int i = 0; i < 9; i++) {
-                        ItemStack hotbarItem = inventory.getItem(i);
-                        replayViewer.lastFirstPersonHotbarItems[i] = hotbarItem.copy();
-                        ServerPlayNetworking.send(replayViewer, new FlashbackRemoteSetSlot(playerCamera.getId(), i, hotbarItem.copy()));
-                    }
-                } else {
-                    if (replayViewer.lastFirstPersonExperienceProgress != playerCamera.experienceProgress ||
-                            replayViewer.lastFirstPersonTotalExperience != playerCamera.totalExperience ||
-                            replayViewer.lastFirstPersonExperienceLevel != playerCamera.experienceLevel) {
-                        replayViewer.lastFirstPersonExperienceProgress = playerCamera.experienceProgress;
-                        replayViewer.lastFirstPersonTotalExperience = playerCamera.totalExperience;
-                        replayViewer.lastFirstPersonExperienceLevel = playerCamera.experienceLevel;
-                        ServerPlayNetworking.send(replayViewer, new FlashbackRemoteExperience(playerCamera.getId(), playerCamera.experienceProgress,
-                            playerCamera.totalExperience, playerCamera.experienceLevel));
-                    }
-
-                    FoodData foodData = playerCamera.getFoodData();
-                    if (replayViewer.lastFirstPersonFoodLevel != foodData.getFoodLevel() || replayViewer.lastFirstPersonSaturationLevel != foodData.getSaturationLevel()) {
-                        replayViewer.lastFirstPersonFoodLevel = foodData.getFoodLevel();
-                        replayViewer.lastFirstPersonSaturationLevel = foodData.getSaturationLevel();
-                        ServerPlayNetworking.send(replayViewer, new FlashbackRemoteFoodData(playerCamera.getId(), foodData.getFoodLevel(), foodData.getSaturationLevel()));
-                    }
-
-                    if (replayViewer.lastFirstPersonSelectedSlot != inventory.getSelectedSlot()) {
-                        replayViewer.lastFirstPersonSelectedSlot = inventory.getSelectedSlot();
-                        ServerPlayNetworking.send(replayViewer, new FlashbackRemoteSelectHotbarSlot(playerCamera.getId(), inventory.getSelectedSlot()));
-                    }
-
-                    for (int i = 0; i < 9; i++) {
-                        ItemStack hotbarItem = inventory.getItem(i);
-                        if (!ItemStack.matches(replayViewer.lastFirstPersonHotbarItems[i], hotbarItem)) {
-                            replayViewer.lastFirstPersonHotbarItems[i] = hotbarItem.copy();
-                            ServerPlayNetworking.send(replayViewer, new FlashbackRemoteSetSlot(playerCamera.getId(), i, hotbarItem.copy()));
-                        }
-                    }
+                UUID povUuid = playerCamera.getUUID();
+                PovPlayerState newState = lastPovStates.get(povUuid);
+                if (newState != null) {
+                    replayViewer.updatePovStateAndSync(povUuid, newState);
                 }
             } else {
-                replayViewer.lastFirstPersonDataUUID = null;
+                replayViewer.povUUID = null;
             }
         }
 

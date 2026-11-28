@@ -87,15 +87,15 @@ public class FlashbackConfigV1 {
         @LatticeWidgetButton
         public boolean markDimensionChanges = true;
 
-        @LatticeOption(title = "flashback.option.recording.record_hotbar", description = "!!.description")
+        @LatticeOption(title = "flashback.option.recording.record_first_person", description = "!!.description")
         @LatticeWidgetButton
-        public boolean recordHotbar = false;
+        public boolean recordFirstPerson = true;
 
         @LatticeOption(title = "flashback.option.recording.local_player_updates_per_second", description = "!!.description")
         @LatticeFormatValues(formattingString = "flashback.option.per_second", translate = true)
         @LatticeIntRange(min = 20, max = 120, step = 20, clampMin = 20, clampMax = 360, clampStep = 20)
         @LatticeWidgetSlider
-        public int localPlayerUpdatesPerSecond = 20;
+        public int localPlayerUpdatesPerSecond = 60;
 
         @LatticeOption(title = "flashback.option.recording.record_voice_chat", description = "!!.description")
         @LatticeWidgetButton

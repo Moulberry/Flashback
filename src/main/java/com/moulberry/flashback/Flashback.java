@@ -20,27 +20,32 @@ import com.moulberry.flashback.editor.ui.ReplayUI;
 import com.moulberry.flashback.exporting.ExportJob;
 import com.moulberry.flashback.exporting.taskbar.TaskbarManager;
 import com.moulberry.flashback.ext.MinecraftExt;
+import com.moulberry.flashback.ext.PlayerPovAuxExt;
 import com.moulberry.flashback.keyframe.KeyframeRegistry;
 import com.moulberry.flashback.keyframe.types.*;
 import com.moulberry.flashback.packet.FlashbackAccurateEntityPosition;
 import com.moulberry.flashback.packet.FlashbackClearEntities;
 import com.moulberry.flashback.packet.FlashbackClearParticles;
 import com.moulberry.flashback.packet.FinishedServerTick;
+import com.moulberry.flashback.packet.FlashbackClientPovChanges;
 import com.moulberry.flashback.packet.FlashbackForceClientTick;
 import com.moulberry.flashback.packet.FlashbackInstantlyLerp;
 import com.moulberry.flashback.packet.FlashbackRawCustomPayload;
-import com.moulberry.flashback.packet.FlashbackRemoteExperience;
-import com.moulberry.flashback.packet.FlashbackRemoteFoodData;
-import com.moulberry.flashback.packet.FlashbackRemoteSelectHotbarSlot;
-import com.moulberry.flashback.packet.FlashbackRemoteSetSlot;
 import com.moulberry.flashback.packet.FlashbackSetBorderLerpStartTime;
+import com.moulberry.flashback.packet.FlashbackSetPovContainer;
+import com.moulberry.flashback.packet.FlashbackSetPovMouseOffset;
+import com.moulberry.flashback.packet.FlashbackSetPovScreen;
 import com.moulberry.flashback.packet.FlashbackVoiceChatSound;
 import com.moulberry.flashback.playback.EmptyLevelSource;
 import com.moulberry.flashback.playback.ReplayServer;
+import com.moulberry.flashback.povstate.PlayerPovAuxiliaryData;
+import com.moulberry.flashback.povstate.PovPlayerState;
+import com.moulberry.flashback.povstate.PovScreenType;
 import com.moulberry.flashback.record.FlashbackMeta;
 import com.moulberry.flashback.record.Recorder;
 import com.moulberry.flashback.record.ReplayExporter;
 import com.moulberry.flashback.record.ReplayMarker;
+import com.moulberry.flashback.screen.FakeScreenHudElement;
 import com.moulberry.flashback.screen.RecoverRecordingsScreen;
 import com.moulberry.flashback.screen.SaveReplayScreen;
 import com.moulberry.flashback.screen.UnsupportedLoaderScreen;
@@ -68,6 +73,11 @@ import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.Font;
+import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.client.gui.screens.inventory.HorseInventoryScreen;
+import net.minecraft.client.gui.screens.inventory.InventoryScreen;
+import net.minecraft.client.gui.screens.inventory.NautilusInventoryScreen;
+import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.protocol.common.ClientCommonPacketListener;
@@ -98,9 +108,17 @@ import net.minecraft.server.packs.repository.PackRepository;
 import net.minecraft.server.packs.repository.ServerPacksSource;
 import net.minecraft.world.Difficulty;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.animal.equine.AbstractHorse;
+import net.minecraft.world.entity.animal.nautilus.AbstractNautilus;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.flag.FeatureFlagSet;
 import net.minecraft.world.flag.FeatureFlags;
+import net.minecraft.world.inventory.AbstractMountInventoryMenu;
+import net.minecraft.world.inventory.HorseInventoryMenu;
+import net.minecraft.world.inventory.InventoryMenu;
+import net.minecraft.world.inventory.MenuType;
+import net.minecraft.world.inventory.NautilusInventoryMenu;
+import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.level.*;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.biome.Biomes;
@@ -212,10 +230,10 @@ public class Flashback implements ModInitializer, ClientModInitializer {
         PayloadTypeRegistry.clientboundPlay().register(FlashbackClearParticles.TYPE, StreamCodec.unit(FlashbackClearParticles.INSTANCE));
         PayloadTypeRegistry.clientboundPlay().register(FlashbackClearEntities.TYPE, StreamCodec.unit(FlashbackClearEntities.INSTANCE));
         PayloadTypeRegistry.clientboundPlay().register(FlashbackInstantlyLerp.TYPE, StreamCodec.unit(FlashbackInstantlyLerp.INSTANCE));
-        PayloadTypeRegistry.clientboundPlay().register(FlashbackRemoteSelectHotbarSlot.TYPE, FlashbackRemoteSelectHotbarSlot.STREAM_CODEC);
-        PayloadTypeRegistry.clientboundPlay().register(FlashbackRemoteExperience.TYPE, FlashbackRemoteExperience.STREAM_CODEC);
-        PayloadTypeRegistry.clientboundPlay().register(FlashbackRemoteFoodData.TYPE, FlashbackRemoteFoodData.STREAM_CODEC);
-        PayloadTypeRegistry.clientboundPlay().register(FlashbackRemoteSetSlot.TYPE, FlashbackRemoteSetSlot.STREAM_CODEC);
+        PayloadTypeRegistry.clientboundPlay().register(FlashbackClientPovChanges.TYPE, FlashbackClientPovChanges.STREAM_CODEC);
+        PayloadTypeRegistry.clientboundPlay().register(FlashbackSetPovScreen.TYPE, FlashbackSetPovScreen.STREAM_CODEC);
+        PayloadTypeRegistry.clientboundPlay().register(FlashbackSetPovContainer.TYPE, FlashbackSetPovContainer.STREAM_CODEC);
+        PayloadTypeRegistry.clientboundPlay().register(FlashbackSetPovMouseOffset.TYPE, FlashbackSetPovMouseOffset.STREAM_CODEC);
         PayloadTypeRegistry.clientboundPlay().register(FlashbackVoiceChatSound.TYPE, FlashbackVoiceChatSound.STREAM_CODEC);
         PayloadTypeRegistry.clientboundPlay().register(FlashbackAccurateEntityPosition.TYPE, FlashbackAccurateEntityPosition.STREAM_CODEC);
         PayloadTypeRegistry.clientboundPlay().register(FlashbackSetBorderLerpStartTime.TYPE, FlashbackSetBorderLerpStartTime.STREAM_CODEC);
@@ -284,6 +302,7 @@ public class Flashback implements ModInitializer, ClientModInitializer {
         ActionRegistry.register(ActionLevelChunkCached.INSTANCE);
         ActionRegistry.register(ActionAccuratePlayerPosition.INSTANCE);
         ActionRegistry.register(ActionRealTimeClock.INSTANCE);
+        ActionRegistry.register(ActionPovChanges.INSTANCE);
 
         KeyframeRegistry.register(CameraKeyframeType.INSTANCE);
         KeyframeRegistry.register(CameraOrbitKeyframeType.INSTANCE);
@@ -333,44 +352,32 @@ public class Flashback implements ModInitializer, ClientModInitializer {
             }
         });
 
-        ClientPlayNetworking.registerGlobalReceiver(FlashbackRemoteSelectHotbarSlot.TYPE, (payload, context) -> {
+        FakeScreenHudElement fakeScreenHudElement = new FakeScreenHudElement();
+
+        Map<UUID, PovPlayerState> lastPovStates = new HashMap<>();
+
+        ClientPlayNetworking.registerGlobalReceiver(FlashbackClientPovChanges.TYPE, (payload, context) -> {
+            Minecraft mc = context.client();
+            ClientLevel level = mc.level;
+            Player localPlayer = mc.player;
             if (Flashback.isInReplay()) {
-                Entity entity = Minecraft.getInstance().level.getEntity(payload.entityId());
-                if (entity instanceof Player player) {
-                    player.getInventory().setSelectedSlot(payload.slot());
+                PovPlayerState state = lastPovStates.computeIfAbsent(payload.playerUuid(), k -> new PovPlayerState());
+                state.applyChanges(payload.packets());
+
+                if (level != null) {
+                    Entity targetEntity = level.getPlayerByUUID(payload.playerUuid());
+                    if (targetEntity instanceof Player targetPlayer && targetPlayer != localPlayer) {
+                        state.applyToPlayer(targetPlayer);
+
+                        if (mc.getCameraEntity() == targetPlayer) {
+                            applyPovStateScreen(fakeScreenHudElement, targetPlayer, false);
+                        }
+                    }
                 }
             }
         });
 
-        ClientPlayNetworking.registerGlobalReceiver(FlashbackRemoteExperience.TYPE, (payload, context) -> {
-            if (Flashback.isInReplay()) {
-                Entity entity = Minecraft.getInstance().level.getEntity(payload.entityId());
-                if (entity instanceof Player player) {
-                    player.experienceProgress = payload.experienceProgress();
-                    player.totalExperience = payload.totalExperience();
-                    player.experienceLevel = payload.experienceLevel();
-                }
-            }
-        });
-
-        ClientPlayNetworking.registerGlobalReceiver(FlashbackRemoteFoodData.TYPE, (payload, context) -> {
-            if (Flashback.isInReplay()) {
-                Entity entity = Minecraft.getInstance().level.getEntity(payload.entityId());
-                if (entity instanceof Player player) {
-                    player.getFoodData().setFoodLevel(payload.foodLevel());
-                    player.getFoodData().setSaturation(payload.saturationLevel());
-                }
-            }
-        });
-
-        ClientPlayNetworking.registerGlobalReceiver(FlashbackRemoteSetSlot.TYPE, (payload, context) -> {
-            if (Flashback.isInReplay()) {
-                Entity entity = Minecraft.getInstance().level.getEntity(payload.entityId());
-                if (entity instanceof Player player) {
-                    player.getInventory().setItem(payload.slot(), payload.itemStack());
-                }
-            }
-        });
+        HudElementRegistry.addLast(Flashback.createIdentifier("fake_screen"), fakeScreenHudElement);
 
         if (FabricLoader.getInstance().isModLoaded("voicechat")) {
             ClientPlayNetworking.registerGlobalReceiver(FlashbackVoiceChatSound.TYPE, (payload, context) -> {
@@ -533,17 +540,28 @@ public class Flashback implements ModInitializer, ClientModInitializer {
         ClientTickEvents.END_CLIENT_TICK.register(minecraft -> {
             updateIsInReplay();
 
-            AccurateEntityPositionHandler.tick();
+            if (Flashback.isInReplay()) {
+                AccurateEntityPositionHandler.tick();
 
-            // Fix for camera entity sometimes being incorrect when respawning
-            Entity camera = Minecraft.getInstance().getCameraEntity();
-            LocalPlayer player = Minecraft.getInstance().player;
-            if (player != null && camera != null && camera != player) {
-                if (camera.isRemoved()) {
-                    Entity other = player.level().getEntity(camera.getId());
-                    if (other != null && !other.isRemoved()) {
-                        Minecraft.getInstance().setCameraEntity(other);
+                Entity camera = Minecraft.getInstance().getCameraEntity();
+                LocalPlayer player = Minecraft.getInstance().player;
+                if (player != null && camera != null && camera != player) {
+                    // Fix for camera entity sometimes being incorrect when respawning
+                    if (camera.isRemoved()) {
+                        Entity other = player.level().getEntity(camera.getId());
+                        if (other != null && !other.isRemoved()) {
+                            Minecraft.getInstance().setCameraEntity(other);
+                        }
                     }
+
+                    // Update screen spectate state
+                    if (camera instanceof Player cameraPlayer) {
+                        applyPovStateScreen(fakeScreenHudElement, cameraPlayer, true);
+                    } else {
+                        fakeScreenHudElement.close();
+                    }
+                } else {
+                    fakeScreenHudElement.close();
                 }
             }
 
@@ -652,6 +670,141 @@ public class Flashback implements ModInitializer, ClientModInitializer {
 
         if (FabricLoader.getInstance().isModLoaded("bobby")) {
             isBobbyLoaded = true;
+        }
+    }
+
+    private static void applyPovStateScreen(FakeScreenHudElement fakeScreenHudElement, Player cameraPlayer, boolean tick) {
+        PlayerPovAuxiliaryData aux = ((PlayerPovAuxExt)cameraPlayer).flashback$getPlayerPovAuxiliaryData();
+
+        // Try to tick current fake screen
+        if (tick && !fakeScreenHudElement.hasScreenFailed(fakeScreenHudElement.fakeScreenType())) {
+            try {
+                fakeScreenHudElement.tick();
+            } catch (Exception e) {
+                fakeScreenHudElement.failedScreen = fakeScreenHudElement.fakeScreenType();
+                fakeScreenHudElement.close();
+            }
+        }
+
+        // Try to set new fake screen
+        if (!fakeScreenHudElement.hasScreenFailed(aux.screen)) {
+            try {
+                updateFakeScreen(cameraPlayer, aux, fakeScreenHudElement);
+
+                if (aux.screen instanceof PovScreenType.Container container
+                    && fakeScreenHudElement.fakeScreen() instanceof AbstractContainerScreen<?> containerScreen
+                ) {
+                    List<Slot> menuSlotList = containerScreen.getMenu().slots;
+                    Set<Slot> slots = new HashSet<>();
+                    for (Integer slot : container.quickCraftSlots()) {
+                        if (slot < menuSlotList.size()) {
+                            slots.add(menuSlotList.get(slot));
+                        }
+                    }
+
+                    if (!Objects.equals(containerScreen.quickCraftSlots, slots)) {
+                        containerScreen.quickCraftSlots.clear();
+                        containerScreen.quickCraftSlots.addAll(slots);
+                    }
+
+                    containerScreen.isQuickCrafting = container.isQuickCrafting();
+                    containerScreen.quickCraftingType = container.quickCraftingType();
+                    containerScreen.recalculateQuickCraftRemaining();
+                }
+            } catch (Exception e) {
+                fakeScreenHudElement.failedScreen = aux.screen;
+                fakeScreenHudElement.close();
+            }
+        }
+    }
+
+    private static void updateFakeScreen(Player cameraPlayer, PlayerPovAuxiliaryData aux, FakeScreenHudElement fakeScreenHudElement) {
+        if (aux.screen == null) {
+            fakeScreenHudElement.close();
+        } else {
+            fakeScreenHudElement.setMouseScreenOffset(aux.mouseX, aux.mouseY);
+
+            Screen fakeScreen = fakeScreenHudElement.fakeScreen();
+            switch (aux.screen) {
+                case PovScreenType.Chat chat -> {
+                    if (fakeScreen instanceof ChatScreen chatScreen) {
+                        if (!chatScreen.input.getValue().equals(chat.text())) {
+                            chatScreen.insertText(chat.text(), true);
+                        }
+                    } else {
+                        fakeScreenHudElement.open(new ChatScreen(chat.text(), false), aux.screen);
+                    }
+                }
+                case PovScreenType.Container container -> {
+                    if (cameraPlayer.containerMenu == fakeScreenHudElement.failedContainer || aux.failedToCreateMenu) {
+                        fakeScreenHudElement.close();
+                        return;
+                    }
+                    try {
+                        boolean sameContainer = fakeScreen instanceof AbstractContainerScreen<?> containerScreen
+                            && containerScreen.getMenu() == cameraPlayer.containerMenu;
+                        switch (cameraPlayer.containerMenu) {
+                            case InventoryMenu inventoryMenu -> {
+                                if (sameContainer) {
+                                    return;
+                                }
+                                fakeScreenHudElement.open(new InventoryScreen(cameraPlayer), aux.screen);
+                            }
+                            case HorseInventoryMenu horseMenu -> {
+                                if (sameContainer) {
+                                    return;
+                                }
+                                if (horseMenu.mount instanceof AbstractHorse abstractHorse) {
+                                    int columns = horseMenu.mountContainer.getContainerSize() / AbstractMountInventoryMenu.INVENTORY_ROWS;
+                                    fakeScreenHudElement.open(new HorseInventoryScreen(horseMenu, cameraPlayer.getInventory(), abstractHorse, columns), aux.screen);
+                                } else {
+                                    fakeScreenHudElement.close();
+                                }
+                            }
+                            case NautilusInventoryMenu horseMenu -> {
+                                if (sameContainer) {
+                                    return;
+                                }
+                                if (horseMenu.mount instanceof AbstractNautilus abstractNautilus) {
+                                    int columns = horseMenu.mountContainer.getContainerSize() / AbstractMountInventoryMenu.INVENTORY_ROWS;
+                                    fakeScreenHudElement.open(new NautilusInventoryScreen(horseMenu, cameraPlayer.getInventory(), abstractNautilus, columns), aux.screen);
+                                } else {
+                                    fakeScreenHudElement.close();
+                                }
+                            }
+                            default -> {
+                                if (sameContainer && Objects.equals(fakeScreen.getTitle(), container.title())) {
+                                    return;
+                                }
+
+                                MenuType targetMenuType = cameraPlayer.containerMenu.getType();
+                                var ctor = MenuScreens.getConstructor(targetMenuType);
+
+                                Screen screen = ctor.create(cameraPlayer.containerMenu, cameraPlayer.getInventory(), container.title());
+                                fakeScreenHudElement.open(screen, aux.screen);
+                            }
+                        }
+                    } catch (Exception e) {
+                        Flashback.LOGGER.error("Unable to create screen for container", e);
+                        fakeScreenHudElement.failedContainer = cameraPlayer.containerMenu;
+                        fakeScreenHudElement.close();
+                    }
+                }
+                case PovScreenType.Death death -> {
+                    if (fakeScreen instanceof DeathScreen deathScreen
+                        && Objects.equals(deathScreen.causeOfDeath, death.causeOfDeath())
+                        && deathScreen.hardcore == death.hardcore()
+                    ) {
+                        return;
+                    }
+                    LocalPlayer localPlayer = Minecraft.getInstance().player;
+                    int oldScore = localPlayer.getScore();
+                    localPlayer.setScore(cameraPlayer.getScore());
+                    fakeScreenHudElement.open(new DeathScreen(death.causeOfDeath(), death.hardcore(), localPlayer), aux.screen);
+                    localPlayer.setScore(oldScore);
+                }
+            }
+
         }
     }
 

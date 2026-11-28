@@ -73,6 +73,8 @@ public class MixinRemotePlayer extends AbstractClientPlayer implements RemotePla
     @Inject(method = "aiStep", at = @At("RETURN"))
     public void aiStep(CallbackInfo ci) {
         if (Flashback.isInReplay()) {
+            this.getInventory().tick();
+
             if (!this.wasSwinging && this.isSwinging()) {
                 this.resetAttackStrengthTicker();
             }

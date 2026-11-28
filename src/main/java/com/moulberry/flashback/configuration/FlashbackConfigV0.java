@@ -84,7 +84,6 @@ public class FlashbackConfigV0 {
         config.recordingControls.quicksave = this.quicksave;
 
         config.recording.markDimensionChanges = this.markDimensionChanges;
-        config.recording.recordHotbar = this.recordHotbar;
         config.recording.localPlayerUpdatesPerSecond = this.localPlayerUpdatesPerSecond;
         config.recording.recordVoiceChat = this.recordVoiceChat;
 

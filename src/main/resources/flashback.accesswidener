@@ -186,3 +186,20 @@ accessible field net/minecraft/client/ClientClockManager$ClientClockInstance rat
 
 accessible field net/minecraft/world/entity/LivingEntity swingState Lnet/minecraft/world/entity/LivingEntity$SwingState;
 accessible field net/minecraft/world/entity/LivingEntity$SwingState ticks I
+
+# Remote menu tracking
+accessible field net/minecraft/world/inventory/AbstractContainerMenu dataSlots Ljava/util/List;
+accessible method net/minecraft/client/gui/screens/MenuScreens getConstructor (Lnet/minecraft/world/inventory/MenuType;)Lnet/minecraft/client/gui/screens/MenuScreens$ScreenConstructor;
+accessible field net/minecraft/client/gui/screens/ChatScreen input Lnet/minecraft/client/gui/components/EditBox;
+accessible field net/minecraft/client/gui/screens/DeathScreen causeOfDeath Lnet/minecraft/network/chat/Component;
+accessible field net/minecraft/client/gui/screens/DeathScreen hardcore Z
+accessible field net/minecraft/world/inventory/AbstractMountInventoryMenu mountContainer Lnet/minecraft/world/Container;
+accessible field net/minecraft/world/inventory/AbstractMountInventoryMenu mount Lnet/minecraft/world/entity/LivingEntity;
+accessible field net/minecraft/world/inventory/AbstractMountInventoryMenu INVENTORY_ROWS I
+accessible field net/minecraft/client/gui/screens/inventory/AbstractContainerScreen quickCraftSlots Ljava/util/Set;
+accessible field net/minecraft/client/gui/screens/inventory/AbstractContainerScreen isQuickCrafting Z
+accessible field net/minecraft/client/gui/screens/inventory/AbstractContainerScreen quickCraftingType I
+accessible method net/minecraft/client/gui/screens/inventory/AbstractContainerScreen recalculateQuickCraftRemaining ()V
+accessible field net/minecraft/client/gui/GuiGraphicsExtractor pendingCursor Lcom/mojang/blaze3d/platform/cursor/CursorType;
+accessible field net/minecraft/client/gui/screens/inventory/AbstractContainerScreen leftPos I
+accessible field net/minecraft/client/gui/screens/inventory/AbstractContainerScreen topPos I
