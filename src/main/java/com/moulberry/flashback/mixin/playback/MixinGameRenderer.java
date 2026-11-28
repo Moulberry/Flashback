@@ -38,11 +38,20 @@ public abstract class MixinGameRenderer {
         }
     }
 
-    @Inject(method = "render", at = @At(value = "INVOKE", target = "Lcom/mojang/renderpearl/api/commands/CommandEncoder;clearDepthTexture(Lcom/mojang/renderpearl/api/textures/GpuTexture;D)V", remap = false, ordinal = 0), cancellable = true)
-    public void render_noGui(CallbackInfo ci) {
+    @WrapOperation(
+        method = "render",
+        at = @At(
+            value = "INVOKE",
+            target = "Lnet/minecraft/client/gui/render/GuiRenderer;render()V"
+        )
+    )
+    public void render_noGui(net.minecraft.client.gui.render.GuiRenderer instance, Operation<Void> original) {
         if (Flashback.isExporting() && Flashback.EXPORT_JOB.getSettings().noGui()) {
-            ci.cancel();
+            // Skip the GUI pass but allow the rest of GameRenderer.render() to run
+            // so renderBuffers.endFrame() and resourcePool.endFrame() are called.
+            return;
         }
+        original.call(instance);
     }
 
     @WrapOperation(method = "renderItemInHand", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/multiplayer/MultiPlayerGameMode;getPlayerMode()Lnet/minecraft/world/level/GameType;"))
