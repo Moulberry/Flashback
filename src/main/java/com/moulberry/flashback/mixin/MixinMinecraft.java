@@ -358,6 +358,15 @@ public abstract class MixinMinecraft extends ReentrantBlockableEventLoop<Runnabl
         this.applyKeyframes.set(true);
     }
 
+    @Inject(method = "runTick", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/MouseHandler;handleAccumulatedMovement()V", shift = At.Shift.AFTER))
+    public void afterMouseMovement(boolean advanceGameTime, CallbackInfo ci) {
+        LocalPlayer player = this.player;
+        if (Flashback.RECORDER != null && player != null) {
+            float partialTick = deltaTracker.getGameTimeDeltaPartialTick(true);
+            Flashback.RECORDER.trackPartialPosition(player, partialTick);
+        }
+    }
+
     @Inject(method = "runTick", at = @At(value = "INVOKE",
         target = "Lcom/mojang/blaze3d/platform/Window;setErrorSection(Ljava/lang/String;)V",
         ordinal = 1), cancellable = true)
@@ -368,13 +377,7 @@ public abstract class MixinMinecraft extends ReentrantBlockableEventLoop<Runnabl
             return;
         }
 
-        LocalPlayer player = this.player;
         DeltaTracker deltaTracker = this.deltaTracker;
-
-        if (Flashback.RECORDER != null && player != null) {
-            float partialTick = deltaTracker.getGameTimeDeltaPartialTick(true);
-            Flashback.RECORDER.trackPartialPosition(player, partialTick);
-        }
 
         AccurateEntityPositionHandler.apply(this.level, deltaTracker);
 

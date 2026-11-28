@@ -3,6 +3,7 @@ package com.moulberry.flashback.mixin.playback;
 import com.mojang.authlib.GameProfile;
 import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.ext.RemotePlayerExt;
+import com.moulberry.flashback.visuals.AccurateEntityPositionHandler;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.player.AbstractClientPlayer;
@@ -25,6 +26,7 @@ import net.minecraft.world.item.MapItem;
 import net.minecraft.world.level.saveddata.maps.MapId;
 import net.minecraft.world.level.saveddata.maps.MapItemSavedData;
 import net.minecraft.world.phys.Vec3;
+import org.joml.Vector2f;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
@@ -80,10 +82,13 @@ public class MixinRemotePlayer extends AbstractClientPlayer implements RemotePla
             }
             this.wasSwinging = this.isSwinging();
 
-            this.xBobO = xBob;
-            this.xBob += Mth.wrapDegrees(this.getXRot() - this.xBob) * 0.5f;
-            this.yBobO = yBob;
-            this.yBob += Mth.wrapDegrees(this.getYRot() - this.yBob) * 0.5f;
+            Vector2f accurate = AccurateEntityPositionHandler.getAccurateRotation(this, 1.0f);
+            float xRot = accurate != null ? accurate.x : this.getXRot();
+            float yRot = accurate != null ? accurate.y : this.getYRot();
+            this.xBobO = this.xBob;
+            this.xBob += Mth.wrapDegrees(xRot - this.xBob) * 0.5f;
+            this.yBobO = this.yBob;
+            this.yBob += Mth.wrapDegrees(yRot - this.yBob) * 0.5f;
 
             if (this.lastPosition != null && this.avatarState().getInterpolatedWalkDistance(0) == this.avatarState().getInterpolatedWalkDistance(1)) {
                 double dx = this.lastPosition.x - this.position().x;
@@ -179,12 +184,18 @@ public class MixinRemotePlayer extends AbstractClientPlayer implements RemotePla
     public void flashback$extractFirstPersonHandsAndItems(float partialTicks, FirstPersonHandsAndItemsRenderState state) {
         Minecraft minecraft = Minecraft.getInstance();
 
+        Vector2f accurate = AccurateEntityPositionHandler.getAccurateRotation(this, partialTicks);
+        float xRot = accurate != null ? accurate.x : this.getXRot();
+        float yRot = accurate != null ? accurate.y : this.getYRot();
+
         LivingEntity.SwingDescription currentSwing = this.getCurrentSwing();
         state.attackHand = currentSwing == null ? InteractionHand.MAIN_HAND : currentSwing.hand();
-        state.viewXRot = this.getViewXRot(partialTicks);
-        state.viewYRot = this.getViewYRot(partialTicks);
+        state.viewXRot = xRot;
+        state.viewYRot = yRot;
         state.xBob = Mth.lerp(partialTicks, this.xBobO, this.xBob);
         state.yBob = Mth.lerp(partialTicks, this.yBobO, this.yBob);
+        state.xBob = state.viewXRot + Mth.wrapDegrees(state.xBob - state.viewXRot);
+        state.yBob = state.viewYRot + Mth.wrapDegrees(state.yBob - state.viewYRot);
         state.isScoping = this.isScoping();
         state.useItemRemainingTicks = this.getUseItemRemainingTicks();
         state.handRenderSelection = evaluateWhichHandsToRender(this);
